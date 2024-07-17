@@ -1,0 +1,204 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:CCR-{company_abbr}{YY}/{######}",
+ "creation": "2024-07-10 14:05:20.870486",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_nywh",
+  "amended_from",
+  "company_abbr",
+  "letter_head",
+  "asset_details",
+  "date",
+  "location",
+  "plant_no",
+  "hours",
+  "column_break_aapa",
+  "company",
+  "plant_description",
+  "custodian",
+  "components_for_replacement_section",
+  "list_of_components",
+  "details_of_request_section",
+  "details"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_nywh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Component Replacement Report",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "asset_details",
+   "fieldtype": "Section Break",
+   "label": "Asset Details"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Location:",
+   "options": "Location",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Request Date:",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_aapa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "plant_description",
+   "fieldtype": "Read Only",
+   "label": "Plant Description:",
+   "reqd": 1
+  },
+  {
+   "fieldname": "hours",
+   "fieldtype": "Data",
+   "label": "Hours / Km:",
+   "reqd": 1
+  },
+  {
+   "fieldname": "plant_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plant No.:",
+   "options": "Asset",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Read Only",
+   "label": "Company:",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "custodian",
+   "fieldtype": "Read Only",
+   "label": "Allocated Driver (If Applicable):"
+  },
+  {
+   "fieldname": "company_abbr",
+   "fieldtype": "Read Only",
+   "hidden": 1,
+   "label": "Company Abbreviation"
+  },
+  {
+   "fieldname": "components_for_replacement_section",
+   "fieldtype": "Section Break",
+   "label": "Components for Replacement"
+  },
+  {
+   "fieldname": "list_of_components",
+   "fieldtype": "Table",
+   "label": "List of Components",
+   "options": "Item List for Component Replacement Report",
+   "reqd": 1
+  },
+  {
+   "fieldname": "details_of_request_section",
+   "fieldtype": "Section Break",
+   "label": "Details of Request"
+  },
+  {
+   "fieldname": "details",
+   "fieldtype": "Small Text",
+   "label": "Comments and Details:"
+  },
+  {
+   "fieldname": "letter_head",
+   "fieldtype": "Read Only",
+   "hidden": 1,
+   "label": "Letterhead"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "link_doctype": "Location",
+   "link_fieldname": "location"
+  },
+  {
+   "link_doctype": "Asset",
+   "link_fieldname": "asset_name"
+  },
+  {
+   "link_doctype": "Company",
+   "link_fieldname": "company_name"
+  },
+  {
+   "link_doctype": "Asset",
+   "link_fieldname": "custodian"
+  },
+  {
+   "link_doctype": "Company",
+   "link_fieldname": "abbr"
+  },
+  {
+   "link_doctype": "Company",
+   "link_fieldname": "default_letter_head"
+  }
+ ],
+ "modified": "2024-07-15 11:20:52.405822",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Component Replacement Report",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Created"
+  },
+  {
+   "color": "Blue",
+   "title": "Reviewed"
+  },
+  {
+   "color": "Blue",
+   "title": "Approved"
+  },
+  {
+   "color": "Blue",
+   "title": "Completed"
+  }
+ ],
+ "track_changes": 1
+}

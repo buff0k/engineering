@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-07-11 07:44:15.646449",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_list_section",
+  "item",
+  "supplier",
+  "oldreference",
+  "newreference",
+  "reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_list_section",
+   "fieldtype": "Section Break",
+   "label": "Item List"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item:",
+   "options": "Item",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier:",
+   "options": "Supplier",
+   "search_index": 1
+  },
+  {
+   "fieldname": "oldreference",
+   "fieldtype": "Data",
+   "label": "Previous Supplier Job/Serial No.:",
+   "search_index": 1
+  },
+  {
+   "fieldname": "newreference",
+   "fieldtype": "Data",
+   "label": "New Supplier Job/Serial No.:",
+   "search_index": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Select",
+   "label": "Reason for Failure",
+   "options": "Wear and Tear\nAbuse\nDamage\nExpiry",
+   "reqd": 1,
+   "search_index": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-07-11 12:59:10.716059",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Item List for Component Replacement Report",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
