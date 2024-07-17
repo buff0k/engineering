@@ -4,6 +4,7 @@ app_publisher = "Jorrie Jordaan"
 app_description = "Engineering Workflows and Maintenance Tasks"
 app_email = "jorrie@isambane.co.za"
 app_license = "mit"
+required_apps = ["frappe/erpnext"]
 # required_apps = []
 
 # Includes in <head>
