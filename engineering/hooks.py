@@ -1,11 +1,10 @@
 app_name = "engineering"
 app_title = "Engineering"
-app_publisher = "Jorrie Jordaan"
+app_publisher = "BuFf0k"
 app_description = "Engineering Workflows and Maintenance Tasks"
-app_email = "jorrie@isambane.co.za"
+app_email = "buff0k@buff0k.co.za"
 app_license = "mit"
 required_apps = ["frappe/erpnext"]
-# required_apps = []
 
 # Includes in <head>
 # ------------------
