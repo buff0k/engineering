@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{asset_category}-{item_name}",
+ "creation": "2024-10-26 18:51:23.200058",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "asset_category",
+  "item_name",
+  "revision_date",
+  "load_capacity",
+  "meter_type",
+  "fuel_tank_capacity",
+  "column_break_btmi",
+  "technical_notes",
+  "section_break_lrrr",
+  "models_site"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Model",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "revision_date",
+   "fieldtype": "Datetime",
+   "label": "Last Technical Revision Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_btmi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "technical_notes",
+   "fieldtype": "Text Editor",
+   "label": "Technical Notes"
+  },
+  {
+   "fieldname": "asset_category",
+   "fieldtype": "Link",
+   "label": "Asset Category",
+   "options": "Asset Category",
+   "reqd": 1
+  },
+  {
+   "fieldname": "load_capacity",
+   "fieldtype": "Int",
+   "label": "Load Capacity (if Applicable)"
+  },
+  {
+   "default": "Hour",
+   "fieldname": "meter_type",
+   "fieldtype": "Select",
+   "label": "Running Meter Type",
+   "options": "Hour\nKm\nN/A",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fuel_tank_capacity",
+   "fieldtype": "Int",
+   "label": "Fuel Tank Capacity (Litres)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_lrrr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "models_site",
+   "fieldtype": "HTML",
+   "label": "Models per Site"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-10-27 11:55:54.415346",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Plant Technical Specification",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Clerk",
+   "select": 1,
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Administrator",
+   "select": 1,
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Supervisor",
+   "select": 1,
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "select": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}
