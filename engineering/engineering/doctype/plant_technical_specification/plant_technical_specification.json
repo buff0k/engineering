@@ -79,7 +79,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-27 11:55:54.415346",
+ "modified": "2024-10-28 07:42:13.135186",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Technical Specification",
@@ -141,7 +141,6 @@
    "share": 1
   },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -149,8 +148,7 @@
    "report": 1,
    "role": "Production Manager",
    "select": 1,
-   "share": 1,
-   "write": 1
+   "share": 1
   },
   {
    "email": 1,
