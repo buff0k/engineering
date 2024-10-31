@@ -12,6 +12,7 @@
   "load_capacity",
   "meter_type",
   "fuel_tank_capacity",
+  "oem_consumption",
   "column_break_btmi",
   "technical_notes",
   "section_break_lrrr",
@@ -75,11 +76,18 @@
    "fieldname": "models_site",
    "fieldtype": "HTML",
    "label": "Models per Site"
+  },
+  {
+   "fieldname": "oem_consumption",
+   "fieldtype": "Float",
+   "label": "OEM Consumption",
+   "precision": "1",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-28 07:42:13.135186",
+ "modified": "2024-10-30 20:34:03.194793",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Technical Specification",
