@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{asset_name}-{breakdown_start_date}-{breakdown_start_time}",
+ "creation": "2024-11-08 13:06:09.494040",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "breakdown_details_tab",
+  "location",
+  "asset_name",
+  "item_name",
+  "asset_category",
+  "column_break_xnrp",
+  "breakdown_start_date",
+  "breakdown_start_time",
+  "breakdown_status",
+  "breakdown_status_description",
+  "hours_breakdown_start",
+  "section_break_sbau",
+  "breakdown_reason_updates",
+  "report_update_breakdown",
+  "tab_2_tab",
+  "section_break_clzv",
+  "last_pre_use_prod_shift_date",
+  "last_pre_use_prod_shift",
+  "column_break_jxph",
+  "last_pre_use_hours_start",
+  "last_pre_use_avail_status",
+  "breakdown_history_tab",
+  "breakdown_history"
+ ],
+ "fields": [
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "asset_name",
+   "fieldtype": "Link",
+   "label": "Plant No.",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "column_break_xnrp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "breakdown_start_date",
+   "fieldtype": "Date",
+   "label": "Breakdown Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "breakdown_start_time",
+   "fieldtype": "Time",
+   "label": "Breakdown Start Time"
+  },
+  {
+   "fieldname": "breakdown_status",
+   "fieldtype": "Link",
+   "label": "Breakdown Status",
+   "options": "Breakdown Status",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "breakdown_status.breakdown_status",
+   "fieldname": "breakdown_status_description",
+   "fieldtype": "Read Only",
+   "label": "Breakdown Status Description"
+  },
+  {
+   "fieldname": "section_break_clzv",
+   "fieldtype": "Section Break",
+   "label": "Last Pre-use Data"
+  },
+  {
+   "fieldname": "last_pre_use_prod_shift_date",
+   "fieldtype": "Read Only",
+   "label": "Last Pre-Use Production Shift Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_pre_use_prod_shift",
+   "fieldtype": "Read Only",
+   "label": "Last Pre-Use Production Shift"
+  },
+  {
+   "fieldname": "hours_breakdown_start",
+   "fieldtype": "Float",
+   "label": "Hours at Breakdown Start",
+   "precision": "1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_jxph",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_pre_use_hours_start",
+   "fieldtype": "Read Only",
+   "label": "Last Pre-use Production Hours Start"
+  },
+  {
+   "fieldname": "last_pre_use_avail_status",
+   "fieldtype": "Read Only",
+   "label": "Last Pre Use Availability Status"
+  },
+  {
+   "fetch_from": "asset_name.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
+   "label": "Plant Model"
+  },
+  {
+   "fetch_from": "asset_name.asset_category",
+   "fieldname": "asset_category",
+   "fieldtype": "Read Only",
+   "label": "Plant Category"
+  },
+  {
+   "fieldname": "section_break_sbau",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "breakdown_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Breakdown Details"
+  },
+  {
+   "fieldname": "tab_2_tab",
+   "fieldtype": "Tab Break",
+   "label": "Last Pre-Use Data"
+  },
+  {
+   "fieldname": "breakdown_history_tab",
+   "fieldtype": "Tab Break",
+   "label": "Breakdown History"
+  },
+  {
+   "fieldname": "breakdown_reason_updates",
+   "fieldtype": "Small Text",
+   "label": "Breakdown Reason/Update",
+   "reqd": 1
+  },
+  {
+   "fieldname": "report_update_breakdown",
+   "fieldtype": "Button",
+   "label": "Report / Update Breakdown"
+  },
+  {
+   "fieldname": "breakdown_history",
+   "fieldtype": "HTML",
+   "label": "History"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-11-08 15:43:31.850608",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Plant Breakdown",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
