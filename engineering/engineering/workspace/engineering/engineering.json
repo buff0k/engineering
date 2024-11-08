@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"r-6kftlW3t\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"163HZgXf8e\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Forms\",\"col\":4}},{\"id\":\"GzDWXZvs3W\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant and Component Lists\",\"col\":4}},{\"id\":\"zEjx5jmz89\",\"type\":\"card\",\"data\":{\"card_name\":\"Stock Control\",\"col\":4}}]",
+ "content": "[{\"id\":\"r-6kftlW3t\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"163HZgXf8e\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Forms\",\"col\":4}},{\"id\":\"GzDWXZvs3W\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant and Component Lists\",\"col\":4}},{\"id\":\"zEjx5jmz89\",\"type\":\"card\",\"data\":{\"card_name\":\"Stock Control\",\"col\":4}},{\"id\":\"-lBJcpjH4A\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}}]",
  "creation": "2024-07-10 13:57:16.421525",
  "custom_blocks": [],
  "docstatus": 0,
@@ -119,9 +119,38 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Breakdown",
+   "link_count": 0,
+   "link_to": "Plant Breakdown",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdown Status",
+   "link_count": 0,
+   "link_to": "Breakdown Status",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2024-10-27 11:53:48.127621",
+ "modified": "2024-11-08 17:24:16.323058",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
