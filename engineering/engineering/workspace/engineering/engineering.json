@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"r-6kftlW3t\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"163HZgXf8e\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Forms\",\"col\":4}},{\"id\":\"GzDWXZvs3W\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant and Component Lists\",\"col\":4}},{\"id\":\"zEjx5jmz89\",\"type\":\"card\",\"data\":{\"card_name\":\"Stock Control\",\"col\":4}},{\"id\":\"-lBJcpjH4A\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}}]",
+ "content": "[{\"id\":\"r-6kftlW3t\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"163HZgXf8e\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Forms\",\"col\":4}},{\"id\":\"GzDWXZvs3W\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant and Component Lists\",\"col\":4}},{\"id\":\"zEjx5jmz89\",\"type\":\"card\",\"data\":{\"card_name\":\"Stock Control\",\"col\":4}},{\"id\":\"-lBJcpjH4A\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}},{\"id\":\"RdPCjnPtd_\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Availability\",\"col\":4}}]",
  "creation": "2024-07-10 13:57:16.421525",
  "custom_blocks": [],
  "docstatus": 0,
@@ -148,9 +148,28 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Availability",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Availability and Utilisation",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2024-11-08 17:24:16.323058",
+ "modified": "2024-11-10 13:43:11.044666",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

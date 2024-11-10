@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-11-09 14:34:10.437877",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_tshf",
+  "avail_util_engine",
+  "base_details_section",
+  "location",
+  "shift_date",
+  "shift",
+  "asset_name",
+  "pre_use_link"
+ ],
+ "fields": [
+  {
+   "fieldname": "shift_date",
+   "fieldtype": "Date",
+   "label": "Shift Date"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Data",
+   "label": "Shift"
+  },
+  {
+   "fieldname": "asset_name",
+   "fieldtype": "Link",
+   "label": "Plant No.",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "pre_use_link",
+   "fieldtype": "Link",
+   "label": "Pre-Use Link",
+   "options": "Pre-Use Hours"
+  },
+  {
+   "fieldname": "section_break_tshf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "base_details_section",
+   "fieldtype": "Section Break",
+   "label": "Base Details"
+  },
+  {
+   "fieldname": "avail_util_engine",
+   "fieldtype": "Button",
+   "label": "Run Availabiity & Utilisation Engine"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "label": "Production Site",
+   "options": "Production Sites"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-11-10 09:00:08.101357",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Availability and Utilisation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

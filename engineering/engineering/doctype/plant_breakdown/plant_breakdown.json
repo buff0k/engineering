@@ -19,7 +19,6 @@
   "hours_breakdown_start",
   "section_break_sbau",
   "breakdown_reason_updates",
-  "report_update_breakdown",
   "tab_2_tab",
   "section_break_clzv",
   "last_pre_use_prod_shift_date",
@@ -35,6 +34,7 @@
    "fieldname": "location",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Site",
    "options": "Location",
    "reqd": 1
@@ -42,6 +42,8 @@
   {
    "fieldname": "asset_name",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Plant No.",
    "options": "Asset"
   },
@@ -63,6 +65,8 @@
   {
    "fieldname": "breakdown_status",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Breakdown Status",
    "options": "Breakdown Status",
    "reqd": 1
@@ -148,19 +152,15 @@
    "reqd": 1
   },
   {
-   "fieldname": "report_update_breakdown",
-   "fieldtype": "Button",
-   "label": "Report / Update Breakdown"
-  },
-  {
    "fieldname": "breakdown_history",
-   "fieldtype": "HTML",
-   "label": "History"
+   "fieldtype": "Table",
+   "label": "Breakdown history",
+   "options": "Breakdown History"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-08 15:43:31.850608",
+ "modified": "2024-11-09 12:08:56.289014",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown",
