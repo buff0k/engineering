@@ -1,94 +1,115 @@
 import frappe
+from frappe.utils import getdate, add_days, today, formatdate
+from datetime import timedelta
 from frappe.model.document import Document
-from frappe.utils import add_days, nowdate, getdate
 
 class AvailabilityandUtilisation(Document):
-    pass
+    @staticmethod
+    def generate_records():
+        created_records = []
+        error_records = []
+        current_date = getdate(today())
 
+        # Log the start of the record generation process
+        frappe.log_error("Starting record generation for Availability and Utilisation", "Process Start")
+
+        # Phase 1: Create Availability and Utilisation documents
+        production_planning_records = frappe.get_all("Monthly Production Planning",
+                                                     filters={"site_status": "Producing"},
+                                                     fields=["location", "prod_month_end", "shift_system"])
+
+        for planning_record in production_planning_records:
+            location = planning_record.location
+            prod_month_end = getdate(planning_record.prod_month_end)
+            shift_system = planning_record.shift_system
+
+            # Get assets linked to the location with specific categories and status "Submitted"
+            assets = frappe.get_all("Asset", filters={
+                "location": location,
+                "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
+                "status": "Submitted"
+            }, fields=["name", "asset_name"])
+
+            start_date = prod_month_end.replace(day=1)
+            end_date = min(prod_month_end, current_date - timedelta(days=1))
+            date = start_date
+
+            while date <= end_date:
+                if date.weekday() == 6:  # Skip Sundays
+                    date = add_days(date, 1)
+                    continue
+
+                shifts = ["A", "B"] if shift_system == "2x12Hour" else ["A", "B", "C"]
+
+                for shift in shifts:
+                    for asset in assets:
+                        try:
+                            doc = frappe.get_doc({
+                                "doctype": "Availability and Utilisation",
+                                "shift_date": date,
+                                "shift": shift,  # Use "A", "B", or "C"
+                                "asset_name": asset.asset_name,
+                                "location": location,
+                                "pre_use_lookup": None,  # Initially set to None
+                                "pre_use_link": None     # Initially set to None
+                            })
+                            doc.insert(ignore_permissions=True)
+                            created_records.append(doc.name)
+                        except Exception as e:
+                            error_message = f"Error creating document on {date} - Shift {shift} for Asset {asset.asset_name} at {location}: {str(e)}"
+                            frappe.log_error(error_message, "Avail. & Util. Creation Error")
+                            error_records.append(error_message)
+
+                date = add_days(date, 1)
+
+        # Phase 2: Update pre_use_lookup field
+        for doc_name in created_records:
+            try:
+                doc = frappe.get_doc("Availability and Utilisation", doc_name)
+                formatted_date = formatdate(doc.shift_date, "dd-mm-yyyy")
+                doc.pre_use_lookup = f"{doc.location}-{formatted_date}-{doc.shift}"
+                doc.save(ignore_permissions=True)
+            except Exception as e:
+                error_message = f"Error updating pre_use_lookup for document {doc_name}: {str(e)}"
+                frappe.log_error(error_message, "Pre-Use Lookup Update Error")
+                error_records.append(error_message)
+
+        # Phase 3: Use pre_use_lookup to update pre_use_link
+        for doc_name in created_records:
+            try:
+                doc = frappe.get_doc("Availability and Utilisation", doc_name)
+
+                # Match the pre_use_lookup with avail_util_lookup in Pre-Use Hours
+                matching_pre_use = frappe.get_all("Pre-Use Hours", filters={
+                    "avail_util_lookup": doc.pre_use_lookup,
+                }, fields=["name"], limit=1)
+
+                if matching_pre_use:
+                    doc.pre_use_link = matching_pre_use[0].name
+                    doc.save(ignore_permissions=True)
+                    frappe.log_error(f"Updated pre_use_link for {doc.name} to {matching_pre_use[0].name}", "Pre-Use Link Updated")
+                else:
+                    frappe.log_error(
+                        f"No matching Pre-Use Hours found for pre_use_lookup: {doc.pre_use_lookup}",
+                        "Pre-Use Link Not Found"
+                    )
+
+            except Exception as e:
+                error_message = f"Error updating pre_use_link for document {doc_name}: {str(e)}"
+                frappe.log_error(error_message, "Pre-Use Link Update Error")
+                error_records.append(error_message)
+
+        # Log completion message
+        success_message = f"Successfully created {len(created_records)} records."
+        if error_records:
+            success_message += "\nErrors encountered. Check the error log for details."
+
+        frappe.log_error(success_message, "Process Completion")
+
+        return success_message
+
+# Button handler function that calls the generate_records method
 @frappe.whitelist()
 def create_availability_and_utilisation():
-    # Define the starting date
-    start_date = getdate("2024-11-01")
-    today = getdate(nowdate())
-    end_date = add_days(today, -1)  # Set end date to yesterday
-    
-    created_records = []
-    updated_records = []
-
-    # Loop over each date from start_date to end_date
-    current_date = start_date
-    while current_date <= end_date:
-        # Skip Sundays
-        if current_date.weekday() != 6:  # 6 represents Sunday
-            # Format the date as yyyy-MM-dd (database-compatible format)
-            shift_date = current_date.strftime("%Y-%m-%d")
-            
-            # Retrieve all production sites with site_status "Producing"
-            producing_sites = frappe.get_all("Production Sites", filters={"site_status": "Producing"}, fields=["name"])
-
-            for site in producing_sites:
-                # Get assets linked to the current production site with specified categories and status "Submitted"
-                assets = frappe.get_all("Asset", filters={
-                    "location": site["name"],
-                    "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
-                    "status": "Submitted"
-                }, fields=["name", "asset_name"])
-
-                # For each asset, create records for both shifts "A" and "B"
-                for asset in assets:
-                    for shift in ["A", "B"]:
-                        # Check if the document already exists
-                        doc_exists = frappe.db.exists("Availability and Utilisation", {
-                            "asset_name": asset["asset_name"],
-                            "shift_date": shift_date,
-                            "shift": shift
-                        })
-                        
-                        # Fetch matching "Pre-Use Hours" document if it exists
-                        pre_use_link_doc = frappe.get_all("Pre-Use Hours", filters={
-                            "location": site["name"],
-                            "shift_date": shift_date,
-                            "shift": shift,
-                            "docstatus": 1  # Only fetch submitted documents
-                        }, fields=["name"], limit=1)
-                        pre_use_link = pre_use_link_doc[0]["name"] if pre_use_link_doc else None
-                        
-                        if doc_exists:
-                            # Update existing document with pre_use_link if missing
-                            existing_doc = frappe.get_doc("Availability and Utilisation", doc_exists)
-                            if not existing_doc.pre_use_link and pre_use_link:
-                                existing_doc.pre_use_link = pre_use_link
-                                existing_doc.save(ignore_permissions=True)
-                                updated_records.append(existing_doc.name)
-                        else:
-                            # Create a new Availability and Utilisation document
-                            try:
-                                doc = frappe.get_doc({
-                                    "doctype": "Availability and Utilisation",
-                                    "production_site": site["name"],
-                                    "location": site["name"],
-                                    "shift_date": shift_date,
-                                    "shift": shift,
-                                    "asset_name": asset["asset_name"],
-                                    "pre_use_link": pre_use_link  # Set pre_use_link if available
-                                })
-                                doc.insert(ignore_permissions=True)
-                                created_records.append(doc.name)
-                            except Exception as e:
-                                # Log the error if the document creation fails
-                                frappe.log_error(f"Error creating Availability and Utilisation for asset {asset['asset_name']} on {shift_date}, shift {shift}: {str(e)}")
-
-        # Move to the next day
-        current_date = add_days(current_date, 1)
-
-    try:
-        frappe.db.commit()  # Commit the database transactions
-    except Exception as e:
-        # Log an error if commit fails
-        frappe.log_error(f"Database commit failed: {str(e)}")
-        return "Error: Database commit failed"
-
-    return {
-        "created_records": created_records,
-        "updated_records": updated_records
-    }  # Return the list of created and updated document names
+    result_message = AvailabilityandUtilisation.generate_records()
+    return result_message

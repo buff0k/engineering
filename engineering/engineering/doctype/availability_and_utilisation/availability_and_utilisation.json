@@ -12,6 +12,8 @@
   "shift_date",
   "shift",
   "asset_name",
+  "column_break_ehgi",
+  "pre_use_lookup",
   "pre_use_link"
  ],
  "fields": [
@@ -24,18 +26,18 @@
   },
   {
    "fieldname": "shift",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Shift"
+   "label": "Shift",
+   "options": "A\nB\nC"
   },
   {
    "fieldname": "asset_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Plant No.",
-   "options": "Asset"
+   "label": "Plant No."
   },
   {
    "fieldname": "pre_use_link",
@@ -59,16 +61,25 @@
   },
   {
    "fieldname": "location",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Production Site",
-   "options": "Production Sites"
+   "label": "Production Site"
+  },
+  {
+   "fieldname": "pre_use_lookup",
+   "fieldtype": "Data",
+   "label": "Pre Use Lookup",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ehgi",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-10 16:21:04.983134",
+ "modified": "2024-11-15 09:08:53.234990",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",
