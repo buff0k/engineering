@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{asset_name}-{breakdown_start_date}-{breakdown_start_time}",
+ "autoname": "format:{asset_name}-{creation}",
  "creation": "2024-11-08 13:06:09.494040",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,20 +12,10 @@
   "item_name",
   "asset_category",
   "column_break_xnrp",
-  "breakdown_start_date",
-  "breakdown_start_time",
-  "breakdown_status",
-  "breakdown_status_description",
   "hours_breakdown_start",
+  "breakdown_status",
   "section_break_sbau",
   "breakdown_reason_updates",
-  "tab_2_tab",
-  "section_break_clzv",
-  "last_pre_use_prod_shift_date",
-  "last_pre_use_prod_shift",
-  "column_break_jxph",
-  "last_pre_use_hours_start",
-  "last_pre_use_avail_status",
   "breakdown_history_tab",
   "breakdown_history"
  ],
@@ -41,57 +31,24 @@
   },
   {
    "fieldname": "asset_name",
-   "fieldtype": "Link",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Plant No.",
-   "options": "Asset"
+   "label": "Plant No."
   },
   {
    "fieldname": "column_break_xnrp",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "breakdown_start_date",
-   "fieldtype": "Date",
-   "label": "Breakdown Start Date",
-   "reqd": 1
-  },
-  {
-   "fieldname": "breakdown_start_time",
-   "fieldtype": "Time",
-   "label": "Breakdown Start Time"
-  },
-  {
+   "description": "Breakdown is recorded with Status 1 (Reported) and comes to an end with status 3 (Resolved). Thus the time in hours from status 1 to status 3 is the recorded breakdown hours of the plant. The system will automatically record the date and time when a status was changed. Status can only change from 1 (Reported) to 2 (In Progress) to 3 (Resolved).",
    "fieldname": "breakdown_status",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Breakdown Status",
-   "options": "Breakdown Status",
+   "options": "1\n2\n3",
    "reqd": 1
-  },
-  {
-   "fetch_from": "breakdown_status.breakdown_status",
-   "fieldname": "breakdown_status_description",
-   "fieldtype": "Read Only",
-   "label": "Breakdown Status Description"
-  },
-  {
-   "fieldname": "section_break_clzv",
-   "fieldtype": "Section Break",
-   "label": "Last Pre-use Data"
-  },
-  {
-   "fieldname": "last_pre_use_prod_shift_date",
-   "fieldtype": "Read Only",
-   "label": "Last Pre-Use Production Shift Date",
-   "read_only": 1
-  },
-  {
-   "fieldname": "last_pre_use_prod_shift",
-   "fieldtype": "Read Only",
-   "label": "Last Pre-Use Production Shift"
   },
   {
    "fieldname": "hours_breakdown_start",
@@ -99,20 +56,6 @@
    "label": "Hours at Breakdown Start",
    "precision": "1",
    "reqd": 1
-  },
-  {
-   "fieldname": "column_break_jxph",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "last_pre_use_hours_start",
-   "fieldtype": "Read Only",
-   "label": "Last Pre-use Production Hours Start"
-  },
-  {
-   "fieldname": "last_pre_use_avail_status",
-   "fieldtype": "Read Only",
-   "label": "Last Pre Use Availability Status"
   },
   {
    "fetch_from": "asset_name.item_name",
@@ -136,11 +79,6 @@
    "label": "Breakdown Details"
   },
   {
-   "fieldname": "tab_2_tab",
-   "fieldtype": "Tab Break",
-   "label": "Last Pre-Use Data"
-  },
-  {
    "fieldname": "breakdown_history_tab",
    "fieldtype": "Tab Break",
    "label": "Breakdown History"
@@ -160,7 +98,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-09 12:08:56.289014",
+ "modified": "2024-11-18 20:22:23.185378",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown",

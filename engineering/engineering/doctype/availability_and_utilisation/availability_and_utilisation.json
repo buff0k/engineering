@@ -14,7 +14,17 @@
   "asset_name",
   "column_break_ehgi",
   "pre_use_lookup",
-  "pre_use_link"
+  "pre_use_link",
+  "hour_analysis_section",
+  "shift_required_hours",
+  "shift_start_hours",
+  "shift_end_hours",
+  "shift_working_hours",
+  "column_break_nlfm",
+  "shift_breakdown_hours",
+  "shift_available_hours",
+  "plant_shift_availability",
+  "plant_shift_utilisation"
  ],
  "fields": [
   {
@@ -30,7 +40,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Shift",
-   "options": "A\nB\nC"
+   "options": "Day\nMorning\nAfternoon\nNight"
   },
   {
    "fieldname": "asset_name",
@@ -43,7 +53,8 @@
    "fieldname": "pre_use_link",
    "fieldtype": "Link",
    "label": "Pre-Use Link",
-   "options": "Pre-Use Hours"
+   "options": "Pre-Use Hours",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_tshf",
@@ -75,11 +86,76 @@
   {
    "fieldname": "column_break_ehgi",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hour_analysis_section",
+   "fieldtype": "Section Break",
+   "label": "Plant Hour Analysis"
+  },
+  {
+   "fieldname": "shift_required_hours",
+   "fieldtype": "Float",
+   "label": "Shift Required Hours",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nlfm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shift_start_hours",
+   "fieldtype": "Float",
+   "label": "Shift Start Hours",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shift_end_hours",
+   "fieldtype": "Float",
+   "label": "Shift End Hours",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shift_working_hours",
+   "fieldtype": "Float",
+   "label": "Shift Working Hours",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shift_breakdown_hours",
+   "fieldtype": "Float",
+   "label": "Shift Breakdown Hours",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shift_available_hours",
+   "fieldtype": "Float",
+   "label": "Shift Available Hours",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plant_shift_availability",
+   "fieldtype": "Percent",
+   "label": "Plant Shift Availability",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plant_shift_utilisation",
+   "fieldtype": "Percent",
+   "label": "Plant Shift Utilisation",
+   "precision": "1",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-15 09:08:53.234990",
+ "modified": "2024-11-17 10:12:16.400921",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",
