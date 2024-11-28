@@ -14,14 +14,15 @@ def execute(filters=None):
         {"label": "Breakdown Reason Updates", "fieldname": "breakdown_reason_updates", "fieldtype": "Text", "width": 200},
         {"label": "Breakdown Status", "fieldname": "breakdown_status", "fieldtype": "Data", "width": 150},
         {"label": "Breakdown Start Hours", "fieldname": "breakdown_start_hours", "fieldtype": "Float", "width": 150},
-        {"label": "Breakdown Hours", "fieldname": "breakdown_hours", "fieldtype": "Float", "width": 150}
+    	{"label": "Timeclock", "fieldname": "timeclock", "fieldtype": "Data", "width": 150},
+        {"label": "Breakdown Resolved", "breakdown_resolved": "breakdown_resolved", "fieldtype": "Check", "width": 150}
     ]
 
     # Fetch data from Breakdown History child table only, ordered by Date
     data = frappe.db.sql("""
         SELECT 
             bh.update_by, bh.date, bh.time, bh.location, bh.asset_name,
-            bh.breakdown_reason_updates, bh.breakdown_status, bh.breakdown_start_hours, bh.breakdown_hours
+            bh.breakdown_reason_updates, bh.breakdown_status, bh.breakdown_start_hours, bh.timeclock, bh.breakdown_resolved
         FROM 
             `tabBreakdown History` AS bh
         ORDER BY 

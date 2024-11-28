@@ -12,9 +12,11 @@
   "shift_date",
   "shift",
   "asset_name",
+  "item_name",
   "column_break_ehgi",
   "pre_use_lookup",
   "pre_use_link",
+  "shift_system",
   "hour_analysis_section",
   "shift_required_hours",
   "shift_start_hours",
@@ -96,7 +98,7 @@
    "fieldname": "shift_required_hours",
    "fieldtype": "Float",
    "label": "Shift Required Hours",
-   "precision": "1",
+   "precision": "3",
    "read_only": 1
   },
   {
@@ -121,21 +123,21 @@
    "fieldname": "shift_working_hours",
    "fieldtype": "Float",
    "label": "Shift Working Hours",
-   "precision": "1",
+   "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "shift_breakdown_hours",
    "fieldtype": "Float",
    "label": "Shift Breakdown Hours",
-   "precision": "1",
+   "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "shift_available_hours",
    "fieldtype": "Float",
    "label": "Shift Available Hours",
-   "precision": "1",
+   "precision": "4",
    "read_only": 1
   },
   {
@@ -151,11 +153,22 @@
    "label": "Plant Shift Utilisation",
    "precision": "1",
    "read_only": 1
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
+   "label": "Model"
+  },
+  {
+   "fieldname": "shift_system",
+   "fieldtype": "Data",
+   "label": "Shift System",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-17 10:12:16.400921",
+ "modified": "2024-11-24 16:37:09.174537",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",

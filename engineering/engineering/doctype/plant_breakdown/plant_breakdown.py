@@ -30,30 +30,30 @@ class PlantBreakdown(Document):
 
         # Update breakdown history if any field changes
         if self.fields_have_changed(previous_doc):
-            self.update_breakdown_history(current_status)
+            self.append_breakdown_history(current_status)
 
-        # Check all history rows if breakdown_status is changed to 3
+        # Automatically mark all breakdown_resolved fields as checked if changing to status '3'
         if current_status == '3':
-            self.mark_history_as_closed()
+            for entry in self.breakdown_history:
+                entry.breakdown_resolved = 1
 
-        # Update the timeclock field in history
-        self.update_timeclock()
+        # Calculate timeclock
+        self.calculate_timeclock()
 
-    def update_breakdown_history(self, current_status):
-        """Update the breakdown history child table."""
-        now_date = frappe.utils.nowdate()
-        now_time = frappe.utils.nowtime()
+    def append_breakdown_history(self, current_status):
+        """Append a new entry to the breakdown history child table."""
+        current_timestamp = frappe.utils.now_datetime()
         user = frappe.session.user
 
-        # Create a new history entry
+        # Create a new history entry with all required fields
         new_entry = {
             "update_by": user,
-            "date": now_date,
-            "time": now_time,
+            "update_date_time": current_timestamp,
             "location": self.location,
             "asset_name": self.asset_name,
             "breakdown_reason_updates": self.breakdown_reason_updates or '',
             "breakdown_status": current_status,
+            "breakdown_start_hours": self.hours_breakdown_start or 0,
         }
 
         # Append the new entry to the child table
@@ -78,33 +78,41 @@ class PlantBreakdown(Document):
 
         return False
 
-    def mark_history_as_closed(self):
-        """Mark all rows in the breakdown_history table as closed."""
-        for entry in self.breakdown_history:
-            entry.breakdown_closed = 1
+    def calculate_timeclock(self):
+        """Calculate the total time difference between the first and last rows."""
+        if not self.breakdown_history or len(self.breakdown_history) < 2:
+            return  # Skip calculation if no rows or only one row exists
 
-    def update_timeclock(self):
-        """Update the timeclock field in the breakdown_history table."""
-        if len(self.breakdown_history) < 2:
-            return  # No calculation needed for fewer than 2 rows
+        first_entry = self.breakdown_history[0]
+        last_entry = self.breakdown_history[-1]
 
         try:
-            # Parse date and time from the first and last rows
-            first_entry = self.breakdown_history[0]
-            last_entry = self.breakdown_history[-1]
-
-            first_datetime = datetime.strptime(f"{first_entry.date} {first_entry.time}", '%Y-%m-%d %H:%M:%S.%f')
-            last_datetime = datetime.strptime(f"{last_entry.date} {last_entry.time}", '%Y-%m-%d %H:%M:%S.%f')
-
-            # Calculate duration in hours
-            duration = (last_datetime - first_datetime).total_seconds() / 3600
-            duration = round(duration, 2)  # Round to 2 decimal places
-
-            # Update the timeclock field for all rows
-            for entry in self.breakdown_history:
-                entry.timeclock = duration
-        except ValueError as e:
-            frappe.log_error(
-                title="Timeclock Calculation Error",
-                message=f"Error: {str(e)}, First Entry: {first_entry}, Last Entry: {last_entry}"
+            # Handle cases where update_date_time might be a string or datetime object
+            first_time = (
+                first_entry.update_date_time 
+                if isinstance(first_entry.update_date_time, datetime) 
+                else datetime.strptime(first_entry.update_date_time, '%Y-%m-%d %H:%M:%S.%f')
             )
+            last_time = (
+                last_entry.update_date_time 
+                if isinstance(last_entry.update_date_time, datetime) 
+                else datetime.strptime(last_entry.update_date_time, '%Y-%m-%d %H:%M:%S.%f')
+            )
+
+            total_duration = last_time - first_time
+
+            # Calculate days, hours, and minutes
+            days = total_duration.days
+            hours, remainder = divmod(total_duration.seconds, 3600)
+            minutes = remainder // 60
+
+            # Construct the timeclock value in days, hours, and minutes
+            timeclock_value = f"{days} day{'s' if days != 1 else ''}, {hours} hour{'s' if hours != 1 else ''}, {minutes} minute{'s' if minutes != 1 else ''}"
+            last_entry.timeclock = timeclock_value
+        except Exception as e:
+            # Log an error if there's an issue
+            frappe.log_error(
+                title="Date-Time Parsing Error in Timeclock Calculation",
+                message=f"Error: {str(e)}, First Entry: {first_entry.update_date_time}, Last Entry: {last_entry.update_date_time}"
+            )
+            last_entry.timeclock = "Error calculating timeclock"
