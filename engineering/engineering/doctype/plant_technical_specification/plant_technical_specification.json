@@ -87,7 +87,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-30 20:34:03.194793",
+ "modified": "2024-12-06 09:34:49.221161",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Technical Specification",
@@ -124,47 +124,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Engineering Clerk",
-   "select": 1,
-   "share": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering Administrator",
-   "select": 1,
-   "share": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering Supervisor",
-   "select": 1,
-   "share": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Production Manager",
-   "select": 1,
-   "share": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Production User",
+   "role": "Engineering User",
    "select": 1,
    "share": 1
   }

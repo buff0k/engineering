@@ -5,6 +5,24 @@ app_description = "Engineering Workflows and Maintenance Tasks"
 app_email = "buff0k@buff0k.co.za"
 app_license = "mit"
 required_apps = ["frappe/erpnext"]
+fixtures = [
+        {"dt": "Role", "filters": [
+            [
+            "name", "in", [
+                    "Engineering Manager",
+                    "Engineering User"
+    		       ]
+                ]
+            ]},
+        {"dt": "Custom DocPerm", "filters": [
+            [
+            "role", "in", [
+                    "Engineering Manager",
+                    "Engineering User"
+    		       ]
+                ]
+            ]}
+        ]
 scheduler_events = {
     "cron": {
         "40 5 * * *": [
