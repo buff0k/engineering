@@ -17,7 +17,8 @@
   "section_break_sbau",
   "breakdown_reason_updates",
   "breakdown_history_tab",
-  "breakdown_history"
+  "breakdown_history",
+  "history_change_log"
  ],
  "fields": [
   {
@@ -94,11 +95,17 @@
    "fieldtype": "Table",
    "label": "Breakdown history",
    "options": "Breakdown History"
+  },
+  {
+   "fieldname": "history_change_log",
+   "fieldtype": "Text Editor",
+   "label": "History Change Log",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-18 20:22:23.185378",
+ "modified": "2024-12-06 08:59:36.654979",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown",
@@ -114,6 +121,42 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   }

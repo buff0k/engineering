@@ -3,6 +3,7 @@ from frappe.utils import getdate, add_days, today, formatdate, get_first_day, ge
 from datetime import timedelta
 from frappe.model.document import Document
 
+
 class AvailabilityandUtilisation(Document):
     @staticmethod
     def generate_records():
@@ -17,79 +18,108 @@ class AvailabilityandUtilisation(Document):
         # Phase 1: Create or Update Availability and Utilisation documents for the last 7 days
         production_planning_records = frappe.get_all(
             "Monthly Production Planning",
-            filters={"site_status": "Producing"},
-            fields=["location", "prod_month_end", "shift_system"]
+            filters={
+                "site_status": "Producing",
+                "prod_month_end": [">=", get_first_day(current_date - timedelta(days=7))],
+                "prod_month_end": ["<=", get_last_day(current_date)],
+            },
+            fields=["location", "prod_month_end", "shift_system"],
+            order_by="prod_month_end asc",  # Ensure earlier records are processed first
         )
 
         start_date = current_date - timedelta(days=7)
         end_date = current_date
 
-        for planning_record in production_planning_records:
-            location = planning_record.location
-            shift_system = planning_record.shift_system
+        # Iterate through each day in the last 7 days
+        date = start_date
+        while date <= end_date:
+            for planning_record in production_planning_records:
+                location = planning_record.location
+                shift_system = planning_record.shift_system
+                prod_month_end = planning_record.prod_month_end
 
-            # Get assets linked to the location with specific categories and docstatus = 1
-            assets = frappe.get_all(
-                "Asset",
-                filters={
-                    "location": location,
-                    "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
-                    "docstatus": 1  # Only submitted assets
-                },
-                fields=["name", "asset_name"]
-            )
+                # Ensure this planning record applies to the current date
+                if getdate(date) <= getdate(prod_month_end):
+                    frappe.log_error(
+                        f"Date: {date}, Location: {location}, Using Shift System: {shift_system}, Prod Month-End: {prod_month_end}",
+                        "Date-Specific Shift System Match",
+                    )
 
-            date = start_date
-            while date <= end_date:
-                if date.weekday() == 6:  # Skip Sundays
-                    date = add_days(date, 1)
-                    continue
+                    # Fetch assets for the location
+                    assets = frappe.get_all(
+                        "Asset",
+                        filters={
+                            "location": location,
+                            "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
+                            "docstatus": 1,
+                        },
+                        fields=["name", "asset_name"],
+                    )
 
-                shifts = ["Day", "Night"] if shift_system == "2x12Hour" else ["Morning", "Afternoon", "Night"]
+                    # Determine shifts based on the applicable shift system
+                    shifts = ["Day", "Night"] if shift_system.strip().lower() == "2x12hour" else ["Morning", "Afternoon", "Night"]
 
-                for shift in shifts:
-                    for asset in assets:
-                        try:
-                            # Check if the record already exists
-                            existing_record = frappe.get_all(
-                                "Availability and Utilisation",
-                                filters={
-                                    "shift_date": date,
-                                    "location": location,
-                                    "shift": shift,
-                                    "asset_name": asset.asset_name
-                                },
-                                fields=["name"],
-                                limit=1
-                            )
+                    frappe.log_error(
+                        f"Date: {date}, Location: {location}, Shifts: {shifts}",
+                        "Shift Determination Debug",
+                    )
 
-                            if existing_record:
-                                # Update the existing record
-                                doc = frappe.get_doc("Availability and Utilisation", existing_record[0].name)
-                                doc.pre_use_lookup = None  # Reset if needed
-                                doc.pre_use_link = None
-                                doc.save(ignore_permissions=True)
-                                updated_records.append(doc.name)
-                            else:
-                                # Create a new record
-                                doc = frappe.get_doc({
-                                    "doctype": "Availability and Utilisation",
-                                    "shift_date": date,
-                                    "shift": shift,
-                                    "asset_name": asset.asset_name,
-                                    "location": location,
-                                    "shift_system": planning_record.shift_system,
-                                    "pre_use_lookup": None,
-                                    "pre_use_link": None
-                                })
-                                doc.insert(ignore_permissions=True)
-                                created_records.append(doc.name)
-                        except Exception as e:
-                            error_message = f"Error processing document on {date} - Shift {shift} for Asset {asset.asset_name} at {location}: {str(e)}"
-                            frappe.log_error(error_message, "Avail. & Util. Processing Error")
-                            error_records.append(error_message)
+                    # Create or update records for each shift
+                    for shift in shifts:
+                        for asset in assets:
+                            try:
+                                existing_record = frappe.get_all(
+                                    "Availability and Utilisation",
+                                    filters={
+                                        "shift_date": date,
+                                        "location": location,
+                                        "shift": shift,
+                                        "asset_name": asset.asset_name,
+                                    },
+                                    fields=["name"],
+                                    limit=1,
+                                )
 
-                date = add_days(date, 1)
+                                if existing_record:
+                                    # Update the existing record
+                                    doc = frappe.get_doc("Availability and Utilisation", existing_record[0].name)
+                                    doc.pre_use_lookup = None  # Reset if needed
+                                    doc.pre_use_link = None
+                                    doc.save(ignore_permissions=True)
+                                    updated_records.append(doc.name)
+
+                                    frappe.log_error(
+                                        f"Updated Record: {doc.name}, Shift: {shift}, Date: {date}, Location: {location}",
+                                        "Record Update Debug",
+                                    )
+                                else:
+                                    # Create a new record
+                                    doc = frappe.get_doc({
+                                        "doctype": "Availability and Utilisation",
+                                        "shift_date": date,
+                                        "shift": shift,
+                                        "asset_name": asset.asset_name,
+                                        "location": location,
+                                        "shift_system": shift_system,
+                                        "pre_use_lookup": None,
+                                        "pre_use_link": None,
+                                    })
+                                    doc.insert(ignore_permissions=True)
+                                    created_records.append(doc.name)
+
+                                    frappe.log_error(
+                                        f"Created Record: {doc.name}, Shift: {shift}, Date: {date}, Location: {location}",
+                                        "Record Creation Debug",
+                                    )
+                            except Exception as e:
+                                error_message = (
+                                    f"Error processing document on {date} - Shift {shift} for Asset {asset.asset_name} at {location}: {str(e)}"
+                                )
+                                frappe.log_error(error_message, "Avail. & Util. Processing Error")
+                                error_records.append(error_message)
+                    break  # Exit loop after processing the matching planning record
+
+            date = add_days(date, 1)  # Move to the next day
 
         # Phase 2: Update pre_use_lookup field
         for doc_name in created_records + updated_records:
@@ -260,12 +290,17 @@ class AvailabilityandUtilisation(Document):
                 frappe.log_error(error_message, "Item Name Update Error")
                 error_records.append(error_message)
 
+        # Continue consistent indentation for the remaining phases...
+
         # Phase 7: Update shift_breakdown_hours
         parent_records = frappe.get_all(
-            'Availability and Utilisation',
+            "Availability and Utilisation",
             filters={},
-            fields=['name', 'shift_date', 'shift', 'shift_system', 'location', 'asset_name', 'shift_breakdown_hours'],
-            order_by='creation desc',
+            fields=[
+                "name", "shift_date", "shift", "shift_system",
+                "location", "asset_name", "shift_breakdown_hours"
+            ],
+            order_by="creation desc",
             limit=21  # Process all records from the last 7 days
         )
 
@@ -273,13 +308,13 @@ class AvailabilityandUtilisation(Document):
             try:
                 # Fetch breakdown_history child table rows from Plant Breakdown
                 breakdown_history_rows = frappe.get_all(
-                    'Breakdown History',
+                    "Breakdown History",
                     filters={
-                        'location': parent_record['location'],  # Match location in child table
-                        'asset_name': parent_record['asset_name'],  # Match asset_name in child table
+                        "location": parent_record["location"],  # Match location in child table
+                        "asset_name": parent_record["asset_name"]  # Match asset_name in child table
                     },
-                    fields=['update_date_time', 'breakdown_status'],
-                    order_by='update_date_time'
+                    fields=["update_date_time", "breakdown_status"],
+                    order_by="update_date_time"
                 )
 
                 if not breakdown_history_rows:
@@ -295,17 +330,17 @@ class AvailabilityandUtilisation(Document):
 
                 # Determine shift timings
                 shift_start, shift_end = get_shift_timings(
-                    parent_record['shift_system'], parent_record['shift'], str(parent_record['shift_date'])
+                    parent_record["shift_system"], parent_record["shift"], str(parent_record["shift_date"])
                 )
 
                 # Initialize variables for breakdown hours calculation
-                breakdown_start = breakdown_history_rows[0]['update_date_time']  # First row is always breakdown_start
+                breakdown_start = breakdown_history_rows[0]["update_date_time"]  # First row is always breakdown_start
                 breakdown_end = None  # To be determined
 
                 # Identify breakdown_end
                 for row in breakdown_history_rows:
-                    if row['breakdown_status'] == '3':  # Breakdown resolved
-                        breakdown_end = row['update_date_time']
+                    if row["breakdown_status"] == "3":  # Breakdown resolved
+                        breakdown_end = row["update_date_time"]
 
                 # If no explicit breakdown_end (status 3), assume ongoing breakdown until shift_end
                 if not breakdown_end:
@@ -342,7 +377,7 @@ class AvailabilityandUtilisation(Document):
 
                 # Always update shift_breakdown_hours
                 frappe.db.set_value(
-                    'Availability and Utilisation', parent_record['name'], 'shift_breakdown_hours', shift_breakdown_hours
+                    "Availability and Utilisation", parent_record["name"], "shift_breakdown_hours", shift_breakdown_hours
                 )
 
                 # Log success
@@ -354,9 +389,6 @@ class AvailabilityandUtilisation(Document):
                     f"Shift End: {shift_end.strftime('%Y-%m-%d %H:%M:%S') if shift_end else 'None'}\n"
                     f"Breakdown Start: {breakdown_start.strftime('%Y-%m-%d %H:%M:%S') if breakdown_start else 'None'}\n"
                     f"Breakdown End: {breakdown_end.strftime('%Y-%m-%d %H:%M:%S') if breakdown_end else 'None'}\n"
-                    f"First Row Update DateTime: {breakdown_history_rows[0]['update_date_time'] if breakdown_history_rows else 'None'}\n"
-                    f"First Row Breakdown Status: {breakdown_history_rows[0]['breakdown_status'] if breakdown_history_rows else 'None'}\n"
-                    f"Last Row Breakdown Status: {breakdown_history_rows[-1]['breakdown_status'] if breakdown_history_rows else 'None'}\n"
                     f"Scenario: {scenario} | Shift Breakdown Hours Updated Successfully: {shift_breakdown_hours}"
                 )
                 frappe.log_error(log_message, "Phase 7 Update Success")
@@ -372,10 +404,54 @@ class AvailabilityandUtilisation(Document):
                 )
                 frappe.log_error(error_message, "Shift Breakdown Hours Update Error")
 
+        # Phase 8: Calculate and set shift_available_hours, plant_shift_utilisation, and plant_shift_availability
+        for doc_name in created_records + updated_records:
+            try:
+                doc = frappe.get_doc("Availability and Utilisation", doc_name)
+
+                # Ensure shift_required_hours is non-zero to avoid division errors
+                shift_required_hours = doc.shift_required_hours or 0
+                shift_breakdown_hours = doc.shift_breakdown_hours or 0
+                shift_working_hours = doc.shift_working_hours or 0
+
+                # Calculate shift_available_hours
+                shift_available_hours = max(shift_required_hours - shift_breakdown_hours, 0)
+                doc.shift_available_hours = shift_available_hours
+
+                # Calculate plant_shift_utilisation (as a percentage)
+                if shift_required_hours > 0:
+                    doc.plant_shift_utilisation = (shift_working_hours / shift_required_hours) * 100
+                else:
+                    doc.plant_shift_utilisation = 0  # Default to 0 if required hours are zero
+
+                # Calculate plant_shift_availability (as a percentage)
+                if shift_required_hours > 0:
+                    doc.plant_shift_availability = (shift_available_hours / shift_required_hours) * 100
+                else:
+                    doc.plant_shift_availability = 0  # Default to 0 if required hours are zero
+
+                # Save the updated fields
+                doc.save(ignore_permissions=True)
+
+                # Log success
+                frappe.log_error(
+                    f"Phase 8: Calculated and updated fields for {doc_name}:\n"
+                    f"Shift Available Hours: {shift_available_hours}\n"
+                    f"Plant Shift Utilisation: {doc.plant_shift_utilisation}\n"
+                    f"Plant Shift Availability: {doc.plant_shift_availability}",
+                    "Phase 8 Update Success"
+                )
+
+            except Exception as e:
+                error_message = f"Error updating Phase 8 fields for document {doc_name}: {str(e)}"
+                frappe.log_error(error_message, "Phase 8 Error")
+                error_records.append(error_message)
+
+
         # Log completion message
         success_message = (
             f"Successfully created {len(created_records)} records. "
-            f"Updated {len(updated_records)} records in Phase 7."
+            f"Updated {len(updated_records)} records."
         )
         if error_records:
             success_message += "\nErrors encountered. Check the error log for details."
@@ -398,7 +474,7 @@ def get_shift_timings(shift_system, shift, shift_date):
             shift_end = get_datetime(shift_date + " 22:00:00")
         elif shift == "Night":
             shift_start = get_datetime(shift_date + " 22:00:00")
-            next_day = (getdate(shift_date) + timedelta(days=1)).strftime('%Y-%m-%d')
+            next_day = (getdate(shift_date) + timedelta(days=1)).strftime("%Y-%m-%d")
             shift_end = get_datetime(next_day + " 06:00:00")
     elif shift_system == "2x12Hour":
         if shift == "Day":
@@ -406,7 +482,7 @@ def get_shift_timings(shift_system, shift, shift_date):
             shift_end = get_datetime(shift_date + " 18:00:00")
         elif shift == "Night":
             shift_start = get_datetime(shift_date + " 18:00:00")
-            next_day = (getdate(shift_date) + timedelta(days=1)).strftime('%Y-%m-%d')
+            next_day = (getdate(shift_date) + timedelta(days=1)).strftime("%Y-%m-%d")
             shift_end = get_datetime(next_day + " 06:00:00")
 
     return shift_start, shift_end
@@ -416,3 +492,10 @@ def get_shift_timings(shift_system, shift, shift_date):
 def create_availability_and_utilisation():
     result_message = AvailabilityandUtilisation.generate_records()
     return result_message
+
+@frappe.whitelist()
+def run_daily():
+    # Run the availability and utilisation engine
+    frappe.log_error("Scheduled job started at 05:40 AM for Availability and Utilisation", "Daily Job Start")
+    AvailabilityandUtilisation.generate_records()
+    frappe.log_error("Scheduled job completed for Availability and Utilisation", "Daily Job Completion")

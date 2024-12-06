@@ -5,7 +5,13 @@ app_description = "Engineering Workflows and Maintenance Tasks"
 app_email = "buff0k@buff0k.co.za"
 app_license = "mit"
 required_apps = ["frappe/erpnext"]
-
+scheduler_events = {
+    "cron": {
+        "40 5 * * *": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
+        ]
+    }
+}
 # Includes in <head>
 # ------------------
 
