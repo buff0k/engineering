@@ -420,7 +420,7 @@ class AvailabilityandUtilisation(Document):
 
                 # Calculate plant_shift_utilisation (as a percentage)
                 if shift_required_hours > 0:
-                    doc.plant_shift_utilisation = (shift_working_hours / shift_required_hours) * 100
+                    doc.plant_shift_utilisation = (shift_working_hours / shift_available_hours) * 100
                 else:
                     doc.plant_shift_utilisation = 0  # Default to 0 if required hours are zero
 
