@@ -1,0 +1,195 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Forms\",\"col\":4}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":4}},{\"id\":\"Pp7z5uyrsj\",\"type\":\"card\",\"data\":{\"card_name\":\"Stock Control\",\"col\":4}},{\"id\":\"BM-4qGU2LM\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Availability\",\"col\":4}}]",
+ "creation": "2024-12-11 11:58:53.866876",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "tool",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Engineering",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Forms",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Component Replacement Report",
+   "link_count": 0,
+   "link_to": "Component Replacement Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Maintenance",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset",
+   "link_count": 0,
+   "link_to": "Asset",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Movement",
+   "link_count": 0,
+   "link_to": "Asset Movement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Maintenance",
+   "link_count": 0,
+   "link_to": "Asset Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Repair",
+   "link_count": 0,
+   "link_to": "Asset Repair",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Technical Specification",
+   "link_count": 0,
+   "link_to": "Plant Technical Specification",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Control",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Alternative",
+   "link_count": 0,
+   "link_to": "Item Alternative",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Warehouse",
+   "link_count": 0,
+   "link_to": "Warehouse",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Breakdown",
+   "link_count": 0,
+   "link_to": "Plant Breakdown",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Availability",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Availability and Utilisation",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2024-12-11 12:02:40.276267",
+ "modified_by": "eben@isambane.co.za",
+ "module": "Engineering",
+ "name": "Engineering",
+ "number_cards": [],
+ "owner": "eben@isambane.co.za",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 44.0,
+ "shortcuts": [],
+ "title": "Engineering"
+}
