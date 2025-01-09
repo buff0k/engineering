@@ -4,24 +4,11 @@ app_publisher = "BuFf0k"
 app_description = "Engineering Workflows and Maintenance Tasks"
 app_email = "buff0k@buff0k.co.za"
 app_license = "mit"
-required_apps = ["frappe/erpnext"]
+required_apps = ["frappe/erpnext", "buff0k/is_production"]
 fixtures = [
-        {"dt": "Role", "filters": [
-            [
-            "name", "in", [
-                    "Engineering Manager",
-                    "Engineering User"
-    		       ]
-                ]
-            ]},
-        {"dt": "Custom DocPerm", "filters": [
-            [
-            "role", "in", [
-                    "Engineering Manager",
-                    "Engineering User"
-    		       ]
-                ]
-            ]}
+        {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User"]]]},
+        {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User"]]]},
+        {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]}
         ]
 scheduler_events = {
     "cron": {
