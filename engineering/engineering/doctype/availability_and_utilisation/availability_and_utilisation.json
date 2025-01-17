@@ -25,6 +25,7 @@
   "column_break_nlfm",
   "shift_breakdown_hours",
   "shift_available_hours",
+  "shift_other_lost_hours",
   "plant_shift_availability",
   "plant_shift_utilisation"
  ],
@@ -164,11 +165,18 @@
    "fieldtype": "Data",
    "label": "Shift System",
    "read_only": 1
+  },
+  {
+   "fieldname": "shift_other_lost_hours",
+   "fieldtype": "Float",
+   "label": "Shift other lost hours",
+   "precision": "3",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-06 09:05:00.474342",
+ "modified": "2025-01-15 14:04:04.109097",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",

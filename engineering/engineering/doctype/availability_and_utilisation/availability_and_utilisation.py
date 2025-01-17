@@ -404,7 +404,7 @@ class AvailabilityandUtilisation(Document):
                 )
                 frappe.log_error(error_message, "Shift Breakdown Hours Update Error")
 
-        # Phase 8: Calculate and set shift_available_hours, plant_shift_utilisation, and plant_shift_availability
+        # Phase 8: Calculate and set shift_available_hours, plant_shift_utilisation, plant_shift_availability, and shift_other_lost_hours
         for doc_name in created_records + updated_records:
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
@@ -417,6 +417,10 @@ class AvailabilityandUtilisation(Document):
                 # Calculate shift_available_hours
                 shift_available_hours = max(shift_required_hours - shift_breakdown_hours, 0)
                 doc.shift_available_hours = shift_available_hours
+
+                # Calculate shift_other_lost_hours
+                shift_other_lost_hours = max(shift_available_hours - shift_working_hours, 0)
+                doc.shift_other_lost_hours = shift_other_lost_hours
 
                 # Calculate plant_shift_utilisation (as a percentage)
                 if shift_required_hours > 0:
@@ -437,6 +441,7 @@ class AvailabilityandUtilisation(Document):
                 frappe.log_error(
                     f"Phase 8: Calculated and updated fields for {doc_name}:\n"
                     f"Shift Available Hours: {shift_available_hours}\n"
+                    f"Shift Other Lost Hours: {shift_other_lost_hours}\n"
                     f"Plant Shift Utilisation: {doc.plant_shift_utilisation}\n"
                     f"Plant Shift Availability: {doc.plant_shift_availability}",
                     "Phase 8 Update Success"
@@ -446,7 +451,6 @@ class AvailabilityandUtilisation(Document):
                 error_message = f"Error updating Phase 8 fields for document {doc_name}: {str(e)}"
                 frappe.log_error(error_message, "Phase 8 Error")
                 error_records.append(error_message)
-
 
         # Log completion message
         success_message = (
@@ -458,6 +462,7 @@ class AvailabilityandUtilisation(Document):
 
         frappe.log_error(success_message, "Process Completion")
         return success_message
+
 
 
 def get_shift_timings(shift_system, shift, shift_date):
