@@ -5,6 +5,18 @@ app_description = "Engineering Workflows and Maintenance Tasks"
 app_email = "buff0k@buff0k.co.za"
 app_license = "mit"
 required_apps = ["frappe/erpnext", "buff0k/is_production"]
+source_link = "http://github.com/buff0k/engineering"
+app_logo_url = "/assets/engineering/images/is-logo.svg"
+app_home = "/app/engineering"
+add_to_apps_screen = [
+	{
+		"name": "ir",
+		"logo": "/assets/engineering/images/is-logo.svg",
+		"title": "Engineering",
+		"route": "/app/engineering",
+		"has_permission": "engineering.engineering.utils.check_app_permission",
+	}
+]
 fixtures = [
         {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User"]]]},
         {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User"]]]},
