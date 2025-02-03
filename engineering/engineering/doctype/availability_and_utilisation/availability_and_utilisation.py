@@ -1,5 +1,14 @@
 import frappe
-from frappe.utils import getdate, add_days, today, formatdate, get_first_day, get_last_day, time_diff_in_hours, get_datetime
+from frappe.utils import (
+    getdate,
+    add_days,
+    today,
+    formatdate,
+    get_first_day,
+    get_last_day,
+    time_diff_in_hours,
+    get_datetime
+)
 from datetime import timedelta
 from frappe.model.document import Document
 
@@ -16,19 +25,22 @@ class AvailabilityandUtilisation(Document):
         frappe.log_error("Starting record generation for Availability and Utilisation", "Process Start")
 
         # Phase 1: Create or Update Availability and Utilisation documents for the last 7 days
+        start_date = current_date - timedelta(days=7)
+        end_date = current_date
+
+        # Fetch planning records that are in "Producing" status and whose production month range overlaps the 7-day window
         production_planning_records = frappe.get_all(
             "Monthly Production Planning",
             filters={
                 "site_status": "Producing",
-                "prod_month_end": [">=", get_first_day(current_date - timedelta(days=7))],
-                "prod_month_end": ["<=", get_last_day(current_date)],
+                # The planning record is considered if its production month starts on or before the end of our window...
+                "prod_month_start_date": ["<=", end_date],
+                # ...and its production month ends on or after the start of our window.
+                "prod_month_end_date": [">=", start_date],
             },
-            fields=["location", "prod_month_end", "shift_system"],
-            order_by="prod_month_end asc",  # Ensure earlier records are processed first
+            fields=["location", "prod_month_start_date", "prod_month_end_date", "shift_system"],
+            order_by="prod_month_start_date asc",  # Ensure earlier records are processed first
         )
-
-        start_date = current_date - timedelta(days=7)
-        end_date = current_date
 
         # Iterate through each day in the last 7 days
         date = start_date
@@ -36,12 +48,15 @@ class AvailabilityandUtilisation(Document):
             for planning_record in production_planning_records:
                 location = planning_record.location
                 shift_system = planning_record.shift_system
-                prod_month_end = planning_record.prod_month_end
+                prod_month_start_date = planning_record.prod_month_start_date
+                prod_month_end_date = planning_record.prod_month_end_date
 
-                # Ensure this planning record applies to the current date
-                if getdate(date) <= getdate(prod_month_end):
+                # Ensure this planning record applies to the current date:
+                # Process the record only if the current date falls within the production month range.
+                if (getdate(date) >= getdate(prod_month_start_date)) and (getdate(date) <= getdate(prod_month_end_date)):
                     frappe.log_error(
-                        f"Date: {date}, Location: {location}, Using Shift System: {shift_system}, Prod Month-End: {prod_month_end}",
+                        f"Date: {date}, Location: {location}, Using Shift System: {shift_system}, "
+                        f"Prod Month Start: {prod_month_start_date}, Prod Month End: {prod_month_end_date}",
                         "Date-Specific Shift System Match",
                     )
 
@@ -117,7 +132,8 @@ class AvailabilityandUtilisation(Document):
                                 )
                                 frappe.log_error(error_message, "Avail. & Util. Processing Error")
                                 error_records.append(error_message)
-                    break  # Exit loop after processing the matching planning record
+                    # Exit the planning records loop once a matching record has been applied for this date
+                    break
 
             date = add_days(date, 1)  # Move to the next day
 
@@ -177,11 +193,12 @@ class AvailabilityandUtilisation(Document):
                 location = doc.location
 
                 # Find the corresponding Monthly Production Planning document
+                # where the shift_date falls within the production month range
                 planning_doc = frappe.get_all(
                     "Monthly Production Planning",
                     filters={
-                        "prod_month_end": [">=", get_first_day(shift_date)],
-                        "prod_month_end": ["<=", get_last_day(shift_date)],
+                        "prod_month_start_date": ["<=", shift_date],
+                        "prod_month_end_date": [">=", shift_date],
                         "location": location
                     },
                     fields=["name"],
@@ -289,8 +306,6 @@ class AvailabilityandUtilisation(Document):
                 )
                 frappe.log_error(error_message, "Item Name Update Error")
                 error_records.append(error_message)
-
-        # Continue consistent indentation for the remaining phases...
 
         # Phase 7: Update shift_breakdown_hours
         parent_records = frappe.get_all(
@@ -464,7 +479,6 @@ class AvailabilityandUtilisation(Document):
         return success_message
 
 
-
 def get_shift_timings(shift_system, shift, shift_date):
     """Calculate shift start and end timings based on the system and shift."""
     shift_start = None
@@ -497,6 +511,7 @@ def get_shift_timings(shift_system, shift, shift_date):
 def create_availability_and_utilisation():
     result_message = AvailabilityandUtilisation.generate_records()
     return result_message
+
 
 @frappe.whitelist()
 def run_daily():
