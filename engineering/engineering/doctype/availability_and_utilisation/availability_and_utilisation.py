@@ -12,7 +12,6 @@ from frappe.utils import (
 from datetime import timedelta
 from frappe.model.document import Document
 
-
 class AvailabilityandUtilisation(Document):
     @staticmethod
     def generate_records():
@@ -27,9 +26,22 @@ class AvailabilityandUtilisation(Document):
                 record_logs[record_key] = []
             record_logs[record_key].append(message)
 
+        def get_doc_asset_item_name(doc_name):
+            """
+            Safely retrieve asset_name and item_name from an existing
+            'Availability and Utilisation' document. If not found, return Unknown.
+            """
+            try:
+                doc = frappe.get_doc("Availability and Utilisation", doc_name)
+                return (doc.asset_name or "Unknown", doc.item_name or "Unknown")
+            except:
+                return ("Unknown", "Unknown")
+
         current_date = getdate(today())
 
-        # ===== Phase 1: Create or Update Availability and Utilisation documents =====
+        # =============================================================================
+        # Phase 1: Create or Update Availability and Utilisation documents
+        # =============================================================================
         start_date = current_date - timedelta(days=7)
         end_date = current_date
 
@@ -53,6 +65,7 @@ class AvailabilityandUtilisation(Document):
                 prod_month_end_date = planning_record.prod_month_end_date
 
                 if (getdate(date) >= getdate(prod_month_start_date)) and (getdate(date) <= getdate(prod_month_end_date)):
+                    # Fetch Asset info, including item_name
                     assets = frappe.get_all(
                         "Asset",
                         filters={
@@ -60,7 +73,7 @@ class AvailabilityandUtilisation(Document):
                             "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
                             "docstatus": 1,
                         },
-                        fields=["name", "asset_name"],
+                        fields=["name", "asset_name", "item_name"],
                     )
 
                     shifts = (
@@ -91,7 +104,13 @@ class AvailabilityandUtilisation(Document):
                                     doc.pre_use_link = None
                                     doc.save(ignore_permissions=True)
                                     updated_records.append(doc.name)
-                                    append_log(doc.name, f"Updated record: {doc.name} for shift {shift} on {date}.")
+                                    append_log(
+                                        doc.name,
+                                        (
+                                            f"Phase 1: Updated record={doc.name}, shift={shift}, date={date}, "
+                                            f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                                        )
+                                    )
                                 else:
                                     doc = frappe.get_doc({
                                         "doctype": "Availability and Utilisation",
@@ -105,10 +124,18 @@ class AvailabilityandUtilisation(Document):
                                     })
                                     doc.insert(ignore_permissions=True)
                                     created_records.append(doc.name)
-                                    append_log(doc.name, f"Created record: {doc.name} for shift {shift} on {date}.")
+                                    append_log(
+                                        doc.name,
+                                        (
+                                            f"Phase 1: Created record={doc.name}, shift={shift}, date={date}, "
+                                            f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                                        )
+                                    )
                             except Exception as e:
+                                # Error before doc creation or update completed
                                 err_msg = (
-                                    f"Error processing asset {asset.asset_name} at {location} on {date} for shift {shift}: {str(e)}"
+                                    f"Phase 1 Error: asset_name={asset.asset_name}, item_name={asset.item_name}, "
+                                    f"location={location}, date={date}, shift={shift}: {str(e)}"
                                 )
                                 append_log(record_key, err_msg)
                                 error_records.append(err_msg)
@@ -116,20 +143,33 @@ class AvailabilityandUtilisation(Document):
 
             date = add_days(date, 1)
 
-        # ===== Phase 2: Update pre_use_lookup field =====
+        # =============================================================================
+        # Phase 2: Update pre_use_lookup field
+        # =============================================================================
         for doc_name in created_records + updated_records:
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
                 formatted_date = formatdate(doc.shift_date, "dd-mm-yyyy")
                 doc.pre_use_lookup = f"{doc.location}-{formatted_date}-{doc.shift}"
                 doc.save(ignore_permissions=True)
-                append_log(doc.name, "Phase 2: pre_use_lookup updated.")
+                append_log(
+                    doc.name,
+                    (
+                        f"Phase 2: pre_use_lookup updated for doc={doc.name}, "
+                        f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                    )
+                )
             except Exception as e:
-                err_msg = f"Phase 2 Error: {str(e)} updating pre_use_lookup for document {doc_name}."
+                asset_name, item_name = get_doc_asset_item_name(doc_name)
+                err_msg = (
+                    f"Phase 2 Error for doc={doc_name}, asset_name={asset_name}, item_name={item_name}: {str(e)}"
+                )
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
-        # ===== Phase 3: Update pre_use_link using pre_use_lookup =====
+        # =============================================================================
+        # Phase 3: Update pre_use_link using pre_use_lookup
+        # =============================================================================
         for doc_name in created_records + updated_records:
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
@@ -142,15 +182,32 @@ class AvailabilityandUtilisation(Document):
                 if matching_pre_use:
                     doc.pre_use_link = matching_pre_use[0].name
                     doc.save(ignore_permissions=True)
-                    append_log(doc.name, "Phase 3: pre_use_link updated.")
+                    append_log(
+                        doc.name,
+                        (
+                            f"Phase 3: pre_use_link updated for doc={doc.name}, "
+                            f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                        )
+                    )
                 else:
-                    append_log(doc.name, f"Phase 3: No matching Pre-Use Hours found for {doc.pre_use_lookup}.")
+                    append_log(
+                        doc.name,
+                        (
+                            f"Phase 3: No matching Pre-Use Hours found for {doc.pre_use_lookup}. "
+                            f"doc={doc.name}, asset_name={doc.asset_name}, item_name={doc.item_name}"
+                        )
+                    )
             except Exception as e:
-                err_msg = f"Phase 3 Error: {str(e)} updating pre_use_link for document {doc_name}."
+                asset_name, item_name = get_doc_asset_item_name(doc_name)
+                err_msg = (
+                    f"Phase 3 Error for doc={doc_name}, asset_name={asset_name}, item_name={item_name}: {str(e)}"
+                )
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
-        # ===== Phase 4: Update shift_required_hours =====
+        # =============================================================================
+        # Phase 4: Update shift_required_hours
+        # =============================================================================
         relevant_records = frappe.get_all(
             "Availability and Utilisation",
             filters={
@@ -189,14 +246,26 @@ class AvailabilityandUtilisation(Document):
                             elif doc.shift == "Afternoon":
                                 doc.shift_required_hours = day.shift_afternoon_hours
                             doc.save(ignore_permissions=True)
-                            append_log(doc.name, "Phase 4: shift_required_hours updated.")
+                            append_log(
+                                doc.name,
+                                (
+                                    f"Phase 4: shift_required_hours updated for doc={doc.name}, "
+                                    f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                                )
+                            )
                             break
             except Exception as e:
-                err_msg = f"Phase 4 Error: {str(e)} updating shift_required_hours for record {record.name}."
-                append_log(record.name, err_msg)
+                asset_name, item_name = get_doc_asset_item_name(record["name"])
+                err_msg = (
+                    f"Phase 4 Error for doc={record['name']}, asset_name={asset_name}, "
+                    f"item_name={item_name}: {str(e)}"
+                )
+                append_log(record["name"], err_msg)
                 error_records.append(err_msg)
 
-        # ===== Phase 5: Update from Pre-Use Hours =====
+        # =============================================================================
+        # Phase 5: Update from Pre-Use Hours
+        # =============================================================================
         for doc_name in created_records + updated_records:
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
@@ -214,19 +283,35 @@ class AvailabilityandUtilisation(Document):
                                 doc.shift_start_hours = asset_row.eng_hrs_start
                             if asset_row.eng_hrs_end is not None:
                                 doc.shift_end_hours = asset_row.eng_hrs_end
-                            if doc.shift_start_hours is not None and doc.shift_end_hours is not None:
-                                doc.shift_working_hours = max(0, doc.shift_end_hours - doc.shift_start_hours)
+                            if (
+                                doc.shift_start_hours is not None and
+                                doc.shift_end_hours is not None
+                            ):
+                                doc.shift_working_hours = max(
+                                    0, doc.shift_end_hours - doc.shift_start_hours
+                                )
                             else:
                                 doc.shift_working_hours = 0
                             doc.save(ignore_permissions=True)
-                            append_log(doc.name, "Phase 5: Pre-Use Hours data applied.")
+                            append_log(
+                                doc.name,
+                                (
+                                    f"Phase 5: Pre-Use Hours data applied for doc={doc.name}, "
+                                    f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                                )
+                            )
                             break
             except Exception as e:
-                err_msg = f"Phase 5 Error: {str(e)} updating Availability and Utilisation for document {doc_name}."
+                asset_name, item_name = get_doc_asset_item_name(doc_name)
+                err_msg = (
+                    f"Phase 5 Error for doc={doc_name}, asset_name={asset_name}, item_name={item_name}: {str(e)}"
+                )
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
-        # ===== Phase 6: Update item_name using asset lookup =====
+        # =============================================================================
+        # Phase 6: Update item_name using asset lookup
+        # =============================================================================
         for doc_name in created_records + updated_records:
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
@@ -238,21 +323,30 @@ class AvailabilityandUtilisation(Document):
                     limit=1
                 )
                 if asset_doc:
-                    asset_doc = asset_doc[0]
-                    fetched_item_name = asset_doc.get("item_name")
+                    fetched_item_name = asset_doc[0].get("item_name")
                     if fetched_item_name != previous_item_name:
                         doc.item_name = fetched_item_name or None
                         doc.save(ignore_permissions=True)
                         append_log(
                             doc.name,
-                            f"Phase 6: item_name updated (Previous: {previous_item_name}, Fetched: {fetched_item_name})."
+                            (
+                                f"Phase 6: item_name updated for doc={doc.name}, "
+                                f"previous_item_name={previous_item_name}, new_item_name={doc.item_name}, "
+                                f"asset_name={doc.asset_name}"
+                            )
                         )
             except Exception as e:
-                err_msg = f"Phase 6 Error: {str(e)} updating item_name for document {doc_name}. Previous item_name: {previous_item_name}."
+                asset_name, item_name = get_doc_asset_item_name(doc_name)
+                err_msg = (
+                    f"Phase 6 Error for doc={doc_name}, asset_name={asset_name}, item_name={item_name}: {str(e)}. "
+                    f"Previous item_name: {previous_item_name}."
+                )
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
-        # ===== Phase 7: Update shift_breakdown_hours =====
+        # =============================================================================
+        # Phase 7: Update shift_breakdown_hours
+        # =============================================================================
         current_date = getdate(today())
         start_date = current_date - timedelta(days=7)
         parent_records = frappe.get_all(
@@ -282,7 +376,10 @@ class AvailabilityandUtilisation(Document):
                 if not breakdown_history_rows:
                     append_log(
                         parent_record["name"],
-                        f"Phase 7: No breakdown history found for record {parent_record['name']}."
+                        (
+                            f"Phase 7: No breakdown history found for doc={parent_record['name']}, "
+                            f"asset_name={parent_record['asset_name']}"
+                        )
                     )
                     continue
 
@@ -293,7 +390,7 @@ class AvailabilityandUtilisation(Document):
                     str(parent_record["shift_date"])
                 )
 
-                # 2) Derive breakdown_start/breakdown_end from the breakdown records
+                # 2) Derive breakdown_start/breakdown_end
                 breakdown_start = breakdown_history_rows[0]["update_date_time"]
                 breakdown_end = None
                 for row in breakdown_history_rows:
@@ -304,7 +401,7 @@ class AvailabilityandUtilisation(Document):
                 if not breakdown_end:
                     breakdown_end = shift_end
 
-                # 3) Calculate overlap and scenario
+                # 3) Calculate overlap & scenario
                 shift_breakdown_hours = 0
                 scenario = None
 
@@ -342,70 +439,99 @@ class AvailabilityandUtilisation(Document):
                     shift_breakdown_hours
                 )
 
-                # 5) Log the scenario details, including the times used in the calculation
+                # 5) Log the scenario details
                 append_log(
                     parent_record["name"],
                     (
-                        f"Phase 7: shift_breakdown_hours updated. {scenario} "
-                        f"Calculated {shift_breakdown_hours} hour(s). "
+                        f"Phase 7: shift_breakdown_hours updated for doc={parent_record['name']}. "
+                        f"{scenario} => {shift_breakdown_hours} hour(s). "
                         f"(Shift Start: {shift_start}, Shift End: {shift_end}, "
                         f"Breakdown Start: {breakdown_start}, Breakdown End: {breakdown_end})"
                     )
                 )
             except Exception as e:
-                err_msg = f"Phase 7 Error: {str(e)} updating shift_breakdown_hours for record {parent_record['name']}."
+                asset_name, item_name = get_doc_asset_item_name(parent_record["name"])
+                err_msg = (
+                    f"Phase 7 Error for doc={parent_record['name']}, "
+                    f"asset_name={asset_name}, item_name={item_name}: {str(e)}"
+                )
                 append_log(parent_record["name"], err_msg)
                 error_records.append(err_msg)
 
-
-           # ===== Phase 8: Calculate and set final fields =====
+        # =============================================================================
+        # Phase 8: Calculate and set final fields
+        # =============================================================================
         for doc_name in created_records + updated_records:
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
 
+                # Retrieve or default to zero
                 shift_required_hours = doc.shift_required_hours or 0
                 shift_breakdown_hours = doc.shift_breakdown_hours or 0
                 shift_working_hours = doc.shift_working_hours or 0
 
+                # Calculate shift_available_hours
                 shift_available_hours = max(shift_required_hours - shift_breakdown_hours, 0)
                 doc.shift_available_hours = shift_available_hours
 
-                shift_other_lost_hours = max(shift_available_hours - shift_working_hours, 0)
+                # New SHIFT_OTHER_LOST_HOURS formula
+                if shift_working_hours > shift_available_hours:
+                    # If working hours exceed available hours...
+                    shift_other_lost_hours = max(shift_required_hours - shift_working_hours, 0)
+                else:
+                    # Otherwise...
+                    shift_other_lost_hours = max(shift_available_hours - shift_working_hours, 0)
+
                 doc.shift_other_lost_hours = shift_other_lost_hours
 
-                if shift_required_hours > 0 and shift_available_hours > 0:
-                    doc.plant_shift_utilisation = (shift_working_hours / shift_available_hours) * 100
+                # Calculate the max value between shift_working_hours and shift_available_hours
+                max_val = max(shift_working_hours, shift_available_hours)
+
+                # --- Plant Shift Utilisation ---
+                if max_val > 0:
+                    doc.plant_shift_utilisation = (shift_working_hours / max_val) * 100
                 else:
                     doc.plant_shift_utilisation = 0
 
+                # --- Plant Shift Availability ---
                 if shift_required_hours > 0:
-                    doc.plant_shift_availability = (shift_available_hours / shift_required_hours) * 100
+                    doc.plant_shift_availability = (max_val / shift_required_hours) * 100
                 else:
                     doc.plant_shift_availability = 0
 
                 doc.save(ignore_permissions=True)
-                
-                # **Expanded Log** to include formula inputs
+
                 append_log(
                     doc.name,
-                    f"Phase 8: Final fields calculated.\n"
-                    f"  shift_required_hours = {shift_required_hours},\n"
-                    f"  shift_breakdown_hours = {shift_breakdown_hours},\n"
-                    f"  shift_working_hours = {shift_working_hours},\n"
-                    f"  shift_available_hours = {shift_available_hours},\n"
-                    f"  shift_other_lost_hours = {shift_other_lost_hours},\n"
-                    f"  plant_shift_utilisation = {doc.plant_shift_utilisation},\n"
-                    f"  plant_shift_availability = {doc.plant_shift_availability}"
+                    (
+                        f"Phase 8: Final fields updated for doc={doc.name}, asset_name={doc.asset_name}, "
+                        f"item_name={doc.item_name}. "
+                        f"(shift_required_hours={shift_required_hours}, "
+                        f"shift_breakdown_hours={shift_breakdown_hours}, "
+                        f"shift_working_hours={shift_working_hours}, "
+                        f"shift_available_hours={shift_available_hours}, "
+                        f"shift_other_lost_hours={doc.shift_other_lost_hours}, "
+                        f"plant_shift_utilisation={doc.plant_shift_utilisation}, "
+                        f"plant_shift_availability={doc.plant_shift_availability})"
+                    )
                 )
+
             except Exception as e:
-                err_msg = f"Phase 8 Error: {str(e)} updating final fields for document {doc_name}."
+                asset_name, item_name = get_doc_asset_item_name(doc_name)
+                err_msg = (
+                    f"Phase 8 Error for doc={doc_name}, asset_name={asset_name}, item_name={item_name}: {str(e)}"
+                )
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
-        # ===== Final Combined Log (Split into 10 Parts) =====
+
+        # =============================================================================
+        # Phase 9: Final Combined Log (Split into 10 Parts)
+        # =============================================================================
         record_keys = list(record_logs.keys())
         total_logs = len(record_keys)
-        max_logs_per_entry = max(1, total_logs // 10)  # Ensure at least 1 log per entry
+        # Prevent division by zero if total_logs < 10
+        max_logs_per_entry = max(1, total_logs // 10)
 
         for i in range(0, total_logs, max_logs_per_entry):
             batch_keys = record_keys[i:i + max_logs_per_entry]
@@ -420,16 +546,22 @@ class AvailabilityandUtilisation(Document):
             log_title = f"Phase Update Log - Batch {i // max_logs_per_entry + 1}"
             frappe.log_error(combined_message, log_title)
 
-        # ===== Final Summary Log =====
+        # =============================================================================
+        # Phase 10: Final Summary Log
+        # =============================================================================
         success_message = (
             f"Successfully created {len(created_records)} records. "
             f"Updated {len(updated_records)} records. "
         )
         if error_records:
-            success_message += f"Errors encountered: {len(error_records)}. Check log batches for details."
+            success_message += (
+                f"Errors encountered: {len(error_records)}. "
+                "Check log batches for details."
+            )
 
         frappe.log_error(success_message, "Process Completion")
         return success_message
+
 
 def get_shift_timings(shift_system, shift, shift_date):
     """Calculate shift start and end timings based on the system and shift."""
@@ -458,14 +590,17 @@ def get_shift_timings(shift_system, shift, shift_date):
 
     return shift_start, shift_end
 
+
 @frappe.whitelist()
 def create_availability_and_utilisation():
+    """Manual trigger to run the generation of records."""
     result_message = AvailabilityandUtilisation.generate_records()
     return result_message
 
 
 @frappe.whitelist()
 def run_daily():
+    """Scheduled daily job."""
     frappe.log_error("Scheduled job started at 05:40 AM for Availability and Utilisation", "Daily Job Start")
     AvailabilityandUtilisation.generate_records()
     frappe.log_error("Scheduled job completed for Availability and Utilisation", "Daily Job Completion")
