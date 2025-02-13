@@ -17,6 +17,8 @@
   "pre_use_lookup",
   "pre_use_link",
   "shift_system",
+  "day_number",
+  "asset_category",
   "hour_analysis_section",
   "shift_required_hours",
   "shift_start_hours",
@@ -172,11 +174,23 @@
    "label": "Shift other lost hours",
    "precision": "3",
    "read_only": 1
+  },
+  {
+   "fieldname": "day_number",
+   "fieldtype": "Int",
+   "label": "Day Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "asset_category",
+   "fieldtype": "Data",
+   "label": "Asset Category",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-15 14:04:04.109097",
+ "modified": "2025-02-11 17:40:51.809721",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",

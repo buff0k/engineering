@@ -34,7 +34,7 @@ class AvailabilityandUtilisation(Document):
             try:
                 doc = frappe.get_doc("Availability and Utilisation", doc_name)
                 return (doc.asset_name or "Unknown", doc.item_name or "Unknown")
-            except:
+            except Exception:
                 return ("Unknown", "Unknown")
 
         current_date = getdate(today())
@@ -65,7 +65,7 @@ class AvailabilityandUtilisation(Document):
                 prod_month_end_date = planning_record.prod_month_end_date
 
                 if (getdate(date) >= getdate(prod_month_start_date)) and (getdate(date) <= getdate(prod_month_end_date)):
-                    # Fetch Asset info, including item_name
+                    # Fetch Asset info, including asset_category now
                     assets = frappe.get_all(
                         "Asset",
                         filters={
@@ -73,7 +73,7 @@ class AvailabilityandUtilisation(Document):
                             "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
                             "docstatus": 1,
                         },
-                        fields=["name", "asset_name", "item_name"],
+                        fields=["name", "asset_name", "item_name", "asset_category"],
                     )
 
                     shifts = (
@@ -99,19 +99,29 @@ class AvailabilityandUtilisation(Document):
                                 )
 
                                 if existing_record:
+                                    # -------------------------------
+                                    # Update Existing Record
+                                    # -------------------------------
                                     doc = frappe.get_doc("Availability and Utilisation", existing_record[0].name)
                                     doc.pre_use_lookup = None
                                     doc.pre_use_link = None
                                     doc.save(ignore_permissions=True)
+                                    # Update read-only fields using db_set
+                                    doc.db_set("day_number", getdate(date).day, update_modified=True)
+                                    doc.db_set("asset_category", asset.asset_category, update_modified=True)
                                     updated_records.append(doc.name)
                                     append_log(
                                         doc.name,
                                         (
                                             f"Phase 1: Updated record={doc.name}, shift={shift}, date={date}, "
-                                            f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                                            f"asset_name={doc.asset_name}, item_name={doc.item_name}, "
+                                            f"day_number={getdate(date).day}, asset_category={asset.asset_category}"
                                         )
                                     )
                                 else:
+                                    # -------------------------------
+                                    # Create New Record
+                                    # -------------------------------
                                     doc = frappe.get_doc({
                                         "doctype": "Availability and Utilisation",
                                         "shift_date": date,
@@ -120,27 +130,29 @@ class AvailabilityandUtilisation(Document):
                                         "location": location,
                                         "shift_system": shift_system,
                                         "pre_use_lookup": None,
-                                        "pre_use_link": None,
+                                        "pre_use_link": None
                                     })
                                     doc.insert(ignore_permissions=True)
+                                    # Update read-only fields using db_set
+                                    doc.db_set("day_number", getdate(date).day, update_modified=True)
+                                    doc.db_set("asset_category", asset.asset_category, update_modified=True)
                                     created_records.append(doc.name)
                                     append_log(
                                         doc.name,
                                         (
                                             f"Phase 1: Created record={doc.name}, shift={shift}, date={date}, "
-                                            f"asset_name={doc.asset_name}, item_name={doc.item_name}"
+                                            f"asset_name={doc.asset_name}, item_name={doc.item_name}, "
+                                            f"day_number={getdate(date).day}, asset_category={asset.asset_category}"
                                         )
                                     )
                             except Exception as e:
-                                # Error before doc creation or update completed
                                 err_msg = (
                                     f"Phase 1 Error: asset_name={asset.asset_name}, item_name={asset.item_name}, "
                                     f"location={location}, date={date}, shift={shift}: {str(e)}"
                                 )
                                 append_log(record_key, err_msg)
                                 error_records.append(err_msg)
-                    break
-
+                        # The break statement has been removed here so that every shift is processed.
             date = add_days(date, 1)
 
         # =============================================================================
@@ -406,28 +418,21 @@ class AvailabilityandUtilisation(Document):
                 scenario = None
 
                 if breakdown_start < shift_end and breakdown_end > shift_start:
-                    # Overlap exists
                     if breakdown_start >= shift_start:
                         if breakdown_end <= shift_end:
-                            # Scenario 3
                             shift_breakdown_hours = time_diff_in_hours(breakdown_end, breakdown_start)
                             scenario = "Scenario 3: Breakdown within shift."
                         else:
-                            # Scenario 4
                             shift_breakdown_hours = time_diff_in_hours(shift_end, breakdown_start)
                             scenario = "Scenario 4: Breakdown started during shift and continued."
                     else:
-                        # breakdown_start < shift_start
                         if breakdown_end <= shift_end:
-                            # Scenario 2
                             shift_breakdown_hours = time_diff_in_hours(breakdown_end, shift_start)
                             scenario = "Scenario 2: Breakdown started before shift and ended during shift."
                         else:
-                            # Scenario 1
                             shift_breakdown_hours = time_diff_in_hours(shift_end, shift_start)
                             scenario = "Scenario 1: Breakdown spanned the entire shift."
                 else:
-                    # No overlap
                     shift_breakdown_hours = 0
                     scenario = "No Breakdown During Shift"
 
@@ -476,10 +481,8 @@ class AvailabilityandUtilisation(Document):
 
                 # New SHIFT_OTHER_LOST_HOURS formula
                 if shift_working_hours > shift_available_hours:
-                    # If working hours exceed available hours...
                     shift_other_lost_hours = max(shift_required_hours - shift_working_hours, 0)
                 else:
-                    # Otherwise...
                     shift_other_lost_hours = max(shift_available_hours - shift_working_hours, 0)
 
                 doc.shift_other_lost_hours = shift_other_lost_hours
@@ -524,13 +527,11 @@ class AvailabilityandUtilisation(Document):
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
-
         # =============================================================================
         # Phase 9: Final Combined Log (Split into 10 Parts)
         # =============================================================================
         record_keys = list(record_logs.keys())
         total_logs = len(record_keys)
-        # Prevent division by zero if total_logs < 10
         max_logs_per_entry = max(1, total_logs // 10)
 
         for i in range(0, total_logs, max_logs_per_entry):
@@ -541,7 +542,6 @@ class AvailabilityandUtilisation(Document):
                 summary_message = f"{key}: " + " | ".join(record_logs[key])
                 batch_messages.append(summary_message)
 
-            # Log as a batch
             combined_message = "\n".join(batch_messages)
             log_title = f"Phase Update Log - Batch {i // max_logs_per_entry + 1}"
             frappe.log_error(combined_message, log_title)

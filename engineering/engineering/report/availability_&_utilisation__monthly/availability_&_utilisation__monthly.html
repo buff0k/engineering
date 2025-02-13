@@ -1,0 +1,52 @@
+% extends "frappe/public/js/frappe/views/reports/report.html" %}
+
+{% block report_content %}
+<style>
+    .hierarchy-level {
+        padding-left: 20px;
+        font-weight: bold;
+    }
+    .level-0 { font-size: 18px; font-weight: bold; }
+    .level-1 { font-size: 16px; padding-left: 20px; }
+    .level-2 { font-size: 14px; padding-left: 40px; }
+    .level-3 { font-size: 12px; padding-left: 60px; }
+    .level-4 { font-size: 12px; padding-left: 80px; }
+    .level-5 { font-size: 12px; padding-left: 100px; }
+</style>
+
+<h2 class="text-center">{{ report.report_name }}</h2>
+<h3 class="text-center">{{ filters.from_date }} - {{ filters.to_date }}</h3>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Hierarchy</th>
+            {% for month in columns if month.fieldname != 'label' %}
+                <th>{{ month.label }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td class="hierarchy-level level-{{ row.indent }}">
+                {% if row.is_group %}
+                    <strong>{{ row.label }}</strong>
+                {% else %}
+                    {{ row.label }}
+                {% endif %}
+            </td>
+            {% for month in columns if month.fieldname != 'label' %}
+                <td>
+                    <strong>Req:</strong> {{ row[month.fieldname ~ '_shift_required_hours'] or 0 }}<br>
+                    <strong>Work:</strong> {{ row[month.fieldname ~ '_shift_working_hours'] or 0 }}<br>
+                    <strong>Break:</strong> {{ row[month.fieldname ~ '_shift_breakdown_hours'] or 0 }}<br>
+                    <strong>Avail:</strong> {{ row[month.fieldname ~ '_shift_available_hours'] or 0 }}<br>
+                    <strong>Lost:</strong> {{ row[month.fieldname ~ '_shift_other_lost_hours'] or 0 }}
+                </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
