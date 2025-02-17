@@ -2,26 +2,38 @@ import frappe
 from frappe.utils import flt, getdate
 import datetime
 
-# Map technical metric names to user-friendly display names.
+# Updated mapping of technical metric names to display labels.
 metrics_mapping = {
-    "shift_required_hours": "Shift Required Hours",
-    "shift_working_hours": "Shift Working Hours",
-    "shift_breakdown_hours": "Shift Breakdown Hours",
-    "shift_available_hours": "Shift Available Hours",
-    "shift_other_lost_hours": "Shift Other Lost Hours"
+    "shift_required_hours": "Req Hrs",
+    "shift_working_hours": "Work Hrs",
+    "shift_breakdown_hours": "BD Hrs",
+    "shift_available_hours": "Avail Hrs",
+    "shift_other_lost_hours": "Oth Lost Hrs"
 }
 
+# Define the hierarchy levels (removed Day Number)
+# Level 0: Root ("All Sites")
+# Level 1: Site (grouped by "location")
+# Level 2: Equipment Type (grouped by "asset_category")
+# Level 3: Shift (grouped by "shift")
+# Level 4: Asset Name (grouped by "asset_name")
+hierarchy_levels = [
+    (None, None, "All Sites"),
+    ("location", "Unknown Site", None),
+    ("asset_category", "Unknown Category", None),
+    ("shift", "Unknown Shift", None),
+    ("asset_name", "Unknown Plant", None)
+]
+
 def get_month_key(shift_date):
-    """
-    Convert shift_date to a month-year key in the format 'feb_2025'.
-    """
+    """Convert shift_date to a month-year key, e.g. 'feb_2025'."""
     d = getdate(shift_date) if not isinstance(shift_date, datetime.date) else shift_date
     return d.strftime("%b_%Y").lower()
 
 def get_months_from_entries(entries):
     """
-    Build a sorted list of month dictionaries from Availability records using shift_date.
-    Each dictionary has:
+    Build a sorted list of month dictionaries from entries.
+    Each dict has:
       - key: a lowercase month-year string (e.g., "feb_2025")
       - label: a display label (e.g., "Feb 2025")
     """
@@ -36,135 +48,195 @@ def get_months_from_entries(entries):
             if key not in month_dates or d < month_dates[key]:
                 month_dates[key] = d
     sorted_keys = sorted(month_dates, key=lambda k: month_dates[k])
-    months = [{"key": k, "label": month_set[k]} for k in sorted_keys]
-    return months
+    return [{"key": k, "label": month_set[k]} for k in sorted_keys]
 
-def compute_monthly_sum(entries, field, months):
+def get_week_key(shift_date):
+    """Return a week key in the format 'YYYY_wkWW'."""
+    d = getdate(shift_date) if not isinstance(shift_date, datetime.date) else shift_date
+    iso_year, iso_week, _ = d.isocalendar()
+    return f"{iso_year}_wk{iso_week:02d}"
+
+def get_week_label(shift_date):
+    """Return a week label, e.g. 'Week 06, 2025'."""
+    d = getdate(shift_date) if not isinstance(shift_date, datetime.date) else shift_date
+    iso_year, iso_week, _ = d.isocalendar()
+    return f"Week {iso_week}, {iso_year}"
+
+def get_weeks_from_entries(entries):
     """
-    Compute summed values for a given field (e.g., shift_required_hours) across the provided months.
-    Returns a dict mapping month keys to sums.
+    Build a sorted list of week dictionaries from entries.
+    Each dict has:
+      - key: a string like "2025_wk06"
+      - label: e.g. "Week 06, 2025"
+      - month: the month key (e.g., "feb_2025") from shift_date
     """
-    sums = {m["key"]: 0 for m in months}
+    week_set = {}
+    week_dates = {}
+    for entry in entries:
+        if entry.get("shift_date"):
+            d = getdate(entry.get("shift_date"))
+            wk_key = get_week_key(d)
+            wk_label = get_week_label(d)
+            mo_key = get_month_key(d)
+            week_set[wk_key] = {"label": wk_label, "month": mo_key}
+            if wk_key not in week_dates or d < week_dates[wk_key]:
+                week_dates[wk_key] = d
+    sorted_keys = sorted(week_dates, key=lambda k: week_dates[k])
+    return [{"key": k, "label": week_set[k]["label"], "month": week_set[k]["month"]} for k in sorted_keys]
+
+def get_day_key(shift_date):
+    """Return a day key in the format 'YYYY-mm-dd'."""
+    d = getdate(shift_date) if not isinstance(shift_date, datetime.date) else shift_date
+    return d.strftime("%Y-%m-%d")
+
+def get_day_label(shift_date):
+    """Return a day label, e.g. '17 Feb 2025'."""
+    d = getdate(shift_date) if not isinstance(shift_date, datetime.date) else shift_date
+    return d.strftime("%d %b %Y")
+
+def get_days_from_entries(entries):
+    """
+    Build a sorted list of day dictionaries from entries.
+    Each dict has:
+      - key: a string like "2025-02-17"
+      - label: e.g. "17 Feb 2025"
+    """
+    day_set = {}
+    day_dates = {}
+    for entry in entries:
+        if entry.get("shift_date"):
+            d = getdate(entry.get("shift_date"))
+            key = get_day_key(d)
+            label = get_day_label(d)
+            day_set[key] = label
+            if key not in day_dates or d < day_dates[key]:
+                day_dates[key] = d
+    sorted_keys = sorted(day_dates, key=lambda k: day_dates[k])
+    return [{"key": k, "label": day_set[k]} for k in sorted_keys]
+
+def compute_monthly_sums(entries, periods, metrics):
+    """
+    For a list of entries, compute the sum for each metric per month.
+    Returns a dict with keys "<period_key>_<metric>".
+    """
+    sums = {}
+    for p in periods:
+        for metric in metrics:
+            sums[f"{p['key']}_{metric}"] = 0
     for entry in entries:
         if entry.get("shift_date"):
             mk = get_month_key(entry.get("shift_date"))
-            if mk in sums:
-                sums[mk] += flt(entry.get(field) or 0)
+            for metric in metrics:
+                key = f"{mk}_{metric}"
+                sums[key] += flt(entry.get(metric) or 0)
     return sums
 
-def build_row(label, indent, is_group, entries, months, metrics):
+def compute_weekly_sums(entries, periods, metrics):
     """
-    Build an aggregated row for a given grouping level.
-    For each metric and each month, compute the sum and store it under a composite key:
-       <month_key>_<metric>
+    For a list of entries, compute the sum for each metric per week.
+    Returns a dict with keys "<period_key>_<metric>".
     """
-    row = {"label": label, "indent": indent, "is_group": is_group}
-    for metric in metrics:
-        sums = compute_monthly_sum(entries, metric, months)
-        for m in months:
-            key = f"{m['key']}_{metric}"
-            row[key] = sums[m["key"]]
-    return row
-
-def build_availability_report_data(entries, months, metrics):
-    """
-    Build the hierarchical report data for Availability & Utilisation.
-    The hierarchy is:
-      Level 0: All Sites
-      Level 1: Site (grouped by location)
-      Level 2: Day (grouped by day_number)
-      Level 3: Shift (grouped by shift)
-      Level 4: Equipment Type (grouped by asset_category)
-      Level 5: Plant (grouped by asset_name)
-    Each grouping row is aggregated with the provided metrics.
-    """
-    data = []
-    # Level 0: All Sites
-    data.append(build_row("All Sites", 0, True, entries, months, metrics))
-    
-    # Level 1: Group by Site (location)
-    sites = {}
-    for entry in entries:
-        site = entry.get("location") or "Unknown Site"
-        sites.setdefault(site, []).append(entry)
-    for site, site_entries in sorted(sites.items()):
-        data.append(build_row(site, 1, True, site_entries, months, metrics))
-        
-        # Level 2: Group by Day (day_number)
-        days = {}
-        for entry in site_entries:
-            day = entry.get("day_number") or "Unknown Day"
-            days.setdefault(day, []).append(entry)
-        for day, day_entries in sorted(days.items(), key=lambda x: int(x[0]) if str(x[0]).isdigit() else x[0]):
-            data.append(build_row(f"Day {day}", 2, True, day_entries, months, metrics))
-            
-            # Level 3: Group by Shift (shift)
-            shifts = {}
-            for entry in day_entries:
-                shift = entry.get("shift") or "Unknown Shift"
-                shifts.setdefault(shift, []).append(entry)
-            for shift, shift_entries in sorted(shifts.items()):
-                data.append(build_row(shift, 3, True, shift_entries, months, metrics))
-                
-                # Level 4: Group by Equipment Type (asset_category)
-                equip_types = {}
-                for entry in shift_entries:
-                    eq_type = entry.get("asset_category") or "Unknown Category"
-                    equip_types.setdefault(eq_type, []).append(entry)
-                for eq_type, eq_entries in sorted(equip_types.items()):
-                    data.append(build_row(eq_type, 4, True, eq_entries, months, metrics))
-                    
-                    # Level 5: Group by Plant (asset_name)
-                    plants = {}
-                    for entry in eq_entries:
-                        plant = entry.get("asset_name") or "Unknown Plant"
-                        plants.setdefault(plant, []).append(entry)
-                    for plant, plant_entries in sorted(plants.items()):
-                        data.append(build_row(plant, 5, False, plant_entries, months, metrics))
-    
-    return data
-
-def explode_rows_by_metric(rows, months, metrics):
-    """
-    For each hierarchical row, output a header row (with the group label) and then five rows,
-    one for each metric, as children of that group.
-    The header row shows the grouping label at its current indent level.
-    The metric rows are indented one level further.
-    Each metric row displays the aggregated value for that metric (per month).
-    """
-    new_rows = []
-    for row in rows:
-        base_label = row.get("label")
-        base_indent = row.get("indent", 0)
-        
-        # First, output the grouping header row (without metric values)
-        header_row = {
-            "label": (" " * (base_indent * 4)) + base_label,
-            "indent": base_indent
-        }
-        for m in months:
-            header_row[m["key"]] = ""
-        new_rows.append(header_row)
-        
-        # Now, output one row per metric, indented one level further.
+    sums = {}
+    for p in periods:
         for metric in metrics:
-            metric_row = {}
-            metric_row["label"] = (" " * ((base_indent + 1) * 4)) + metrics_mapping.get(metric, metric)
-            metric_row["indent"] = base_indent + 1
-            for m in months:
-                metric_row[m["key"]] = row.get(f"{m['key']}_{metric}", 0)
-            new_rows.append(metric_row)
-    return new_rows
+            sums[f"{p['key']}_{metric}"] = 0
+    for entry in entries:
+        if entry.get("shift_date"):
+            wk = get_week_key(entry.get("shift_date"))
+            for metric in metrics:
+                key = f"{wk}_{metric}"
+                sums[key] += flt(entry.get(metric) or 0)
+    return sums
 
-def get_columns(months):
+def compute_daily_sums(entries, periods, metrics):
     """
-    Build column definitions with one column per month.
+    For a list of entries, compute the sum for each metric per day.
+    Returns a dict with keys "<period_key>_<metric>".
     """
-    columns = [{"fieldname": "label", "label": "Hierarchy", "fieldtype": "Data", "width": 300}]
-    for m in months:
+    sums = {}
+    for p in periods:
+        for metric in metrics:
+            sums[f"{p['key']}_{metric}"] = 0
+    for entry in entries:
+        if entry.get("shift_date"):
+            dk = get_day_key(entry.get("shift_date"))
+            for metric in metrics:
+                key = f"{dk}_{metric}"
+                sums[key] += flt(entry.get(metric) or 0)
+    return sums
+
+def build_tree(entries, level_index, periods, metrics, compute_sums_fn, parent_indent=0):
+    """
+    Recursively build a tree for the grouping hierarchy.
+    Each node is a dict with:
+      - label, indent, sums, children
+    """
+    node = {}
+    indent = parent_indent
+
+    if level_index == 0:
+        node["label"] = hierarchy_levels[0][2]  # "All Sites"
+        filtered = entries
+    else:
+        filtered = entries
+
+    node["sums"] = compute_sums_fn(filtered, periods, metrics)
+    node["indent"] = indent
+    node["children"] = []
+
+    if level_index + 1 < len(hierarchy_levels):
+        group_field, default_value, label_prefix = hierarchy_levels[level_index + 1]
+        groups = {}
+        for entry in filtered:
+            key = entry.get(group_field) or default_value
+            groups.setdefault(key, []).append(entry)
+        for group_value in sorted(groups):
+            child_node = build_tree(groups[group_value], level_index + 1, periods, metrics, compute_sums_fn, indent + 1)
+            child_node["label"] = f"{label_prefix}{group_value}" if label_prefix else group_value
+            child_node["indent"] = indent + 1
+            node["children"].append(child_node)
+    return node
+
+def flatten_tree_exploded(nodes, periods, metrics):
+    """
+    Flatten the tree into a list of rows.
+    For each node, add a header row, then one row per metric,
+    then process children recursively.
+    """
+    rows = []
+    for node in nodes:
+        base_label = node.get("label", "")
+        base_indent = node.get("indent", 0)
+        header = {
+            "label": base_label,
+            "indent": base_indent,
+            "is_group": True
+        }
+        for p in periods:
+            header[p["key"]] = ""
+        rows.append(header)
+        for metric in metrics:
+            row = {
+                "label": (" " * ((base_indent + 1) * 4)) + metrics_mapping[metric],
+                "indent": base_indent + 1,
+                "is_group": False
+            }
+            for p in periods:
+                row[p["key"]] = node["sums"].get(f"{p['key']}_{metric}", 0)
+            rows.append(row)
+        if node.get("children"):
+            rows.extend(flatten_tree_exploded(node["children"], periods, metrics))
+    return rows
+
+def get_columns(periods, main_header="Hierarchy"):
+    """
+    Build column definitions based on periods.
+    """
+    columns = [{"fieldname": "label", "label": main_header, "fieldtype": "Data", "width": 300}]
+    for p in periods:
         columns.append({
-            "fieldname": m["key"],
-            "label": m["label"],
+            "fieldname": p["key"],
+            "label": p["label"],
             "fieldtype": "Float",
             "width": 150
         })
@@ -174,23 +246,46 @@ def execute(filters=None):
     filters = filters or {}
     conditions = ""
     params = {}
+
+    # Date filters
     if filters.get("from_date") and filters.get("to_date"):
         conditions = "WHERE shift_date BETWEEN %(from_date)s AND %(to_date)s"
         params["from_date"] = filters.get("from_date")
         params["to_date"] = filters.get("to_date")
-        
+
+    # Site filter
+    if filters.get("site"):
+        if conditions:
+            conditions += " AND location = %(site)s"
+        else:
+            conditions = "WHERE location = %(site)s"
+        params["site"] = filters.get("site")
+
+    # Asset Category filter
+    if filters.get("asset_category"):
+        if conditions:
+            conditions += " AND asset_category = %(asset_category)s"
+        else:
+            conditions = "WHERE asset_category = %(asset_category)s"
+        params["asset_category"] = filters.get("asset_category")
+    
+    # Asset Name filter
+    if filters.get("asset_name"):
+        if conditions:
+            conditions += " AND asset_name = %(asset_name)s"
+        else:
+            conditions = "WHERE asset_name = %(asset_name)s"
+        params["asset_name"] = filters.get("asset_name")
+
     query = f"""
-        SELECT location, shift_date, day_number, shift, asset_category, asset_name,
+        SELECT location, shift_date, shift, asset_category, asset_name,
                shift_required_hours, shift_working_hours, shift_breakdown_hours,
                shift_available_hours, shift_other_lost_hours
         FROM `tabAvailability and Utilisation`
         {conditions}
-        ORDER BY location, shift_date, day_number, shift, asset_category, asset_name
+        ORDER BY location, shift_date, shift, asset_category, asset_name
     """
     entries = frappe.db.sql(query, params, as_dict=True)
-    months = get_months_from_entries(entries)
-    
-    # Define all five metrics.
     metrics = [
         "shift_required_hours",
         "shift_working_hours",
@@ -198,10 +293,51 @@ def execute(filters=None):
         "shift_available_hours",
         "shift_other_lost_hours"
     ]
-    
-    # Build hierarchical data (each row aggregates the metrics for that group).
-    data = build_availability_report_data(entries, months, metrics)
-    # Explode each grouping row into one header row plus five metric rows.
-    data = explode_rows_by_metric(data, months, metrics)
-    columns = get_columns(months)
-    return columns, data
+
+    # Determine display mode: Days, Weeks, or Months (default)
+    display_by = (filters.get("display_by") or "Months").lower()
+    if display_by in ["week", "weeks"]:
+        weeks = get_weeks_from_entries(entries)
+        # Optionally, you can add a month filter logic here if needed
+        periods = weeks
+        compute_sums_fn = compute_weekly_sums
+        main_header = "Hierarchy (Weeks)"
+    elif display_by in ["day", "days"]:
+        days = get_days_from_entries(entries)
+        periods = days
+        compute_sums_fn = compute_daily_sums
+        main_header = "Hierarchy (Days)"
+    else:
+        # Default to Months
+        periods = get_months_from_entries(entries)
+        compute_sums_fn = compute_monthly_sums
+        main_header = "Hierarchy (Months)"
+
+    tree = build_tree(entries, 0, periods, metrics, compute_sums_fn)
+    data = flatten_tree_exploded([tree], periods, metrics)
+    columns = get_columns(periods, main_header=main_header)
+
+    # Build chart data for BD Hrs, Avail Hrs and Other Lost Hrs using root node sums.
+    chart_data = {
+        "data": {
+            "labels": [p["label"] for p in periods],
+            "datasets": [
+                {
+                    "name": "BD Hrs",
+                    "values": [tree["sums"].get(f"{p['key']}_shift_breakdown_hours", 0) for p in periods]
+                },
+                {
+                    "name": "Avail Hrs",
+                    "values": [tree["sums"].get(f"{p['key']}_shift_available_hours", 0) for p in periods]
+                },
+                {
+                    "name": "Other Lost Hrs",
+                    "values": [tree["sums"].get(f"{p['key']}_shift_other_lost_hours", 0) for p in periods]
+                }
+            ]
+        },
+        "type": "line",
+        "fieldtype": "Float"
+    }
+
+    return columns, data, None, chart_data, [], None

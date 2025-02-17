@@ -143,25 +143,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Breakdowns",
-   "link_count": 1,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plant Breakdown",
-   "link_count": 0,
-   "link_to": "Plant Breakdown",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Plant Availability",
    "link_count": 1,
    "link_type": "DocType",
@@ -171,16 +152,47 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Availability and Utilisation",
+   "label": "Avail & Util Report",
    "link_count": 0,
-   "link_to": "Availability and Utilisation",
+   "link_to": "Availability & Utilisation- Monthly",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Availability and Utilisation",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Breakdown Updates",
+   "link_count": 0,
+   "link_to": "Plant Breakdown",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdown History",
+   "link_count": 0,
+   "link_to": "Breakdown Status History",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Plant Breakdown",
+   "type": "Link"
   }
  ],
- "modified": "2024-12-11 12:02:40.276267",
- "modified_by": "eben@isambane.co.za",
+ "modified": "2025-02-17 13:05:45.569512",
+ "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
  "number_cards": [],

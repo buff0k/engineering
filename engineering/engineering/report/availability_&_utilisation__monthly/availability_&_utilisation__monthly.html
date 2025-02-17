@@ -1,52 +1,91 @@
-% extends "frappe/public/js/frappe/views/reports/report.html" %}
+{% extends "frappe/public/js/frappe/views/reports/report.html" %}
 
 {% block report_content %}
+{%
+	// Get columns (filtering out any hidden columns)
+	var columns = report.get_columns_for_print();
+	columns = columns.filter(col => !col.hidden);
+	// Data is the second element returned from execute
+	var data = data;
+	// Optional: Limit the number of columns to prevent display issues
+	if (columns.length > 8) {
+	    frappe.throw(__("Too many columns. Export the report and print it using a spreadsheet application."));
+	}
+%}
+
 <style>
-    .hierarchy-level {
-        padding-left: 20px;
-        font-weight: bold;
-    }
-    .level-0 { font-size: 18px; font-weight: bold; }
-    .level-1 { font-size: 16px; padding-left: 20px; }
-    .level-2 { font-size: 14px; padding-left: 40px; }
-    .level-3 { font-size: 12px; padding-left: 60px; }
-    .level-4 { font-size: 12px; padding-left: 80px; }
-    .level-5 { font-size: 12px; padding-left: 100px; }
+	/* Styling for hierarchy levels */
+	.hierarchy-level {
+	    padding-left: 20px;
+	}
+	.level-0 { font-size: 18px; font-weight: bold; }
+	.level-1 { font-size: 16px; padding-left: 20px; }
+	.level-2 { font-size: 14px; padding-left: 40px; }
+	.level-3 { font-size: 12px; padding-left: 60px; }
+	.level-4 { font-size: 12px; padding-left: 80px; }
+	.level-5 { font-size: 12px; padding-left: 100px; }
+	.group-row { font-weight: bold; background: #f0f0f0; }
+	.chart-area {
+	    margin: 20px 0;
+	}
 </style>
 
-<h2 class="text-center">{{ report.report_name }}</h2>
-<h3 class="text-center">{{ filters.from_date }} - {{ filters.to_date }}</h3>
+<!-- Report Header -->
+<h2 class="text-center">{%= __(report.report_name) %}</h2>
+<h4 class="text-center">
+	{%= filters.from_date ? frappe.datetime.str_to_user(filters.from_date) : "" %}
+	 -
+	 {%= filters.to_date ? frappe.datetime.str_to_user(filters.to_date) : "" %}
+</h4>
+{% if (filters.site) { %}
+	<h4 class="text-center">Site: {%= filters.site %}</h4>
+{% } %}
+{% if (filters.asset_category) { %}
+	<h4 class="text-center">Asset Category: {%= filters.asset_category %}</h4>
+{% } %}
 
+<hr>
+
+<!-- Table Display -->
 <table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Hierarchy</th>
-            {% for month in columns if month.fieldname != 'label' %}
-                <th>{{ month.label }}</th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in data %}
-        <tr>
-            <td class="hierarchy-level level-{{ row.indent }}">
-                {% if row.is_group %}
-                    <strong>{{ row.label }}</strong>
-                {% else %}
-                    {{ row.label }}
-                {% endif %}
-            </td>
-            {% for month in columns if month.fieldname != 'label' %}
-                <td>
-                    <strong>Req:</strong> {{ row[month.fieldname ~ '_shift_required_hours'] or 0 }}<br>
-                    <strong>Work:</strong> {{ row[month.fieldname ~ '_shift_working_hours'] or 0 }}<br>
-                    <strong>Break:</strong> {{ row[month.fieldname ~ '_shift_breakdown_hours'] or 0 }}<br>
-                    <strong>Avail:</strong> {{ row[month.fieldname ~ '_shift_available_hours'] or 0 }}<br>
-                    <strong>Lost:</strong> {{ row[month.fieldname ~ '_shift_other_lost_hours'] or 0 }}
-                </td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </tbody>
+	<thead>
+		<tr>
+			<th style="width: {%= 100 - (columns.length - 1) * 13 %}%">Hierarchy</th>
+			{% for (let i = 1, l = columns.length; i < l; i++) { %}
+				<th class="text-right">{%= columns[i].label %}</th>
+			{% } %}
+		</tr>
+	</thead>
+	<tbody>
+		{% for (let j = 0, k = data.length; j < k; j++) { %}
+			{%
+				var row = data[j];
+				var row_class = row.is_group ? "group-row" : "";
+			%}
+			<tr class="{%= row_class %}">
+				<td class="hierarchy-level level-{%= row.indent %}">
+					{%= row.label %}
+				</td>
+				{% for (let i = 1, l = columns.length; i < l; i++) { %}
+					<td class="text-right">
+						{% const fieldname = columns[i].fieldname; %}
+						{%= row[fieldname] !== null ? frappe.format(row[fieldname], columns[i], {}, row) : 0 %}
+					</td>
+				{% } %}
+			</tr>
+		{% } %}
+	</tbody>
 </table>
+
+<!-- Chart Section -->
+{% if (chart) { %}
+	<h4 class="text-center">Chart (BD Hrs, Avail Hrs & Other Lost Hrs)</h4>
+	<div class="chart-area">
+	    {%= frappe.render_chart(chart) %}
+	</div>
+{% } %}
+
+<p class="text-right text-muted">
+	Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}
+</p>
 {% endblock %}

@@ -355,7 +355,6 @@ class AvailabilityandUtilisation(Document):
                 )
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
-
         # =============================================================================
         # Phase 7: Update shift_breakdown_hours
         # =============================================================================
@@ -436,7 +435,15 @@ class AvailabilityandUtilisation(Document):
                     shift_breakdown_hours = 0
                     scenario = "No Breakdown During Shift"
 
-                # 4) Update the document
+                # 4) Cap the breakdown hours so that it does not exceed (shift_required_hours - shift_working_hours)
+                doc = frappe.get_doc("Availability and Utilisation", parent_record["name"])
+                # Ensure we have numbers (default to 0 if None)
+                shift_required_hours = doc.shift_required_hours or 0
+                shift_working_hours = doc.shift_working_hours or 0
+                max_breakdown_allowed = max(shift_required_hours - shift_working_hours, 0)
+                shift_breakdown_hours = min(shift_breakdown_hours, max_breakdown_allowed)
+
+                # 5) Update the document in the database
                 frappe.db.set_value(
                     "Availability and Utilisation",
                     parent_record["name"],
@@ -444,7 +451,7 @@ class AvailabilityandUtilisation(Document):
                     shift_breakdown_hours
                 )
 
-                # 5) Log the scenario details
+                # 6) Log the scenario details
                 append_log(
                     parent_record["name"],
                     (
@@ -462,7 +469,7 @@ class AvailabilityandUtilisation(Document):
                 )
                 append_log(parent_record["name"], err_msg)
                 error_records.append(err_msg)
-
+                
         # =============================================================================
         # Phase 8: Calculate and set final fields
         # =============================================================================
