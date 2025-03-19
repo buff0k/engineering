@@ -295,6 +295,10 @@ class AvailabilityandUtilisation(Document):
                                 doc.shift_start_hours = asset_row.eng_hrs_start
                             if asset_row.eng_hrs_end is not None:
                                 doc.shift_end_hours = asset_row.eng_hrs_end
+                            # --- New Update for pre_use_avail_status ---
+                            if asset_row.pre_use_avail_status is not None:
+                                doc.pre_use_avail_status = asset_row.pre_use_avail_status
+                            # --- End of New Update ---                           
                             if (
                                 doc.shift_start_hours is not None and
                                 doc.shift_end_hours is not None
@@ -470,7 +474,7 @@ class AvailabilityandUtilisation(Document):
                 append_log(parent_record["name"], err_msg)
                 error_records.append(err_msg)
                 
-        # =============================================================================
+         # =============================================================================
         # Phase 8: Calculate and set final fields
         # =============================================================================
         for doc_name in created_records + updated_records:
@@ -482,16 +486,23 @@ class AvailabilityandUtilisation(Document):
                 shift_breakdown_hours = doc.shift_breakdown_hours or 0
                 shift_working_hours = doc.shift_working_hours or 0
 
-                # Calculate shift_available_hours
-                shift_available_hours = max(shift_required_hours - shift_breakdown_hours, 0)
-                doc.shift_available_hours = shift_available_hours
-
-                # New SHIFT_OTHER_LOST_HOURS formula
-                if shift_working_hours > shift_available_hours:
-                    shift_other_lost_hours = max(shift_required_hours - shift_working_hours, 0)
+                # --- Amendment: Check pre_use_avail_status ---
+                if doc.pre_use_avail_status in ("3", "6"):
+                    shift_required_hours = 0
+                    shift_available_hours = shift_working_hours
+                    shift_other_lost_hours = 0
                 else:
-                    shift_other_lost_hours = max(shift_available_hours - shift_working_hours, 0)
+                    # Calculate shift_available_hours normally
+                    shift_available_hours = max(shift_required_hours - shift_breakdown_hours, 0)
+                    # New SHIFT_OTHER_LOST_HOURS formula
+                    if shift_working_hours > shift_available_hours:
+                        shift_other_lost_hours = max(shift_required_hours - shift_working_hours, 0)
+                    else:
+                        shift_other_lost_hours = max(shift_available_hours - shift_working_hours, 0)
 
+                # Update the document fields with the computed values
+                doc.shift_required_hours = shift_required_hours
+                doc.shift_available_hours = shift_available_hours
                 doc.shift_other_lost_hours = shift_other_lost_hours
 
                 # Calculate the max value between shift_working_hours and shift_available_hours
@@ -504,10 +515,14 @@ class AvailabilityandUtilisation(Document):
                     doc.plant_shift_utilisation = 0
 
                 # --- Plant Shift Availability ---
-                if shift_required_hours > 0:
-                    doc.plant_shift_availability = (max_val / shift_required_hours) * 100
+                # Default to 100% if pre_use_avail_status is "3" or "6"
+                if doc.pre_use_avail_status in ("3", "6"):
+                    doc.plant_shift_availability = 100
                 else:
-                    doc.plant_shift_availability = 0
+                    if shift_required_hours > 0:
+                        doc.plant_shift_availability = (max_val / shift_required_hours) * 100
+                    else:
+                        doc.plant_shift_availability = 0
 
                 doc.save(ignore_permissions=True)
 
@@ -520,7 +535,7 @@ class AvailabilityandUtilisation(Document):
                         f"shift_breakdown_hours={shift_breakdown_hours}, "
                         f"shift_working_hours={shift_working_hours}, "
                         f"shift_available_hours={shift_available_hours}, "
-                        f"shift_other_lost_hours={doc.shift_other_lost_hours}, "
+                        f"shift_other_lost_hours={shift_other_lost_hours}, "
                         f"plant_shift_utilisation={doc.plant_shift_utilisation}, "
                         f"plant_shift_availability={doc.plant_shift_availability})"
                     )

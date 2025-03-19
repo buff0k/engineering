@@ -19,6 +19,7 @@
   "shift_system",
   "day_number",
   "asset_category",
+  "pre_use_avail_status",
   "hour_analysis_section",
   "shift_required_hours",
   "shift_start_hours",
@@ -186,11 +187,17 @@
    "fieldtype": "Data",
    "label": "Asset Category",
    "read_only": 1
+  },
+  {
+   "fieldname": "pre_use_avail_status",
+   "fieldtype": "Data",
+   "label": "Pre-Use Availability Status",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-11 17:40:51.809721",
+ "modified": "2025-03-11 19:56:12.033023",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",
