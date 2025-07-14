@@ -55,6 +55,9 @@ class PlantBreakdown(Document):
     def track_history_changes(self):
         """Track add/remove/update events in breakdown_history for an audit log."""
         previous = self.get_doc_before_save()
+        #  nothing to compare on a brand‐new doc
+        if not previous:
+            return
         old_rows = previous.breakdown_history if previous else []
         new_rows = self.breakdown_history
 
