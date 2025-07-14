@@ -16,6 +16,8 @@
   "breakdown_status",
   "section_break_sbau",
   "breakdown_reason_updates",
+  "site_breakdown_situation_section",
+  "breakdown_situation",
   "breakdown_history_tab",
   "breakdown_history",
   "history_change_log"
@@ -32,10 +34,11 @@
   },
   {
    "fieldname": "asset_name",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Plant No."
+   "label": "Plant No.",
+   "options": "Asset"
   },
   {
    "fieldname": "column_break_xnrp",
@@ -49,14 +52,15 @@
    "in_standard_filter": 1,
    "label": "Breakdown Status",
    "options": "1\n2\n3",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "hours_breakdown_start",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Hours at Breakdown Start",
    "precision": "1",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fetch_from": "asset_name.item_name",
@@ -88,7 +92,7 @@
    "fieldname": "breakdown_reason_updates",
    "fieldtype": "Small Text",
    "label": "Breakdown Reason/Update",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "breakdown_history",
@@ -101,12 +105,23 @@
    "fieldtype": "Text Editor",
    "label": "History Change Log",
    "read_only": 1
+  },
+  {
+   "fieldname": "site_breakdown_situation_section",
+   "fieldtype": "Section Break",
+   "label": "Site Breakdown Situation"
+  },
+  {
+   "depends_on": "eval:doc.location && doc.asset_name",
+   "fieldname": "breakdown_situation",
+   "fieldtype": "HTML",
+   "label": "Breakdown Situation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-25 09:37:15.539891",
+ "modified": "2025-07-13 19:26:20.575186",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown",
@@ -174,6 +189,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

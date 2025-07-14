@@ -5,219 +5,149 @@ from datetime import datetime
 
 class PlantBreakdown(Document):
     def before_save(self):
-        # Track changes to breakdown_history
+        # 1) Prevent edits once locked at status '3'
+        previous = self.get_doc_before_save()
+        prev_status = str(previous.breakdown_status) if previous and previous.breakdown_status else None
+        if prev_status == '3':
+            throw(_("Cannot edit once breakdown_status is 3."))
+
+        # 2) Log change events for audit (JS handles history row creation)
         self.track_history_changes()
 
-        # Ensure current breakdown_status is treated as a string
+        # 3) Validate status progression: new record must start at '1', then 1→2→3
         current_status = str(self.breakdown_status) if self.breakdown_status else None
-        previous_status = None
-
-        # Fetch the previous document state, if it exists
-        previous_doc = self.get_doc_before_save()
-        if previous_doc:
-            previous_status = str(previous_doc.breakdown_status) if previous_doc.breakdown_status else None
-
-        # Validation for the first save
         if self.is_new():
             if current_status != '1':
-                throw(_("When the document is saved for the first time, breakdown_status must be 1."))
-
-        # Validation for subsequent saves
+                throw(_("On first save, breakdown_status must be 1."))
         else:
-            if previous_status == '1' and current_status not in ['1', '2']:
-                throw(_("Breakdown_status can only be changed from 1 to 2 or left at 1."))
-            if previous_status == '2' and current_status not in ['2', '3']:
-                throw(_("Breakdown_status can only be changed from 2 to 3 or left at 2."))
-            if previous_status == '3':
-                throw(_("The document is locked and cannot be edited once breakdown_status is 3."))
+            if prev_status == '1' and current_status not in ['1', '2']:
+                throw(_("Can only change status 1→2 or stay at 1."))
+            if prev_status == '2' and current_status not in ['2', '3']:
+                throw(_("Can only change status 2→3 or stay at 2."))
 
-        # Update breakdown history if any field changes
-        if self.fields_have_changed(previous_doc):
-            self.append_breakdown_history(current_status)
-
-        # Automatically mark all breakdown_resolved fields as checked if changing to status '3'
+        # 4) Mark resolved flags when final status is reached
         if current_status == '3':
             for entry in self.breakdown_history:
                 entry.breakdown_resolved = 1
 
-        # Calculate timeclock
+        # 5) Recalculate timeclocks on all history entries
         self.calculate_timeclock()
 
-    def fields_have_changed(self, previous_doc):
-        """Check if any relevant fields in the main document have changed."""
-        if not previous_doc:
-            return True  # If there's no previous document, treat as changed
-
-        # List of fields to track for changes in the main document
-        fields_to_check = [
-            "location", "asset_name", "breakdown_status",
-            "breakdown_reason_updates", "hours_breakdown_start"
-        ]
-
-        for field in fields_to_check:
-            previous_value = getattr(previous_doc, field, None)
-            current_value = getattr(self, field, None)
-            if previous_value != current_value:
-                return True
-
-        return False
+        # 6) Aggregate history entries into the parent reason field (no duplicate hours)
+        if self.breakdown_history:
+            lines = []
+            for entry in self.breakdown_history:
+                status = entry.breakdown_status
+                timestamp = entry.update_date_time
+                line = f"Status {status} ({timestamp}): "
+                # Only include start hours for the initial breakdown
+                if status == '1' and entry.breakdown_start_hours is not None:
+                    line += f"Start Hours: {entry.breakdown_start_hours} | "
+                # Append the recorded reason
+                if entry.breakdown_reason_updates:
+                    line += entry.breakdown_reason_updates
+                # Append timeclock if calculated
+                if entry.timeclock:
+                    line += f" [Timeclock: {entry.timeclock}]"
+                lines.append(line)
+            self.breakdown_reason_updates = "\n".join(lines)
 
     def track_history_changes(self):
-        """Track changes to the breakdown_history table and log them."""
-        previous_doc = self.get_doc_before_save()
-        previous_history = previous_doc.breakdown_history if previous_doc else []
-        current_history = self.breakdown_history
+        """Track add/remove/update events in breakdown_history for an audit log."""
+        previous = self.get_doc_before_save()
+        old_rows = previous.breakdown_history if previous else []
+        new_rows = self.breakdown_history
 
-        # Detect changes
-        added = [row for row in current_history if row.name not in [p.name for p in previous_history]]
-        removed = [row for row in previous_history if row.name not in [c.name for c in current_history]]
+        old_ids = {r.name for r in old_rows}
+        new_ids = {r.name for r in new_rows}
+        added = [r for r in new_rows if r.name not in old_ids]
+        removed = [r for r in old_rows if r.name not in new_ids]
         updated = [
-            {"old": prev_row, "new": curr_row}
-            for prev_row in previous_history
-            for curr_row in current_history
-            if prev_row.name == curr_row.name and self.row_changed(prev_row, curr_row)
+            {'old': o, 'new': n}
+            for o in old_rows for n in new_rows
+            if o.name == n.name and self.row_changed(o, n)
         ]
 
-        # Recalculate timeclock if update_date_time has changed
-        if any(self.row_changed(prev_row, curr_row) and "update_date_time" in self.get_changed_fields(prev_row, curr_row)
-               for prev_row, curr_row in [(u["old"], u["new"]) for u in updated]):
-            self.calculate_timeclock()
+        entries = []
+        for r in added:
+            entries.append({'action': 'Added', 'details': r.as_dict()})
+        for r in removed:
+            entries.append({'action': 'Removed', 'details': r.as_dict()})
+        for u in updated:
+            fields = self.get_changed_fields(u['old'], u['new'])
+            details = {f: {'before': getattr(u['old'], f), 'after': getattr(u['new'], f)} for f in fields}
+            entries.append({'action': 'Updated', 'details': details})
 
-        # Construct log message
-        log_entries = []
-
-        # Log added rows
-        for row in added:
-            log_entries.append({"action": "Added", "details": row.as_dict()})
-
-        # Log removed rows
-        for row in removed:
-            log_entries.append({"action": "Removed", "details": row.as_dict()})
-
-        # Log updated rows
-        for change in updated:
-            changes = self.get_changed_fields(change["old"], change["new"])
-            details = {field: {"before": getattr(change["old"], field), "after": getattr(change["new"], field)} for field in changes}
-            log_entries.append({"action": "Updated", "details": details})
-
-        # Append to history change log in simplified table format
-        if log_entries:
-            current_time = frappe.utils.now_datetime()
+        if entries:
+            ts = frappe.utils.now_datetime()
             user = frappe.session.user
-            log_table = self.format_log_table(current_time, user, log_entries)
-            self.history_change_log = (self.history_change_log or "") + log_table
+            self.history_change_log = (self.history_change_log or '') + self.format_log_table(ts, user, entries)
 
     def format_log_table(self, timestamp, user, log_entries):
-        """Format change log as an HTML table."""
-        table = f"""
-        <table border="1" style="width:100%;border-collapse:collapse;">
-            <thead>
-                <tr>
-                    <th>Timestamp, User, Action</th>
-                    <th>Details</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
-        for log in log_entries:
-            details_html = "<br>".join([f"{field}: {values['before']} → {values['after']}" for field, values in log.get("details", {}).items()])
-            table += f"""
-                <tr>
-                    <td>{timestamp}<br>{user}<br>{log['action']}</td>
-                    <td>{details_html}</td>
-                </tr>
-            """
-        table += "</tbody></table>"
-        return table
+        """Format the history_change_log as an HTML table."""
+        html = [
+            '<table border="1" style="width:100%;border-collapse:collapse;">',
+            '<thead><tr><th>Timestamp, User, Action</th><th>Details</th></tr></thead>',
+            '<tbody>'
+        ]
+        for e in log_entries:
+            details = []
+            for fld, val in e['details'].items():
+                if isinstance(val, dict) and 'before' in val and 'after' in val:
+                    details.append(f"{fld}: {val['before']} → {val['after']}")
+                else:
+                    details.append(f"{fld}: {val}")
+            html.append(f"<tr><td>{timestamp}<br>{user}<br>{e['action']}</td><td>{'<br>'.join(details)}</td></tr>")
+        html.append('</tbody></table>')
+        return ''.join(html)
 
     def row_changed(self, old_row, new_row):
-        """Check if a row has changed."""
-        fields_to_check = [
-            "update_by", "update_date_time", "location", 
-            "asset_name", "breakdown_reason_updates", 
-            "breakdown_status", "breakdown_start_hours"
+        """Detect if any tracked field in a history row changed."""
+        fields = [
+            'update_by', 'update_date_time', 'location',
+            'asset_name', 'breakdown_reason_updates',
+            'breakdown_status', 'breakdown_start_hours'
         ]
-        for field in fields_to_check:
-            if getattr(old_row, field) != getattr(new_row, field):
-                return True
-        return False
+        return any(getattr(old_row, f) != getattr(new_row, f) for f in fields)
 
     def get_changed_fields(self, old_row, new_row):
-        """Get a list of fields that have changed."""
-        changed_fields = []
-        fields_to_check = [
-            "update_by", "update_date_time", "location", 
-            "asset_name", "breakdown_reason_updates", 
-            "breakdown_status", "breakdown_start_hours"
+        """Return list of fields that differ between two history rows."""
+        return [
+            f for f in [
+                'update_by', 'update_date_time', 'location',
+                'asset_name', 'breakdown_reason_updates',
+                'breakdown_status', 'breakdown_start_hours'
+            ]
+            if getattr(old_row, f) != getattr(new_row, f)
         ]
-        for field in fields_to_check:
-            if getattr(old_row, field) != getattr(new_row, field):
-                changed_fields.append(field)
-        return changed_fields
-
-    def append_breakdown_history(self, current_status):
-        """Append a new entry to the breakdown history child table."""
-        current_timestamp = frappe.utils.now_datetime()
-        user = frappe.session.user
-
-        # Create a new history entry with all required fields
-        new_entry = {
-            "update_by": user,
-            "update_date_time": current_timestamp,
-            "location": self.location,
-            "asset_name": self.asset_name,
-            "breakdown_reason_updates": self.breakdown_reason_updates or '',
-            "breakdown_status": current_status,
-            "breakdown_start_hours": self.hours_breakdown_start or 0,
-        }
-
-        # Append the new entry to the child table
-        self.append("breakdown_history", new_entry)
 
     def calculate_timeclock(self):
-        """Calculate the total time difference between the first and last rows."""
-        if not self.breakdown_history or len(self.breakdown_history) < 2:
-            return  # Skip calculation if no rows or only one row exists
-
-        first_entry = self.breakdown_history[0]
-        last_entry = self.breakdown_history[-1]
-
+        """Compute elapsed time between first and last history entry."""
+        if len(self.breakdown_history) < 2:
+            return
+        first = self.breakdown_history[0]
+        last = self.breakdown_history[-1]
         try:
-            # Validate and parse update_date_time for first and last entries
-            first_time = self.parse_datetime_field(first_entry.update_date_time, "First Entry")
-            last_time = self.parse_datetime_field(last_entry.update_date_time, "Last Entry")
-
-            total_duration = last_time - first_time
-
-            # Calculate days, hours, and minutes
-            days = total_duration.days
-            hours, remainder = divmod(total_duration.seconds, 3600)
-            minutes = remainder // 60
-
-            # Construct the timeclock value in days, hours, and minutes
-            timeclock_value = f"{days} day{'s' if days != 1 else ''}, {hours} hour{'s' if hours != 1 else ''}, {minutes} minute{'s' if minutes != 1 else ''}"
-            last_entry.timeclock = timeclock_value
+            t1 = self.parse_datetime_field(first.update_date_time, 'First Entry')
+            t2 = self.parse_datetime_field(last.update_date_time, 'Last Entry')
+            delta = t2 - t1
+            days = delta.days
+            hrs, rem = divmod(delta.seconds, 3600)
+            mins = rem // 60
+            last.timeclock = f"{days} day{'s' if days != 1 else ''}, {hrs} hour{'s' if hrs != 1 else ''}, {mins} minute{'s' if mins != 1 else ''}"
         except Exception as e:
-            # Log an error if there's an issue
-            frappe.log_error(
-                title="Date-Time Parsing Error in Timeclock Calculation",
-                message=f"Error: {str(e)}"
-            )
-            last_entry.timeclock = "Error calculating timeclock"
+            frappe.log_error(title='Timeclock Error', message=str(e))
+            last.timeclock = 'Error calculating timeclock'
 
     def parse_datetime_field(self, value, label):
-        """Parse and validate a datetime field."""
+        """Parse a datetime string or object into a datetime."""
         if not value:
-            raise ValueError(f"{label} - update_date_time is missing.")
-        try:
-            # Check if value is already a datetime object
-            if isinstance(value, datetime):
-                return value
-            # Parse datetime string
-            return datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
-        except ValueError:
-            # Attempt parsing without milliseconds if necessary
+            raise ValueError(f"{label} - missing date-time")
+        if isinstance(value, datetime):
+            return value
+        for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
             try:
-                return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
-            except ValueError as e:
-                raise ValueError(f"{label} - Invalid date format: {value}. Error: {str(e)}")
+                return datetime.strptime(value, fmt)
+            except:
+                pass
+        raise ValueError(f"{label} - invalid format: {value}")

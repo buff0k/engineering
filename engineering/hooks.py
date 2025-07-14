@@ -20,6 +20,7 @@ add_to_apps_screen = [
 fixtures = [
         {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User"]]]},
         {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User"]]]},
+        {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
         {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]}
         ]
 scheduler_events = {
@@ -29,6 +30,12 @@ scheduler_events = {
         ]
     }
 }
+
+# ────────────────────────────────────────────────────────────────────────────
+doctype_js = {
+    "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js"
+}
+
 # Includes in <head>
 # ------------------
 
