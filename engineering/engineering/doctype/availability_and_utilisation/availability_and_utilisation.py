@@ -15,6 +15,10 @@ from frappe.model.document import Document
 class AvailabilityandUtilisation(Document):
     @staticmethod
     def generate_records():
+        # Prevent execution during migration or app install
+        if frappe.flags.in_migrate or frappe.flags.in_install_app:
+            frappe.logger().info("Skipped generate_records during migrate/install")
+            return
         created_records = []
         updated_records = []
         error_records = []
