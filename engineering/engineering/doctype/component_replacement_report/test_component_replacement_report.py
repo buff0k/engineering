@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Jorrie Jordaan and Contributors
+# Copyright (c) 2025, Jorrie Jordaan and Contributors
 # See license.txt
 
 # import frappe
