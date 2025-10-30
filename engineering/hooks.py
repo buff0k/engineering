@@ -23,13 +23,6 @@ fixtures = [
         {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
         {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]}
         ]
-scheduler_events = {
-    "cron": {
-        "40 5 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
-        ]
-    }
-}
 
 # ────────────────────────────────────────────────────────────────────────────
 doctype_js = {
