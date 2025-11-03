@@ -8,6 +8,7 @@
  "field_order": [
   "breakdown_details_tab",
   "location",
+  "downtime_type",
   "asset_name",
   "item_name",
   "asset_category",
@@ -116,12 +117,18 @@
    "fieldname": "breakdown_situation",
    "fieldtype": "HTML",
    "label": "Breakdown Situation"
+  },
+  {
+   "fieldname": "downtime_type",
+   "fieldtype": "Select",
+   "label": "Downtime type",
+   "options": "Breakdown\nPlanned Maintenance"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-13 19:26:20.575186",
+ "modified": "2025-11-03 08:02:57.731050",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown",

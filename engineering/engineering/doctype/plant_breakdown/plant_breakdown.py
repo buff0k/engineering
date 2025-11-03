@@ -39,7 +39,9 @@ class PlantBreakdown(Document):
             for entry in self.breakdown_history:
                 status = entry.breakdown_status
                 timestamp = entry.update_date_time
-                line = f"Status {status} ({timestamp}): "
+                downtime_type = getattr(entry, 'downtime_type', 'Plant Breakdown')
+                line = f"[{downtime_type}] Status {status} ({timestamp}): "
+
                 # Only include start hours for the initial breakdown
                 if status == '1' and entry.breakdown_start_hours is not None:
                     line += f"Start Hours: {entry.breakdown_start_hours} | "

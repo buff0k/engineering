@@ -37,7 +37,7 @@ function render_breakdown_ui(frm) {
   // Zone definitions
   const defs = {
     green:  { label: '🟢 In Production', bg: '#e6ffe6', bd: '#b3ffb3' },
-    red:    { label: '🔴 Breakdown',     bg: '#ffe6e6', bd: '#ffb3b3' },
+    red:    { label: '🔴 Breakdown/Planned Maintenance',     bg: '#ffe6e6', bd: '#ffb3b3' },
     yellow: { label: '🟡 Workshop',      bg: '#fff9e6', bd: '#ffe38a' }
   };
 
@@ -134,15 +134,17 @@ function handleZoneTransition(frm, toZone) {
 
       // Append a single history child row
       frm.add_child('breakdown_history', {
-        update_by:                frappe.session.user,
-        update_date_time:         frappe.datetime.now_datetime(),
-        location:                 frm.doc.location,
-        asset_name:               frm.doc.asset_name,
-        breakdown_status:         newStatus,
-        breakdown_reason_updates: reasonStr,
-        breakdown_start_hours:    (newStatus === '1' ? data.hours : frm.doc.hours_breakdown_start),
-        breakdown_resolved:       newStatus === '3' ? 1 : 0
-      });
+  downtime_type: frm.doc.downtime_type || 'Plant Breakdown',
+  update_by: frappe.session.user,
+  update_date_time: frappe.datetime.now_datetime(),
+  location: frm.doc.location,
+  asset_name: frm.doc.asset_name,
+  breakdown_status: newStatus,
+  breakdown_reason_updates: reasonStr,
+  breakdown_start_hours: (newStatus === '1' ? data.hours : frm.doc.hours_breakdown_start),
+  breakdown_resolved: newStatus === '3' ? 1 : 0
+});
+
 
       // Update parent doc fields
       frm.set_value('breakdown_status', newStatus);
