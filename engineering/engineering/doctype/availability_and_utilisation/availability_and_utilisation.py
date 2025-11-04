@@ -513,10 +513,11 @@ class AvailabilityandUtilisation(Document):
                 max_val = max(shift_working_hours, shift_available_hours)
 
                 # --- Plant Shift Utilisation ---
-                if max_val > 0:
-                    doc.plant_shift_utilisation = (shift_working_hours / max_val) * 100
+                    if shift_available_hours > 0:
+                    doc.plant_shift_utilisation = (shift_working_hours / shift_available_hours) * 100
                 else:
-                    doc.plant_shift_utilisation = 0
+                doc.plant_shift_utilisation = 0
+
 
                 # --- Plant Shift Availability ---
                 # Default to 100% if pre_use_avail_status is "3" or "6"
