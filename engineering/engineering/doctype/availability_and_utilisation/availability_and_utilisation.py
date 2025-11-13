@@ -515,10 +515,11 @@ class AvailabilityandUtilisation(Document):
                 max_val = max(shift_working_hours, shift_available_hours)
 
                 # --- Plant Shift Utilisation ---
-                if max_val > 0:
-                    doc.plant_shift_utilisation = (shift_working_hours / max_val) * 100
+                if shift_available_hours > 0:
+                    doc.plant_shift_utilisation = (shift_working_hours / shift_available_hours) * 100
                 else:
                     doc.plant_shift_utilisation = 0
+
 
                 # --- Plant Shift Availability ---
                 # Default to 100% if pre_use_avail_status is "3" or "6"
@@ -632,3 +633,27 @@ def run_daily():
     frappe.log_error("Scheduled job started at 05:40 AM for Availability and Utilisation", "Daily Job Start")
     AvailabilityandUtilisation.generate_records()
     frappe.log_error("Scheduled job completed for Availability and Utilisation", "Daily Job Completion")
+# ============================================================
+# NEW: Background Queue Function
+# ============================================================
+
+@frappe.whitelist()
+def queue_availability_and_utilisation():
+    """
+    Enqueue the Availability and Utilisation generation process
+    to run in the background (async job).
+    This prevents the UI from freezing or timing out.
+    """
+    frappe.enqueue(
+        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.create_availability_and_utilisation",
+        queue="long",  # Use the long-running worker
+        job_name="Availability & Utilisation Engine Run",
+        timeout=60 * 60  # 1 hour timeout window
+    )
+    frappe.msgprint(
+        msg="⏳ Availability & Utilisation generation has been queued. Check Error Log for progress.",
+        title="Process Queued",
+        indicator="blue"
+    )
+    return "Queued"
+    

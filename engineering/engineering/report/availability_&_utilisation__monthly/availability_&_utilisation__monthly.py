@@ -317,27 +317,30 @@ def execute(filters=None):
     data = flatten_tree_exploded([tree], periods, metrics)
     columns = get_columns(periods, main_header=main_header)
 
-    # Build chart data for BD Hrs, Avail Hrs and Other Lost Hrs using root node sums.
-    chart_data = {
-        "data": {
-            "labels": [p["label"] for p in periods],
-            "datasets": [
-                {
-                    "name": "BD Hrs",
-                    "values": [tree["sums"].get(f"{p['key']}_shift_breakdown_hours", 0) for p in periods]
-                },
-                {
-                    "name": "Avail Hrs",
-                    "values": [tree["sums"].get(f"{p['key']}_shift_available_hours", 0) for p in periods]
-                },
-                {
-                    "name": "Other Lost Hrs",
-                    "values": [tree["sums"].get(f"{p['key']}_shift_other_lost_hours", 0) for p in periods]
-                }
-            ]
-        },
-        "type": "line",
-        "fieldtype": "Float"
-    }
-
+    # Build chart data for BD Hrs, Avail Hrs, Work Hrs and Other Lost Hrs using root node sums.
+chart_data = {
+    "data": {
+        "labels": [p["label"] for p in periods],
+        "datasets": [
+            {
+                "name": "Work Hrs",
+                "values": [tree["sums"].get(f"{p['key']}_shift_working_hours", 0) for p in periods]
+            },
+            {
+                "name": "BD Hrs",
+                "values": [tree["sums"].get(f"{p['key']}_shift_breakdown_hours", 0) for p in periods]
+            },
+            {
+                "name": "Avail Hrs",
+                "values": [tree["sums"].get(f"{p['key']}_shift_available_hours", 0) for p in periods]
+            },
+            {
+                "name": "Other Lost Hrs",
+                "values": [tree["sums"].get(f"{p['key']}_shift_other_lost_hours", 0) for p in periods]
+            }
+        ]
+    },
+    "type": "line",
+    "fieldtype": "Float"
+}
     return columns, data, None, chart_data, [], None
