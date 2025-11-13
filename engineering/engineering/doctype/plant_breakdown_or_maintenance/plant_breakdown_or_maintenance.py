@@ -6,7 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import get_datetime
 
 
-class PlantBreakdownOrMaintenance(Document):
+class PlantBreakdownorMaintenance(Document):
     """Main doctype for recording equipment breakdowns or maintenance."""
 
     def before_save(self):
