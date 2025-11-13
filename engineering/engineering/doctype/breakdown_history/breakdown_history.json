@@ -5,6 +5,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "parent_breakdown",
   "update_by",
   "update_date_time",
   "breakdown_reason_updates",
@@ -18,9 +19,21 @@
  ],
  "fields": [
   {
+   "fieldname": "parent_breakdown",
+   "fieldtype": "Link",
+   "label": "Breakdown Parent",
+   "options": "Plant Breakdown or Maintenance",
+   "reqd": 0
+  },
+  {
    "fieldname": "update_by",
    "fieldtype": "Data",
    "label": "Update By"
+  },
+  {
+   "fieldname": "update_date_time",
+   "fieldtype": "Datetime",
+   "label": "Update Date and Time"
   },
   {
    "fieldname": "breakdown_reason_updates",
@@ -49,21 +62,15 @@
    "precision": "1"
   },
   {
-   "default": "0",
-   "fieldname": "breakdown_resolved",
-   "fieldtype": "Check",
-   "label": "Breakdown Resolved"
-  },
-  {
    "fieldname": "timeclock",
    "fieldtype": "Data",
    "label": "Timeclock"
   },
   {
-   "columns": 1,
-   "fieldname": "update_date_time",
-   "fieldtype": "Datetime",
-   "label": "Update Date and Time"
+   "default": "0",
+   "fieldname": "breakdown_resolved",
+   "fieldtype": "Check",
+   "label": "Breakdown Resolved"
   },
   {
    "default": "0",
@@ -75,7 +82,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-12 15:49:20.722635",
+ "modified": "2025-11-13 10:28:00.000000",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Breakdown History",
@@ -90,6 +97,17 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
    "share": 1,
    "write": 1
   }

@@ -12,7 +12,6 @@
   "asset_name",
   "item_name",
   "asset_category",
-  "event_type",
   "exclude_from_au",
   "column_break_xnrp",
   "hours_breakdown_start",
@@ -30,7 +29,8 @@
   "workshop_start_datetime",
   "column_break_zygn",
   "resolution_summary",
-  "resolved_datetime"
+  "resolved_datetime",
+  "breakdown_situation"
  ],
  "fields": [
   {
@@ -51,28 +51,6 @@
    "options": "Asset"
   },
   {
-   "fieldname": "column_break_xnrp",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Breakdown is recorded with Status 1 (Reported) and comes to an end with status 3 (Resolved). Thus the time in hours from status 1 to status 3 is the recorded breakdown hours of the plant. The system will automatically record the date and time when a status was changed. Status can only change from 1 (Reported) to 2 (In Progress) to 3 (Resolved).",
-   "fieldname": "breakdown_status",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Breakdown Status",
-   "options": "1\n2\n3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "hours_breakdown_start",
-   "fieldtype": "Float",
-   "hidden": 1,
-   "label": "Hours at Breakdown Start",
-   "precision": "1",
-   "read_only": 1
-  },
-  {
    "fetch_from": "asset_name.item_name",
    "fieldname": "item_name",
    "fieldtype": "Read Only",
@@ -85,8 +63,47 @@
    "label": "Plant Category"
   },
   {
+   "fieldname": "downtime_type",
+   "fieldtype": "Select",
+   "label": "Downtime type",
+   "options": "Breakdown\nPlanned Maintenance"
+  },
+  {
+   "default": "0",
+   "fieldname": "exclude_from_au",
+   "fieldtype": "Check",
+   "label": "Exclude from Downtime"
+  },
+  {
+   "fieldname": "column_break_xnrp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hours_breakdown_start",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Hours at Breakdown Start",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "description": "Breakdown is recorded with Status 1 (Reported) and comes to an end with status 3 (Resolved). Thus the time in hours from status 1 to status 3 is the recorded breakdown hours of the plant. The system will automatically record the date and time when a status was changed. Status can only change from 1 (Reported) to 2 (In Progress) to 3 (Resolved).",
+   "fieldname": "breakdown_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Breakdown Status",
+   "options": "1\n2\n3",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_sbau",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "breakdown_hours",
+   "fieldtype": "Float",
+   "label": "Breakdown Hours"
   },
   {
    "fieldname": "breakdown_details_tab",
@@ -153,37 +170,17 @@
    "label": "Datetime back in production"
   },
   {
-   "fieldname": "breakdown_hours",
-   "fieldtype": "Float",
-   "label": "Breakdown Hours"
-  },
-  {
-   "fieldname": "event_type",
-   "fieldtype": "Select",
-   "label": "Event type",
-   "options": "Breakdown\nPlanned Maintenance"
-  },
-  {
    "default": "0",
-   "fieldname": "exclude_from_au",
-   "fieldtype": "Check",
-   "label": "Exclude from Downtime",
    "depends_on": "eval:doc.location && doc.asset_name",
    "fieldname": "breakdown_situation",
    "fieldtype": "HTML",
    "label": "Breakdown Situation"
-  },
-  {
-   "fieldname": "downtime_type",
-   "fieldtype": "Select",
-   "label": "Downtime type",
-   "options": "Breakdown\nPlanned Maintenance"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-12 15:47:52.891205",
+ "modified": "2025-11-13 09:26:17.163761",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",

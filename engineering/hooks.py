@@ -29,6 +29,22 @@ doctype_js = {
     "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js"
 }
 
+scheduler_events = {
+    "cron": {
+        # Run every day at 05:40 AM
+        "40 5 * * *": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
+        ]
+    }
+}
+
+doc_events = {
+    "Plant Breakdown or Maintenance": {
+        "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update"
+    }
+}
+
+
 # Includes in <head>
 # ------------------
 
@@ -249,12 +265,5 @@ doctype_js = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-scheduler_events = {
-    "cron": {
-        # Run every day at 05:40 AM
-        "40 5 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
-        ]
-    }
-}
+
 
