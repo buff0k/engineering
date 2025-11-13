@@ -99,7 +99,6 @@
    "label": "Site Breakdown Situation"
   },
   {
-<<<<<<< HEAD:engineering/engineering/doctype/plant_breakdown_or_maintenance/plant_breakdown_or_maintenance.json
    "fieldname": "hours_breakdown_starts",
    "fieldtype": "Float",
    "label": "Hours Breakdown Start",
@@ -168,8 +167,7 @@
    "default": "0",
    "fieldname": "exclude_from_au",
    "fieldtype": "Check",
-   "label": "Exclude from Downtime"
-=======
+   "label": "Exclude from Downtime",
    "depends_on": "eval:doc.location && doc.asset_name",
    "fieldname": "breakdown_situation",
    "fieldtype": "HTML",
@@ -180,17 +178,12 @@
    "fieldtype": "Select",
    "label": "Downtime type",
    "options": "Breakdown\nPlanned Maintenance"
->>>>>>> 9941937b1da6da3b94af3a092eb3b7c4b0a3cd3a:engineering/engineering/doctype/plant_breakdown/plant_breakdown.json
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
-<<<<<<< HEAD:engineering/engineering/doctype/plant_breakdown_or_maintenance/plant_breakdown_or_maintenance.json
  "modified": "2025-11-12 15:47:52.891205",
-=======
- "modified": "2025-11-03 08:02:57.731050",
->>>>>>> 9941937b1da6da3b94af3a092eb3b7c4b0a3cd3a:engineering/engineering/doctype/plant_breakdown/plant_breakdown.json
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
