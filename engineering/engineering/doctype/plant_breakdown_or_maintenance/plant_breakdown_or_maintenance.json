@@ -11,16 +11,25 @@
   "asset_name",
   "item_name",
   "asset_category",
+  "event_type",
+  "exclude_from_au",
   "column_break_xnrp",
   "hours_breakdown_start",
   "breakdown_status",
   "section_break_sbau",
-  "breakdown_reason_updates",
+  "breakdown_hours",
   "site_breakdown_situation_section",
-  "breakdown_situation",
-  "breakdown_history_tab",
-  "breakdown_history",
-  "history_change_log"
+  "hours_breakdown_starts",
+  "breakdown_start_datetime",
+  "breakdown_reason",
+  "column_break_arpm",
+  "jobcard_no",
+  "workshop_action",
+  "eta_datetime",
+  "workshop_start_datetime",
+  "column_break_zygn",
+  "resolution_summary",
+  "resolved_datetime"
  ],
  "fields": [
   {
@@ -84,47 +93,89 @@
    "label": "Breakdown Details"
   },
   {
-   "fieldname": "breakdown_history_tab",
-   "fieldtype": "Tab Break",
-   "label": "Breakdown History"
-  },
-  {
-   "fieldname": "breakdown_reason_updates",
-   "fieldtype": "Small Text",
-   "label": "Breakdown Reason/Update",
-   "read_only": 1
-  },
-  {
-   "fieldname": "breakdown_history",
-   "fieldtype": "Table",
-   "label": "Breakdown history",
-   "options": "Breakdown History"
-  },
-  {
-   "fieldname": "history_change_log",
-   "fieldtype": "Text Editor",
-   "label": "History Change Log",
-   "read_only": 1
-  },
-  {
    "fieldname": "site_breakdown_situation_section",
    "fieldtype": "Section Break",
    "label": "Site Breakdown Situation"
   },
   {
-   "depends_on": "eval:doc.location && doc.asset_name",
-   "fieldname": "breakdown_situation",
-   "fieldtype": "HTML",
-   "label": "Breakdown Situation"
+   "fieldname": "hours_breakdown_starts",
+   "fieldtype": "Float",
+   "label": "Hours Breakdown Start",
+   "precision": "1"
+  },
+  {
+   "fieldname": "breakdown_start_datetime",
+   "fieldtype": "Datetime",
+   "label": "Breakdown Start Time"
+  },
+  {
+   "fieldname": "breakdown_reason",
+   "fieldtype": "Small Text",
+   "label": "Breakdown Reason"
+  },
+  {
+   "fieldname": "column_break_arpm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "jobcard_no",
+   "fieldtype": "Data",
+   "label": "Jobcard no."
+  },
+  {
+   "fieldname": "workshop_action",
+   "fieldtype": "Small Text",
+   "label": "Workshop Action"
+  },
+  {
+   "fieldname": "eta_datetime",
+   "fieldtype": "Datetime",
+   "label": "ETA back in production"
+  },
+  {
+   "fieldname": "workshop_start_datetime",
+   "fieldtype": "Datetime",
+   "label": "Workshop Start Time"
+  },
+  {
+   "fieldname": "column_break_zygn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resolution_summary",
+   "fieldtype": "Small Text",
+   "label": "Resolution Summary"
+  },
+  {
+   "fieldname": "resolved_datetime",
+   "fieldtype": "Datetime",
+   "label": "Datetime back in production"
+  },
+  {
+   "fieldname": "breakdown_hours",
+   "fieldtype": "Float",
+   "label": "Breakdown Hours"
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "label": "Event type",
+   "options": "Breakdown\nPlanned Maintenance"
+  },
+  {
+   "default": "0",
+   "fieldname": "exclude_from_au",
+   "fieldtype": "Check",
+   "label": "Exclude from Downtime"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-13 19:26:20.575186",
+ "modified": "2025-11-12 15:47:52.891205",
  "modified_by": "Administrator",
  "module": "Engineering",
- "name": "Plant Breakdown",
+ "name": "Plant Breakdown or Maintenance",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

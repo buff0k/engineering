@@ -387,11 +387,13 @@ class AvailabilityandUtilisation(Document):
                     "Breakdown History",
                     filters={
                         "location": parent_record["location"],
-                        "asset_name": parent_record["asset_name"]
+                        "asset_name": parent_record["asset_name"],
+                        "exclude_from_au": 0  # ✅ only include unexcluded breakdowns
                     },
                     fields=["update_date_time", "breakdown_status"],
                     order_by="update_date_time"
                 )
+
                 if not breakdown_history_rows:
                     append_log(
                         parent_record["name"],
