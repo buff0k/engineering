@@ -7,7 +7,8 @@ from frappe.utils import (
     get_first_day,
     get_last_day,
     time_diff_in_hours,
-    get_datetime
+    get_datetime,
+    now_datetime
 )
 from datetime import timedelta
 from frappe.model.document import Document
@@ -19,6 +20,7 @@ class AvailabilityandUtilisation(Document):
         if frappe.flags.in_migrate or frappe.flags.in_install_app:
             frappe.logger().info("Skipped generate_records during migrate/install")
             return
+        process_started_at = now_datetime()
         created_records = []
         updated_records = []
         error_records = []
@@ -578,9 +580,15 @@ class AvailabilityandUtilisation(Document):
         # =============================================================================
         # Phase 10: Final Summary Log
         # =============================================================================
+        process_completed_at = now_datetime()
+        duration = process_completed_at - process_started_at
+
         success_message = (
             f"Successfully created {len(created_records)} records. "
             f"Updated {len(updated_records)} records. "
+            f"Started at {process_started_at.strftime('%Y-%m-%d %H:%M:%S')}, "
+            f"completed at {process_completed_at.strftime('%Y-%m-%d %H:%M:%S')}, "
+            f"duration {duration}. "
         )
         if error_records:
             success_message += (
@@ -590,7 +598,6 @@ class AvailabilityandUtilisation(Document):
 
         frappe.log_error(success_message, "Process Completion")
         return success_message
-
 
 def get_shift_timings(shift_system, shift, shift_date):
     """Calculate shift start and end timings based on the system and shift."""
@@ -629,10 +636,32 @@ def create_availability_and_utilisation():
 
 @frappe.whitelist()
 def run_daily():
-    """Scheduled daily job."""
-    frappe.log_error("Scheduled job started at 05:40 AM for Availability and Utilisation", "Daily Job Start")
-    AvailabilityandUtilisation.generate_records()
-    frappe.log_error("Scheduled job completed for Availability and Utilisation", "Daily Job Completion")
+    """Scheduled job: enqueue the heavy processing on the long queue."""
+
+    started_at = now_datetime()
+    frappe.log_error(
+        f"Scheduled job enqueuing at {started_at.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"for Availability and Utilisation",
+        "Daily Job Start",
+    )
+
+    # Enqueue the heavy process on the long queue
+    frappe.enqueue(
+        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.create_availability_and_utilisation",
+        queue="long",
+        job_name="Availability & Utilisation Engine (Scheduled)",
+        timeout=60 * 60,  # 1 hour
+    )
+
+    enqueued_at = now_datetime()
+    frappe.log_error(
+        f"Scheduled job enqueued at {enqueued_at.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"for Availability and Utilisation",
+        "Daily Job Enqueued",
+    )
+
+    # no need to return anything, scheduler just needs this to finish quickly
+
 # ============================================================
 # NEW: Background Queue Function
 # ============================================================
