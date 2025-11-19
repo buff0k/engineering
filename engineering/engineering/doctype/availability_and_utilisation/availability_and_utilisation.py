@@ -596,7 +596,11 @@ class AvailabilityandUtilisation(Document):
                 "Check log batches for details."
             )
 
-        frappe.log_error(success_message, "Process Completion")
+        frappe.log_error(
+            message=success_message,
+            title="Availability & Utilisation - Process Completion",
+        )
+
         return success_message
 
 def get_shift_timings(shift_system, shift, shift_date):
