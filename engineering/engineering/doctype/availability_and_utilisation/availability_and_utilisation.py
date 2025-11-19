@@ -480,7 +480,7 @@ class AvailabilityandUtilisation(Document):
                 append_log(parent_record["name"], err_msg)
                 error_records.append(err_msg)
                 
-         # =============================================================================
+        # =============================================================================
         # Phase 8: Calculate and set final fields
         # =============================================================================
         for doc_name in created_records + updated_records:

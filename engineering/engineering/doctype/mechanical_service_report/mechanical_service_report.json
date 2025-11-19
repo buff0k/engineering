@@ -1,0 +1,163 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-19 06:21:29.576772",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "general_information_column",
+  "date",
+  "site_manager",
+  "artisan",
+  "site",
+  "machine_information_column",
+  "machine",
+  "is_no",
+  "smr",
+  "last_service",
+  "model",
+  "type",
+  "breakdown_and_work_section",
+  "breakdown_and_work_column",
+  "description",
+  "spares_required_and_comments",
+  "description_of_work_done",
+  "time_tracking_column",
+  "start_time",
+  "end_time",
+  "total_hours"
+ ],
+ "fields": [
+  {
+   "fieldname": "general_information_column",
+   "fieldtype": "Column Break",
+   "label": "General Information"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "site_manager",
+   "fieldtype": "Data",
+   "label": "Site Manager"
+  },
+  {
+   "fieldname": "artisan",
+   "fieldtype": "Data",
+   "label": "Artisan"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
+  },
+  {
+   "fieldname": "machine_information_column",
+   "fieldtype": "Column Break",
+   "label": "Machine Information"
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Data",
+   "label": "Machine"
+  },
+  {
+   "fieldname": "is_no",
+   "fieldtype": "Data",
+   "label": "IS NO"
+  },
+  {
+   "fieldname": "smr",
+   "fieldtype": "Data",
+   "label": "SMR"
+  },
+  {
+   "fieldname": "last_service",
+   "fieldtype": "Data",
+   "label": "Last Service"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model"
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Data",
+   "label": "Type"
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Time",
+   "label": "Start Time"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description of Breakdown"
+  },
+  {
+   "fieldname": "spares_required_and_comments",
+   "fieldtype": "Data",
+   "label": "Spares Required and Comments"
+  },
+  {
+   "fieldname": "description_of_work_done",
+   "fieldtype": "Data",
+   "label": "Description of Work Done"
+  },
+  {
+   "fieldname": "end_time",
+   "fieldtype": "Time",
+   "label": "End Time"
+  },
+  {
+   "fieldname": "total_hours",
+   "fieldtype": "Duration",
+   "label": "Total Hours"
+  },
+  {
+   "fieldname": "breakdown_and_work_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "breakdown_and_work_column",
+   "fieldtype": "Column Break",
+   "label": "Breakdown and Work"
+  },
+  {
+   "fieldname": "time_tracking_column",
+   "fieldtype": "Column Break",
+   "label": "Time Tracking"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-19 09:30:27.721855",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Mechanical Service Report",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

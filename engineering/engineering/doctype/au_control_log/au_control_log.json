@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-13 11:53:48.952657",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_control",
+  "title",
+  "run_engine",
+  "run_engine_background",
+  "section_summary",
+  "records_created",
+  "records_updated",
+  "records_errors",
+  "last_run_time",
+  "last_message",
+  "execution_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_control",
+   "fieldtype": "Section Break",
+   "label": "Control Panel Section"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "run_engine",
+   "fieldtype": "Button",
+   "label": "Run A&U Engine"
+  },
+  {
+   "fieldname": "run_engine_background",
+   "fieldtype": "Button",
+   "label": "Run in Background"
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Section Break",
+   "label": "Summary Section"
+  },
+  {
+   "fieldname": "records_created",
+   "fieldtype": "Int",
+   "label": "Records Created"
+  },
+  {
+   "fieldname": "records_updated",
+   "fieldtype": "Int",
+   "label": "Records Updated"
+  },
+  {
+   "fieldname": "records_errors",
+   "fieldtype": "Int",
+   "label": "Errors Logged"
+  },
+  {
+   "fieldname": "last_run_time",
+   "fieldtype": "Datetime",
+   "label": "Last Run Time"
+  },
+  {
+   "fieldname": "last_message",
+   "fieldtype": "Small Text",
+   "label": "Last Message"
+  },
+  {
+   "fieldname": "execution_log",
+   "fieldtype": "Long Text",
+   "label": "Execution Log"
+  }
+ ],
+ "module": "Engineering",
+ "name": "AU Control Log",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

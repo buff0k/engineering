@@ -32,7 +32,11 @@ doctype_js = {
 scheduler_events = {
     "cron": {
         # Run every day at 05:40 AM
-        "40 5 * * *": [
+        "0 6 * * *": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
+        ],
+        # Run every day at 18:00
+        "0 18 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ]
     }
@@ -44,6 +48,9 @@ doc_events = {
     }
 }
 
+doctype_js = {
+    "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js"
+}
 
 # Includes in <head>
 # ------------------
