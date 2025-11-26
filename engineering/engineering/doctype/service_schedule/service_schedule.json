@@ -10,7 +10,7 @@
   "notes",
   "service_schedule_child",
   "column_break_rqjd",
-  "html",
+  "create_ss_dashboard",
   "service_schedule_dashboard",
   "service_schedule"
  ],
@@ -41,11 +41,6 @@
    "label": "Service Schedule"
   },
   {
-   "fieldname": "html",
-   "fieldtype": "Button",
-   "label": "Create Service Schedule Dashboard"
-  },
-  {
    "fieldname": "service_schedule_child",
    "fieldtype": "Table",
    "label": "Service Schedule child",
@@ -55,12 +50,17 @@
    "fieldname": "service_schedule_dashboard",
    "fieldtype": "Tab Break",
    "label": "Service Schedule Dashboard"
+  },
+  {
+   "fieldname": "create_ss_dashboard",
+   "fieldtype": "Button",
+   "label": "Create Service Schedule Dashboard"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-26 12:37:39.398648",
+ "modified": "2025-11-26 13:51:37.058879",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule",
