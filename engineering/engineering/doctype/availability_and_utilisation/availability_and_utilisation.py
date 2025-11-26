@@ -689,4 +689,3 @@ def queue_availability_and_utilisation():
         indicator="blue"
     )
     return "Queued"
-    

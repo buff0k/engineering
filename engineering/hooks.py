@@ -8,46 +8,54 @@ required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/buff0k/engineering"
 app_logo_url = "/assets/engineering/images/is-logo.svg"
 app_home = "/app/engineering"
-add_to_apps_screen = [
-	{
-		"name": "ir",
-		"logo": "/assets/engineering/images/is-logo.svg",
-		"title": "Engineering",
-		"route": "/app/engineering",
-		"has_permission": "engineering.engineering.utils.check_app_permission",
-	}
-]
-fixtures = [
-        {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User"]]]},
-        {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User"]]]},
-        {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
-        {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]}
-        ]
 
-# ────────────────────────────────────────────────────────────────────────────
+add_to_apps_screen = [
+    {
+        "name": "ir",
+        "logo": "/assets/engineering/images/is-logo.svg",
+        "title": "Engineering",
+        "route": "/app/engineering",
+        "has_permission": "engineering.engineering.utils.check_app_permission",
+    }
+]
+
+fixtures = [
+    {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User"]]]},
+    {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User"]]]},
+    {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
+    {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]},
+]
+
+# ---------------------------------------------------------------------
+# Doctype-specific client JS
+# ---------------------------------------------------------------------
 doctype_js = {
-    "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js"
+    "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js",
+    "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js",
+    "Service Schedule": "engineering/doctype/service_schedule/service_schedule.js",
 }
 
+# ---------------------------------------------------------------------
+# Scheduled jobs
+# ---------------------------------------------------------------------
 scheduler_events = {
     "cron": {
-        # Run every day at 05:40 AM
+        # Run every day at 06:00
         "0 6 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
         # Run every day at 18:00
         "0 18 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
-        ]
+        ],
     }
 }
 
+# ---------------------------------------------------------------------
+# DocType event hooks
+# ---------------------------------------------------------------------
 doc_events = {
     "Plant Breakdown or Maintenance": {
         "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update"
     }
-}
-
-doctype_js = {
-    "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js"
 }

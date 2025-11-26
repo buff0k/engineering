@@ -41,7 +41,7 @@
  "is_standard": "Yes",
  "letter_head": "",
  "letterhead": null,
- "modified": "2025-09-09 14:36:03.305959",
+ "modified": "2025-11-26 13:33:52.578857",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Pre-Use Report",
@@ -50,16 +50,6 @@
  "ref_doctype": "Pre-Use Hours",
  "report_name": "Pre-Use Report",
  "report_type": "Script Report",
- "roles": [
-  {
-   "role": "System Manager"
-  },
-  {
-   "role": "Production Manager"
-  },
-  {
-   "role": "Production User"
-  }
- ],
+ "roles": [],
  "timeout": 0
 }

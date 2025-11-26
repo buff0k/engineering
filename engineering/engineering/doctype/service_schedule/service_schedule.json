@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-25 20:31:48.862727",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "site",
+  "month",
+  "notes",
+  "service_schedule_child",
+  "column_break_rqjd",
+  "html",
+  "service_schedule_dashboard",
+  "service_schedule"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "month",
+   "fieldtype": "Date",
+   "label": "Month"
+  },
+  {
+   "fieldname": "column_break_rqjd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "service_schedule",
+   "fieldtype": "HTML",
+   "label": "Service Schedule"
+  },
+  {
+   "fieldname": "html",
+   "fieldtype": "Button",
+   "label": "Create Service Schedule Dashboard"
+  },
+  {
+   "fieldname": "service_schedule_child",
+   "fieldtype": "Table",
+   "label": "Service Schedule child",
+   "options": "Service Schedule Child"
+  },
+  {
+   "fieldname": "service_schedule_dashboard",
+   "fieldtype": "Tab Break",
+   "label": "Service Schedule Dashboard"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-26 12:37:39.398648",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Service Schedule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

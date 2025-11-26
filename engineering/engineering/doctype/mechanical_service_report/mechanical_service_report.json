@@ -1,31 +1,53 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{site}-{service_date}-{asset}-{reference_number}",
  "creation": "2025-11-19 06:21:29.576772",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_break_seyr",
   "general_information_column",
-  "date",
-  "site_manager",
-  "artisan",
+  "service_date",
+  "reference_number",
+  "attach",
+  "plant_manager_code",
+  "plant_man_name",
+  "artisan_employee_code",
+  "artisan_fullname",
   "site",
   "machine_information_column",
-  "machine",
-  "is_no",
+  "asset",
+  "model",
+  "asset_category",
+  "last_smr_preuse",
   "smr",
   "last_service",
-  "model",
-  "type",
   "breakdown_and_work_section",
-  "breakdown_and_work_column",
-  "description",
-  "spares_required_and_comments",
-  "description_of_work_done",
   "time_tracking_column",
   "start_time",
   "end_time",
-  "total_hours"
+  "total_hours",
+  "breakdown_and_work_column",
+  "service_breakdown",
+  "service_interval",
+  "description_of_breakdown",
+  "spares_required_and_comments",
+  "description_of_work_done",
+  "mini_risk_assessment_section",
+  "column_break_lgfk",
+  "section",
+  "job_instructions",
+  "team_members",
+  "column_break_mvjh",
+  "isolate",
+  "procedure",
+  "changes",
+  "section_break_euxp",
+  "ppe",
+  "safety_tips",
+  "column_break_qncc",
+  "risks"
  ],
  "fields": [
   {
@@ -34,24 +56,11 @@
    "label": "General Information"
   },
   {
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "label": "Date"
-  },
-  {
-   "fieldname": "site_manager",
-   "fieldtype": "Data",
-   "label": "Site Manager"
-  },
-  {
-   "fieldname": "artisan",
-   "fieldtype": "Data",
-   "label": "Artisan"
-  },
-  {
    "fieldname": "site",
-   "fieldtype": "Data",
-   "label": "Site"
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
   },
   {
    "fieldname": "machine_information_column",
@@ -59,64 +68,45 @@
    "label": "Machine Information"
   },
   {
-   "fieldname": "machine",
-   "fieldtype": "Data",
-   "label": "Machine"
-  },
-  {
-   "fieldname": "is_no",
-   "fieldtype": "Data",
-   "label": "IS NO"
-  },
-  {
    "fieldname": "smr",
    "fieldtype": "Data",
-   "label": "SMR"
+   "label": "Hours at MSR",
+   "reqd": 1
   },
   {
    "fieldname": "last_service",
    "fieldtype": "Data",
-   "label": "Last Service"
+   "label": "Hours at Previous Service"
   },
   {
+   "fetch_from": "asset.item_name",
    "fieldname": "model",
-   "fieldtype": "Data",
-   "label": "Model"
-  },
-  {
-   "fieldname": "type",
-   "fieldtype": "Data",
-   "label": "Type"
+   "fieldtype": "Read Only",
+   "label": "Model",
+   "options": "Item"
   },
   {
    "fieldname": "start_time",
    "fieldtype": "Time",
-   "label": "Start Time"
-  },
-  {
-   "fieldname": "description",
-   "fieldtype": "Data",
-   "label": "Description of Breakdown"
+   "label": "Start Time",
+   "reqd": 1
   },
   {
    "fieldname": "spares_required_and_comments",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Spares Required and Comments"
-  },
-  {
-   "fieldname": "description_of_work_done",
-   "fieldtype": "Data",
-   "label": "Description of Work Done"
   },
   {
    "fieldname": "end_time",
    "fieldtype": "Time",
-   "label": "End Time"
+   "label": "End Time",
+   "reqd": 1
   },
   {
    "fieldname": "total_hours",
-   "fieldtype": "Duration",
-   "label": "Total Hours"
+   "fieldtype": "Float",
+   "label": "Total Hours",
+   "read_only": 1
   },
   {
    "fieldname": "breakdown_and_work_section",
@@ -131,15 +121,179 @@
    "fieldname": "time_tracking_column",
    "fieldtype": "Column Break",
    "label": "Time Tracking"
+  },
+  {
+   "fieldname": "section_break_euxp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "risks",
+   "fieldtype": "Small Text",
+   "label": "Risks"
+  },
+  {
+   "fieldname": "ppe",
+   "fieldtype": "Small Text",
+   "label": "P.P.E Used"
+  },
+  {
+   "fieldname": "column_break_qncc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "safety_tips",
+   "fieldtype": "Small Text",
+   "label": "Safety Tips"
+  },
+  {
+   "fieldname": "mini_risk_assessment_section",
+   "fieldtype": "Section Break",
+   "label": "Mini Risk Assessment"
+  },
+  {
+   "fieldname": "isolate",
+   "fieldtype": "Select",
+   "label": "Did you isolate?",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "procedure",
+   "fieldtype": "Select",
+   "label": "Did you understand the procedure?",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "changes",
+   "fieldtype": "Select",
+   "label": "Can there be any changes made?",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "column_break_lgfk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Data",
+   "label": "Section"
+  },
+  {
+   "fieldname": "job_instructions",
+   "fieldtype": "Data",
+   "label": "Job Instructions",
+   "reqd": 1
+  },
+  {
+   "fieldname": "team_members",
+   "fieldtype": "Table",
+   "label": "Team Members",
+   "options": "MSR Employee Table"
+  },
+  {
+   "fieldname": "column_break_mvjh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reference_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reference Number Manual MSR",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attach",
+   "fieldtype": "Attach",
+   "label": "Attach Mechanical Service Report"
+  },
+  {
+   "fieldname": "description_of_breakdown",
+   "fieldtype": "Small Text",
+   "label": "Description of Breakdown/Maintenance"
+  },
+  {
+   "fieldname": "description_of_work_done",
+   "fieldtype": "Small Text",
+   "label": "Description of Work Done"
+  },
+  {
+   "fieldname": "section_break_seyr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Fleet Number",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "asset.asset_category",
+   "fieldname": "asset_category",
+   "fieldtype": "Read Only",
+   "label": "Asset Category"
+  },
+  {
+   "fieldname": "plant_manager_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plant Manager Employee Code",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "plant_manager_code.employee_name",
+   "fieldname": "plant_man_name",
+   "fieldtype": "Read Only",
+   "label": "Plant Manager Name"
+  },
+  {
+   "fieldname": "service_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "MSR date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "service_breakdown",
+   "fieldtype": "Select",
+   "label": "Was this a scheduled service or breakdown?",
+   "options": "Service\nBreakdown\nPlanned Maintenance",
+   "reqd": 1
+  },
+  {
+   "fieldname": "artisan_employee_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Artisan Employee Code",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "artisan_employee_code.employee_name",
+   "fieldname": "artisan_fullname",
+   "fieldtype": "Read Only",
+   "label": "Artisan Full Name"
+  },
+  {
+   "fieldname": "service_interval",
+   "fieldtype": "Select",
+   "label": "Service Interval",
+   "options": "250 Hours\n500 Hours\n750 Hours\n1000 Hours\n2000 Hours"
+  },
+  {
+   "fieldname": "last_smr_preuse",
+   "fieldtype": "Read Only",
+   "label": "Last Hours from Pre-Use"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-19 09:30:27.721855",
+ "modified": "2025-11-21 14:54:04.440106",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
