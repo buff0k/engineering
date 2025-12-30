@@ -21,33 +21,19 @@
   "model",
   "asset_category",
   "last_smr_preuse",
-  "smr",
-  "last_service",
+  "current_hours",
+  "plant_breakdown_number",
   "breakdown_and_work_section",
   "time_tracking_column",
   "start_time",
   "end_time",
-  "total_hours",
-  "breakdown_and_work_column",
+  "total_time",
   "service_breakdown",
   "service_interval",
+  "breakdown_and_work_column",
   "description_of_breakdown",
   "spares_required_and_comments",
-  "description_of_work_done",
-  "mini_risk_assessment_section",
-  "column_break_lgfk",
-  "section",
-  "job_instructions",
-  "team_members",
-  "column_break_mvjh",
-  "isolate",
-  "procedure",
-  "changes",
-  "section_break_euxp",
-  "ppe",
-  "safety_tips",
-  "column_break_qncc",
-  "risks"
+  "description_of_work_done"
  ],
  "fields": [
   {
@@ -66,17 +52,6 @@
    "fieldname": "machine_information_column",
    "fieldtype": "Column Break",
    "label": "Machine Information"
-  },
-  {
-   "fieldname": "smr",
-   "fieldtype": "Data",
-   "label": "Hours at MSR",
-   "reqd": 1
-  },
-  {
-   "fieldname": "last_service",
-   "fieldtype": "Data",
-   "label": "Hours at Previous Service"
   },
   {
    "fetch_from": "asset.item_name",
@@ -103,12 +78,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "total_hours",
-   "fieldtype": "Float",
-   "label": "Total Hours",
-   "read_only": 1
-  },
-  {
    "fieldname": "breakdown_and_work_section",
    "fieldtype": "Section Break"
   },
@@ -121,77 +90,6 @@
    "fieldname": "time_tracking_column",
    "fieldtype": "Column Break",
    "label": "Time Tracking"
-  },
-  {
-   "fieldname": "section_break_euxp",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "risks",
-   "fieldtype": "Small Text",
-   "label": "Risks"
-  },
-  {
-   "fieldname": "ppe",
-   "fieldtype": "Small Text",
-   "label": "P.P.E Used"
-  },
-  {
-   "fieldname": "column_break_qncc",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "safety_tips",
-   "fieldtype": "Small Text",
-   "label": "Safety Tips"
-  },
-  {
-   "fieldname": "mini_risk_assessment_section",
-   "fieldtype": "Section Break",
-   "label": "Mini Risk Assessment"
-  },
-  {
-   "fieldname": "isolate",
-   "fieldtype": "Select",
-   "label": "Did you isolate?",
-   "options": "Yes\nNo"
-  },
-  {
-   "fieldname": "procedure",
-   "fieldtype": "Select",
-   "label": "Did you understand the procedure?",
-   "options": "Yes\nNo"
-  },
-  {
-   "fieldname": "changes",
-   "fieldtype": "Select",
-   "label": "Can there be any changes made?",
-   "options": "Yes\nNo"
-  },
-  {
-   "fieldname": "column_break_lgfk",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section",
-   "fieldtype": "Data",
-   "label": "Section"
-  },
-  {
-   "fieldname": "job_instructions",
-   "fieldtype": "Data",
-   "label": "Job Instructions",
-   "reqd": 1
-  },
-  {
-   "fieldname": "team_members",
-   "fieldtype": "Table",
-   "label": "Team Members",
-   "options": "MSR Employee Table"
-  },
-  {
-   "fieldname": "column_break_mvjh",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "reference_number",
@@ -257,7 +155,7 @@
    "fieldname": "service_breakdown",
    "fieldtype": "Select",
    "label": "Was this a scheduled service or breakdown?",
-   "options": "Service\nBreakdown\nPlanned Maintenance",
+   "options": "Service\nBreakdown\nPlanned Maintenance\nBack Log Breakdown\nBack Log Service\nInspection\nNearby Inspection",
    "reqd": 1
   },
   {
@@ -284,12 +182,32 @@
    "fieldname": "last_smr_preuse",
    "fieldtype": "Read Only",
    "label": "Last Hours from Pre-Use"
-  }
+  },
+  {
+  "fieldname": "current_hours",
+  "fieldtype": "Float",
+  "label": "Current Hours",
+  "reqd": 1,
+  "precision": "0"
+},
+  {
+   "fieldname": "plant_breakdown_number",
+   "fieldtype": "Link",
+   "label": "Plant Breakdown Number",
+   "options": "Plant Breakdown or Maintenance"
+  },
+  
+  {
+  "fieldname": "total_time",
+  "fieldtype": "Duration",
+  "label": "Total Time",
+  "read_only": 1
+}
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-21 14:54:04.440106",
+ "modified": "2025-12-21 21:59:44.689526",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

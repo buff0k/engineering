@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-08 11:24:30.008350",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "attach_paper",
+  "sections",
+  "fleet_number",
+  "site",
+  "date"
+ ],
+ "fields": [
+  {
+   "fieldname": "sections",
+   "fieldtype": "Select",
+   "label": "Sections",
+   "options": "Brake Test\nFire Suppression\nFRCS\nLifting Equipment\nMachine Service Records\nNDT\nPDS\nService Schedule\nTyre Inspection Report\nWearcheck"
+  },
+  {
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "label": "Fleet Number",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "attach_paper",
+   "fieldtype": "Attach",
+   "label": "Attach Paper"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-10 12:56:08.999742",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Engineering Legals",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

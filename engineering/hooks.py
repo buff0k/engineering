@@ -32,7 +32,7 @@ fixtures = [
 doctype_js = {
     "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js",
     "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js",
-    "Service Schedule": "engineering/doctype/service_schedule/service_schedule.js",
+    "Service Schedule": "engineering/engineering/doctype/service_schedule/service_schedule.js",
 }
 
 # ---------------------------------------------------------------------
@@ -48,6 +48,12 @@ scheduler_events = {
         "0 18 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
+         # ==========================================================
+        # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
+        # ==========================================================
+        "0 1 * * *": [
+            "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update"
+        ]
     }
 }
 
@@ -57,5 +63,15 @@ scheduler_events = {
 doc_events = {
     "Plant Breakdown or Maintenance": {
         "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update"
+    },
+    "Engineering Legals": {
+        "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_update"
     }
+}
+
+# ---------------------------------------------------------------------
+# Whitelisted method overrides
+# ---------------------------------------------------------------------
+override_whitelisted_methods = {
+    "custom_checkin": "engineering.checkin.custom_checkin"
 }

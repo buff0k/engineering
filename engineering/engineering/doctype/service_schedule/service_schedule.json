@@ -1,18 +1,22 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{site}-{month}",
  "creation": "2025-11-25 20:31:48.862727",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "site",
+  "month_picker",
   "month",
+  "site",
   "notes",
   "service_schedule_child",
   "column_break_rqjd",
   "create_ss_dashboard",
   "service_schedule_dashboard",
-  "service_schedule"
+  "service_schedule",
+  "assets_almost_due_for_service_50_hours_tab",
+  "dashboard_summary"
  ],
  "fields": [
   {
@@ -23,7 +27,8 @@
   },
   {
    "fieldname": "month",
-   "fieldtype": "Date",
+   "fieldtype": "Data",
+   "hidden": 1,
    "label": "Month"
   },
   {
@@ -55,15 +60,31 @@
    "fieldname": "create_ss_dashboard",
    "fieldtype": "Button",
    "label": "Create Service Schedule Dashboard"
+  },
+  {
+   "fieldname": "assets_almost_due_for_service_50_hours_tab",
+   "fieldtype": "Tab Break",
+   "label": "Assets almost due for service (50 hours)"
+  },
+  {
+   "fieldname": "dashboard_summary",
+   "fieldtype": "HTML",
+   "label": "Dashboard Summary"
+  },
+  {
+   "fieldname": "month_picker",
+   "fieldtype": "HTML",
+   "label": "Month Picker"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-26 13:51:37.058879",
+ "modified": "2025-12-21 20:00:09.349834",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

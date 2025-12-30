@@ -49,7 +49,22 @@ frappe.ui.form.on("Mechanical Service Report", {
         if (frm.doc.service_breakdown === "Service" && !frm.doc.service_interval) {
             frappe.msgprint(__('Please select a Service Interval for a Service MSR.'));
             frappe.validated = false;
+            return;
         }
+
+        // Make sure total_time is always correct before saving
+        calculate_total_hours(frm);
+
+    },
+
+    // when Start Time changes, update total_time
+    start_time(frm) {
+        calculate_total_hours(frm);
+    },
+
+    // when End Time changes, update total_time
+    end_time(frm) {
+        calculate_total_hours(frm);
     },
 
     asset(frm) {
@@ -92,4 +107,37 @@ function toggle_service_interval(frm) {
     if (!is_service && frm.doc.service_interval) {
         frm.set_value('service_interval', null);
     }
+}
+
+// Helper to calculate total_time from start_time and end_time
+function calculate_total_hours(frm) {
+    if (!frm.doc.start_time || !frm.doc.end_time) {
+        frm.set_value("total_time", 0);
+        return;
+    }
+
+    // start_time and end_time are strings like "08:30:00" or "08:30"
+    function time_to_seconds(t) {
+        const parts = t.split(":").map(Number);
+        const h = parts[0] || 0;
+        const m = parts[1] || 0;
+        const s = parts[2] || 0;
+        return (h * 3600) + (m * 60) + s;
+    }
+
+    let start_sec = time_to_seconds(frm.doc.start_time);
+    let end_sec = time_to_seconds(frm.doc.end_time);
+
+    // If end is smaller, assume it went past midnight
+    if (end_sec < start_sec) {
+        end_sec += 24 * 3600;
+    }
+
+    let diff_seconds = end_sec - start_sec;
+
+    // Optional: round to nearest minute so it looks clean (no odd seconds)
+    diff_seconds = Math.round(diff_seconds / 60) * 60;
+
+    // Duration field expects seconds
+    frm.set_value("total_time", diff_seconds);
 }

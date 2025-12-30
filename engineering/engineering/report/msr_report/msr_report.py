@@ -46,7 +46,4 @@ def execute(filters=None):
         limit_page_length=20,
     )
 
-    # Each row already has the fieldnames matching our columns
-    data = msr_list
-
-    return columns, data
+    return columns, msr_list
