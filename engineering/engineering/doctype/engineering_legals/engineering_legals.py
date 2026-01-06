@@ -1,4 +1,5 @@
 import os
+import mimetypes
 from typing import Optional
 
 import frappe
@@ -11,26 +12,120 @@ ENGINEERING_DRIVE_TEAM_TITLE = "Engineering team"
 
 class EngineeringLegals(Document):
     """Controller for Engineering Legals DocType."""
-    # You can add per-document logic here later if you like
-    pass
+    def validate(self):
+        """
+        Server-side source of truth.
+        - expiry_date is ALWAYS recalculated from start_date + section rules
+        - invalid combinations are blocked
+        - conditional fields are cleared when not relevant
+        - expiry is never carried over and never user-editable
+        """
+        from frappe.utils import add_months
+
+        # Always reset first (prevents stale carry-over)
+        self.expiry_date = None
+
+        # Core fields must exist (server enforcement)
+        if not self.sections:
+            frappe.throw("Section is required.")
+        if not self.start_date:
+            frappe.throw("Start Date is required.")
 
 
-def on_update(doc: Document, method: Optional[str] = None):
+        section = (self.sections or "").strip()
+
+        # Brake Test & PDS -> require vehicle_type
+        if section in ("Brake Test", "PDS"):
+            if not self.vehicle_type:
+                frappe.throw("Vehicle Type (LDV/TMM) is required for this Section.")
+
+            months = 1 if self.vehicle_type == "TMM" else 3
+            self.expiry_date = add_months(self.start_date, months)
+
+        # FRCS -> +3 months, no vehicle type required
+        elif section == "FRCS":
+            self.expiry_date = add_months(self.start_date, 3)
+
+        # Lifting Equipment -> require lifting_type
+        elif section == "Lifting Equipment":
+            if not self.lifting_type:
+                frappe.throw("Lifting Type (Inspection/Certificate) is required for this Section.")
+
+            months = 3 if self.lifting_type == "Inspection" else 12
+            self.expiry_date = add_months(self.start_date, months)
+
+        # No expiry at all
+        elif section in ("Machine Service Records", "Service Schedule", "Wearcheck"):
+            self.expiry_date = None
+
+        else:
+            frappe.throw(f"Unknown Section: {section}")
+
+        # Clear irrelevant fields so nothing stale gets saved (imports/API too)
+        if section not in ("Brake Test", "PDS"):
+            self.vehicle_type = None
+
+        if section != "Lifting Equipment":
+            self.lifting_type = None
+
+    def on_update(self):
+        try:
+            move_engineering_legal_file_to_folder(self)
+            create_drive_link_for_engineering_legals(self)
+        except Exception:
+            frappe.log_error(
+                title="Engineering Legals file move failed",
+                message=frappe.get_traceback(),
+            )
+
+    def on_trash(self):
+        try:
+            remove_drive_links_for_engineering_legals(self)
+        except Exception:
+            frappe.log_error(
+                title="Engineering Legals drive link removal failed",
+                message=frappe.get_traceback(),
+            )
+
+
+
+
+
+
+
+def remove_drive_links_for_engineering_legals(doc: Document):
     """
-    Hook called whenever an Engineering Legals document is saved.
-    1. Moves the attached file into File Manager folder tree:
-       Home / Engineering Legals / <Site> / <Sections> / <Fleet Number> /
-    2. Creates a link entry in Frappe Drive under:
-       Home / Engineering Legals / <Site> / <Sections> /
+    Deactivate Drive File link(s) created for this doc attachment.
+    Safer than deleting: sets is_active=0.
     """
-    try:
-        move_engineering_legal_file_to_folder(doc)
-        create_drive_link_for_engineering_legals(doc)
-    except Exception:
-        frappe.log_error(
-            title="Engineering Legals file move failed",
-            message=frappe.get_traceback(),
-        )
+
+    if "drive" not in frappe.get_installed_apps():
+        return
+
+    file_url = getattr(doc, "attach_paper", None)
+    if not file_url:
+        return
+
+    # Match the exact same URL format you used when creating the link
+    public_url = file_url.replace("/private/files/", "/files/")
+    absolute_url = frappe.utils.get_url(public_url)
+
+    team = _get_default_drive_team()
+
+    # Deactivate any matching Drive link rows (avoid brittle folder lookups)
+    frappe.db.sql(
+        """
+        UPDATE `tabDrive File`
+        SET is_active = 0
+        WHERE team = %s
+          AND is_link = 1
+          AND is_active = 1
+          AND path = %s
+        """,
+        (team, absolute_url),
+    )
+
+    frappe.db.commit()
 
 
 def move_engineering_legal_file_to_folder(doc: Document):
@@ -208,17 +303,21 @@ def create_drive_link_for_engineering_legals(doc: Document):
 
     # Avoid creating duplicate links for the same file & folder
     public_url = file_row.file_url.replace("/private/files/", "/files/")
+    # Drive links work best with an ABSOLUTE URL
+    absolute_url = frappe.utils.get_url(public_url)
+
+
 
     existing = frappe.db.exists(
-        "Drive File",
-        {
-            "team": team,
-            "parent_entity": fleet_folder,
-            "is_link": 1,
-            "path": public_url,   # always compare using public url
-            "is_active": 1,
-        },
-    )
+    "Drive File",
+    {
+        "team": team,
+        "parent_entity": fleet_folder,
+        "is_link": 1,
+        "path": absolute_url,   # compare using absolute url
+        "is_active": 1,
+    },
+)
 
     if existing:
         return
@@ -237,9 +336,11 @@ def create_drive_link_for_engineering_legals(doc: Document):
             "is_link": 1,    # link entity
             "is_active": 1,
             "is_private": 0,  # visible to team
-            "path": public_url,  # ALWAYS /files/...
+            "path": absolute_url,  # ABSOLUTE url so Drive can open it
             "file_size": file_row.file_size or 0,
-            "mime_type": file_row.file_type or "",
+
+            # Better MIME detection (File.file_type is often blank / not a real MIME)
+            "mime_type": (mimetypes.guess_type(file_row.file_name or "")[0] or (file_row.file_type or "")),
         }
     )
 

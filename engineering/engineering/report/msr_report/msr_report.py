@@ -1,12 +1,11 @@
 import frappe
 
+
 def execute(filters=None):
     filters = filters or {}
-    asset = filters.get("asset")
 
-    # Safety check: if no asset, return nothing
-    if not asset:
-        return [], []
+    asset = filters.get("asset")
+    service_breakdown = filters.get("service_breakdown")
 
     columns = [
         {
@@ -14,7 +13,7 @@ def execute(filters=None):
             "fieldname": "name",
             "fieldtype": "Link",
             "options": "Mechanical Service Report",
-            "width": 180,
+            "width": 280,
         },
         {
             "label": "Service Date",
@@ -24,26 +23,37 @@ def execute(filters=None):
         },
         {
             "label": "Hours at Service",
-            "fieldname": "smr",
-            "fieldtype": "Data",
-            "width": 130,
+            "fieldname": "current_hours",
+            "fieldtype": "Float",
+            "width": 150,
         },
         {
             "label": "Description of Breakdown",
             "fieldname": "description_of_breakdown",
             "fieldtype": "Data",
-            "width": 300,
+            "width": 560,
         },
     ]
 
-    # Get last 20 records for this asset ordered by latest service date,
-    # and then by creation as a tie-breaker
-    msr_list = frappe.get_all(
+    if not asset:
+        return columns, []
+
+    query_filters = {"asset": asset}
+    if service_breakdown:
+        query_filters["service_breakdown"] = service_breakdown
+
+    data = frappe.get_all(
         "Mechanical Service Report",
-        filters={"asset": asset},
-        fields=["name", "service_date", "smr", "description_of_breakdown"],
+        filters=query_filters,
+        fields=[
+            "name",
+            "service_date",
+            "current_hours",
+            "description_of_breakdown",
+            "service_breakdown",
+        ],
         order_by="service_date desc, creation desc",
-        limit_page_length=20,
+        limit_page_length=200,
     )
 
-    return columns, msr_list
+    return columns, data

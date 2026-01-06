@@ -1,53 +1,96 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{site}-{start_date}-{fleet_number}",
  "creation": "2025-12-08 11:24:30.008350",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "attach_paper",
+  "engineering_legals_section",
   "sections",
-  "fleet_number",
   "site",
-  "date"
+  "fleet_number",
+  "vehicle_type",
+  "lifting_type",
+  "column_break_neqp",
+  "attach_paper",
+  "start_date",
+  "expiry_date"
  ],
  "fields": [
   {
    "fieldname": "sections",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Sections",
-   "options": "Brake Test\nFire Suppression\nFRCS\nLifting Equipment\nMachine Service Records\nNDT\nPDS\nService Schedule\nTyre Inspection Report\nWearcheck"
+   "options": "Brake Test\nFire Suppression\nFRCS\nLifting Equipment\nMachine Service Records\nNDT\nPDS\nService Schedule\nTyre Inspection Report\nWearcheck",
+   "reqd": 1
   },
   {
    "fieldname": "fleet_number",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Fleet Number",
-   "options": "Asset"
+   "options": "Asset",
+   "reqd": 1
   },
   {
    "fieldname": "site",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Site",
-   "options": "Location"
+   "options": "Location",
+   "reqd": 1
   },
   {
    "fieldname": "attach_paper",
    "fieldtype": "Attach",
-   "label": "Attach Paper"
+   "in_list_view": 1,
+   "label": "Attach Paper",
+   "reqd": 1
   },
   {
-   "fieldname": "date",
+   "fieldname": "start_date",
    "fieldtype": "Date",
-   "label": "Date"
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "label": "Expiry Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_neqp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "engineering_legals_section",
+   "fieldtype": "Section Break",
+   "label": "Engineering Legals"
+  },
+  {
+   "fieldname": "vehicle_type",
+   "fieldtype": "Select",
+   "label": "Vehicle Type",
+   "options": "LDV\nTMM"
+  },
+  {
+   "fieldname": "lifting_type",
+   "fieldtype": "Select",
+   "label": "Lifting Type",
+   "options": "Inspection\nCertificate"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-10 12:56:08.999742",
+ "modified": "2026-01-06 11:02:16.885208",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

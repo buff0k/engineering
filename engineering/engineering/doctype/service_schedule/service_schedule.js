@@ -268,11 +268,9 @@ function render_month_selector(frm) {
 //  - Mark the FIRST later cell where Est >= threshold as .overdue
 // ----------------------------
 function apply_overdue_highlights(frm, assets) {
+    assets.forEach(assetObj => {
+        const fleet = assetObj.fleet_number;
 
-    assets.forEach(a => {
-        const fleet = a.fleet_number;
-
-        // All day cells for this fleet, sorted by date
         const cells = $(`.day-cell[data-asset="${fleet}"]`)
             .toArray()
             .sort((x, y) => String($(x).data("date")).localeCompare(String($(y).data("date"))))
@@ -280,10 +278,9 @@ function apply_overdue_highlights(frm, assets) {
 
         if (!cells.length) return;
 
-        // Clear previous overdue marks (because we recompute every time)
+        // Clear previous overdue marks (recompute every render)
         cells.forEach(c => c.removeClass("overdue"));
 
-        // Helper: is this an interval cell?
         const isIntervalCell = (cell) => {
             const cls = cell.attr("class") || "";
             return (
@@ -295,10 +292,19 @@ function apply_overdue_highlights(frm, assets) {
             );
         };
 
-        // For each interval cell, mark the first cell 50 hours after it
+        // Tag each cell with a "cycle number" (1,2,3...) based on interval cells
+        let cycle = 0;
+        cells.forEach(c => {
+            if (isIntervalCell(c)) cycle += 1;
+            c.data("ss_cycle", cycle); // cycle=0 before first interval
+        });
+
+        // For each interval cell: mark overdue, BUT if MSR exists later in same cycle -> remove overdue in that cycle
         for (let i = 0; i < cells.length; i++) {
             const intervalCell = cells[i];
             if (!isIntervalCell(intervalCell)) continue;
+
+            const myCycle = intervalCell.data("ss_cycle");
 
             const estText = (intervalCell.find(".est-val").text() || "").trim();
             const serviceEst = estText ? parseFloat(estText) : NaN;
@@ -306,21 +312,49 @@ function apply_overdue_highlights(frm, assets) {
 
             const threshold = serviceEst + 50;
 
-            // Find first later cell where Est >= threshold
-            for (let j = i + 1; j < cells.length; j++) {
-                const nextCell = cells[j];
-                const nextEstText = (nextCell.find(".est-val").text() || "").trim();
-                const nextEst = nextEstText ? parseFloat(nextEstText) : NaN;
-                if (isNaN(nextEst)) continue;
+            // 1) Find first overdue candidate in THIS cycle (after interval cell)
+            let overdueCell = null;
 
-                if (nextEst >= threshold) {
-                    nextCell.addClass("overdue");
-                    break; // only the first overdue cell after THIS interval cell
+            for (let j = i + 1; j < cells.length; j++) {
+                const c = cells[j];
+
+                // stop when we leave this cycle (next interval starts next cycle)
+                if (c.data("ss_cycle") !== myCycle) break;
+
+                const eText = (c.find(".est-val").text() || "").trim();
+                const eVal = eText ? parseFloat(eText) : NaN;
+                if (isNaN(eVal)) continue;
+
+                if (eVal >= threshold) {
+                    overdueCell = c;
+                    break;
                 }
+            }
+
+            // If we found overdue, tentatively mark it
+            if (overdueCell) overdueCell.addClass("overdue");
+
+            // 2) If there is ANY MSR (green border) later in THIS cycle -> remove overdue marks for this cycle
+            let hasMSRInCycle = false;
+            for (let j = i + 1; j < cells.length; j++) {
+                const c = cells[j];
+                if (c.data("ss_cycle") !== myCycle) break;
+                if (c.hasClass("ss-green-border")) {
+                    hasMSRInCycle = true;
+                    break;
+                }
+            }
+
+            if (hasMSRInCycle) {
+                // remove overdue for the whole cycle (including the one we just marked)
+                cells.forEach(c => {
+                    if (c.data("ss_cycle") === myCycle) c.removeClass("overdue");
+                });
             }
         }
     });
 }
+
 
 
 
@@ -524,24 +558,41 @@ if (r.date_of_next_service_3) {
 
     
 // Build a quick lookup: (fleet_number + date) -> interval (250/500/750/1000/2000)
-// We only care about the rows where the backend marked the "next_service_interval_*" on that specific date.
+// CONSERVATIVE FORMULA: highlight the PREVIOUS cell (one day earlier) instead of the crossing day.
 const intervalByFleetDate = {};
 (rows || []).forEach(r => {
     const fleet = r.fleet_number;
-    const date  = r.date;
-    if (!fleet || !date) return;
+    const dateRaw = r.date;
+    if (!fleet || !dateRaw) return;
 
     const iv =
-    (r.next_service_interval_1 || null) ||
-    (r.next_service_interval_2 || null) ||
-    (r.next_service_interval_3 || null);
-
+        (r.next_service_interval_1 || null) ||
+        (r.next_service_interval_2 || null) ||
+        (r.next_service_interval_3 || null);
 
     const ivNum = iv != null ? parseInt(iv, 10) : NaN;
     if (![250, 500, 750, 1000, 2000].includes(ivNum)) return;
 
-    intervalByFleetDate[`${fleet}__${date}`] = ivNum;
+    // Normalize "YYYY-MM-DD"
+    const dateStr = String(dateRaw).slice(0, 10);
+
+    // Shift to previous day (conservative)
+    const dt = new Date(dateStr + "T00:00:00");
+    dt.setDate(dt.getDate() - 1);
+
+    const shifted =
+        dt.getFullYear() + "-" +
+        String(dt.getMonth() + 1).padStart(2, "0") + "-" +
+        String(dt.getDate()).padStart(2, "0");
+
+    // If shifting moves outside this month, keep original date (avoid highlighting previous month)
+    const monthStart = `${year}-${String(month_index).padStart(2, "0")}-01`;
+    const monthEnd   = `${year}-${String(month_index).padStart(2, "0")}-${String(days).padStart(2, "0")}`;
+    const finalDate = (shifted >= monthStart && shifted <= monthEnd) ? shifted : dateStr;
+
+    intervalByFleetDate[`${fleet}__${finalDate}`] = ivNum;
 });
+
 
     // helper: decide colour class per asset
     function getAssetClass(a) {
@@ -628,10 +679,10 @@ const intervalByFleetDate = {};
 
 
 /* =============================
-   60-HOUR PRE-WINDOW (RED BORDER)
+   50-HOUR PRE-WINDOW (ORANGE BORDER)
    ============================= */
 .day-cell.ss-red-border {
-    border: 2px solid red !important;
+    border: 2px solid #ff8c12ff !important; /* orange */
 }
 
 /* =============================
@@ -730,7 +781,7 @@ const intervalByFleetDate = {};
 
 .legend-swatch-red-border {
     background: #ffffff;
-    border: 2px solid red;
+    border: 2px solid #ff8c12ff; /* orange */
 }
 
 .legend-swatch-green-border {
@@ -1059,30 +1110,37 @@ html += `
 
     dashField.$wrapper.html(html);
 
+// Helper: does this asset have ANY MSR (green-border event) between fromDate and toDate?
+function hasMsrBetween(assetObj, fromDate, toDate) {
+    if (!assetObj || !assetObj.msr_events) return false;
+
+    return Object.keys(assetObj.msr_events).some(msrDate => {
+        // msrDate is "YYYY-MM-DD" so string compare works
+        return msrDate >= fromDate && msrDate <= toDate;
+    });
+}
+
 // ---------------------------------------------------------------------------
 // APPLY 60-HOUR RED BORDER WINDOW (per asset, before each interval cell)
+// NEW RULE: if ANY MSR exists in the cycle before the interval date => skip red borders for that cycle
 // ---------------------------------------------------------------------------
 setTimeout(() => {
-    // For each asset column
-    assets.forEach(a => {
-        const asset = a.fleet_number;
+    assets.forEach(assetObj => {
+        const fleet = assetObj.fleet_number;
 
-        // Get all day cells for this asset sorted by date
-        const cells = $(`.day-cell[data-asset="${asset}"]`)
+        const cells = $(`.day-cell[data-asset="${fleet}"]`)
             .toArray()
             .sort((x, y) => String($(x).data("date")).localeCompare(String($(y).data("date"))))
             .map(el => $(el));
 
         if (!cells.length) return;
 
-        // Clear any previous red-border class before re-applying
+        // Always clear first (so borders disappear automatically when MSR exists)
         cells.forEach(c => c.removeClass("ss-red-border"));
 
-        // For each interval cell, mark the previous 60-hour window
         for (let i = 0; i < cells.length; i++) {
             const cell = cells[i];
 
-            // Is this a "service interval" cell? (has interval-250/500/750/1000/2000)
             const cls = cell.attr("class") || "";
             const isInterval =
                 cls.includes("interval-250") ||
@@ -1093,14 +1151,37 @@ setTimeout(() => {
 
             if (!isInterval) continue;
 
-            // Read Est from this interval cell
+            const intervalDate = String(cell.data("date"));
+
+            // Cycle start = previous interval date (or month start if first interval)
+            let prevIntervalDate = null;
+            for (let k = i - 1; k >= 0; k--) {
+                const prevCls = cells[k].attr("class") || "";
+                const prevIsInterval =
+                    prevCls.includes("interval-250") ||
+                    prevCls.includes("interval-500") ||
+                    prevCls.includes("interval-750") ||
+                    prevCls.includes("interval-1000") ||
+                    prevCls.includes("interval-2000");
+
+                if (prevIsInterval) {
+                    prevIntervalDate = String(cells[k].data("date"));
+                    break;
+                }
+            }
+
+            const monthStart = `${year}-${String(month_index).padStart(2, "0")}-01`;
+            const fromDate = prevIntervalDate || monthStart;
+
+            
+
+            // Original red-border logic (60 hours before interval Est)
             const estText = (cell.find(".est-val").text() || "").trim();
             const serviceEst = estText ? parseFloat(estText) : NaN;
             if (isNaN(serviceEst)) continue;
 
             const lower = serviceEst - 60;
 
-            // Walk backwards and mark cells that are within [lower, serviceEst)
             for (let j = i - 1; j >= 0; j--) {
                 const prevCell = cells[j];
 
@@ -1111,7 +1192,6 @@ setTimeout(() => {
                 if (prevEst >= lower && prevEst < serviceEst) {
                     prevCell.addClass("ss-red-border");
                 } else if (prevEst < lower) {
-                    // Once we are below the window, stop going further back
                     break;
                 }
             }

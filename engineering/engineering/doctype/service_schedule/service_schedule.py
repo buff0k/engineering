@@ -405,20 +405,22 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             except Exception:
                 start_hours = 0.0
 
-            # estimate_hours per Task 1 (+ Day 1 carry-over rule)
-            if start_hours > 0:
-                estimate_hours = start_hours
-            else:
-                if d == month_start:
-                    # day 1 with 0 start hours seeds from previous month last estimate + prev month daily usage
+                       # estimate_hours (NEW RULE):
+            # - Day 1: seed from start_hours if available, else seed from previous month, else daily_use_asset
+            # - Day 2+ : ALWAYS compound from previous EST (ignore start_hours for estimate)
+            if prev_estimate is None:
+                # First day for this asset in this month
+                if start_hours > 0:
+                    estimate_hours = float(start_hours)
+                else:
                     prev_est, prev_daily = get_prev_month_seed(doc.site, doc.month, asset)
                     if prev_est is not None and prev_daily is not None:
                         estimate_hours = float(prev_est) + clamp_daily_usage(prev_daily)
                     else:
                         estimate_hours = float(daily_use_asset)
-                else:
-                    prev_val = prev_estimate if prev_estimate is not None else 0.0
-                    estimate_hours = float(prev_val) + float(daily_use_asset)
+            else:
+                estimate_hours = float(prev_estimate) + float(daily_use_asset)
+
 
             prev_estimate = float(estimate_hours or 0.0)
 
@@ -551,20 +553,21 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
         r.msr_reference_number = str(r.msr_reference_number or "")
         r.msr_record_name = str(r.msr_record_name or "")
 
-        if start_hours > 0:
-            r.estimate_hours = start_hours
-        else:
-            if getdate(r.date) == month_start:
-                # NEW: day 1 with 0 start hours seeds from previous month
+                    # estimate_hours (NEW RULE):
+        # - First row of month: seed from start_hours if available, else seed from previous month, else daily_use
+        # - All next rows: ALWAYS compound from previous EST (ignore start_hours for estimate)
+        if prev_estimate is None:
+            if start_hours > 0:
+                r.estimate_hours = float(start_hours)
+            else:
                 prev_est, prev_daily = get_prev_month_seed(doc.site, doc.month, fleet_number)
                 if prev_est is not None and prev_daily is not None:
                     r.estimate_hours = float(prev_est) + clamp_daily_usage(prev_daily)
                 else:
-                    # fallback to old behavior
                     r.estimate_hours = float(daily_use)
-            else:
-                prev_val = prev_estimate if prev_estimate is not None else 0.0
-                r.estimate_hours = float(prev_val) + float(daily_use)
+        else:
+            r.estimate_hours = float(prev_estimate) + float(daily_use)
+
 
 
         prev_estimate = float(r.estimate_hours or 0.0)

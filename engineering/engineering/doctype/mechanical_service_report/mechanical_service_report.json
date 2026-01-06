@@ -155,7 +155,7 @@
    "fieldname": "service_breakdown",
    "fieldtype": "Select",
    "label": "Was this a scheduled service or breakdown?",
-   "options": "Service\nBreakdown\nPlanned Maintenance\nBack Log Breakdown\nBack Log Service\nInspection\nNearby Inspection",
+   "options": "Service\nBreakdown\nPlanned Maintenance\nInspection",
    "reqd": 1
   },
   {
@@ -181,33 +181,32 @@
   {
    "fieldname": "last_smr_preuse",
    "fieldtype": "Read Only",
-   "label": "Last Hours from Pre-Use"
+   "label": "Last Service"
   },
   {
-  "fieldname": "current_hours",
-  "fieldtype": "Float",
-  "label": "Current Hours",
-  "reqd": 1,
-  "precision": "0"
-},
+   "fieldname": "current_hours",
+   "fieldtype": "Float",
+   "label": "Current Hours",
+   "precision": "0",
+   "reqd": 1
+  },
   {
    "fieldname": "plant_breakdown_number",
    "fieldtype": "Link",
    "label": "Plant Breakdown Number",
    "options": "Plant Breakdown or Maintenance"
   },
-  
   {
-  "fieldname": "total_time",
-  "fieldtype": "Duration",
-  "label": "Total Time",
-  "read_only": 1
-}
+   "fieldname": "total_time",
+   "fieldtype": "Duration",
+   "label": "Total Time",
+   "read_only": 1
+  }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-21 21:59:44.689526",
+ "modified": "2026-01-05 14:24:56.258879",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",
@@ -223,6 +222,42 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
    "share": 1,
    "write": 1
   }

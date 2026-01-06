@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:{asset_name}-{creation}",
- "creation": "2024-11-08 13:06:09.494040",
+ "creation": "2025-11-13 09:32:55.404198",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -129,7 +129,8 @@
   {
    "fieldname": "breakdown_reason",
    "fieldtype": "Small Text",
-   "label": "Breakdown Reason"
+   "label": "Breakdown Reason",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_arpm",
@@ -180,7 +181,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-13 09:26:17.163761",
+ "modified": "2026-01-06 10:24:43.624070",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",

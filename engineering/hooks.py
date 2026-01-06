@@ -65,7 +65,8 @@ doc_events = {
         "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update"
     },
     "Engineering Legals": {
-        "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_update"
+        "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_update",
+        "on_trash": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_trash",
     }
 }
 
