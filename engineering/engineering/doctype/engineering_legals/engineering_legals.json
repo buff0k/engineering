@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "upload_tab",
   "engineering_legals_section",
   "sections",
   "site",
@@ -15,7 +16,9 @@
   "column_break_neqp",
   "attach_paper",
   "start_date",
-  "expiry_date"
+  "expiry_date",
+  "near_expire",
+  "legals"
  ],
  "fields": [
   {
@@ -81,12 +84,27 @@
    "fieldtype": "Select",
    "label": "Lifting Type",
    "options": "Inspection\nCertificate"
+  },
+  {
+   "fieldname": "near_expire",
+   "fieldtype": "Tab Break",
+   "label": "Legals 7 days before expiry date"
+  },
+  {
+   "fieldname": "legals",
+   "fieldtype": "HTML",
+   "label": "Legals"
+  },
+  {
+   "fieldname": "upload_tab",
+   "fieldtype": "Tab Break",
+   "label": "Upload"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-06 11:02:16.885208",
+ "modified": "2026-01-07 14:06:01.622264",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
@@ -102,6 +120,42 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
    "share": 1,
    "write": 1
   }

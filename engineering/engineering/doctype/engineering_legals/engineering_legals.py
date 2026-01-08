@@ -54,6 +54,16 @@ class EngineeringLegals(Document):
             months = 3 if self.lifting_type == "Inspection" else 12
             self.expiry_date = add_months(self.start_date, months)
 
+       
+        elif section == "NDT":
+            self.expiry_date = add_months(self.start_date, 6)
+
+        elif section == "Fire Suppression":
+            self.expiry_date = add_months(self.start_date, 3)
+
+        elif section == "Tyre Inspection Report":
+            self.expiry_date = add_months(self.start_date, 1)
+
         # No expiry at all
         elif section in ("Machine Service Records", "Service Schedule", "Wearcheck"):
             self.expiry_date = None
@@ -61,34 +71,15 @@ class EngineeringLegals(Document):
         else:
             frappe.throw(f"Unknown Section: {section}")
 
+
+
+
         # Clear irrelevant fields so nothing stale gets saved (imports/API too)
         if section not in ("Brake Test", "PDS"):
             self.vehicle_type = None
 
         if section != "Lifting Equipment":
             self.lifting_type = None
-
-    def on_update(self):
-        try:
-            move_engineering_legal_file_to_folder(self)
-            create_drive_link_for_engineering_legals(self)
-        except Exception:
-            frappe.log_error(
-                title="Engineering Legals file move failed",
-                message=frappe.get_traceback(),
-            )
-
-    def on_trash(self):
-        try:
-            remove_drive_links_for_engineering_legals(self)
-        except Exception:
-            frappe.log_error(
-                title="Engineering Legals drive link removal failed",
-                message=frappe.get_traceback(),
-            )
-
-
-
 
 
 
@@ -442,3 +433,27 @@ def _get_or_create_drive_folder(title: str, parent_entity: Optional[str], team: 
     )
     folder.insert(ignore_permissions=True)
     return folder.name
+
+# -------------------------------------------------------------------
+# Module-level doc_event hooks (required if hooks.py points to
+# engineering.engineering.doctype.engineering_legals.engineering_legals.on_update)
+# -------------------------------------------------------------------
+
+def on_update(doc, method=None):
+    try:
+        move_engineering_legal_file_to_folder(doc)
+        create_drive_link_for_engineering_legals(doc)
+    except Exception:
+        frappe.log_error(
+            title="Engineering Legals file move failed",
+            message=frappe.get_traceback(),
+        )
+
+def on_trash(doc, method=None):
+    try:
+        remove_drive_links_for_engineering_legals(doc)
+    except Exception:
+        frappe.log_error(
+            title="Engineering Legals drive link removal failed",
+            message=frappe.get_traceback(),
+        )
