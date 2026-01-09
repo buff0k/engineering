@@ -405,22 +405,20 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             except Exception:
                 start_hours = 0.0
 
-                       # estimate_hours (NEW RULE):
-            # - Day 1: seed from start_hours if available, else seed from previous month, else daily_use_asset
-            # - Day 2+ : ALWAYS compound from previous EST (ignore start_hours for estimate)
-            if prev_estimate is None:
-                # First day for this asset in this month
-                if start_hours > 0:
-                    estimate_hours = float(start_hours)
-                else:
+            # estimate_hours per Task 1 (+ Day 1 carry-over rule)
+            if start_hours > 0:
+                estimate_hours = start_hours
+            else:
+                if d == month_start:
+                    # day 1 with 0 start hours seeds from previous month last estimate + prev month daily usage
                     prev_est, prev_daily = get_prev_month_seed(doc.site, doc.month, asset)
                     if prev_est is not None and prev_daily is not None:
                         estimate_hours = float(prev_est) + clamp_daily_usage(prev_daily)
                     else:
                         estimate_hours = float(daily_use_asset)
-            else:
-                estimate_hours = float(prev_estimate) + float(daily_use_asset)
-
+                else:
+                    prev_val = prev_estimate if prev_estimate is not None else 0.0
+                    estimate_hours = float(prev_val) + float(daily_use_asset)
 
             prev_estimate = float(estimate_hours or 0.0)
 
@@ -482,14 +480,35 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
     # Next service markers (1/2/3). Latest JSON has date_of_next_service_1 and _2, but NOT _3.
     for asset in asset_list:
-        first = rows_index.get((asset, month_start.isoformat()))
-        base_hours = cint(getattr(first, "hours_previous_service", 0)) if first else 0
+        # Use the FIRST row in the month where hours_previous_service > 0
+        base_hours = 0
+        for d in date_list:
+            r0 = rows_index.get((asset, d.isoformat()))
+            if not r0:
+                continue
+            bh = cint(getattr(r0, "hours_previous_service", 0)) or 0
+            if bh > 0:
+                base_hours = bh
+                break
+
         if base_hours <= 0:
             continue
+
 
         planned1 = ceiling_to_250(base_hours)
         planned2 = planned1 + 250
         planned3 = planned2 + 250
+
+        # Populate planned hours on EVERY row for this asset (child table visibility)
+        for d in date_list:
+            r_all = rows_index.get((asset, d.isoformat()))
+            if not r_all:
+                continue
+
+            r_all.planned_hours_next_service_1 = planned1
+            r_all.planned_hours_next_service_2 = planned2
+            r_all.planned_hours_of_service_3 = planned3
+
 
         d1 = find_threshold_crossing_date(est_series[asset], planned1)
         d2 = find_threshold_crossing_date(est_series[asset], planned2)
@@ -553,21 +572,20 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
         r.msr_reference_number = str(r.msr_reference_number or "")
         r.msr_record_name = str(r.msr_record_name or "")
 
-                    # estimate_hours (NEW RULE):
-        # - First row of month: seed from start_hours if available, else seed from previous month, else daily_use
-        # - All next rows: ALWAYS compound from previous EST (ignore start_hours for estimate)
-        if prev_estimate is None:
-            if start_hours > 0:
-                r.estimate_hours = float(start_hours)
-            else:
+        if start_hours > 0:
+            r.estimate_hours = start_hours
+        else:
+            if getdate(r.date) == month_start:
+                # NEW: day 1 with 0 start hours seeds from previous month
                 prev_est, prev_daily = get_prev_month_seed(doc.site, doc.month, fleet_number)
                 if prev_est is not None and prev_daily is not None:
                     r.estimate_hours = float(prev_est) + clamp_daily_usage(prev_daily)
                 else:
+                    # fallback to old behavior
                     r.estimate_hours = float(daily_use)
-        else:
-            r.estimate_hours = float(prev_estimate) + float(daily_use)
-
+            else:
+                prev_val = prev_estimate if prev_estimate is not None else 0.0
+                r.estimate_hours = float(prev_val) + float(daily_use)
 
 
         prev_estimate = float(r.estimate_hours or 0.0)
@@ -589,11 +607,26 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
 
 
     if rows:
-        base_hours = cint(rows[0].hours_previous_service) or 0
+        # Use the FIRST row where hours_previous_service > 0 (rows already sorted by date)
+        base_hours = 0
+        for r0 in rows:
+            bh = cint(r0.hours_previous_service) or 0
+            if bh > 0:
+                base_hours = bh
+                break
+
         if base_hours > 0:
+
             planned1 = ceiling_to_250(base_hours)
             planned2 = planned1 + 250
             planned3 = planned2 + 250
+
+            # Populate planned hours on EVERY row for this fleet (child table visibility)
+            for r in rows:
+                r.planned_hours_next_service_1 = planned1
+                r.planned_hours_next_service_2 = planned2
+                r.planned_hours_of_service_3 = planned3
+
 
             d1 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned1), month_start=month_start)
             d2 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned2), month_start=month_start)
