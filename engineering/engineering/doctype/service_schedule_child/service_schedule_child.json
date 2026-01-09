@@ -141,7 +141,7 @@
   },
   {
    "fieldname": "planned_hours_of_service_3",
-   "fieldtype": "Data",
+   "fieldtype": "Float",
    "label": "Planned Hours of Service 3"
   },
   {
@@ -167,7 +167,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-12-24 08:57:05.440883",
+ "modified": "2026-01-09 11:54:45.394779",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule Child",

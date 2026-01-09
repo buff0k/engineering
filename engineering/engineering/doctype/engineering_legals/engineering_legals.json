@@ -26,7 +26,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Sections",
-   "options": "Brake Test\nFire Suppression\nFRCS\nLifting Equipment\nMachine Service Records\nNDT\nPDS\nService Schedule\nTyre Inspection Report\nWearcheck",
+   "options": "Brake Test\nFire Suppression\nFRCS\nLifting Equipment\nMachine Service Records\nNDT\nPDS\nService Schedule\nTyre Inspection Report\nWearcheck\nIllumination Baseline",
    "reqd": 1
   },
   {
@@ -104,7 +104,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-07 14:06:01.622264",
+ "modified": "2026-01-09 14:52:12.296688",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",

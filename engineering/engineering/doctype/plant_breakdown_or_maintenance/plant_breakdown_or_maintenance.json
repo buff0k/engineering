@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{asset_name}-{creation}",
+ "autoname": "format:{asset_name}-{YYYY}{MM}{DD}-{breakdown_reason_category}",
  "creation": "2025-11-13 09:32:55.404198",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -22,6 +22,7 @@
   "hours_breakdown_starts",
   "breakdown_start_datetime",
   "breakdown_reason",
+  "breakdown_reason_category",
   "column_break_arpm",
   "jobcard_no",
   "workshop_action",
@@ -176,12 +177,19 @@
    "fieldname": "breakdown_situation",
    "fieldtype": "HTML",
    "label": "Breakdown Situation"
+  },
+  {
+   "fieldname": "breakdown_reason_category",
+   "fieldtype": "Select",
+   "label": "Breakdown Reason Category",
+   "options": "Engine\nTransmission\nDropbox\nDifferentials\nFinal Drive\nHydraulics\nElectricals\nTyres\nTracks\nCylinder",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-06 10:24:43.624070",
+ "modified": "2026-01-09 14:48:18.683968",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
