@@ -16,25 +16,26 @@ def execute(filters=None):
             "width": 280,
         },
         {
-            "label": "Service Date",
+            "label": "MSR Date",
             "fieldname": "service_date",
             "fieldtype": "Date",
             "width": 120,
         },
         {
-            "label": "Hours at Service",
+            "label": "Hours",
             "fieldname": "current_hours",
             "fieldtype": "Float",
-            "width": 150,
+            "width": 140,
         },
         {
-            "label": "Description of Breakdown",
+            "label": "Description of Equipment Interaction/Work performed",
             "fieldname": "description_of_breakdown",
-            "fieldtype": "Data",
+            "fieldtype": "Text",
             "width": 560,
         },
     ]
 
+    # Do not return data until Fleet Number is selected
     if not asset:
         return columns, []
 
