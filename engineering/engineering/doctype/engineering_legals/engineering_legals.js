@@ -87,11 +87,14 @@ function set_expiry_date(frm) {
     expiry = addMonths(6);
   } else if (section === 'Fire Suppression') {
     expiry = addMonths(3);
-  } else if (section === 'Tyre Inspection Report') {
-    expiry = addMonths(1);
-  } else {
-    expiry = null; // safe default
-  }
+} else if (section === 'Tyre Inspection Report') {
+  expiry = addMonths(1);
+} else if (section === 'Illumination Baseline') {
+  expiry = addMonths(24); // +2 years
+} else {
+  expiry = null; // safe default
+}
+
 
   frm.set_value('expiry_date', expiry);
 }
@@ -114,7 +117,8 @@ const sections = [
   "Lifting Equipment",
   "NDT",
   "PDS",
-  "Tyre Inspection Report"
+  "Tyre Inspection Report",
+  "Illumination Baseline"
 ];
 
   const today = frappe.datetime.get_today();

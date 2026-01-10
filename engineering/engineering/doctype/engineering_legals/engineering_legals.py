@@ -64,9 +64,14 @@ class EngineeringLegals(Document):
         elif section == "Tyre Inspection Report":
             self.expiry_date = add_months(self.start_date, 1)
 
+        # Illumination Baseline -> +24 months (2 years)
+        elif section == "Illumination Baseline":
+            self.expiry_date = add_months(self.start_date, 24)
+
         # No expiry at all
         elif section in ("Machine Service Records", "Service Schedule", "Wearcheck"):
             self.expiry_date = None
+
 
         else:
             frappe.throw(f"Unknown Section: {section}")
