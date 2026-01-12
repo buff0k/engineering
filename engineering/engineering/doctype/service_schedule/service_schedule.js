@@ -10,23 +10,60 @@ function get_dashboard_wrapper(frm) {
     return null;
 }
 
+function ss_disable_buttons(frm, disabled = true) {
+    frm.custom_buttons &&
+        Object.keys(frm.custom_buttons).forEach(label => {
+            frm.custom_buttons[label].prop("disabled", disabled);
+        });
+}
+
 frappe.ui.form.on("Service Schedule", {
     refresh(frm) {
 
 
-// Hide Service Schedule Child table (UI only)
-if (frm.fields_dict.service_schedule_child) {
-    frm.fields_dict.service_schedule_child.$wrapper.show();
-}
-
 
 frm.add_custom_button("Rebuild (Current Code)", () => {
-    frappe.call({
-        method: "engineering.engineering.doctype.service_schedule.service_schedule.rebuild_service_schedule",
-        args: { name: frm.doc.name },
-        freeze: true,
-        callback: () => frm.reload_doc()
+    frappe.confirm(
+        "This will CLEAR all MSR-related service data and re-sync from MSRs when Daily Update runs.<br><br>Continue?",
+        () => {
+            frappe.call({
+                method: "engineering.engineering.doctype.service_schedule.service_schedule.rebuild_service_schedule",
+                args: { name: frm.doc.name },
+                freeze: true,
+callback: () => {
+    ss_disable_buttons(frm, true);
+
+    frm.reload_doc().then(() => {
+
+        frappe.call({
+            method: "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update",
+            args: {
+                schedule_name: frm.doc.name,
+                daily_usage_default: 15
+            },
+            freeze: true,
+            freeze_message: "Rebuilding from MSRs...",
+            callback: () => {
+                frm.reload_doc().then(() => {
+                    const dashWrapper = get_dashboard_wrapper(frm);
+                    if (dashWrapper) render_service_board(frm);
+                    if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
+                        render_due_soon_summary(frm);
+                    }
+                });
+
+                frappe.msgprint("Rebuild complete. MSR data re-synced.");
+                ss_disable_buttons(frm, false);
+
+            }
+        });
+
     });
+}
+
+            });
+        }
+    );
 });
 
 
@@ -69,17 +106,39 @@ frm.add_custom_button("Run Daily Update", () => {
         // style history grid
         
 
-        // render dashboard if the fields exist on the form
-        const dashWrapper = get_dashboard_wrapper(frm);
-        if (dashWrapper) {
-            console.log("🧪 render_service_board called", {
-                child_rows: (frm.doc.service_schedule_child || []).length,
-                history_rows: (frm.doc.service_schedule_history || []).length,
-                has_service_schedule_field: !!frm.fields_dict.service_schedule,
-                has_service_schedule_dashboard_field: !!frm.fields_dict.service_schedule_dashboard
-            });
-            render_service_board(frm);
-        }
+// render dashboard if the fields exist on the form
+const dashWrapper = get_dashboard_wrapper(frm);
+if (dashWrapper) {
+
+    const rows = frm.doc.service_schedule_child || [];
+    const hasAnyMSR = rows.some(r => r.date_of_previous_service);
+
+    if (!hasAnyMSR && rows.length) {
+        dashWrapper.prepend(`
+            <div style="
+                background:#fff3cd;
+                border:1px solid #ffeeba;
+                padding:6px;
+                margin-bottom:6px;
+                font-size:11px;
+                font-weight:bold;
+            ">
+                ⚠️ MSR data has been reset.  
+                Run <b>Daily Update</b> to repopulate service history.
+            </div>
+        `);
+    }
+
+    console.log("🧪 render_service_board called", {
+        child_rows: rows.length,
+        history_rows: (frm.doc.service_schedule_history || []).length,
+        has_service_schedule_field: !!frm.fields_dict.service_schedule,
+        has_service_schedule_dashboard_field: !!frm.fields_dict.service_schedule_dashboard
+    });
+
+    render_service_board(frm);
+}
+
 
         if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
             render_due_soon_summary(frm);

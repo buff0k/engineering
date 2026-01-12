@@ -10,16 +10,33 @@ class ServiceSchedule(Document):
 
 
 @frappe.whitelist()
-def rebuild_service_schedule(name, daily_usage_default=15):
-    # 1) regenerate child rows (this function already saves)
-    generate_schedule_backend(schedule_name=name, daily_usage_default=daily_usage_default)
+def rebuild_service_schedule(name):
+    doc = frappe.get_doc("Service Schedule", name)
 
-    # HTML fields are client-side only, JS will re-render after reload
-    return "Service Schedule rebuilt (child rows)."
+    # 🔥 ONLY clear MSR-related fields, keep rows and all other logic intact
+    for r in doc.service_schedule_child:
+        r.date_of_previous_service = None
+        r.hours_previous_service = 0
+        r.last_service_interval = 0
 
+        r.date_of_next_service_1 = None
+        r.planned_hours_next_service_1 = None
+        r.next_service_interval_1 = ""
 
+        r.date_of_next_service_2 = None
+        r.planned_hours_next_service_2 = None
+        r.next_service_interval_2 = ""
 
+        r.date_of_next_service_3 = None
+        r.planned_hours_of_service_3 = None
+        r.next_service_interval_3 = ""
 
+        # keep MSR link fields clean but stable
+        r.msr_reference_number = ""
+        r.msr_record_name = ""
+
+    doc.save(ignore_permissions=True)
+    return "Service Schedule MSR fields cleared"
 
 
 
@@ -561,7 +578,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 r.next_service_interval_3 = "750"
 
 
-    doc.save(ignore_permissions=True, ignore_version=True)
+    doc.save()
     frappe.db.commit()
     return {"ok": True, "rows": len(doc.service_schedule_child)}
 
@@ -669,6 +686,241 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                         r.next_service_interval_3 = "750"
                         break
 
-    doc.save(ignore_permissions=True, ignore_version=True)
+    doc.save()
     frappe.db.commit()
     return {"ok": True, "rows": len(rows)}
+
+
+# ============================================================================
+# ENGINE: OVERDUE EMAILS (matches current JS logic)
+# - Trigger ONLY when (overdue_date == today)
+# - Suppress overdue if MSR exists (green-border logic) within interval window
+# - One email per asset
+# - Designed for scheduler 07:00, but can be run manually in console
+# ============================================================================
+
+def _ss_today_str(today_override=None):
+    d = getdate(today_override) if today_override else getdate(nowdate())
+    return str(d)
+
+def _ss_ensure_overdue_log_table():
+    # simple dedupe storage without creating a DocType
+    frappe.db.sql("""
+        CREATE TABLE IF NOT EXISTS `tabSS Overdue Email Log` (
+            `name` varchar(140) NOT NULL,
+            `creation` datetime(6) DEFAULT CURRENT_TIMESTAMP(6),
+            `modified` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+            `fleet_number` varchar(140),
+            `overdue_date` date,
+            `schedule_name` varchar(140),
+            PRIMARY KEY (`name`),
+            UNIQUE KEY `uniq_fleet_date` (`fleet_number`, `overdue_date`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    frappe.db.commit()
+
+def _ss_already_sent(fleet_number, overdue_date):
+    _ss_ensure_overdue_log_table()
+    row = frappe.db.sql("""
+        SELECT name FROM `tabSS Overdue Email Log`
+        WHERE fleet_number=%s AND overdue_date=%s
+        LIMIT 1
+    """, (fleet_number, overdue_date), as_dict=True)
+    return bool(row)
+
+def _ss_mark_sent(fleet_number, overdue_date, schedule_name):
+    _ss_ensure_overdue_log_table()
+    name = f"{fleet_number}-{overdue_date}"
+    try:
+        frappe.db.sql("""
+            INSERT IGNORE INTO `tabSS Overdue Email Log` (name, fleet_number, overdue_date, schedule_name)
+            VALUES (%s, %s, %s, %s)
+        """, (name, fleet_number, overdue_date, schedule_name))
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "SS Overdue Email Log insert failed")
+
+def _ss_pick_interval_anchor_interval(row):
+    iv = row.get("next_service_interval_1") or row.get("next_service_interval_2") or row.get("next_service_interval_3")
+    if iv is None:
+        return None
+
+    # allow values like "250 Hours"
+    s = "".join(ch for ch in str(iv) if ch.isdigit())
+    if not s:
+        return None
+
+    ivn = int(s)
+    return ivn if ivn in (250, 500, 750, 1000, 2000) else None
+
+
+def _ss_collect_msr_dates_by_fleet(rows):
+    # match your JS intent: MSR event exists when date_of_previous_service + (ref or name) exists
+    msr_dates = {}
+    for r in rows:
+        fleet = r.get("fleet_number")
+        if not fleet:
+            continue
+        dps = r.get("date_of_previous_service")
+        if not dps:
+            continue
+        if not (r.get("msr_record_name") or r.get("msr_reference_number")):
+            continue
+        msr_date = str(getdate(dps))
+        msr_dates.setdefault(fleet, set()).add(msr_date)
+    return msr_dates
+
+def _ss_compute_overdue_today_events_for_schedule(doc, today_str):
+    rows = [r.as_dict() for r in (doc.get("service_schedule_child") or [])]
+    if not rows:
+        return []
+
+    # sort rows per fleet by date
+    rows.sort(key=lambda x: (str(x.get("fleet_number") or ""), str(getdate(x.get("date")) if x.get("date") else "9999-12-31")))
+
+    msr_dates_by_fleet = _ss_collect_msr_dates_by_fleet(rows)
+
+    # group by fleet
+    by_fleet = {}
+    for r in rows:
+        fleet = r.get("fleet_number")
+        if not fleet or not r.get("date"):
+            continue
+        by_fleet.setdefault(fleet, []).append(r)
+
+    events = []
+    for fleet, frs in by_fleet.items():
+        # sort by date
+        frs.sort(key=lambda x: str(getdate(x.get("date"))))
+
+        # find anchor indices (interval cells)
+        anchors = []
+        for idx, r in enumerate(frs):
+            iv = _ss_pick_interval_anchor_interval(r)
+            if iv:
+                anchors.append((idx, iv))
+
+        if not anchors:
+            continue
+
+        # evaluate each anchor window (until next anchor)
+        for ai, (anchor_idx, interval_iv) in enumerate(anchors):
+            window_end = anchors[ai + 1][0] if (ai + 1) < len(anchors) else len(frs)
+            anchor_row = frs[anchor_idx]
+            anchor_date = str(getdate(anchor_row.get("date")))
+
+            # anchor est = interval cell est
+            try:
+                anchor_est = float(anchor_row.get("estimate_hours") or 0)
+            except Exception:
+                anchor_est = 0.0
+
+            threshold = anchor_est + 50.0
+
+            # JS suppression: if ANY green-border in window => suppress overdue for this interval
+            # green-border == MSR date exists within this window
+            serviced_in_window = False
+            msr_dates = msr_dates_by_fleet.get(fleet, set())
+            if msr_dates:
+                for j in range(anchor_idx, window_end):
+                    d = str(getdate(frs[j].get("date")))
+                    if d in msr_dates:
+                        serviced_in_window = True
+                        break
+            if serviced_in_window:
+                continue
+
+            # find first later row where est >= threshold
+            overdue_date = None
+            for j in range(anchor_idx + 1, window_end):
+                try:
+                    est = float(frs[j].get("estimate_hours") or 0)
+                except Exception:
+                    continue
+                if est >= threshold:
+                    overdue_date = str(getdate(frs[j].get("date")))
+                    break
+
+            if overdue_date and overdue_date == today_str:
+                events.append({
+                    "schedule_name": doc.name,
+                    "site": doc.get("site") or "",
+                    "fleet_number": fleet,
+                    "service_interval": interval_iv,
+                    "overdue_date": overdue_date,
+                })
+
+    return events
+
+def ss_overdue_email_daily_job():
+    # scheduler entrypoint (07:00 daily)
+    # keep dry_run=0 for real run (it will queue/send if email account exists)
+    run_overdue_email_engine(dry_run=0)
+
+
+@frappe.whitelist()
+def run_overdue_email_engine(dry_run=1, today_override=None, test_recipient="juan@isambane.co.za"):
+    """
+    dry_run=1: does NOT send, returns what WOULD send
+    dry_run=0: queues/sends emails (requires Outgoing Email Account configured)
+    today_override="YYYY-MM-DD": for testing without waiting for real 'today'
+    """
+    dry_run = cint(dry_run) or 0
+    today_str = _ss_today_str(today_override)
+
+    schedules = frappe.get_all("Service Schedule", fields=["name"])
+    all_events = []
+
+    for s in schedules:
+        doc = frappe.get_doc("Service Schedule", s.name)
+        events = _ss_compute_overdue_today_events_for_schedule(doc, today_str)
+        all_events.extend(events)
+
+    # one email per asset (event)
+    outbound = []
+    for e in all_events:
+        fleet = e["fleet_number"]
+        od = e["overdue_date"]
+
+        # dedupe per fleet+date
+        if _ss_already_sent(fleet, od):
+            continue
+
+        subject = f"🚨⚠️ {fleet} needs attention"
+        message = f"""
+        <p>🚨🚨 <b>Warning asset needs attention!</b> 🚨🚨</p>
+        <ul>
+          <li><b>Site:</b> {frappe.utils.escape_html(str(e.get("site") or ""))}</li>
+          <li><b>Fleet Number:</b> {frappe.utils.escape_html(str(fleet))}</li>
+          <li><b>Service Interval:</b> {frappe.utils.escape_html(str(e.get("service_interval")))} Hours</li>
+          <li><b>Overdue Date:</b> {frappe.utils.escape_html(str(od))}</li>
+          <li><b>Service Schedule:</b> {frappe.utils.escape_html(str(e.get("schedule_name")))} </li>
+        </ul>
+        <p><b>Sender:</b> MaintenancePlanning</p>
+        """
+
+        outbound.append({
+            "to": test_recipient,
+            "subject": subject,
+            "message": message,
+            "event": e
+        })
+
+        if not dry_run:
+            try:
+                frappe.sendmail(
+                    recipients=[test_recipient],
+                    subject=subject,
+                    message=message
+                )
+                _ss_mark_sent(fleet, od, e.get("schedule_name"))
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "SS Overdue Email send failed")
+
+    return {
+        "today": today_str,
+        "dry_run": bool(dry_run),
+        "total_schedules": len(schedules),
+        "matched_events": all_events,
+        "outbound": outbound
+    }
