@@ -11,16 +11,14 @@ class ServiceSchedule(Document):
 
 @frappe.whitelist()
 def rebuild_service_schedule(name, daily_usage_default=15):
-    doc = frappe.get_doc("Service Schedule", name)
+    # 1) regenerate child rows (this function already saves)
+    generate_schedule_backend(schedule_name=name, daily_usage_default=daily_usage_default)
 
-    # Clear stored dashboard HTML (optional)
-    if hasattr(doc, "service_schedule_dashboard"):
-        doc.service_schedule_dashboard = ""
+    # HTML fields are client-side only, JS will re-render after reload
+    return "Service Schedule rebuilt (child rows)."
 
-    # Rebuild using CURRENT backend logic
-    generate_schedule_backend(schedule_name=doc.name, daily_usage_default=daily_usage_default)
 
-    return "Service Schedule rebuilt (child rows regenerated)."
+
 
 
 
@@ -563,7 +561,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 r.next_service_interval_3 = "750"
 
 
-    doc.save()
+    doc.save(ignore_permissions=True, ignore_version=True)
     frappe.db.commit()
     return {"ok": True, "rows": len(doc.service_schedule_child)}
 
@@ -671,6 +669,6 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                         r.next_service_interval_3 = "750"
                         break
 
-    doc.save()
+    doc.save(ignore_permissions=True, ignore_version=True)
     frappe.db.commit()
     return {"ok": True, "rows": len(rows)}

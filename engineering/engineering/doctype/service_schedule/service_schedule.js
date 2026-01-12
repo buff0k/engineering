@@ -14,10 +14,11 @@ frappe.ui.form.on("Service Schedule", {
     refresh(frm) {
 
 
-        // Hide Service Schedule Child table (UI only)
+// Hide Service Schedule Child table (UI only)
 if (frm.fields_dict.service_schedule_child) {
-    frm.fields_dict.service_schedule_child.$wrapper.hide();
+    frm.fields_dict.service_schedule_child.$wrapper.show();
 }
+
 
 frm.add_custom_button("Rebuild (Current Code)", () => {
     frappe.call({
