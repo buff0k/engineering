@@ -8,6 +8,23 @@ from datetime import timedelta
 class ServiceSchedule(Document):
     pass
 
+
+@frappe.whitelist()
+def rebuild_service_schedule(name, daily_usage_default=15):
+    doc = frappe.get_doc("Service Schedule", name)
+
+    # Clear stored dashboard HTML (optional)
+    if hasattr(doc, "service_schedule_dashboard"):
+        doc.service_schedule_dashboard = ""
+
+    # Rebuild using CURRENT backend logic
+    generate_schedule_backend(schedule_name=doc.name, daily_usage_default=daily_usage_default)
+
+    return "Service Schedule rebuilt (child rows regenerated)."
+
+
+
+
 def clamp_daily_usage(val, min_val=0.0, max_val=24.0):
     try:
         v = float(val or 0)

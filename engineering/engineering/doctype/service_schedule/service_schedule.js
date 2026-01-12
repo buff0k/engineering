@@ -19,6 +19,15 @@ if (frm.fields_dict.service_schedule_child) {
     frm.fields_dict.service_schedule_child.$wrapper.hide();
 }
 
+frm.add_custom_button("Rebuild (Current Code)", () => {
+    frappe.call({
+        method: "engineering.engineering.doctype.service_schedule.service_schedule.rebuild_service_schedule",
+        args: { name: frm.doc.name },
+        freeze: true,
+        callback: () => frm.reload_doc()
+    });
+});
+
 
         render_month_selector(frm);
         frm.set_df_property("month", "read_only", 1);
@@ -321,8 +330,26 @@ function apply_overdue_highlights(frm, assets) {
 
             const threshold = serviceEst + 50;
 
+
+            // Window end = next interval anchor (or end of cells)
+            let endIdx = cells.length;
+            for (let k = i + 1; k < cells.length; k++) {
+                if (isIntervalCell(cells[k])) {
+                    endIdx = k;
+                    break;
+                }
+            }
+
+            // If serviced (green border) anywhere in this interval window, suppress overdue for this interval
+            const servicedInWindow = cells.slice(i, endIdx).some(c => c.hasClass("ss-green-border"));
+            if (servicedInWindow) {
+                continue; // skip overdue marking for THIS interval anchor
+            }
+           
+
+
             // Find first later cell where Est >= threshold
-            for (let j = i + 1; j < cells.length; j++) {
+            for (let j = i + 1; j < endIdx; j++) {
                 const nextCell = cells[j];
                 const nextEstText = (nextCell.find(".est-val").text() || "").trim();
                 const nextEst = nextEstText ? parseFloat(nextEstText) : NaN;

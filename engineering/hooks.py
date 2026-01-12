@@ -48,6 +48,10 @@ scheduler_events = {
         "0 18 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
+        "0 7 * * *": [
+            "engineering.engineering.doctype.service_schedule.service_schedule.ss_overdue_email_daily_job"
+        ],
+
          # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
         # ==========================================================
