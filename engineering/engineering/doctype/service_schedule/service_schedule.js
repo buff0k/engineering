@@ -10,61 +10,10 @@ function get_dashboard_wrapper(frm) {
     return null;
 }
 
-function ss_disable_buttons(frm, disabled = true) {
-    frm.custom_buttons &&
-        Object.keys(frm.custom_buttons).forEach(label => {
-            frm.custom_buttons[label].prop("disabled", disabled);
-        });
-}
-
 frappe.ui.form.on("Service Schedule", {
     refresh(frm) {
 
 
-
-frm.add_custom_button("Rebuild (Current Code)", () => {
-    frappe.confirm(
-        "This will CLEAR all MSR-related service data and re-sync from MSRs when Daily Update runs.<br><br>Continue?",
-        () => {
-            frappe.call({
-                method: "engineering.engineering.doctype.service_schedule.service_schedule.rebuild_service_schedule",
-                args: { name: frm.doc.name },
-                freeze: true,
-callback: () => {
-    ss_disable_buttons(frm, true);
-
-    frm.reload_doc().then(() => {
-
-        frappe.call({
-            method: "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update",
-            args: {
-                schedule_name: frm.doc.name,
-                daily_usage_default: 15
-            },
-            freeze: true,
-            freeze_message: "Rebuilding from MSRs...",
-            callback: () => {
-                frm.reload_doc().then(() => {
-                    const dashWrapper = get_dashboard_wrapper(frm);
-                    if (dashWrapper) render_service_board(frm);
-                    if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                        render_due_soon_summary(frm);
-                    }
-                });
-
-                frappe.msgprint("Rebuild complete. MSR data re-synced.");
-                ss_disable_buttons(frm, false);
-
-            }
-        });
-
-    });
-}
-
-            });
-        }
-    );
-});
 
 
         render_month_selector(frm);
@@ -106,39 +55,17 @@ frm.add_custom_button("Run Daily Update", () => {
         // style history grid
         
 
-// render dashboard if the fields exist on the form
-const dashWrapper = get_dashboard_wrapper(frm);
-if (dashWrapper) {
-
-    const rows = frm.doc.service_schedule_child || [];
-    const hasAnyMSR = rows.some(r => r.date_of_previous_service);
-
-    if (!hasAnyMSR && rows.length) {
-        dashWrapper.prepend(`
-            <div style="
-                background:#fff3cd;
-                border:1px solid #ffeeba;
-                padding:6px;
-                margin-bottom:6px;
-                font-size:11px;
-                font-weight:bold;
-            ">
-                ⚠️ MSR data has been reset.  
-                Run <b>Daily Update</b> to repopulate service history.
-            </div>
-        `);
-    }
-
-    console.log("🧪 render_service_board called", {
-        child_rows: rows.length,
-        history_rows: (frm.doc.service_schedule_history || []).length,
-        has_service_schedule_field: !!frm.fields_dict.service_schedule,
-        has_service_schedule_dashboard_field: !!frm.fields_dict.service_schedule_dashboard
-    });
-
-    render_service_board(frm);
-}
-
+        // render dashboard if the fields exist on the form
+        const dashWrapper = get_dashboard_wrapper(frm);
+        if (dashWrapper) {
+            console.log("🧪 render_service_board called", {
+                child_rows: (frm.doc.service_schedule_child || []).length,
+                history_rows: (frm.doc.service_schedule_history || []).length,
+                has_service_schedule_field: !!frm.fields_dict.service_schedule,
+                has_service_schedule_dashboard_field: !!frm.fields_dict.service_schedule_dashboard
+            });
+            render_service_board(frm);
+        }
 
         if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
             render_due_soon_summary(frm);
@@ -391,7 +318,24 @@ function apply_overdue_highlights(frm, assets) {
             const threshold = serviceEst + 50;
 
 
-            // Window end = next interval anchor (or end of cells)
+            // Suppress overdue if a green service exists within ±R hours of this interval anchor
+            const R = 120; // <-- your radius (change if needed)
+
+            const servicedNearAnchor = cells.some(c => {
+                if (!c.hasClass("ss-green-border")) return false;
+
+                const t = (c.find(".est-val").text() || "").trim();
+                const e = t ? parseFloat(t) : NaN;
+                if (isNaN(e)) return false;
+
+                return Math.abs(e - serviceEst) <= R;
+            });
+
+            if (servicedNearAnchor) {
+                continue; // skip overdue for THIS interval anchor
+            }
+
+            // Determine interval window end (next interval cell)
             let endIdx = cells.length;
             for (let k = i + 1; k < cells.length; k++) {
                 if (isIntervalCell(cells[k])) {
@@ -400,13 +344,15 @@ function apply_overdue_highlights(frm, assets) {
                 }
             }
 
-            // If serviced (green border) anywhere in this interval window, suppress overdue for this interval
-            const servicedInWindow = cells.slice(i, endIdx).some(c => c.hasClass("ss-green-border"));
-            if (servicedInWindow) {
-                continue; // skip overdue marking for THIS interval anchor
-            }
-           
+            // If serviced (green border) exists in this interval window (INCLUDING interval day)
+            // then suppress overdue for this interval
+            const servicedInWindow = cells
+                .slice(i, endIdx)
+                .some(c => c.hasClass("ss-green-border"));
 
+            if (servicedInWindow) {
+                continue; // skip overdue for THIS interval
+            }
 
             // Find first later cell where Est >= threshold
             for (let j = i + 1; j < endIdx; j++) {
@@ -1249,29 +1195,28 @@ setTimeout(() => {
             .toArray()
             .sort((a, b) => String($(a).data("date")).localeCompare(String($(b).data("date"))));
 
-        let prevStart = null;
+    let prevEst = null;
 
-        cells.forEach((elem, idx) => {
-            const cell = $(elem);
+    cells.forEach((elem, idx) => {
+        const cell = $(elem);
 
-            // start hours displayed in the grid; treat missing as 0
-            const startText = cell.find(".start-val").text().trim();
-            const startVal = startText ? (parseFloat(startText) || 0) : 0;
+        const startText = cell.find(".start-val").text().trim();
+        const startVal = startText ? (parseFloat(startText) || 0) : 0;
 
-            // Task 1 estimate rule:
-            // - if start_hours > 0: estimate_hours = start_hours
-            // - if start_hours = 0: estimate_hours = prev day start_hours + daily_estimated_hours_usage
-            let estVal = 0;
-            if (startVal > 0) {
-                estVal = startVal;
-            } else {
-                const prev = (prevStart != null ? prevStart : 0);
-                estVal = prev + dailyUse;
-            }
+        let estVal = 0;
 
-            cell.find(".est-val").text(estVal);
-            prevStart = startVal; // prev day start_hours
-        });
+        if (idx === 0) {
+            estVal = startVal;              // Day 1
+        } else if (startVal > 0) {
+            estVal = startVal;              // reset if start appears
+        } else {
+            estVal = (prevEst ?? 0) + dailyUse;
+        }
+
+        cell.find(".est-val").text(estVal);
+        prevEst = estVal;
+    });
+
 
         // Persist the edited daily usage to child rows and recompute next-service markers server-side (debounced)
         window._ss_usage_timers = window._ss_usage_timers || {};
