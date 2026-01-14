@@ -299,6 +299,35 @@ def next_service_interval_from_last(last_interval):
     mapping = {250: 500, 500: 750, 750: 1000, 1000: 250, 2000: 250}
     return mapping.get(v, 250)
 
+def normalize_last_service_interval(last_interval):
+    """Return numeric interval from MSR/service_interval field (e.g. '2000 Hours' -> 2000)."""
+    try:
+        v = cint(str(last_interval or "").replace("Hours", "").strip()) or 0
+    except Exception:
+        v = 0
+    return v if v > 0 else 250
+
+
+def interval_due_at_hours(planned_hours):
+    """Return which service interval is due at this planned hour.
+    Picks the largest interval that divides planned_hours.
+    Example: 4000 -> 2000, 3000 -> 1000, 2250 -> 750, 1500 -> 500, 1250 -> 250
+    """
+    try:
+        h = cint(planned_hours) or 0
+    except Exception:
+        h = 0
+
+    if h <= 0:
+        return 250
+
+    for iv in (2000, 1000, 750, 500, 250):
+        if h % iv == 0:
+            return iv
+
+    return 250
+
+
 def find_threshold_crossing_date(series, planned_hours):
     """series: list of (date, estimate_hours) sorted asc.
     Returns first date where estimate crosses planned (>= planned and previous < planned).
@@ -313,12 +342,17 @@ def find_threshold_crossing_date(series, planned_hours):
             est_v = float(est)
         except Exception:
             continue
+        
+        # NEW RULE:
+        # A "crossing" only counts when we go from below -> >= planned.
+        # If day 1 is already >= planned, do NOT mark day 1.
         if prev_est is None:
-            if est_v >= planned_hours:
-                return d
-        else:
-            if prev_est < planned_hours <= est_v:
-                return d
+            prev_est = est_v
+            continue
+
+        if prev_est < planned_hours <= est_v:
+            return d
+
         prev_est = est_v
     return None
 
@@ -498,8 +532,6 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
 
 
-
-
         # compute next interval types from last_service_interval
         last_interval_val = None
         for d in date_list:
@@ -508,9 +540,10 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 last_interval_val = r0.last_service_interval
                 break
 
-        next1 = next_service_interval_from_last(last_interval_val)
-        next2 = next_service_interval_from_last(next1)
-        next3 = next_service_interval_from_last(next2)
+        next1 = normalize_last_service_interval(last_interval_val)
+        next2 = next1 + 250
+        next3 = next2 + 250
+
 
         if d1:
             r = rows_index.get((asset, d1.isoformat()))
@@ -614,9 +647,11 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
             d3 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned3), month_start=month_start)
 
             last_interval_val = rows[0].last_service_interval if rows else None
-            next1 = next_service_interval_from_last(last_interval_val)
-            next2 = next_service_interval_from_last(next1)
-            next3 = next_service_interval_from_last(next2)
+            next1 = normalize_last_service_interval(last_interval_val)
+            next2 = next1 + 250
+            next3 = next2 + 250
+
+
 
             if d1:
                 for r in rows:

@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-14 05:53:55.782524",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "friday_date",
+  "uitgevallen",
+  "koppie",
+  "bankfontein"
+ ],
+ "fields": [
+  {
+   "fieldname": "friday_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Friday Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "uitgevallen",
+   "fieldtype": "Float",
+   "label": "Uitgevallen (%)"
+  },
+  {
+   "fieldname": "koppie",
+   "fieldtype": "Float",
+   "label": "Koppie (%)"
+  },
+  {
+   "fieldname": "bankfontein",
+   "fieldtype": "Float",
+   "label": "Bankfontein (%)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-14 05:56:10.319425",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Availability Tracking Entry",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

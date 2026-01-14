@@ -1,0 +1,142 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{site}-{YYYY}-{MM}",
+ "creation": "2026-01-13 15:18:31.391735",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "data_tab",
+  "month_html",
+  "month",
+  "site",
+  "target_percentage",
+  "weekly_entries",
+  "graphs_tab",
+  "monthly_graph",
+  "section_break_ufds",
+  "yearly_graph"
+ ],
+ "fields": [
+  {
+   "description": "Select any date in the month being tracked",
+   "fieldname": "month",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Month"
+  },
+  {
+   "default": "85",
+   "fieldname": "target_percentage",
+   "fieldtype": "Float",
+   "label": "Target Percentage"
+  },
+  {
+   "fieldname": "weekly_entries",
+   "fieldtype": "Table",
+   "label": "Availability Weekly Entries",
+   "options": "Availability Tracking Entry"
+  },
+  {
+   "fieldname": "data_tab",
+   "fieldtype": "Tab Break",
+   "label": "Data"
+  },
+  {
+   "fieldname": "graphs_tab",
+   "fieldtype": "Tab Break",
+   "label": "Graphs"
+  },
+  {
+   "fieldname": "monthly_graph",
+   "fieldtype": "HTML",
+   "label": "Monthly Availability Graph"
+  },
+  {
+   "fieldname": "yearly_graph",
+   "fieldtype": "HTML",
+   "label": "Yearly Availability Graph"
+  },
+  {
+   "fieldname": "section_break_ufds",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "month_html",
+   "fieldtype": "HTML",
+   "label": "Month"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-14 07:14:51.279653",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Availability Tracking",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

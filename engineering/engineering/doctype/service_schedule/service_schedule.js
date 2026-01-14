@@ -496,7 +496,9 @@ if (msrDate) {
 
 
 
-assetMap[r.fleet_number].days[r.date] = {
+const rowDateKey = String(r.date || "").slice(0, 10);
+
+assetMap[r.fleet_number].days[rowDateKey] = {
     start: r.start_hours,
     est: r.estimate_hours,
 };
@@ -579,16 +581,26 @@ const intervalByFleetDate = {};
     const date  = r.date;
     if (!fleet || !date) return;
 
-    const iv =
-    (r.next_service_interval_1 || null) ||
-    (r.next_service_interval_2 || null) ||
-    (r.next_service_interval_3 || null);
+const rowDate = String(r.date || "").slice(0, 10);
+
+const d1 = r.date_of_next_service_1 ? String(r.date_of_next_service_1).slice(0, 10) : "";
+const d2 = r.date_of_next_service_2 ? String(r.date_of_next_service_2).slice(0, 10) : "";
+const d3 = r.date_of_next_service_3 ? String(r.date_of_next_service_3).slice(0, 10) : "";
+
+let intervalVal = null;
+
+// Only colour the exact threshold-crossing day
+if (d3 && rowDate === d3) intervalVal = r.next_service_interval_3;
+else if (d2 && rowDate === d2) intervalVal = r.next_service_interval_2;
+else if (d1 && rowDate === d1) intervalVal = r.next_service_interval_1;
+
+const ivNum = intervalVal != null ? parseInt(intervalVal, 10) : NaN;
+if (![250, 500, 750, 1000, 2000].includes(ivNum)) return;
+
+const prevDay = frappe.datetime.add_days(rowDate, -1);
+intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
 
 
-    const ivNum = iv != null ? parseInt(iv, 10) : NaN;
-    if (![250, 500, 750, 1000, 2000].includes(ivNum)) return;
-
-    intervalByFleetDate[`${fleet}__${date}`] = ivNum;
 });
 
     // helper: decide colour class per asset
@@ -1353,13 +1365,14 @@ dueRows.forEach(r => {
     const planned = plannedVal != null ? (parseFloat(plannedVal) || 0) : 0;
 
     // Use interval colour on the whole row
-    let colourClass = "";
     const intervalVal = (
-        r.next_service_interval_1 ??
-        r.next_service_interval_2 ??
         r.next_service_interval_3 ??
+        r.next_service_interval_2 ??
+        r.next_service_interval_1 ??
         r.next_service_interval
-    );
+);
+
+
     const iv = parseInt(intervalVal, 10);
 
     if (iv === 250) colourClass = "blue";
