@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class AvailabilityTrackingEntry(Document):
+class ServiceInterval(Document):
 	pass

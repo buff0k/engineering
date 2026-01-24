@@ -13,11 +13,16 @@ frappe.ui.form.on("Mechanical Service Report", {
 
         // Handle Service vs Breakdown visibility/requirements
         toggle_service_interval(frm);
+        calculate_total_time_live(frm);
+        
+
     },
 
     onload(frm) {
         // Ensure correct state when form loads
         toggle_service_interval(frm);
+        calculate_total_time_live(frm);
+        
     },
 
     site(frm) {
@@ -53,18 +58,23 @@ frappe.ui.form.on("Mechanical Service Report", {
         }
 
         // Make sure total_time is always correct before saving
-        calculate_total_hours(frm);
+        
 
     },
 
-    // when Start Time changes, update total_time
     start_time(frm) {
-        calculate_total_hours(frm);
+        calculate_total_time_live(frm);
     },
 
-    // when End Time changes, update total_time
+
+
+    plant_breakdown_number(frm) {
+        calculate_total_time_unavailable_live(frm);
+    },
+
     end_time(frm) {
-        calculate_total_hours(frm);
+        calculate_total_time_live(frm);
+        calculate_total_time_unavailable_live(frm);
     },
 
     asset(frm) {
@@ -109,35 +119,57 @@ function toggle_service_interval(frm) {
     }
 }
 
-// Helper to calculate total_time from start_time and end_time
-function calculate_total_hours(frm) {
+function calculate_total_time_live(frm) {
     if (!frm.doc.start_time || !frm.doc.end_time) {
         frm.set_value("total_time", 0);
         return;
     }
 
-    // start_time and end_time are strings like "08:30:00" or "08:30"
-    function time_to_seconds(t) {
-        const parts = t.split(":").map(Number);
-        const h = parts[0] || 0;
-        const m = parts[1] || 0;
-        const s = parts[2] || 0;
-        return (h * 3600) + (m * 60) + s;
+    const start = frappe.datetime.str_to_obj(frm.doc.start_time);
+    const end = frappe.datetime.str_to_obj(frm.doc.end_time);
+
+    let diff_seconds = (end - start) / 1000;
+
+    if (diff_seconds < 0) {
+        diff_seconds = 0;
     }
 
-    let start_sec = time_to_seconds(frm.doc.start_time);
-    let end_sec = time_to_seconds(frm.doc.end_time);
+    frm.set_value("total_time", Math.floor(diff_seconds));
+}
 
-    // If end is smaller, assume it went past midnight
-    if (end_sec < start_sec) {
-        end_sec += 24 * 3600;
+function calculate_total_time_unavailable_live(frm) {
+    if (!frm.doc.plant_breakdown_number || !frm.doc.end_time) {
+        frm.set_value("total_time_unavailable", 0);
+        return;
     }
 
-    let diff_seconds = end_sec - start_sec;
+    frappe.call({
+        method: "frappe.client.get_value",
+        args: {
+            doctype: "Plant Breakdown or Maintenance",
+            name: frm.doc.plant_breakdown_number,
+            fieldname: "breakdown_start_datetime"
+        },
+        callback: function(r) {
+            const breakdown_start = r.message && r.message.breakdown_start_datetime;
 
-    // Optional: round to nearest minute so it looks clean (no odd seconds)
-    diff_seconds = Math.round(diff_seconds / 60) * 60;
+            if (!breakdown_start) {
+                frm.set_value("total_time_unavailable", 0);
+                return;
+            }
 
-    // Duration field expects seconds
-    frm.set_value("total_time", diff_seconds);
+            const end = frappe.datetime.str_to_obj(frm.doc.end_time);
+            const start = frappe.datetime.str_to_obj(breakdown_start);
+
+
+
+            let diff_seconds = (end - start) / 1000;
+            if (diff_seconds < 0) {
+                frappe.msgprint("Breakdown Start Date/Time is AFTER MSR End Time. Fix breakdown_start_datetime or MSR end_time.");
+                diff_seconds = 0;
+            }
+
+            frm.set_value("total_time_unavailable", Math.floor(diff_seconds));
+        }
+    });
 }

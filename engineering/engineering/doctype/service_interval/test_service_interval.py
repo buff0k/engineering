@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestAvailabilityTracking(FrappeTestCase):
+class TestServiceInterval(FrappeTestCase):
 	pass

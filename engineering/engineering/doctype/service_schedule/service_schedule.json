@@ -28,7 +28,6 @@
   {
    "fieldname": "month",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Month"
   },
   {
@@ -48,7 +47,6 @@
   {
    "fieldname": "service_schedule_child",
    "fieldtype": "Table",
-   "hidden": 1,
    "label": "Service Schedule child",
    "options": "Service Schedule Child"
   },
@@ -65,7 +63,7 @@
   {
    "fieldname": "assets_almost_due_for_service_50_hours_tab",
    "fieldtype": "Tab Break",
-   "label": "Assets almost due for service (50 hours)"
+   "label": "Service Planning Summary"
   },
   {
    "fieldname": "dashboard_summary",
@@ -81,7 +79,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-14 15:52:00.750427",
+ "modified": "2026-01-22 15:49:47.501636",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule",

@@ -3,6 +3,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate, nowdate, cint
 import calendar
 import math
+import re
 from datetime import timedelta
 
 class ServiceSchedule(Document):
@@ -69,11 +70,67 @@ def parse_month_bounds(month_label):
     month_end = getdate(f"{year}-{month_index:02d}-{last_day:02d}")
     return year, month_index, month_start, month_end
 
+def round_to_250(value):
+    v = cint(value) or 0
+    if v <= 0:
+        return 0
+
+    down = int(math.floor(v / 250.0) * 250)
+    up = int(math.ceil(v / 250.0) * 250)
+
+    # if equal distance, choose DOWN (e.g. 2625 -> 2500)
+    if (v - down) <= (up - v):
+        return down
+    return up
+
+
+def _extract_interval_number(interval_text):
+    """
+    "500 Hours" -> 500
+    "500" -> 500
+    "" / invalid -> 0
+    """
+    if not interval_text:
+        return 0
+    m = re.search(r"(\d+)", str(interval_text))
+    return int(m.group(1)) if m else 0
+
+def _fmt_hours(n):
+    n = cint(n) or 0
+    return f"{n} Hours" if n > 0 else ""
+
+def interval_from_planned_hours(planned_hours):
+    """Your rule:
+    2000 interval = even thousands (2000,4000,6000,...)
+    1000 interval = odd thousands  (1000,3000,5000,...)
+    otherwise cycle by remainder in the 1000-block: 250/500/750
+    """
+    h = cint(planned_hours) or 0
+    if h <= 0:
+        return 250
+
+    if h % 2000 == 0:
+        return 2000
+    if h % 1000 == 0:
+        return 1000
+
+    r = h % 1000
+    if r == 250:
+        return 250
+    if r == 500:
+        return 500
+    if r == 750:
+        return 750
+    return 250
+
+
 def ceiling_to_250(value):
     v = cint(value) or 0
     if v <= 0:
         return 0
     return int(math.ceil(v / 250.0) * 250)
+
+
 
 def adjust_sunday_to_saturday(d, month_start=None):
     """If d is Sunday, move it back to Saturday. If that moves before month_start, keep original."""
@@ -384,6 +441,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
     rows_index = {}   # (asset, date_iso) -> row
     est_series = {a: [] for a in asset_list}
+    seed_by_asset = {}
 
     daily_usage_default = clamp_daily_usage(daily_usage_default or 0)
 
@@ -408,6 +466,11 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
         before_row = (msr_map.get(asset) or {}).get("before")
         within_rows = (msr_map.get(asset) or {}).get("within") or []
         within_rows = sorted(within_rows, key=lambda r: as_date(r.get("service_date")) or month_start)
+        planning_seed = within_rows[-1] if within_rows else before_row
+        seed_by_asset[asset] = {
+            "hours": cint(planning_seed.get("current_hours")) if planning_seed else 0,
+            "interval": (planning_seed.get("service_interval") or "") if planning_seed else "",
+        }
         ptr = 0
         latest_within = None
 
@@ -432,33 +495,33 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
             prev_estimate = float(estimate_hours or 0.0)
 
-            # previous service per Task 1
-            if d == month_start:
-                chosen = before_row
-            else:
-                while ptr < len(within_rows):
-                    sr = within_rows[ptr]
-                    sr_date = as_date(sr.get("service_date"))
-                    if sr_date and sr_date <= d:
-                        latest_within = sr
-                        ptr += 1
-                    else:
-                        break
-                chosen = latest_within
+            # previous service per day (includes day 1)
+            while ptr < len(within_rows):
+                sr = within_rows[ptr]
+                sr_date = as_date(sr.get("service_date"))
+                if sr_date and sr_date <= d:
+                    latest_within = sr
+                    ptr += 1
+                else:
+                    break
+            chosen = latest_within or before_row
 
-            date_of_previous_service = as_date(chosen.get("service_date")) if chosen else None
-            hours_previous_service = cint(chosen.get("current_hours")) if chosen else 0
-            last_service_interval = (chosen.get("service_interval") or "") if chosen else ""
-            msr_reference_number = ""
-            msr_record_name = ""
 
-            if chosen:
-                msr_reference_number = chosen.get("reference_number") or ""
-                # IMPORTANT: this is the MSR document name (docname) used in the URL
-                msr_record_name = chosen.get("name") or ""
+            # Seed = latest MSR up to this day (can be before month)
+            seed_service_date = as_date(chosen.get("service_date")) if chosen else None
+            seed_hours = cint(chosen.get("current_hours")) if chosen else 0
+            seed_interval = (chosen.get("service_interval") or "") if chosen else ""
+            seed_ref = (chosen.get("reference_number") or "") if chosen else ""
+            seed_name = (chosen.get("name") or "") if chosen else ""
 
-            msr_reference_number = str(msr_reference_number or "")
-            msr_record_name = str(msr_record_name or "")
+            # Only stamp MSR fields on the exact MSR day row (must be within the month)
+            is_msr_day = bool(seed_service_date and getdate(seed_service_date) == getdate(d))
+
+            date_of_previous_service = seed_service_date if is_msr_day else None
+            hours_previous_service = seed_hours if is_msr_day else 0
+            last_service_interval = seed_interval if is_msr_day else ""
+            msr_reference_number = seed_ref if is_msr_day else ""
+            msr_record_name = seed_name if is_msr_day else ""
 
 
 
@@ -476,7 +539,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 "estimate_hours": estimate_hours,
                 "date_of_previous_service": date_of_previous_service,
                 "hours_previous_service": hours_previous_service or 0,
-                "last_service_interval": last_service_interval or 0,
+                "last_service_interval": last_service_interval,
                 "msr_reference_number": msr_reference_number,
                 "msr_record_name": msr_record_name,
 
@@ -490,24 +553,17 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
     # Next service markers (1/2/3). Latest JSON has date_of_next_service_1 and _2, but NOT _3.
     for asset in asset_list:
-        # Use the FIRST row in the month where hours_previous_service > 0
-        base_hours = 0
-        for d in date_list:
-            r0 = rows_index.get((asset, d.isoformat()))
-            if not r0:
-                continue
-            bh = cint(getattr(r0, "hours_previous_service", 0)) or 0
-            if bh > 0:
-                base_hours = bh
-                break
 
+
+        base_hours = cint((seed_by_asset.get(asset) or {}).get("hours")) or 0
         if base_hours <= 0:
             continue
 
 
-        planned1 = ceiling_to_250(base_hours)
-        planned2 = planned1 + 250
-        planned3 = planned2 + 250
+        planned1 = round_to_250(base_hours)
+        planned2 = ceiling_to_250(planned1 + 250)
+        planned3 = ceiling_to_250(planned2 + 250)
+
 
         # Populate planned hours on EVERY row for this asset (child table visibility)
         for d in date_list:
@@ -517,7 +573,19 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
             r_all.planned_hours_next_service_1 = planned1
             r_all.planned_hours_next_service_2 = planned2
-            r_all.planned_hours_of_service_3 = planned3
+            r_all.planned_hours_next_service_3 = planned3
+
+
+            # NEW: populate intervals on every row once estimate reaches planned
+            est = float(r_all.estimate_hours or 0)
+
+            if est >= float(planned1):
+                r_all.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
+            if est >= float(planned2):
+                r_all.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
+            if est >= float(planned3):
+                r_all.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+
 
 
         d1 = find_threshold_crossing_date(est_series[asset], planned1)
@@ -532,17 +600,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
 
 
-        # compute next interval types from last_service_interval
-        last_interval_val = None
-        for d in date_list:
-            r0 = rows_index.get((asset, d.isoformat()))
-            if r0 and r0.last_service_interval:
-                last_interval_val = r0.last_service_interval
-                break
 
-        next1 = normalize_last_service_interval(last_interval_val)
-        next2 = next1 + 250
-        next3 = next2 + 250
 
 
         if d1:
@@ -550,21 +608,24 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             if r:
                 r.date_of_next_service_1 = d1
                 r.planned_hours_next_service_1 = planned1
-                r.next_service_interval_1 = str(next1)
+                r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
+
 
         if d2:
             r = rows_index.get((asset, d2.isoformat()))
             if r:
                 r.date_of_next_service_2 = d2
                 r.planned_hours_next_service_2 = planned2
-                r.next_service_interval_2 = str(next2)
+                r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
+
 
         if d3:
             r = rows_index.get((asset, d3.isoformat()))
             if r:
                 r.date_of_next_service_3 = d3
-                r.planned_hours_of_service_3 = planned3
-                r.next_service_interval_3 = str(next3)
+                r.planned_hours_next_service_3 = planned3
+                r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+
 
 
     doc.save()
@@ -616,7 +677,7 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
         r.next_service_interval_2 = ""
 
         r.date_of_next_service_3 = None
-        r.planned_hours_of_service_3 = None
+        r.planned_hours_next_service_3 = None
         r.next_service_interval_3 = ""
 
 
@@ -631,25 +692,34 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
 
         if base_hours > 0:
 
-            planned1 = ceiling_to_250(base_hours)
-            planned2 = planned1 + 250
-            planned3 = planned2 + 250
+            planned1 = round_to_250(base_hours)
+            planned2 = ceiling_to_250(planned1 + 250)
+            planned3 = ceiling_to_250(planned2 + 250)
+
 
             # Populate planned hours on EVERY row for this fleet (child table visibility)
             for r in rows:
                 r.planned_hours_next_service_1 = planned1
                 r.planned_hours_next_service_2 = planned2
-                r.planned_hours_of_service_3 = planned3
+                r.planned_hours_next_service_3 = planned3
+
+                # NEW: populate intervals on every row once estimate reaches planned
+                est = float(r.estimate_hours or 0)
+
+                if est >= float(planned1):
+                    r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
+                if est >= float(planned2):
+                    r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
+                if est >= float(planned3):
+                    r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
 
 
             d1 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned1), month_start=month_start)
             d2 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned2), month_start=month_start)
             d3 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned3), month_start=month_start)
 
-            last_interval_val = rows[0].last_service_interval if rows else None
-            next1 = normalize_last_service_interval(last_interval_val)
-            next2 = next1 + 250
-            next3 = next2 + 250
+
+
 
 
 
@@ -658,21 +728,22 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                     if getdate(r.date) == d1:
                         r.date_of_next_service_1 = d1
                         r.planned_hours_next_service_1 = planned1
-                        r.next_service_interval_1 = str(next1)
+                        r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
                         break
             if d2:
                 for r in rows:
                     if getdate(r.date) == d2:
                         r.date_of_next_service_2 = d2
                         r.planned_hours_next_service_2 = planned2
-                        r.next_service_interval_2 = str(next2)
+                        r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
                         break
             if d3:
                 for r in rows:
                     if getdate(r.date) == d3:
                         r.date_of_next_service_3 = d3
-                        r.planned_hours_of_service_3 = planned3
-                        r.next_service_interval_3 = str(next3)
+                        r.planned_hours_next_service_3 = planned3
+                        r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+
                         break
 
     doc.save()

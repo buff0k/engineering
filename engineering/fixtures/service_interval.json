@@ -1,0 +1,37 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Service Interval",
+  "modified": "2026-01-21 15:28:05.716668",
+  "name": "250 Hours",
+  "service_interval": "250 Hours"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Service Interval",
+  "modified": "2026-01-21 15:28:12.362012",
+  "name": "500 Hours",
+  "service_interval": "500 Hours"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Service Interval",
+  "modified": "2026-01-21 15:28:25.372766",
+  "name": "1000 Hours",
+  "service_interval": "1000 Hours"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Service Interval",
+  "modified": "2026-01-21 15:28:31.716995",
+  "name": "750 Hours",
+  "service_interval": "750 Hours"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Service Interval",
+  "modified": "2026-01-21 15:28:41.195898",
+  "name": "2000 Hours",
+  "service_interval": "2000 Hours"
+ }
+]

@@ -24,6 +24,7 @@ fixtures = [
     {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User"]]]},
     {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
     {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]},
+    {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]}
 ]
 
 # ---------------------------------------------------------------------
@@ -48,9 +49,7 @@ scheduler_events = {
         "0 18 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
-        "0 7 * * *": [
-            "engineering.engineering.doctype.service_schedule.service_schedule.ss_overdue_email_daily_job"
-        ],
+
 
          # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)

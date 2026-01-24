@@ -23,6 +23,7 @@
   "last_smr_preuse",
   "current_hours",
   "plant_breakdown_number",
+  "total_time_unavailable",
   "breakdown_and_work_section",
   "time_tracking_column",
   "start_time",
@@ -62,7 +63,7 @@
   },
   {
    "fieldname": "start_time",
-   "fieldtype": "Time",
+   "fieldtype": "Datetime",
    "label": "Start Time",
    "reqd": 1
   },
@@ -73,7 +74,7 @@
   },
   {
    "fieldname": "end_time",
-   "fieldtype": "Time",
+   "fieldtype": "Datetime",
    "label": "End Time",
    "reqd": 1
   },
@@ -174,9 +175,9 @@
   },
   {
    "fieldname": "service_interval",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Service Interval",
-   "options": "250 Hours\n500 Hours\n750 Hours\n1000 Hours\n2000 Hours"
+   "options": "Service Interval"
   },
   {
    "fieldname": "last_smr_preuse",
@@ -201,12 +202,17 @@
    "fieldtype": "Duration",
    "label": "Total Time",
    "read_only": 1
+  },
+  {
+   "fieldname": "total_time_unavailable",
+   "fieldtype": "Duration",
+   "label": "Total Time Unavailable"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-05 14:24:56.258879",
+ "modified": "2026-01-20 16:06:56.683019",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

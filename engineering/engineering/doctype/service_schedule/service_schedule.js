@@ -441,8 +441,10 @@ rows.forEach(r => {
     };
 }
 
-// Track the latest previous service date (for display if you still want it)
-if (r.date_of_previous_service) {
+// Track the latest MSR event row only (aligned with "only stamp MSR fields on the MSR-day row")
+const hasMsrOnThisRow = !!(r.msr_record_name || r.msr_reference_number);
+
+if (hasMsrOnThisRow && r.date_of_previous_service) {
     const newDate = String(r.date_of_previous_service).slice(0, 10);
     const oldDate = assetMap[r.fleet_number].service_date
         ? String(assetMap[r.fleet_number].service_date).slice(0, 10)
@@ -451,17 +453,13 @@ if (r.date_of_previous_service) {
     if (!oldDate || newDate > oldDate) {
         assetMap[r.fleet_number].service_date = newDate;
 
-        // ✅ keep MSR link details aligned to the latest MSR
+        // keep MSR link details aligned to the latest MSR
         assetMap[r.fleet_number].msr_reference_number = r.msr_reference_number || "";
         assetMap[r.fleet_number].msr_record_name = r.msr_record_name || "";
 
-        // ✅ IMPORTANT: keep these aligned to the latest MSR too
-        if (r.hours_previous_service != null) {
-            assetMap[r.fleet_number].hours_previous_service = r.hours_previous_service;
-        }
-        if (r.last_service_interval != null) {
-            assetMap[r.fleet_number].last_service_interval = r.last_service_interval;
-        }
+        // keep these aligned to the MSR-day row too
+        assetMap[r.fleet_number].hours_previous_service = r.hours_previous_service ?? "";
+        assetMap[r.fleet_number].last_service_interval = r.last_service_interval ?? "";
     }
 }
 
@@ -599,6 +597,7 @@ if (![250, 500, 750, 1000, 2000].includes(ivNum)) return;
 
 const prevDay = frappe.datetime.add_days(rowDate, -1);
 intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
+
 
 
 });
@@ -1262,147 +1261,236 @@ setTimeout(() => {
 
 
 
-// ---------------------------------------------------------------------------
-// "Assets almost due for service (50 hours)" SUMMARY TABLE
-// ---------------------------------------------------------------------------
 function render_due_soon_summary(frm) {
+    const wrapper = frm.fields_dict.dashboard_summary.$wrapper;
     let rows = frm.doc.service_schedule_child || [];
-    console.log("SS child sample row:", rows && rows.length ? rows[0] : null);
 
     if (!rows.length) {
-        frm.fields_dict.dashboard_summary.$wrapper.html("<p>No data.</p>");
+        wrapper.html("<p>No data.</p>");
         return;
     }
 
-// Filter rows where Est Hours is within 50 hours before Planned Hours Next Service
-let dueRows = rows.filter(r => {
-    const plannedVal = (r.planned_hours_next_service_1 ?? r.planned_hours_next_service_2 ?? r.planned_hours_of_service_3 ?? r.planned_hours_next_service);
-    const planned = plannedVal != null ? parseFloat(plannedVal) : NaN;
-    const est = r.estimate_hours != null
-        ? parseFloat(r.estimate_hours) : NaN;
+const today = frappe.datetime.get_today();
 
-    // Need valid values
-    if (isNaN(planned) || isNaN(est) || planned <= 0) return false;
+// ONLY look at TODAY
+rows = rows.filter(r => String(r.date || "").slice(0, 10) === today);
 
-    // INCLUDE if Est is >= (planned - 50) AND < planned
-    return est >= (planned - 50) && est < planned;
-});
-
-
-    if (!dueRows.length) {
-        frm.fields_dict.dashboard_summary.$wrapper.html(
-            "<p>No assets are within 50 hours of the next service.</p>"
-        );
-        return;
-    }
-
-    // Sort by date ascending
-    dueRows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-
-
-
-    // Format date like "1 October – Wednesday"
-    function formatDisplayDate(isoDate) {
-        if (!isoDate) return "";
-        const d = new Date(isoDate);
-        if (isNaN(d)) return isoDate;   // fallback
-
-        const day = d.getDate();
-        const monthName = d.toLocaleString("default", { month: "long" });
-        const weekday = d.toLocaleString("default", { weekday: "long" });
-
-        return `${day} ${monthName} – ${weekday}`;
-    }
-
-
-    let html = `
-    <style>
-        .due-summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-        .due-summary-table th,
-        .due-summary-table td {
-            border: 1px solid #ccc;
-            padding: 4px;
-            text-align: left;
-        }
-        .due-summary-table th {
-            background: #eee;
-            font-weight: bold;
-        }
-        .due-summary-date { width: 120px; }
-        .due-summary-interval { width: 130px; }
-    </style>
-
-       <table class="due-summary-table">
-        <thead>
-            <tr>
-                <th class="due-summary-date">Service Date</th>
-                <th class="due-summary-interval">Next Service Interval</th>
-                <th>Plant No.</th>
-                <th>Plant Type</th>
-                <th>Model</th>
-                <th>Start Hours</th>
-                <th>Est Hours</th>
-                <th>Planned Hours Next Service</th>
-            </tr>
-        </thead>
-        <tbody>
-    `;
-
-
-    
-dueRows.forEach(r => {
-    // planned must be calculated HERE (was causing "planned is not defined")
-    const plannedVal = (
-        r.planned_hours_next_service_1 ??
-        r.planned_hours_next_service_2 ??
-        r.planned_hours_of_service_3 ??
-        r.planned_hours_next_service
+// Helper: get nearest planned service
+function get_planned(r) {
+    return Math.min(
+        ...[
+            r.planned_hours_next_service_1,
+            r.planned_hours_next_service_2,
+            r.planned_hours_next_service_3
+        ].filter(p => typeof p === "number" && p > 0)
     );
-    const planned = plannedVal != null ? (parseFloat(plannedVal) || 0) : 0;
+}
 
-    // Use interval colour on the whole row
-    const intervalVal = (
-        r.next_service_interval_3 ??
-        r.next_service_interval_2 ??
-        r.next_service_interval_1 ??
-        r.next_service_interval
-);
-
-
-    const iv = parseInt(intervalVal, 10);
-
-    if (iv === 250) colourClass = "blue";
-    else if (iv === 500) colourClass = "orange";
-    else if (iv === 750) colourClass = "yellow";
-    else if (iv === 1000) colourClass = "pink";
-    else if (iv === 2000) colourClass = "purple";
-
-    html += `
-        <tr class="${colourClass}">
-            <td>${formatDisplayDate(r.date)}</td>
-            <td>${intervalVal ? (intervalVal + ' Hours') : ''}</td>
-            <td><strong>${r.fleet_number || ""}</strong></td>
-            <td>${r.asset_category || ""}</td>
-            <td>${r.model || ""}</td>
-            <td>${r.start_hours ?? ""}</td>
-            <td>${r.estimate_hours ?? ""}</td>
-            <td>${planned ? planned : ''}</td>
-        </tr>
-    `;
+// 65 HOURS BEFORE SERVICE
+const due65 = rows.filter(r => {
+    const start = Number(r.start_hours);
+    const planned = get_planned(r);
+    if (isNaN(start) || !planned) return false;
+    return start >= (planned - 65) && start < planned;
 });
 
-    html += `</tbody></table>`;
+// 260 HOURS BEFORE CYCLE
+const due260 = rows.filter(r => {
+    const start = Number(r.start_hours);
+    const planned = get_planned(r);
+    if (isNaN(start) || !planned) return false;
+    return start >= (planned - 260) && start < planned;
+});
 
-    frm.fields_dict.dashboard_summary.$wrapper.html(html);
 
-    
+
+    if (!due65.length && !due260.length) {
+        wrapper.html("<p>No assets close to service.</p>");
+        return;
+    }
+
+let html = `
+<style>
+
+
+/* MAIN SECTION HEADINGS (MOST IMPORTANT VISUAL) */
+.ss-summary-title{
+  font-size: 15px;
+  font-weight: 900;
+  padding: 10px 14px;
+  margin: 14px 0 6px 0;
+  border-radius: 10px;
+  background: #e6e6e6 !important;
+  border: 2px solid #000;
+  color: #ff0000;
+  letter-spacing: .3px;
+  text-align: center;
+  display: flex; justify-content: center; align-items: center;
 }
 
 
 
+  .ss-table-scroll{
+    max-height: 520px;
+    overflow: auto;
+    border: 1px solid rgba(15,23,42,.12);
+    border-radius: 12px;
+    background: #fff;
+  }
 
 
+
+
+  .due-summary-table{
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 11px;
+    margin-bottom: 12px;
+    border:1px solid rgba(15,23,42,.10);
+    border-radius:12px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 10px 22px rgba(2,6,23,.06);
+  }
+
+
+
+.due-summary-table th{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #dcfce7;              /* light green */
+  font-weight: 900;
+  font-size: 13px;
+  border-bottom: 3px solid #166534; /* dark green */
+  border-right: 2px solid #166534;  /* strong column separators */
+  color: #065f46;
+}
+
+
+  .due-summary-table tr:last-child td{
+    border-bottom:none;
+  }
+
+  .due-summary-table tr:nth-child(even) td{
+    background:#f8fafc;
+  }
+
+
+.due-summary-table th,
+.due-summary-table td{
+  border-bottom:2px solid #6b7280;   /* darker horizontal lines */
+  border-right:2px solid #374151;    /* DARK column separators */
+  padding: 6px 8px;
+  text-align: left;
+  color:#0f172a;
+}
+
+
+  .due-summary-table th:last-child,
+  .due-summary-table td:last-child{
+    border-right: none;
+  }
+
+/* Bold Date + Plant (fleet number) columns */
+.due-summary-table td.col-date,
+.due-summary-table td.col-plant{
+  font-weight: 800;
+}
+
+  .ss-pill{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:800;
+    border:1px solid rgba(15,23,42,.10);
+    margin-left:6px;
+    vertical-align:middle;
+  }
+  /* Light row highlights based on interval (tinted from legend colours) */
+/* Interval row highlights (lighter than legend) */
+.due-summary-table tr.ss-row-250  td { background: rgba(76, 110, 245, 0.22) !important; }   /* blue */
+.due-summary-table tr.ss-row-500  td { background: rgba(255, 140, 18, 0.22) !important; }   /* orange */
+.due-summary-table tr.ss-row-750  td { background: rgba(233, 230, 36, 0.26) !important; }   /* yellow */
+.due-summary-table tr.ss-row-1000 td { background: rgba(44, 24, 98, 0.22) !important; }    /* purple */
+.due-summary-table tr.ss-row-2000 td { background: rgba(44, 24, 98, 0.22) !important; }    /* purple */
+
+
+  .due-summary-table tr:hover td { filter: brightness(0.985); }
+
+</style>
+<div class="ss-summary-wrap">
+`;
+
+
+    if (due65.length) {
+        html += `<div class="ss-summary-title">65 hours before service</div>`;
+        html += build_summary_table(
+    Object.values(
+        Object.fromEntries(due65.map(r => [r.fleet_number, r]))
+    )
+);
+    }
+
+    if (due260.length) {
+        html += `<div class="ss-summary-title">260 hours before cycle</div>`;
+        html += build_summary_table(
+    Object.values(
+        Object.fromEntries(due260.map(r => [r.fleet_number, r]))
+    )
+);
+    }
+
+    html += `</div>`;
+wrapper.html(html);
+}
+
+
+function build_summary_table(rows) {
+
+    const today = frappe.datetime.get_today();
+
+    let html = `<div class="ss-table-scroll"><table class="due-summary-table">
+        <tr>
+                <th>Date</th><th>Interval</th><th>Plant</th>
+                <th>Type</th><th>Model</th><th>Planned</th>
+
+        </tr>`;
+            
+
+    rows.forEach(r => {
+
+
+                const d = String(r.date || "").slice(0,10);
+        const isToday = (d === today);
+
+ 
+
+const planned =
+    r.planned_hours_next_service_1 ??
+    r.planned_hours_next_service_2 ??
+    r.planned_hours_next_service_3 ?? "";
+
+const interval =
+    r.next_service_interval_3 ??
+    r.next_service_interval_2 ??
+    r.next_service_interval_1 ?? "";
+
+const iv = interval ? String(parseInt(interval, 10)) : "";
+const rowClass = iv ? `ss-row-${iv}` : "";
+
+
+html += `<tr class="${rowClass}">
+            <td class="col-date">${d}</td>
+            <td>${interval}</td>
+            <td class="col-plant">${r.fleet_number}</td>
+            <td>${r.asset_category}</td>
+            <td>${r.model}</td>
+            <td>${planned}</td>
+        </tr>`;
+    });
+
+    return html + "</table></div>";
+}
