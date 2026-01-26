@@ -165,10 +165,10 @@ def batch_get_day_shift_start_hours(asset_list, month_start, month_end):
         "Pre-Use Hours",
         filters={
             "shift_date": ("between", [month_start, month_end]),
-            "shift": "Day",
+            "shift": ["in", ["Night", "Day"]],
         },
-        fields=["name", "shift_date"],
-        order_by="shift_date asc",
+        fields=["name", "shift_date", "shift"],
+        order_by="shift_date desc",
     )
 
     if not pre_use_docs:
@@ -198,6 +198,49 @@ def batch_get_day_shift_start_hours(asset_list, month_start, month_end):
         out[(dt.isoformat(), asset)] = float(r.get("eng_hrs_start") or 0)
 
     return out
+    
+
+
+def get_latest_prev_start_hours(asset, month_start):
+    """
+    Rule:
+    Look backwards day by day:
+    - Night shift first
+    - If no Night, use Day
+    """
+    if not asset or not month_start:
+        return 0.0
+
+    cursor = getdate(month_start) - timedelta(days=1)
+    # stop after 3 months back (prevents infinite loop when no history exists)
+    stop_date = getdate(month_start) - timedelta(days=92)
+
+    while True:
+        rows = frappe.db.sql(
+            """
+            SELECT
+                pu.shift,
+                pa.eng_hrs_start
+            FROM `tabPre-Use Hours` pu
+            JOIN `tabPre-use Assets` pa ON pa.parent = pu.name
+            WHERE
+                pa.asset_name = %s
+                AND pu.shift_date = %s
+                AND pa.eng_hrs_start > 0
+            ORDER BY FIELD(pu.shift, 'Night', 'Day')
+            LIMIT 1
+            """,
+            (asset, cursor),
+            as_dict=True,
+        )
+
+        if rows:
+            return float(rows[0].get("eng_hrs_start") or 0)
+
+        cursor = cursor - timedelta(days=1)
+        if cursor < stop_date:
+            return 0.0
+
 
 def prev_month_label(month_label):
     year, month_index = parse_month_label(month_label)
@@ -234,6 +277,7 @@ def get_last_30_day_avg_daily_usage(asset, anchor_date):
 
     parent_names = [d["name"] for d in pre_use_docs]
     parent_to_date = {d["name"]: getdate(d["shift_date"]) for d in pre_use_docs}
+    parent_shift = {d["name"]: d.get("shift") for d in pre_use_docs}
 
     # Pull only this asset's child rows
     child_rows = frappe.get_all(
@@ -459,6 +503,8 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
         asset = a["name"]
 
         prev_estimate = None  # track previous day's estimate per asset
+        prev_start_hours = None  # track previous day's start_hours per asset
+
 
         # per-asset default daily usage (rolling 30 days)
         daily_use_asset = asset_daily_default.get(asset, daily_usage_default)
@@ -484,16 +530,27 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             except Exception:
                 start_hours = 0.0
 
-            # NEW RULE:
-            # Day 1 Est = Day 1 Start
-            # Day N Est = Prev Est + Daily Use (ignore start_hours after day 1)
+            # Day 1 seed always comes from latest previous Day-shift eng_hrs_start (carry-forward)
+            if d == month_start:
+                start_hours = get_latest_prev_start_hours(asset, month_start)
+
+
+            # RULE:
+            # Day 1: Est = Day 1 start_hours
+            # Day 2..end:
+            #   if previous day had start_hours -> Est = prev_start_hours + daily_use
+            #   else -> Est = prev_estimate + daily_use
             if d == month_start:
                 estimate_hours = float(start_hours or 0.0)
             else:
-                prev_val = prev_estimate if prev_estimate is not None else float(start_hours or 0.0)
-                estimate_hours = float(prev_val) + float(daily_use_asset)
+                if float(prev_start_hours or 0.0) > 0:
+                    estimate_hours = float(prev_start_hours) + float(daily_use_asset)
+                else:
+                    estimate_hours = float(prev_estimate or 0.0) + float(daily_use_asset)
 
             prev_estimate = float(estimate_hours or 0.0)
+            prev_start_hours = float(start_hours or 0.0)
+
 
             # previous service per day (includes day 1)
             while ptr < len(within_rows):
@@ -646,6 +703,7 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
     rows.sort(key=lambda r: getdate(r.date))
 
     prev_estimate = None
+    prev_start_hours = None
     series = []
     for r in rows:
         r.daily_estimated_hours_usage = daily_use
@@ -654,18 +712,23 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
         r.msr_reference_number = str(r.msr_reference_number or "")
         r.msr_record_name = str(r.msr_record_name or "")
 
-        # NEW RULE (match dashboard + backend generation):
-        # Day 1 Est = Day 1 Start
-        # Day N Est = Prev Est + Daily Use (ignore start_hours after day 1)
+        # RULE:
+        # Day 1: Est = Day 1 start_hours
+        # Day 2..end:
+        #   if previous day had start_hours -> Est = prev_start_hours + daily_use
+        #   else -> Est = prev_estimate + daily_use
         if prev_estimate is None or getdate(r.date) == month_start:
             r.estimate_hours = start_hours
         else:
-            r.estimate_hours = float(prev_estimate) + float(daily_use)
+            if float(prev_start_hours or 0.0) > 0:
+                r.estimate_hours = float(prev_start_hours) + float(daily_use)
+            else:
+                r.estimate_hours = float(prev_estimate) + float(daily_use)
 
 
         prev_estimate = float(r.estimate_hours or 0.0)
+        prev_start_hours = start_hours
         series.append((getdate(r.date), float(r.estimate_hours or 0.0)))
-
 
         # clear markers
         r.date_of_next_service_1 = None

@@ -26,7 +26,8 @@
   "planned_hours_next_service_3",
   "next_service_interval_3",
   "msr_reference_number",
-  "msr_record_name"
+  "msr_record_name",
+  "daily_estimated_hours_usage"
  ],
  "fields": [
   {
@@ -155,13 +156,18 @@
    "fieldname": "planned_hours_next_service_3",
    "fieldtype": "Int",
    "label": "Planned Hours of Service 3"
+  },
+  {
+   "fieldname": "daily_estimated_hours_usage",
+   "fieldtype": "Int",
+   "label": "Daily Estimated hours usage"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-23 11:30:12.598007",
+ "modified": "2026-01-24 19:00:01.360915",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule Child",

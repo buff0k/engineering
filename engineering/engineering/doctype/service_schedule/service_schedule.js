@@ -426,7 +426,7 @@ rows.forEach(r => {
         planned_hours_next_service_2: null,
         next_service_interval_2: null,
         date_of_next_service_3: null,
-        planned_hours_of_service_3: null,
+        planned_hours_next_service_3: null,
         next_service_interval_3: null,
 
         msr_reference_number: r.msr_reference_number,
@@ -515,7 +515,7 @@ if (r.date_of_next_service_2) {
 }
 if (r.date_of_next_service_3) {
     assetMap[r.fleet_number].date_of_next_service_3 = String(r.date_of_next_service_3).slice(0, 10);
-    assetMap[r.fleet_number].planned_hours_of_service_3 = r.planned_hours_of_service_3;
+    assetMap[r.fleet_number].planned_hours_next_service_3 = r.planned_hours_next_service_3;
     assetMap[r.fleet_number].next_service_interval_3 = r.next_service_interval_3;
 }
 
@@ -671,7 +671,7 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
 .day-cell.interval-250  { background: #4c6ef5 !important; color: #fff; }
 .day-cell.interval-500  { background: #ff8c12ff !important; color: #000; }
 .day-cell.interval-750  { background: #e9e624ff !important; color: #000; }
-.day-cell.interval-1000 { background: #ff3eb8ff !important; color: #fff; }
+.day-cell.interval-1000 { background: #2c1862ff !important; color: #fff; }
 .day-cell.interval-2000 { background: #2c1862ff !important; color: #fff; }
 
 
@@ -682,7 +682,7 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
 .cell.history-interval-250  { background: #4c6ef5 !important; color: #fff !important; }
 .cell.history-interval-500  { background: #ff8c12ff !important; color: #000 !important; }
 .cell.history-interval-750  { background: #e9e624ff !important; color: #000 !important; }
-.cell.history-interval-1000 { background: #ff3eb8ff !important; color: #fff !important; }
+.cell.history-interval-1000 { background: #2c1862ff !important; color: #fff !important; }
 .cell.history-interval-2000 { background: #2c1862ff !important; color: #fff !important; }
 
 
@@ -779,8 +779,8 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
 .legend-swatch.blue   { background: #4c6ef5; }   /* 250 */
 .legend-swatch.orange { background: #ff8c12ff; } /* 500 */
 .legend-swatch.yellow { background: #e9e624ff; } /* 750 */
-.legend-swatch.pink   { background: #ff3eb8ff; } /* 1000 */
-.legend-swatch.purple { background: #2c1862ff; } /* 2000 */
+.legend-swatch.pink   { background: #2c1862ff; } /* 1000/2000 combined */
+.legend-swatch.purple { background: #2c1862ff; } /* 2000 (unused in legend now) */
 
 /* Status indicators */
 .legend-swatch-overdue {
@@ -836,10 +836,7 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
             <div class="legend-swatch yellow"></div>750-hour service
         </div>
        <div class="legend-item">
-        <div class="legend-swatch pink"></div>1000-hour service
-        </div>
-        <div class="legend-item">
-    <div class="legend-swatch purple"></div>2000-hour service
+    <div class="legend-swatch pink"></div>1000/2000-hour service
 </div>
 
         <div class="legend-item">
@@ -1207,6 +1204,7 @@ setTimeout(() => {
             .sort((a, b) => String($(a).data("date")).localeCompare(String($(b).data("date"))));
 
     let prevEst = null;
+    let prevStart = null;
 
     cells.forEach((elem, idx) => {
         const cell = $(elem);
@@ -1217,15 +1215,16 @@ setTimeout(() => {
         let estVal = 0;
 
         if (idx === 0) {
-            estVal = startVal;              // Day 1
-        } else if (startVal > 0) {
-            estVal = startVal;              // reset if start appears
+            estVal = startVal; // Day 1
+        } else if ((prevStart ?? 0) > 0) {
+            estVal = (prevStart ?? 0) + dailyUse; // prev day had start_hours
         } else {
-            estVal = (prevEst ?? 0) + dailyUse;
+            estVal = (prevEst ?? 0) + dailyUse;   // continue from prev estimate
         }
 
         cell.find(".est-val").text(estVal);
         prevEst = estVal;
+        prevStart = startVal;
     });
 
 
