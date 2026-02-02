@@ -11,7 +11,7 @@ app_home = "/app/engineering"
 
 add_to_apps_screen = [
     {
-        "name": "ir",
+        "name": "engineering",
         "logo": "/assets/engineering/images/is-logo.svg",
         "title": "Engineering",
         "route": "/app/engineering",
