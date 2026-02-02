@@ -7,14 +7,14 @@ app_license = "mit"
 required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/buff0k/engineering"
 app_logo_url = "/assets/engineering/images/is-logo.svg"
-app_home = "/app/engineering"
+app_home = "/desk/engineering"
 
 add_to_apps_screen = [
     {
-        "name": "engineering",
+        "name": app_name,
         "logo": "/assets/engineering/images/is-logo.svg",
-        "title": "Engineering",
-        "route": "/app/engineering",
+        "title": app_title,
+        "route": app_home,
         "has_permission": "engineering.engineering.utils.check_app_permission",
     }
 ]
