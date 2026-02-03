@@ -50,15 +50,22 @@ scheduler_events = {
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
 
-
-         # ==========================================================
+        # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
         # ==========================================================
         "0 1 * * *": [
             "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update"
-        ]
+        ],
+
+        # ==========================================================
+        # NEW — API WEARCHECK SYNC (Runs hourly)
+        # ==========================================================
+        "0 * * * *": [
+            "engineering.api_wearcheck.importer.fetch_and_sync"
+        ],
     }
 }
+
 
 # ---------------------------------------------------------------------
 # DocType event hooks

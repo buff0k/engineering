@@ -1,0 +1,32 @@
+{
+ "app": "engineering",
+ "creation": "2026-01-27 09:00:58.707820",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_type": "App",
+ "idx": 3,
+ "label": "Engineering",
+ "link": "/app/engineering",
+ "link_to": "Engineering",
+ "link_type": "Workspace Sidebar",
+ "logo_url": "/assets/engineering/images/is-logo.svg",
+ "modified": "2026-02-03 17:55:44.678677",
+ "modified_by": "Administrator",
+ "name": "Engineering",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering User"
+  }
+ ],
+ "sidebar": "Engineering",
+ "standard": 1
+}
