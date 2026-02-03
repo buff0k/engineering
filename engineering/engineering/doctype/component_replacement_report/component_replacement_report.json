@@ -1,170 +1,340 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:CCR-{company_abbr}{YY}/{######}",
- "creation": "2024-07-10 14:05:20.870486",
+ "creation": "2026-01-27 09:51:50.835315",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_nywh",
-  "amended_from",
-  "company_abbr",
-  "letter_head",
-  "asset_details",
   "date",
-  "location",
-  "plant_no",
+  "time",
+  "smr",
+  "column_break_vjyy",
+  "site",
+  "fleet_no",
+  "model",
+  "column_break_yjmc",
+  "component",
+  "component_leftright",
+  "reason_failure",
+  "disciplinary",
+  "specify_disciplinary",
+  "damaged_by",
+  "section_break_sdmw",
+  "column_break_lpfk",
+  "order_no",
+  "cost",
+  "gate_release_number",
+  "column_break_mqcf",
+  "operator_name",
+  "component_no",
+  "pr_number",
+  "section_break_gfxg",
+  "previous_supplier",
+  "previous_supplier_date",
   "hours",
-  "column_break_aapa",
-  "company",
-  "plant_description",
-  "custodian",
-  "components_for_replacement_section",
-  "list_of_components",
-  "details_of_request_section",
-  "details"
+  "job_no_previous",
+  "column_break_gfct",
+  "new_supplier",
+  "job_no_new",
+  "job_date",
+  "column_break_nmih",
+  "warranty",
+  "comments",
+  "section_break_cydt",
+  "component_fitted_by",
+  "component_date",
+  "component_name",
+  "component_signature",
+  "plant_manager",
+  "plant_manager_date",
+  "plant_manager_name",
+  "plant_manager_signature",
+  "site_manager",
+  "site_date",
+  "site_name",
+  "site_signature",
+  "column_break_rjnn",
+  "area_date",
+  "area_name",
+  "area_signature"
  ],
  "fields": [
   {
-   "fieldname": "section_break_nywh",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Component Replacement Report",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "asset_details",
-   "fieldtype": "Section Break",
-   "label": "Asset Details"
-  },
-  {
-   "fieldname": "location",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Location:",
-   "options": "Location",
-   "reqd": 1,
-   "search_index": 1
-  },
-  {
    "fieldname": "date",
    "fieldtype": "Date",
-   "label": "Request Date:",
+   "in_list_view": 1,
+   "label": "Date",
    "reqd": 1
   },
   {
-   "fieldname": "column_break_aapa",
+   "fieldname": "time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "column_break_vjyy",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "plant_description",
-   "fieldtype": "Read Only",
-   "label": "Plant Description:",
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_yjmc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fleet_no",
+   "fieldtype": "Link",
+   "label": "Fleet No",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Link",
+   "label": "Model",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "smr",
+   "fieldtype": "Int",
+   "label": "SMR",
+   "reqd": 1
+  },
+  {
+   "fieldname": "component",
+   "fieldtype": "Data",
+   "label": "Component"
+  },
+  {
+   "fieldname": "component_leftright",
+   "fieldtype": "Select",
+   "label": "Component (Left/Right)",
+   "options": "N/A\nLeft\nRight"
+  },
+  {
+   "fieldname": "reason_failure",
+   "fieldtype": "Select",
+   "label": "Reason for failure",
+   "options": "Abuse\nDamage\nWear & Tear\nPart Failure"
+  },
+  {
+   "fieldname": "disciplinary",
+   "fieldtype": "Select",
+   "label": "Disciplinary required in case of abuse or damage?",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "specify_disciplinary",
+   "fieldtype": "Data",
+   "label": "Specify disciplinary"
+  },
+  {
+   "fieldname": "section_break_sdmw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_gfct",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_lpfk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mqcf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "operator_name",
+   "fieldtype": "Link",
+   "label": "Operator Name",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "component_no",
+   "fieldtype": "Data",
+   "label": "Component No"
+  },
+  {
+   "fieldname": "pr_number",
+   "fieldtype": "Data",
+   "label": "PR number"
+  },
+  {
+   "fieldname": "new_supplier",
+   "fieldtype": "Data",
+   "label": "New Supplier"
+  },
+  {
+   "fieldname": "job_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Float",
+   "label": "Cost (excl vat):"
+  },
+  {
+   "fieldname": "order_no",
+   "fieldtype": "Data",
+   "label": "Order No"
+  },
+  {
+   "fieldname": "gate_release_number",
+   "fieldtype": "Data",
+   "label": "Gate release number"
+  },
+  {
+   "fieldname": "job_no_new",
+   "fieldtype": "Data",
+   "label": "Job No"
+  },
+  {
+   "fieldname": "section_break_gfxg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "previous_supplier",
+   "fieldtype": "Data",
+   "label": "Previous Supplier"
+  },
+  {
+   "fieldname": "previous_supplier_date",
+   "fieldtype": "Date",
+   "label": "Date"
   },
   {
    "fieldname": "hours",
+   "fieldtype": "Int",
+   "label": "Hours"
+  },
+  {
+   "fieldname": "job_no_previous",
    "fieldtype": "Data",
-   "label": "Hours / Km:",
-   "reqd": 1
+   "label": "Job No"
   },
   {
-   "fieldname": "plant_no",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Plant No.:",
-   "options": "Asset",
-   "reqd": 1,
-   "search_index": 1
+   "fieldname": "column_break_nmih",
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "company",
-   "fieldtype": "Read Only",
-   "label": "Company:",
-   "reqd": 1,
-   "search_index": 1
+   "fieldname": "warranty",
+   "fieldtype": "Select",
+   "label": "Is this previous component a warranty claim?",
+   "options": "Yes\nNo"
   },
   {
-   "fieldname": "custodian",
-   "fieldtype": "Read Only",
-   "label": "Allocated Driver (If Applicable):"
-  },
-  {
-   "fieldname": "company_abbr",
-   "fieldtype": "Read Only",
-   "hidden": 1,
-   "label": "Company Abbreviation"
-  },
-  {
-   "fieldname": "components_for_replacement_section",
-   "fieldtype": "Section Break",
-   "label": "Components for Replacement"
-  },
-  {
-   "fieldname": "list_of_components",
-   "fieldtype": "Table",
-   "label": "List of Components",
-   "options": "Item List for Component Replacement Report",
-   "reqd": 1
-  },
-  {
-   "fieldname": "details_of_request_section",
-   "fieldtype": "Section Break",
-   "label": "Details of Request"
-  },
-  {
-   "fieldname": "details",
+   "fieldname": "comments",
    "fieldtype": "Small Text",
-   "label": "Comments and Details:"
+   "label": "Comments"
   },
   {
-   "fieldname": "letter_head",
-   "fieldtype": "Read Only",
-   "hidden": 1,
-   "label": "Letterhead"
+   "fieldname": "section_break_cydt",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "component_fitted_by",
+   "fieldtype": "Column Break",
+   "label": "Component fitted by"
+  },
+  {
+   "fieldname": "component_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "component_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "component_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "column_break_rjnn",
+   "fieldtype": "Column Break",
+   "label": "Area Manager Engineering"
+  },
+  {
+   "fieldname": "plant_manager",
+   "fieldtype": "Column Break",
+   "label": "Plant Manager/Foreman Name"
+  },
+  {
+   "fieldname": "plant_manager_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "plant_manager_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "area_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "plant_manager_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "area_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "area_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "site_manager",
+   "fieldtype": "Column Break",
+   "label": "Site Manager"
+  },
+  {
+   "fieldname": "site_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "site_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "site_signature",
+   "fieldtype": "Signature",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "damaged_by",
+   "fieldtype": "Select",
+   "label": "Damaged by",
+   "options": "Other\nOperator\nArtisan"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
- "links": [
-  {
-   "link_doctype": "Location",
-   "link_fieldname": "location"
-  },
-  {
-   "link_doctype": "Asset",
-   "link_fieldname": "asset_name"
-  },
-  {
-   "link_doctype": "Company",
-   "link_fieldname": "company_name"
-  },
-  {
-   "link_doctype": "Asset",
-   "link_fieldname": "custodian"
-  },
-  {
-   "link_doctype": "Company",
-   "link_fieldname": "abbr"
-  },
-  {
-   "link_doctype": "Company",
-   "link_fieldname": "default_letter_head"
-  }
- ],
- "modified": "2025-06-10 14:43:40.119050",
+ "links": [],
+ "modified": "2026-01-27 10:46:32.483325",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Component Replacement Report",
- "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -177,55 +347,12 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "submit": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering Manager",
-   "select": 1,
-   "share": 1,
-   "submit": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering User",
-   "select": 1,
-   "share": 1,
    "write": 1
   }
  ],
  "row_format": "Dynamic",
- "sort_field": "modified",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
  "sort_order": "DESC",
- "states": [
-  {
-   "color": "Blue",
-   "title": "Created"
-  },
-  {
-   "color": "Blue",
-   "title": "Reviewed"
-  },
-  {
-   "color": "Blue",
-   "title": "Approved"
-  },
-  {
-   "color": "Blue",
-   "title": "Completed"
-  }
- ],
- "track_changes": 1
+ "states": []
 }

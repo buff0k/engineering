@@ -280,7 +280,7 @@
         fieldtype: "Select",
         fieldname: "msr_type",
         label: "Type",
-        options: ["", "Service", "Breakdown", "Planned Maintenance", "Inspection"].join("\n"),
+        options: ["All", "Service", "Breakdown", "Planned Maintenance", "Inspection"].join("\n"),
         reqd: 0,
       },
       render_input: true,
@@ -484,7 +484,7 @@
       try {
         const resp = await fetch_report_data({
           asset: fleet,
-          service_breakdown: type || undefined,
+          service_breakdown: (!type || type === "All") ? undefined : type,
         });
 
         const rows = normalize_result(resp.columns, resp.result);

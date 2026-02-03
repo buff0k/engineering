@@ -1,0 +1,63 @@
+frappe.query_reports["Weekly Availability Dashboard"] = {
+    filters: [
+        {
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+        },
+        {
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
+        },
+    ],
+
+    onload(report) {
+        const today = frappe.datetime.get_today();
+
+        report.set_filter_value("to_date", today);
+        report.set_filter_value(
+            "from_date",
+            frappe.datetime.add_days(today, -6)
+        );
+
+        hide_table(report);
+    },
+
+    refresh(report) {
+        hide_table(report);
+    },
+};
+
+
+function hide_table(report) {
+    const hide = () => {
+        // hide datatable + report result containers (these include the footer/help text + scrollbar)
+        report.page.wrapper.find(".result, .result-container, .report-wrapper, .report-footer").hide();
+        report.page.main.find(".result, .result-container, .report-wrapper, .report-footer").hide();
+
+        // extra safety: hide any lingering "help/execution time" text blocks
+        report.page.wrapper.find(".dt-help, .dt-message, .dt-footer, .no-result").hide();
+        report.page.main.find(".dt-help, .dt-message, .dt-footer, .no-result").hide();
+
+        // remove the tiny scroll area if it remains
+        report.page.wrapper.find(".result, .result-container, .report-wrapper").css({
+            "max-height": "0",
+            "overflow": "hidden",
+            "padding": "0",
+            "margin": "0"
+        });
+        report.page.main.find(".result, .result-container, .report-wrapper").css({
+            "max-height": "0",
+            "overflow": "hidden",
+            "padding": "0",
+            "margin": "0"
+        });
+    };
+
+    setTimeout(hide, 0);
+    setTimeout(hide, 200);
+    setTimeout(hide, 800);
+    setTimeout(hide, 1500);
+}
+

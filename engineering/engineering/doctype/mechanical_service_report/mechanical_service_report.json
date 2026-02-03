@@ -34,7 +34,8 @@
   "breakdown_and_work_column",
   "description_of_breakdown",
   "spares_required_and_comments",
-  "description_of_work_done"
+  "description_of_work_done",
+  "amended_from"
  ],
  "fields": [
   {
@@ -207,19 +208,31 @@
    "fieldname": "total_time_unavailable",
    "fieldtype": "Duration",
    "label": "Total Time Unavailable"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Mechanical Service Report",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-01-26 06:45:45.233827",
+ "modified": "2026-01-28 15:47:45.149902",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -229,6 +242,7 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -241,6 +255,7 @@
    "report": 1,
    "role": "Engineering Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -255,6 +270,7 @@
    "write": 1
   },
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -264,6 +280,7 @@
    "report": 1,
    "role": "Fleet Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],

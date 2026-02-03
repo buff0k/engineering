@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class ComponentReplacementReport(Document):
+class OEMBooking(Document):
 	pass

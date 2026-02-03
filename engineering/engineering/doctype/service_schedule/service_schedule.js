@@ -1,3 +1,35 @@
+function ss_queue_daily_update(frm) {
+    if (frm.__ss_updating) return;
+    frm.__ss_updating = true;
+
+    frappe.call({
+        method: "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update",
+        args: {
+            schedule_name: frm.doc.name,
+            daily_usage_default: 15
+        },
+        freeze: true,
+        freeze_message: "Queueing Service Schedule Update...",
+        callback: () => {
+            frm.__ss_updating = false;
+
+            frm.reload_doc().then(() => {
+                const dashWrapper = get_dashboard_wrapper(frm);
+                if (dashWrapper) render_service_board(frm);
+                if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
+                    render_due_soon_summary(frm);
+                }
+            });
+
+            frappe.msgprint("Update queued and refreshed.");
+        },
+        error: () => {
+            frm.__ss_updating = false;
+        }
+    });
+}
+
+
 function get_dashboard_wrapper(frm) {
     // Prefer the actual HTML field
     if (frm.fields_dict.service_schedule && frm.fields_dict.service_schedule.$wrapper) {
@@ -14,42 +46,30 @@ frappe.ui.form.on("Service Schedule", {
     refresh(frm) {
 
 
+// ✅ Force OEM Booking checkbox to reflect doc value in grid list-view
+setTimeout(() => {
+    const grid = frm.fields_dict.service_schedule_child?.grid;
+    if (!grid) return;
 
+    (grid.grid_rows || []).forEach(gr => {
+        const v = !!(gr.doc && (gr.doc.oem_booking_date == 1 || gr.doc.oem_booking_date === true));
+
+        const $cell = gr.row && gr.row.find('[data-fieldname="oem_booking_date"]');
+        const $cb = $cell && $cell.find('input[type="checkbox"]');
+
+        if ($cb && $cb.length) {
+            $cb.prop("checked", v);
+
+            // ERPNext static checkbox visual
+            $cb.toggleClass("disabled-selected", v);
+        }
+    });
+}, 300);
 
         render_month_selector(frm);
         frm.set_df_property("month", "read_only", 1);
 
-frm.add_custom_button("Run Daily Update", () => {
-    if (frm.__ss_updating) return;
-    frm.__ss_updating = true;
 
-    frappe.call({
-        method: "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update",
-        args: {
-            schedule_name: frm.doc.name,
-            daily_usage_default: 15
-        },
-        freeze: true,
-        freeze_message: "Queueing Service Schedule Update...",
-        callback: () => {
-            frm.__ss_updating = false;
-
-            // reload so MSRs + planned fields show without deleting
-            frm.reload_doc().then(() => {
-                const dashWrapper = get_dashboard_wrapper(frm);
-                if (dashWrapper) render_service_board(frm);
-                if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                    render_due_soon_summary(frm);
-                }
-            });
-
-            frappe.msgprint("Update queued and refreshed.");
-        },
-        error: () => {
-            frm.__ss_updating = false;
-        }
-    });
-});
 
 
         // style history grid
@@ -96,7 +116,6 @@ frm.add_custom_button("Run Daily Update", () => {
         }
     }
 });
-
 
 
 
@@ -499,8 +518,9 @@ const rowDateKey = String(r.date || "").slice(0, 10);
 assetMap[r.fleet_number].days[rowDateKey] = {
     start: r.start_hours,
     est: r.estimate_hours,
+    oem: (r.oem_booking_date == 1 || r.oem_booking_date === true) ? 1 : 0,
+    oem_name: r.oem_booking_name || ""
 };
-
 
 // Capture next service markers (these fields are only set on the specific day that crosses the threshold)
 if (r.date_of_next_service_1) {
@@ -824,7 +844,14 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
 
        </style>
 
-        <!-- Small colour legend (outside scroll area) -->
+    <!-- Run update button (above legend) -->
+    <div style="margin: 6px 0;">
+        <button type="button" class="btn btn-xs btn-primary ss-run-daily-update">
+            Run Daily Update
+        </button>
+    </div>
+
+    <!-- Small colour legend (outside scroll area) -->
     <div class="legend-row">
         <div class="legend-item">
             <div class="legend-swatch blue"></div>250-hour service
@@ -888,6 +915,7 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
     // HISTORY ROWS
     // -----------------------------------------------------------------------
     const historyRows = [
+    { label: "Prev Service Hours", key: "hours_previous_service" },
     { label: "Prev Service Date", key: "service_date" },
     { label: "Last Service Interval", key: "last_service_interval" },
 ];
@@ -909,23 +937,11 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
 
 // ONLY colour these history rows:
 // - Last Service Interval (exact match 250/500/750/1000/2000)
-// - Prev Service Hours (floor to nearest 250, then map to 250/500/750/1000/2000)
+// - Prev Service Hours (ALWAYS same colour as Last Service Interval)
 if (row.key === "last_service_interval" || row.key === "hours_previous_service") {
 
-    // Pull a number out of the displayed value (handles "250", "250 Hours", "1013", etc.)
-    const rawNum = parseFloat(String(value || "").replace(/[^\d.]/g, ""));
-    let iv = isNaN(rawNum) ? NaN : rawNum;
-
-    if (row.key === "last_service_interval") {
-        // exact interval
-        iv = parseInt(String(value || "").replace(/[^\d]/g, ""), 10);
-    } else {
-        // Prev Service Hours: floor to nearest 250
-        iv = Math.floor(iv / 250) * 250;
-
-        // cap anything >= 2000 to 2000 (so 2050, 2600 etc still become purple)
-        if (iv >= 2000) iv = 2000;
-    }
+    // Always take the interval from last_service_interval (so both rows match)
+    const iv = parseInt(String(a.last_service_interval || "").replace(/[^\d]/g, ""), 10);
 
     if ([250, 500, 750, 1000, 2000].includes(iv)) {
         cls = ` history-interval-${iv}`;
@@ -998,6 +1014,7 @@ html += `<div class="cell history-border${cls}">${value}</div>`;
 
             const start = info.start;
             const est   = info.est;
+            const oem   = info.oem || 0;
             
 
         
@@ -1052,6 +1069,15 @@ const msrRef = msrEvent ? msrEvent.msr_reference_number : "";
 const msrName = msrEvent ? msrEvent.msr_record_name : "";
 
 let msrLinkHtml = "";
+const oemName = info.oem_name || "";
+let oemHtml = "";
+
+if (oem && oemName) {
+    const route = frappe.utils.get_form_link("OEM Booking", oemName);
+    oemHtml = `<br><a href="${route}" target="_blank" style="font-weight:900; text-decoration:none;">OEM ✅</a>`;
+} else if (oem) {
+    oemHtml = `<br><span style="font-weight:900;">OEM ✅</span>`;
+}
 
 if (msrRef) {
     const label = `MSR:${frappe.utils.escape_html(String(msrRef))}`;
@@ -1093,6 +1119,7 @@ html += `
             <br>
             Est:   <span class="est-val">${est ?? ""}</span>
             ${msrLinkHtml}
+            ${oemHtml}
         </div>
     </div>
 `;
@@ -1114,7 +1141,10 @@ html += `
     }
 
     dashField.$wrapper.html(html);
-
+    dashField.$wrapper
+        .find(".ss-run-daily-update")
+        .off("click.ss")
+        .on("click.ss", () => ss_queue_daily_update(frm));
 // ---------------------------------------------------------------------------
 // APPLY 60-HOUR RED BORDER WINDOW (per asset, before each interval cell)
 // ---------------------------------------------------------------------------
@@ -1274,31 +1304,33 @@ const today = frappe.datetime.get_today();
 // ONLY look at TODAY
 rows = rows.filter(r => String(r.date || "").slice(0, 10) === today);
 
-// Helper: get nearest planned service
+// Helper: get NEXT planned service (the next one still ahead of today's estimate)
 function get_planned(r) {
-    return Math.min(
-        ...[
-            r.planned_hours_next_service_1,
-            r.planned_hours_next_service_2,
-            r.planned_hours_next_service_3
-        ].filter(p => typeof p === "number" && p > 0)
-    );
+    const est = Number(r.estimate_hours || 0);
+
+    const planned_list = [
+        r.planned_hours_next_service_1,
+        r.planned_hours_next_service_2,
+        r.planned_hours_next_service_3
+    ].filter(p => typeof p === "number" && p > est);  // only future targets
+
+    return planned_list.length ? Math.min(...planned_list) : null;
 }
 
 // 65 HOURS BEFORE SERVICE
 const due65 = rows.filter(r => {
-    const start = Number(r.start_hours);
-    const planned = get_planned(r);
-    if (isNaN(start) || !planned) return false;
-    return start >= (planned - 65) && start < planned;
+const est = Number(r.estimate_hours);
+const planned = get_planned(r);
+if (isNaN(est) || !planned) return false;
+return est >= (planned - 65) && est < planned;
 });
 
 // 260 HOURS BEFORE CYCLE
 const due260 = rows.filter(r => {
-    const start = Number(r.start_hours);
-    const planned = get_planned(r);
-    if (isNaN(start) || !planned) return false;
-    return start >= (planned - 260) && start < planned;
+const est = Number(r.estimate_hours);
+const planned = get_planned(r);
+if (isNaN(est) || !planned) return false;
+return est >= (planned - 260) && est < planned;
 });
 
 

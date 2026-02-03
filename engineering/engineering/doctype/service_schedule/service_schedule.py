@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, nowdate, cint
+from frappe.utils import getdate, nowdate, cint, add_months
 import calendar
 import math
 import re
@@ -149,6 +149,7 @@ def get_assets_for_site(site):
         "Asset",
         filters={
             "location": site,
+            "docstatus": 1,
             "asset_category": ["in", ["ADT", "Diesel Bowsers", "Excavator", "Dozer", "Service Truck"]],
         },
         fields=["name", "asset_category", "item_name", "item_code"],
@@ -332,28 +333,62 @@ def get_prev_month_seed(site, month_label, fleet_number):
     if not site or not month_label or not fleet_number:
         return (None, None)
 
-    pm_label = prev_month_label(month_label)
 
-    prev_sched_name = frappe.db.get_value(
-        "Service Schedule",
-        {"site": site, "month": pm_label},
-        "name"
+
+
+
+
+
+
+
+
+def batch_get_oem_bookings(asset_list, month_start, month_end):
+    """Return mapping (asset, date_iso) -> True for OEM Booking dates in this window.
+    Draft + Submitted are valid; ignore Cancelled (docstatus=2).
+    NOTE: OEM Booking does NOT have fleet_number; it uses `asset`.
+    """
+    if not asset_list:
+        return {}
+
+    rows = frappe.get_all(
+        "OEM Booking",
+        filters={
+            "asset": ["in", asset_list],
+            "booking_date": ("between", [month_start, month_end]),
+            "docstatus": ["in", [0, 1]],
+        },
+        fields=["name", "asset", "booking_date"],
+        order_by="booking_date asc",
     )
-    if not prev_sched_name:
-        return (None, None)
 
-    last_row = frappe.db.get_value(
-        "Service Schedule Child",
-        {"parent": prev_sched_name, "fleet_number": fleet_number},
-        ["estimate_hours", "daily_estimated_hours_usage"],
-        order_by="date desc"
-    )
-    if not last_row:
-        return (None, None)
+    out = {}
+    for r in rows:
+        a = r.get("asset")
+        d = as_date(r.get("booking_date"))
+        name = r.get("name")
+        if a and d and name:
+            # if multiple bookings same day, first one wins
+            out.setdefault((a, d.isoformat()), name)
+    return out
 
-    prev_est = float(last_row[0] or 0)
-    prev_daily = float(last_row[1] or 0)
-    return (prev_est, prev_daily)
+
+def recompute_oem_booking_flags(doc, lookup_start, lookup_end):
+    """Stamp doc.service_schedule_child.oem_booking_date based on OEM Booking truth."""
+    asset_list = sorted({r.fleet_number for r in (doc.service_schedule_child or []) if r.fleet_number})
+    oem_map = batch_get_oem_bookings(asset_list, lookup_start, lookup_end) or {}
+
+    # TEMP DEBUG (remove later)
+    frappe.logger(__name__).info(f"[OEM DEBUG] assets={len(asset_list)} oem_hits={len(oem_map)}")
+    frappe.logger(__name__).info(f"[OEM DEBUG] IS0617 hits: {[k for k in oem_map.keys() if k[0]=='IS0617'][:10]}")
+
+    for r in (doc.service_schedule_child or []):
+        if not r.fleet_number or not r.date:
+            continue
+        d = getdate(r.date)
+        key = (r.fleet_number, d.isoformat())
+        booking_name = oem_map.get(key)
+        r.oem_booking_date = 1 if booking_name else 0
+        r.oem_booking_name = booking_name or ""
 
 
 
@@ -479,6 +514,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
     start_hours_map = batch_get_day_shift_start_hours(asset_list, month_start, month_end)
     msr_map = batch_get_service_reports(asset_list, month_start, month_end)
+    oem_map = batch_get_oem_bookings(asset_list, month_start, month_end) or {}
 
     # clear
     doc.set("service_schedule_child", [])
@@ -599,6 +635,8 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 "last_service_interval": last_service_interval,
                 "msr_reference_number": msr_reference_number,
                 "msr_record_name": msr_record_name,
+                "oem_booking_date": 1 if oem_map.get((asset, d_iso)) else 0,
+                "oem_booking_name": oem_map.get((asset, d_iso)) or "",
 
             })
 
@@ -685,6 +723,10 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 
 
 
+    # OEM Booking flags: current + previous month window
+    lookup_start = add_months(month_start, -1)
+    recompute_oem_booking_flags(doc, lookup_start, month_end)
+
     doc.save()
     frappe.db.commit()
     return {"ok": True, "rows": len(doc.service_schedule_child)}
@@ -695,7 +737,7 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
     doc = frappe.get_doc("Service Schedule", schedule_name)
     if not doc.month:
         frappe.throw("Month is required.")
-    _, _, month_start, _ = parse_month_bounds(doc.month)
+    _, _, month_start, month_end = parse_month_bounds(doc.month)
 
     daily_use = clamp_daily_usage(daily_usage or 0)
 
@@ -808,6 +850,9 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                         r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
 
                         break
+
+    lookup_start = add_months(month_start, -1)
+    recompute_oem_booking_flags(doc, lookup_start, month_end)
 
     doc.save()
     frappe.db.commit()

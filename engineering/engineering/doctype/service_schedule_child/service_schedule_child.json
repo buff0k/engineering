@@ -27,7 +27,9 @@
   "next_service_interval_3",
   "msr_reference_number",
   "msr_record_name",
-  "daily_estimated_hours_usage"
+  "daily_estimated_hours_usage",
+  "oem_booking_date",
+  "oem_booking_name"
  ],
  "fields": [
   {
@@ -161,13 +163,27 @@
    "fieldname": "daily_estimated_hours_usage",
    "fieldtype": "Int",
    "label": "Daily Estimated hours usage"
+  },
+  {
+   "default": "0",
+   "fieldname": "oem_booking_date",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "OEM Booking"
+  },
+  {
+   "fieldname": "oem_booking_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "OEM Booking Record",
+   "options": "OEM Booking"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-24 19:00:01.360915",
+ "modified": "2026-01-29 17:16:44.219475",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule Child",
