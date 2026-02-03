@@ -1,0 +1,425 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:sampno",
+ "creation": "2026-02-03 14:22:55.338654",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sampno",
+  "bottleno",
+  "customer",
+  "site",
+  "machine",
+  "component",
+  "profileid",
+  "status",
+  "section_break_gscc",
+  "sampledate",
+  "registerdate",
+  "section_break_tabl",
+  "machread",
+  "oilread",
+  "perwater",
+  "fueldilution",
+  "section_break_qnbg",
+  "oilsupplier",
+  "oilbrand",
+  "samp_taker",
+  "section_break_rfha",
+  "commentstext",
+  "actiontext",
+  "feedbacktext",
+  "section_break_rgoy",
+  "tan",
+  "tbn",
+  "section_break_vieu",
+  "fe",
+  "ag",
+  "al",
+  "ca",
+  "cr",
+  "cu",
+  "mg",
+  "na",
+  "ni",
+  "pb",
+  "si",
+  "sn",
+  "p",
+  "b",
+  "ba",
+  "mo",
+  "v",
+  "zn",
+  "ti",
+  "section_break_lpja",
+  "v40",
+  "v100",
+  "oxi",
+  "soot",
+  "section_break_aptg",
+  "iso4",
+  "iso6",
+  "iso14",
+  "pq",
+  "checksum"
+ ],
+ "fields": [
+  {
+   "fieldname": "sampno",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "sampno",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "bottleno",
+   "fieldtype": "Int",
+   "label": "bottleno"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "label": "customer"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "site"
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "machine"
+  },
+  {
+   "fieldname": "component",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "component"
+  },
+  {
+   "fieldname": "profileid",
+   "fieldtype": "Int",
+   "label": "profileid"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "status"
+  },
+  {
+   "fieldname": "section_break_gscc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sampledate",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "sampledate"
+  },
+  {
+   "fieldname": "registerdate",
+   "fieldtype": "Date",
+   "label": "registerdate"
+  },
+  {
+   "fieldname": "section_break_tabl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "machread",
+   "fieldtype": "Int",
+   "label": "machread"
+  },
+  {
+   "fieldname": "oilread",
+   "fieldtype": "Float",
+   "label": "oilread"
+  },
+  {
+   "fieldname": "perwater",
+   "fieldtype": "Float",
+   "label": "perwater"
+  },
+  {
+   "fieldname": "fueldilution",
+   "fieldtype": "Float",
+   "label": "fueldilution"
+  },
+  {
+   "fieldname": "section_break_qnbg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "oilsupplier",
+   "fieldtype": "Data",
+   "label": "oilsupplier"
+  },
+  {
+   "fieldname": "oilbrand",
+   "fieldtype": "Data",
+   "label": "oilbrand"
+  },
+  {
+   "fieldname": "samp_taker",
+   "fieldtype": "Data",
+   "label": "samp_taker"
+  },
+  {
+   "fieldname": "section_break_rfha",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "commentstext",
+   "fieldtype": "Long Text",
+   "label": "commentstext"
+  },
+  {
+   "fieldname": "actiontext",
+   "fieldtype": "Long Text",
+   "label": "actiontext"
+  },
+  {
+   "fieldname": "feedbacktext",
+   "fieldtype": "Long Text",
+   "label": "feedbacktext"
+  },
+  {
+   "fieldname": "section_break_rgoy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "tan",
+   "fieldtype": "Float",
+   "label": "tan"
+  },
+  {
+   "fieldname": "tbn",
+   "fieldtype": "Float",
+   "label": "tbn"
+  },
+  {
+   "fieldname": "section_break_vieu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "fe",
+   "fieldtype": "Int",
+   "label": "fe"
+  },
+  {
+   "fieldname": "ag",
+   "fieldtype": "Int",
+   "label": "ag"
+  },
+  {
+   "fieldname": "al",
+   "fieldtype": "Int",
+   "label": "al"
+  },
+  {
+   "fieldname": "ca",
+   "fieldtype": "Int",
+   "label": "ca"
+  },
+  {
+   "fieldname": "cr",
+   "fieldtype": "Int",
+   "label": "cr"
+  },
+  {
+   "fieldname": "cu",
+   "fieldtype": "Int",
+   "label": "cu"
+  },
+  {
+   "fieldname": "mg",
+   "fieldtype": "Int",
+   "label": "mg"
+  },
+  {
+   "fieldname": "na",
+   "fieldtype": "Int",
+   "label": "na"
+  },
+  {
+   "fieldname": "ni",
+   "fieldtype": "Int",
+   "label": "ni"
+  },
+  {
+   "fieldname": "pb",
+   "fieldtype": "Int",
+   "label": "pb"
+  },
+  {
+   "fieldname": "si",
+   "fieldtype": "Int",
+   "label": "si"
+  },
+  {
+   "fieldname": "sn",
+   "fieldtype": "Int",
+   "label": "sn"
+  },
+  {
+   "fieldname": "p",
+   "fieldtype": "Int",
+   "label": "p"
+  },
+  {
+   "fieldname": "b",
+   "fieldtype": "Int",
+   "label": "b"
+  },
+  {
+   "fieldname": "ba",
+   "fieldtype": "Int",
+   "label": "ba"
+  },
+  {
+   "fieldname": "mo",
+   "fieldtype": "Int",
+   "label": "mo"
+  },
+  {
+   "fieldname": "v",
+   "fieldtype": "Int",
+   "label": "v"
+  },
+  {
+   "fieldname": "zn",
+   "fieldtype": "Int",
+   "label": "zn"
+  },
+  {
+   "fieldname": "ti",
+   "fieldtype": "Int",
+   "label": "ti"
+  },
+  {
+   "fieldname": "section_break_lpja",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "v40",
+   "fieldtype": "Float",
+   "label": "v40"
+  },
+  {
+   "fieldname": "v100",
+   "fieldtype": "Float",
+   "label": "v100"
+  },
+  {
+   "fieldname": "oxi",
+   "fieldtype": "Float",
+   "label": "oxi"
+  },
+  {
+   "fieldname": "soot",
+   "fieldtype": "Float",
+   "label": "soot"
+  },
+  {
+   "fieldname": "section_break_aptg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "iso4",
+   "fieldtype": "Int",
+   "label": "iso4"
+  },
+  {
+   "fieldname": "iso6",
+   "fieldtype": "Int",
+   "label": "iso6"
+  },
+  {
+   "fieldname": "iso14",
+   "fieldtype": "Int",
+   "label": "iso14"
+  },
+  {
+   "fieldname": "pq",
+   "fieldtype": "Int",
+   "label": "pq"
+  },
+  {
+   "fieldname": "checksum",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "checksum",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-03 15:55:50.460142",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "API Wearcheck",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
