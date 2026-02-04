@@ -284,6 +284,32 @@ DASH_CSS = """
 }
 
 
+.isd-daylabels{
+  display: grid;
+  grid-template-columns: repeat(44, 1fr);
+  gap: 2px;
+  margin-left: 34px;
+  margin-top: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #666;
+}
+
+.isd-daylab{
+  grid-column: span 2;   /* one label per (avail+util) pair */
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.isd-daysep{
+  height: 100%;
+  border-left: 2px solid #d0d0d0;
+}
+
+
+
+
 /* tighter table spacing */
 .isd-hourly-table th,
 .isd-hourly-table td{
@@ -378,6 +404,18 @@ DASH_CSS = """
   white-space: nowrap;
 }
 
+/* colour + bold the mini-table numbers like the bars */
+.isd-mini-table td.isd-num-avail{
+  color: #f39c12;   /* avail bar colour */
+  font-weight: 900;
+}
+
+.isd-mini-table td.isd-num-util{
+  color: #6b6b6b;   /* util bar colour */
+  font-weight: 900;
+}
+
+
 .isd-mini-table th:first-child,
 .isd-mini-table td:first-child{
   text-align: left;
@@ -408,6 +446,16 @@ DASH_CSS = """
   display: grid;
   gap: 6px;
   justify-items: center;
+}
+
+.isd-circlelink{
+  text-decoration: none;
+  color: inherit;
+}
+
+.isd-circlelink:hover .isd-circle{
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35), 0 10px 18px rgba(0,0,0,0.12);
 }
 
 .isd-circlelabel{
@@ -513,7 +561,8 @@ def execute(filters=None):
         rows = fetch_site_rows(site, from_date, to_date)
         series = build_daily_series(rows, date_list)
         avgs = build_7day_averages(series)
-        site_blocks.append(build_site_block_weekly(site, date_list, avgs, series))
+        site_blocks.append(build_site_block_weekly(site, date_list, avgs, series, from_date, to_date))
+
 
     html = f"""
 <style>{DASH_CSS}</style>
@@ -605,9 +654,22 @@ def build_7day_averages(series):
     return out
 
 
-def build_site_block_weekly(site, date_list, avgs, series):
+def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
     header_colour = SITE_HEADER_COLOURS.get(site, "#f7f7f7")
     site_safe = frappe.utils.escape_html(site)
+
+    # Avail and Util report filters are: start_date, end_date, site
+    report_route = "Avail%20and%20Util%20report"
+
+    report_href = (
+        f"/app/query-report/{report_route}"
+        f"?start_date={frappe.utils.quote(str(from_date))}"
+        f"&end_date={frappe.utils.quote(str(to_date))}"
+        f"&site={frappe.utils.quote(site)}"
+    )
+
+
+
 
     def trend_opacities(series_map, metric):
         points = []
@@ -671,10 +733,11 @@ def build_site_block_weekly(site, date_list, avgs, series):
         rows_html.append(f"""
 <tr>
   <td class="isd-yhead">{cat}</td>
-  <td>{a}</td>
-  <td>{u}</td>
+  <td class="isd-num-avail">{a}</td>
+  <td class="isd-num-util">{u}</td>
 </tr>
 """)
+
 
     avail_word = state_word(av_state)
     util_word = state_word(ut_state)
@@ -699,15 +762,19 @@ def build_site_block_weekly(site, date_list, avgs, series):
 
   <div class="isd-side">
     <div class="isd-cards">
-      <div class="isd-circlecard">
+      <a class="isd-circlecard isd-circlelink"
+         target="_blank" rel="noopener"
+         href="{report_href}">
         <div class="isd-circlelabel">Availability</div>
         <div class="{circle_class(av_state)}">{avail_word}</div>
-      </div>
+      </a>
 
-      <div class="isd-circlecard">
+      <a class="isd-circlecard isd-circlelink"
+         target="_blank" rel="noopener"
+         href="{report_href}">
         <div class="isd-circlelabel">Utilisation</div>
         <div class="{circle_class(ut_state)}">{util_word}</div>
-      </div>
+      </a>
     </div>
 
     <div class="isd-legend">
@@ -742,6 +809,26 @@ def build_site_block_weekly(site, date_list, avgs, series):
             out.append(f"<div class='isd-bar util' style='height:{h(it.get('util'))}px'></div>")
         return "".join(out)
 
+
+    def day_labels_for(label):
+        items = series.get(label, [])
+        if len(items) < 7:
+            items = ([{"date": ""}] * (7 - len(items))) + items
+        else:
+            items = items[-7:]
+
+        out = []
+        for it in items:
+            d = (it.get("date") or "")
+            # YYYY-MM-DD -> DD
+            dd = d[-2:] if len(d) >= 2 else d
+            out.append(f"<div class='isd-daylab'>{dd}</div>")
+        return "".join(out)
+
+
+
+
+
     chart_html = f"""
 <div class="isd-chart" style="position:relative;">
   <div class="isd-yaxis">
@@ -762,6 +849,14 @@ def build_site_block_weekly(site, date_list, avgs, series):
     {bars_for("Excavator's")}
     <div class="isd-sep"></div>
     {bars_for("Dozer's")}
+  </div>
+
+  <div class="isd-daylabels">
+    {day_labels_for("ADT's")}
+    <div class="isd-daysep"></div>
+    {day_labels_for("Excavator's")}
+    <div class="isd-daysep"></div>
+    {day_labels_for("Dozer's")}
   </div>
 
   <div class="isd-chart-x">
