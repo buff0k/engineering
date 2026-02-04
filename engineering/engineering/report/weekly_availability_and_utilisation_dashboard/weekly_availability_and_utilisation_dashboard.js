@@ -1,5 +1,11 @@
-frappe.query_reports["Weekly Availability Dashboard"] = {
+frappe.query_reports["Weekly Availability and Utilisation Dashboard"] = {
     filters: [
+        {
+            fieldname: "site",
+            label: __("Site"),
+            fieldtype: "Link",
+            options: "Location",
+        },
         {
             fieldname: "from_date",
             label: __("From Date"),
@@ -13,13 +19,14 @@ frappe.query_reports["Weekly Availability Dashboard"] = {
     ],
 
     onload(report) {
-        const today = frappe.datetime.get_today();
+const today = frappe.datetime.get_today();
+const yesterday = frappe.datetime.add_days(today, -1);
 
-        report.set_filter_value("to_date", today);
-        report.set_filter_value(
-            "from_date",
-            frappe.datetime.add_days(today, -6)
-        );
+report.set_filter_value("to_date", yesterday);
+report.set_filter_value(
+    "from_date",
+    frappe.datetime.add_days(yesterday, -6)
+);
 
         hide_table(report);
     },
