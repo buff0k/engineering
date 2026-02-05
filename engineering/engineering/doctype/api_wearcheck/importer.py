@@ -1,6 +1,9 @@
 import requests
 import frappe
 from frappe.utils import now
+import json
+import hashlib
+
 
 
 def _to_float(v):
@@ -21,6 +24,12 @@ def _to_int(v):
         return None
 
 
+def _checksum(row: dict) -> str:
+    # stable JSON => stable SHA1
+    raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
 @frappe.whitelist()
 def fetch_and_sync():
     settings = frappe.get_single("API Wearcheck Settings")
@@ -35,18 +44,16 @@ def fetch_and_sync():
     res.raise_for_status()
     rows = res.json() or []
 
-    import json
-    import hashlib
 
-    def _checksum(row: dict) -> str:
-        raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-        return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
     # store checksum in a hidden custom field (or reuse a Data field)
     # We'll add a field "checksum" (Data) to API Wearcheck in the next tiny step.
     created = 0
     updated = 0
     skipped = 0
+
+    BATCH = 200
+    n = 0
 
     for r in rows:
         if not isinstance(r, dict):
@@ -56,16 +63,20 @@ def fetch_and_sync():
         if not sampno:
             continue
 
-        name = frappe.db.get_value("API Wearcheck", {"sampno": sampno}, "name")
+        # because autoname is field:sampno
+        name = str(sampno)
 
         new_cs = _checksum(r)
-        if name:
-            old_cs = frappe.db.get_value("API Wearcheck", name, "checksum")
-            if old_cs == new_cs:
-                skipped += 1
-                continue
+        old_cs = frappe.db.get_value("API Wearcheck", name, "checksum")
 
-        doc = frappe.get_doc("API Wearcheck", name) if name else frappe.new_doc("API Wearcheck")
+        # unchanged => skip without loading full doc
+        if old_cs and old_cs == new_cs:
+            skipped += 1
+            continue
+
+        exists = frappe.db.exists("API Wearcheck", name)
+
+        doc = frappe.get_doc("API Wearcheck", name) if exists else frappe.new_doc("API Wearcheck")
 
         doc.sampno = sampno
         doc.bottleno = _to_int(r.get("bottleno"))
@@ -103,22 +114,20 @@ def fetch_and_sync():
         doc.iso14 = _to_int(r.get("iso14"))
         doc.pq = _to_int(r.get("pq"))
 
-        # checksum
-        new_cs = _checksum(r)
+        doc.checksum = new_cs
+        frappe.db.set_value("API Wearcheck", name, "checksum", new_cs, update_modified=False)
 
-        if name:
-            old_cs = frappe.db.get_value("API Wearcheck", name, "checksum")
-            if old_cs == new_cs:
-                skipped += 1
-                continue
-
-            doc.checksum = new_cs
+        if exists:
             doc.save(ignore_permissions=True)
             updated += 1
         else:
-            doc.checksum = new_cs
             doc.insert(ignore_permissions=True)
             created += 1
+
+        n += 1
+        if n % BATCH == 0:
+            frappe.db.commit()
+
 
 
     frappe.db.commit()

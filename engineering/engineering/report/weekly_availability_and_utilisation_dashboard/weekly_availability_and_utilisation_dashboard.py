@@ -54,6 +54,162 @@ DASH_CSS = """
   margin-top: 2px;
 }
 
+
+.isd-site-title{
+  padding: 10px 12px 8px;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.isd-band{
+  padding: 10px 12px 12px;
+  background: var(--site-colour, #f7f7f7);
+  border-bottom: 1px solid #e8e8e8;
+}
+
+/* let each pill size itself; still 3 per row when space allows */
+.isd-metrics{
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  gap: 10px;
+  justify-content: start;
+  align-items: start;
+}
+
+.isd-metric{
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.isd-metric-title{
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  opacity: 0.75;
+  line-height: 1;
+  text-align: center;
+}
+
+
+.isd-pill{
+  background: rgba(255,255,255,0.86);
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 999px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+
+  width: fit-content;          /* adapt pill width to content */
+  max-width: 100%;             /* never overflow container */
+}
+
+.isd-pill-title{
+  white-space: nowrap;         /* never wrap "DOZER (AVG)" */
+}
+
+
+.isd-pill-title{
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  opacity: 0.75;
+  line-height: 1;
+}
+
+/* smaller pill + two mini-bubbles inside */
+.isd-pill{
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.isd-pill-title{
+  font-size: 10px;
+}
+
+/* ensure inner bubbles NEVER overflow the big pill */
+.isd-pill-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.isd-mbubble{
+  border-radius: 999px;
+  border: 3px solid rgba(0,0,0,0.14);
+  background: transparent;
+  padding: 6px 10px;
+  display: grid;
+  gap: 2px;
+
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+
+  color: #fff;               /* default white text */
+}
+
+
+
+.isd-mbubble-label,
+.isd-mbubble-value{
+  color: #fff;
+  opacity: 1;
+}
+
+.isd-mbubble-label,
+.isd-mbubble-value{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+
+
+/* Availability uses the AV colour family (orange) */
+.isd-mbubble.av.isd-mbubble-green{ border-color: rgba(30, 142, 62, 0.95); background: rgba(30, 142, 62, 0.95); }
+.isd-mbubble.av.isd-mbubble-yellow{ border-color: rgba(26, 115, 232, 0.98); background: rgba(26, 115, 232, 0.98); }
+.isd-mbubble.av.isd-mbubble-red{ border-color: rgba(217, 48, 37, 0.96); background: rgba(217, 48, 37, 0.96); }
+
+/* Utilisation uses the Util colour family (grey) but traffic border still signals state */
+.isd-mbubble.ut.isd-mbubble-green{ border-color: rgba(30, 142, 62, 0.95); background: rgba(30, 142, 62, 0.95); }
+.isd-mbubble.ut.isd-mbubble-yellow{ border-color: rgba(26, 115, 232, 0.98); background: rgba(26, 115, 232, 0.98); }
+.isd-mbubble.ut.isd-mbubble-red{ border-color: rgba(217, 48, 37, 0.96); background: rgba(217, 48, 37, 0.96); }
+
+
+.isd-mbubble-label{
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  opacity: 1;
+  line-height: 1;
+}
+
+.isd-mbubble-value{
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.isd-mbubble.av .isd-mbubble-value{ color: #fff; }
+.isd-mbubble.ut .isd-mbubble-value{ color: #fff; }
+
+
+
+.isd-pill-sub{
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  opacity: 0.55;
+  line-height: 1;
+}
+
+
 .isd-hourly-table{
   width: 100%;
   border-collapse: collapse;
@@ -212,6 +368,23 @@ DASH_CSS = """
   border-top: 1px solid #e8e8e8;
 }
 
+.isd-avgline{
+  position: absolute;
+  left: 34px;
+  right: 10px;
+  height: 2px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* match legend colours */
+.isd-avgline.isd-avg-85{ background: #f39c12; } /* Availability (orange) */
+.isd-avgline.isd-avg-80{ background: #6b6b6b; } /* Utilisation (grey) */
+
+.isd-avgline.isd-avg-80{ top: 38px; } /* 10 + (100-80)*1.4 */
+.isd-avgline.isd-avg-85{ top: 31px; } /* 10 + (100-85)*1.4 */
+
+
 .isd-yaxis{
   position: absolute;
   left: 10px;
@@ -227,24 +400,7 @@ DASH_CSS = """
   pointer-events: none;
 }
 
-.isd-target-line{
-  position: absolute;
-  left: 44px;          /* 10px left padding + 34px y-axis width */
-  right: 10px;
-  height: 2px;
-  opacity: 0.9;
-  pointer-events: none;
-}
 
-.isd-target-line.util{
-  top: calc(10px + (140px * (1 - 0.80))); /* chart top + height*(1-0.80) */
-  background: #333;
-}
-
-.isd-target-line.avail{
-  top: calc(10px + (140px * (1 - 0.85)));
-  background: #f39c12;
-}
 
 .isd-chart-grid{
   display: grid;
@@ -360,81 +516,23 @@ DASH_CSS = """
 }
 
 
-
-
-/* --- compact top row (mini table + circles + legend) --- */
-.isd-toprow{
+.isd-contentrow{
   display: grid;
   grid-template-columns: 1fr 260px;
   gap: 10px;
-  padding: 8px 10px;
-  border-bottom: 1px solid #e8e8e8;
   align-items: start;
-}
-
-.isd-miniwrap{
-  border: 1px solid #e2e2e2;
-  border-radius: 10px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.isd-minititle{
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  padding: 8px 10px;
-  background: #f6f6f6;
-  border-bottom: 1px solid #e2e2e2;
-}
-
-.isd-mini-table{
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 11px;
-}
-
-.isd-mini-table th,
-.isd-mini-table td{
-  border-top: 1px solid #ededed;
-  padding: 6px 8px;
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* colour + bold the mini-table numbers like the bars */
-.isd-mini-table td.isd-num-avail{
-  color: #f39c12;   /* avail bar colour */
-  font-weight: 900;
-}
-
-.isd-mini-table td.isd-num-util{
-  color: #6b6b6b;   /* util bar colour */
-  font-weight: 900;
-}
-
-
-.isd-mini-table th:first-child,
-.isd-mini-table td:first-child{
-  text-align: left;
-  width: 42%;
-}
-
-.isd-mini-table thead th{
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  background: #fbfbfb;
-  border-top: none;
+  border-top: 1px solid #e8e8e8;
 }
 
 .isd-side{
   display: grid;
   gap: 8px;
+  padding: 10px 10px 12px;
+  border-left: 1px solid #e8e8e8;
 }
+
+
+
 
 .isd-cards{
   display: grid;
@@ -444,7 +542,7 @@ DASH_CSS = """
 
 .isd-circlecard{
   display: grid;
-  gap: 6px;
+  gap: 0;
   justify-items: center;
 }
 
@@ -725,66 +823,114 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
 
     def fmt(v):
         return "" if v is None else f"{v:.1f}%"
+    
 
-    rows_html = []
+
+    def bubble_colour_class(metric, v):
+        """Return CSS class for availability/utilisation thresholds."""
+        if v is None:
+            return ""
+
+        v = float(v)
+
+        if metric == "avail":
+            # Green >=85, Yellow 75-<85, Red <75
+            if v >= 85.0:
+                return "isd-mbubble-green"
+            if v >= 75.0:
+                return "isd-mbubble-yellow"
+            return "isd-mbubble-red"
+
+        # metric == "util"
+        # Green >=80, Yellow 70-<80, Red <70
+        if v >= 80.0:
+            return "isd-mbubble-green"
+        if v >= 70.0:
+            return "isd-mbubble-yellow"
+        return "isd-mbubble-red"
+   
+
+    def short_name(ui_cat):
+        if ui_cat == "ADT's":
+            return "ADT's"
+        if ui_cat == "Excavator's":
+            return "Excavator's"
+        if ui_cat == "Dozer's":
+            return "Dozer's"
+        return ui_cat
+
+
+
+
+
+    pills = []
     for cat in UI_CATEGORIES:
-        a = fmt((avgs.get(cat) or {}).get("avail"))
-        u = fmt((avgs.get(cat) or {}).get("util"))
-        rows_html.append(f"""
-<tr>
-  <td class="isd-yhead">{cat}</td>
-  <td class="isd-num-avail">{a}</td>
-  <td class="isd-num-util">{u}</td>
-</tr>
+        av_v = (avgs.get(cat) or {}).get("avail")
+        ut_v = (avgs.get(cat) or {}).get("util"
+
+        )
+        a = fmt(av_v)
+        u = fmt(ut_v)
+
+        av_cls = bubble_colour_class("avail", av_v)
+        ut_cls = bubble_colour_class("util", ut_v)
+
+        pills.append(f"""
+<div class="isd-metric">
+  <div class="isd-metric-title">{short_name(cat)} (Avg)</div>
+
+  <div class="isd-pill-row">
+    <div class="isd-mbubble av {av_cls}">
+      <div class="isd-mbubble-label">Availability</div>
+      <div class="isd-mbubble-value">{a}</div>
+    </div>
+
+    <div class="isd-mbubble ut {ut_cls}">
+      <div class="isd-mbubble-label">Utilisation</div>
+      <div class="isd-mbubble-value">{u}</div>
+    </div>
+  </div>
+</div>
 """)
 
 
-    avail_word = state_word(av_state)
-    util_word = state_word(ut_state)
-
-    header_compact = f"""
-<div class="isd-toprow">
-  <div class="isd-miniwrap">
-    <div class="isd-minititle">7 Day Average</div>
-    <table class="isd-mini-table">
-      <thead>
-        <tr>
-          <th>Category</th>
-          <th>Availability</th>
-          <th>Utilisation</th>
-        </tr>
-      </thead>
-      <tbody>
-        {''.join(rows_html)}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="isd-side">
-    <div class="isd-cards">
-      <a class="isd-circlecard isd-circlelink"
-         target="_blank" rel="noopener"
-         href="{report_href}">
-        <div class="isd-circlelabel">Availability</div>
-        <div class="{circle_class(av_state)}">{avail_word}</div>
-      </a>
-
-      <a class="isd-circlecard isd-circlelink"
-         target="_blank" rel="noopener"
-         href="{report_href}">
-        <div class="isd-circlelabel">Utilisation</div>
-        <div class="{circle_class(ut_state)}">{util_word}</div>
-      </a>
-    </div>
-
-    <div class="isd-legend">
-      <span class="isd-legitem"><i class="isd-legswatch isd-leg-avail"></i>Availability</span>
-      <span class="isd-legitem"><i class="isd-legswatch isd-leg-util"></i>Utilisation</span>
-    </div>
+    header_band = f"""
+<div class="isd-band" style="--site-colour:{header_colour}">
+  <div class="isd-metrics">
+    {''.join(pills)}
   </div>
 </div>
 """
 
+    avail_word = state_word(av_state)
+    util_word = state_word(ut_state)
+
+    side_html = f"""
+<div class="isd-side">
+  <div class="isd-cards">
+    <div class="isd-circlecard">
+      <a class="isd-circlelink"
+         target="_blank" rel="noopener"
+         href="{report_href}">
+        <div class="{circle_class(av_state)}">{avail_word}</div>
+      </a>
+    </div>
+
+    <div class="isd-circlecard">
+      <a class="isd-circlelink"
+         target="_blank" rel="noopener"
+         href="{report_href}">
+        <div class="{circle_class(ut_state)}">{util_word}</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="isd-legend">
+    <span class="isd-legitem"><i class="isd-legswatch isd-leg-avail"></i>Availability</span>
+    <span class="isd-legitem"><i class="isd-legswatch isd-leg-util"></i>Utilisation</span>
+  </div>
+</div>
+"""
 
 
 
@@ -840,8 +986,9 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
     <div>0%</div>
   </div>
 
-  <div class="isd-target-line util"></div>
-  <div class="isd-target-line avail"></div>
+  <!-- average target lines (overlay the grid) -->
+  <div class="isd-avgline isd-avg-85"></div>
+  <div class="isd-avgline isd-avg-80"></div>
 
   <div class="isd-chart-grid">
     {bars_for("ADT's")}
@@ -860,22 +1007,21 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
   </div>
 
   <div class="isd-chart-x">
-    <div>ADT</div>
-    <div>Excavator</div>
-    <div>Dozer</div>
+    <div>ADT's</div>
+    <div>Excavator's</div>
+    <div>Dozer's</div>
   </div>
 </div>
 """
 
     return f"""
 <div class="isd-site">
-  <div class="isd-site-header" style="--site-colour:{header_colour}">
-    <div>Site: {site_safe}</div>
-    <div class="isd-site-sub">Week: {date_list[0]} to {date_list[-1]}</div>
+  <div class="isd-site-title">{site_safe} • {date_list[0]} → {date_list[-1]}</div>
+  {header_band}
+
+  <div class="isd-contentrow">
+    {chart_html}
+    {side_html}
   </div>
-
-  {header_compact}
-
-  {chart_html}
 </div>
 """

@@ -1,11 +1,14 @@
 frappe.query_reports["Weekly Availability and Utilisation Dashboard"] = {
     filters: [
         {
-            fieldname: "site",
-            label: __("Site"),
-            fieldtype: "Link",
-            options: "Location",
+            fieldname: "site_group",
+            label: __("Complex"),
+            fieldtype: "Select",
+            options: ["", "All", "Seriti Sites", "Other"],
+            default: "All",
+
         },
+
         {
             fieldname: "from_date",
             label: __("From Date"),
@@ -32,6 +35,10 @@ report.set_filter_value(
     },
 
     refresh(report) {
+        hide_table(report);
+    },
+
+    after_datatable_render(report) {
         hide_table(report);
     },
 };

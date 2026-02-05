@@ -12,16 +12,26 @@ def dashboard_date_range():
 
 def dashboard_sites(filters):
     filters = filters or {}
-    site = filters.get("site")
-    if site:
-        return [site]
 
-    # Default sites (same as your current dashboard)
-    return [
+    SERITI_SITES = [
         "Klipfontein",
-        "Uitgevallen",
         "Gwab",
-        "Koppie",
         "Kriel Rehabilitation",
+    ]
+
+    OTHER_SITES = [
+        "Uitgevallen",
+        "Koppie",
         "Bankfontein",
     ]
+
+    group = (filters.get("site_group") or "All").strip()
+
+    if group == "Seriti Sites":
+        return SERITI_SITES
+
+    if group == "Other":
+        return OTHER_SITES
+
+    # All (default)
+    return SERITI_SITES + OTHER_SITES

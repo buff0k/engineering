@@ -1,8 +1,6 @@
 import requests
 import frappe
 from frappe.utils import now
-import json
-import hashlib
 
 
 def _to_float(v):
@@ -23,11 +21,6 @@ def _to_int(v):
         return None
 
 
-def _checksum(row: dict) -> str:
-    raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
-
-
 @frappe.whitelist()
 def fetch_and_sync():
     settings = frappe.get_single("API Wearcheck Settings")
@@ -44,10 +37,6 @@ def fetch_and_sync():
 
     created = 0
     updated = 0
-    skipped = 0
-
-    BATCH = 200
-    n = 0
 
     for r in rows:
         if not isinstance(r, dict):
@@ -57,17 +46,8 @@ def fetch_and_sync():
         if not sampno:
             continue
 
-        name = str(sampno)
-
-        new_cs = _checksum(r)
-        old_cs = frappe.db.get_value("API Wearcheck", name, "checksum")
-
-        if old_cs and old_cs == new_cs:
-            skipped += 1
-            continue
-
-        exists = frappe.db.exists("API Wearcheck", name)
-        doc = frappe.get_doc("API Wearcheck", name) if exists else frappe.new_doc("API Wearcheck")
+        name = frappe.db.get_value("API Wearcheck", {"sampno": sampno}, "name")
+        doc = frappe.get_doc("API Wearcheck", name) if name else frappe.new_doc("API Wearcheck")
 
         doc.sampno = sampno
         doc.bottleno = _to_int(r.get("bottleno"))
@@ -100,23 +80,22 @@ def fetch_and_sync():
         for k in ("fe","ag","al","ca","cr","cu","mg","na","ni","pb","si","sn","p","b","ba","mo","v","zn","ti"):
             setattr(doc, k, _to_int(r.get(k)))
 
+        doc.v40 = _to_float(r.get("v40"))
+        doc.v100 = _to_float(r.get("v100"))
+        doc.oxi = _to_float(r.get("oxi"))
+        doc.soot = _to_float(r.get("soot"))
+
         doc.iso4 = _to_int(r.get("iso4"))
         doc.iso6 = _to_int(r.get("iso6"))
         doc.iso14 = _to_int(r.get("iso14"))
         doc.pq = _to_int(r.get("pq"))
 
-        doc.checksum = new_cs
-
-        if exists:
+        if name:
             doc.save(ignore_permissions=True)
             updated += 1
         else:
             doc.insert(ignore_permissions=True)
             created += 1
 
-        n += 1
-        if n % BATCH == 0:
-            frappe.db.commit()
-
     frappe.db.commit()
-    return {"ok": True, "count": len(rows), "created": created, "updated": updated, "skipped": skipped, "ts": now()}
+    return {"ok": True, "count": len(rows), "created": created, "updated": updated, "ts": now()}
