@@ -756,11 +756,13 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
     header_colour = SITE_HEADER_COLOURS.get(site, "#f7f7f7")
     site_safe = frappe.utils.escape_html(site)
 
-    # Avail and Util report filters are: start_date, end_date, site
-    report_route = "Avail%20and%20Util%20report"
+    # Avail and Util summary filters are: start_date, end_date, site
+    report_route = "Avail%20and%20Util%20summary"
+
 
     report_href = (
         f"/app/query-report/{report_route}"
+
         f"?start_date={frappe.utils.quote(str(from_date))}"
         f"&end_date={frappe.utils.quote(str(to_date))}"
         f"&site={frappe.utils.quote(site)}"

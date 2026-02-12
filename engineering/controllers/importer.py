@@ -5,6 +5,7 @@ import json
 import hashlib
 
 
+
 def _to_float(v):
     if v in (None, "", "null"):
         return None
@@ -24,6 +25,7 @@ def _to_int(v):
 
 
 def _checksum(row: dict) -> str:
+    # stable JSON => stable SHA1
     raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
@@ -42,6 +44,7 @@ def fetch_and_sync():
     res.raise_for_status()
     rows = res.json() or []
 
+    # store checksum in a hidden custom field (or reuse a Data field)
     created = 0
     updated = 0
     skipped = 0
@@ -57,17 +60,20 @@ def fetch_and_sync():
         if not sampno:
             continue
 
+        # because autoname is field:sampno
         name = str(sampno)
 
         new_cs = _checksum(r)
-        old_cs = frappe.db.get_value("API Wearcheck", name, "checksum")
+        old_cs = frappe.db.get_value("WearCheck Results", name, "checksum")
 
+        # unchanged => skip without loading full doc
         if old_cs and old_cs == new_cs:
             skipped += 1
             continue
 
-        exists = frappe.db.exists("API Wearcheck", name)
-        doc = frappe.get_doc("API Wearcheck", name) if exists else frappe.new_doc("API Wearcheck")
+        exists = frappe.db.exists("WearCheck Results", name)
+
+        doc = frappe.get_doc("WearCheck Results", name) if exists else frappe.new_doc("WearCheck Results")
 
         doc.sampno = sampno
         doc.bottleno = _to_int(r.get("bottleno"))
@@ -106,6 +112,7 @@ def fetch_and_sync():
         doc.pq = _to_int(r.get("pq"))
 
         doc.checksum = new_cs
+        frappe.db.set_value("WearCheck Results", name, "checksum", new_cs, update_modified=False)
 
         if exists:
             doc.save(ignore_permissions=True)
@@ -117,6 +124,8 @@ def fetch_and_sync():
         n += 1
         if n % BATCH == 0:
             frappe.db.commit()
+
+
 
     frappe.db.commit()
     return {"ok": True, "count": len(rows), "created": created, "updated": updated, "skipped": skipped, "ts": now()}

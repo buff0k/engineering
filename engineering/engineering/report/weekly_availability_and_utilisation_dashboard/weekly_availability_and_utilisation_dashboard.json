@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-03 06:19:52.760715",
+ "modified": "2026-02-05 13:37:24.106718",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Weekly Availability and Utilisation Dashboard",
@@ -31,6 +31,12 @@
   },
   {
    "role": "All"
+  },
+  {
+   "role": "Engineering User"
+  },
+  {
+   "role": "Production User"
   }
  ],
  "timeout": 0

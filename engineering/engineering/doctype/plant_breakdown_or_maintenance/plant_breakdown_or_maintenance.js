@@ -3,12 +3,24 @@
 
 frappe.ui.form.on("Plant Breakdown or Maintenance", {
   breakdown_start_datetime(frm) {
+    frm.trigger("set_breakdown_start_key");
     frm.trigger("calculate_hours");
   },
 
   resolved_datetime(frm) {
     frm.trigger("calculate_hours");
   },
+
+  // Build YYYYMMDD from breakdown_start_datetime
+  set_breakdown_start_key(frm) {
+    const dt = frm.doc.breakdown_start_datetime;
+    if (!dt) {
+      frm.set_value("breakdown_start_key", "");
+      return;
+    }
+    frm.set_value("breakdown_start_key", moment(dt).format("YYYYMMDD"));
+  },
+
 
   calculate_hours(frm) {
     const start = frm.doc.breakdown_start_datetime;
@@ -30,6 +42,12 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
       frm.set_value("breakdown_hours", 0);
     }
   },
+
+  validate(frm) {
+    frm.trigger("set_breakdown_start_key");
+  },
+
+
 
   refresh(frm) {
     // Make breakdown_hours read-only

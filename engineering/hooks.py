@@ -61,7 +61,7 @@ scheduler_events = {
         # NEW — API WEARCHECK SYNC (Runs hourly)
         # ==========================================================
         "0 * * * *": [
-            "engineering.api_wearcheck.importer.fetch_and_sync"
+            "engineering.controllers.importer.fetch_and_sync"
         ],
     }
 }
@@ -77,7 +77,11 @@ doc_events = {
     "Engineering Legals": {
         "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_update",
         "on_trash": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_trash",
-    }
+    },
+    "OEM Booking": {
+        "on_update": "engineering.controllers.notifications.oem_booking_on_update",
+},
+
 }
 
 # ---------------------------------------------------------------------

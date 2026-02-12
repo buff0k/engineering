@@ -13,9 +13,9 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 
-class IntegrationTestAPIWearcheck(IntegrationTestCase):
+class IntegrationTestWearCheckResults(IntegrationTestCase):
 	"""
-	Integration tests for APIWearcheck.
+	Integration tests for WearCheckResults.
 	Use this class for testing interactions between multiple components.
 	"""
 

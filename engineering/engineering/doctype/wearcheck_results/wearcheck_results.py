@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class APIWearcheck(Document):
+class WearCheckResults(Document):
 	pass

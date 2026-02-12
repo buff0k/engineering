@@ -6,7 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "enabled",
-  "endpoint_url"
+  "endpoint_url",
+  "table_jqnq"
  ],
  "fields": [
   {
@@ -16,16 +17,22 @@
    "label": "enabled"
   },
   {
+   "description": "https link to WearCheck JSON Source",
    "fieldname": "endpoint_url",
    "fieldtype": "Data",
-   "label": "endpoint_url"
+   "label": "Endpoint URL"
+  },
+  {
+   "fieldname": "table_jqnq",
+   "fieldtype": "Table",
+   "options": "Wearcheck Unmapped"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-03 15:18:26.560966",
+ "modified": "2026-02-06 09:18:26.673543",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "API Wearcheck Settings",

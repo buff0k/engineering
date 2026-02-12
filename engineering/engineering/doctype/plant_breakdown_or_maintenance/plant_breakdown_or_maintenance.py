@@ -3,10 +3,21 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
 from frappe.utils import get_datetime
 
 
 class PlantBreakdownorMaintenance(Document):
+
+
+    def autoname(self):
+
+        dt = get_datetime(self.breakdown_start_datetime) if self.breakdown_start_datetime else None
+        date_key = dt.strftime("%Y%m%d") if dt else ""
+        self.name = make_autoname(
+            f"{self.asset_name}-{date_key}-{self.breakdown_reason_category}-.#####"
+        )
+    
     """Main doctype for recording equipment breakdowns or maintenance."""
 
     # ---------------------------------------------------------------

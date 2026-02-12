@@ -6,34 +6,27 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "sampno",
-  "bottleno",
+  "json_source_section",
   "customer",
   "site",
   "machine",
   "component",
-  "profileid",
-  "status",
-  "section_break_gscc",
   "sampledate",
   "registerdate",
-  "section_break_tabl",
+  "status",
   "machread",
   "oilread",
   "perwater",
+  "sampno",
+  "bottleno",
   "fueldilution",
-  "section_break_qnbg",
   "oilsupplier",
   "oilbrand",
-  "samp_taker",
-  "section_break_rfha",
   "commentstext",
   "actiontext",
   "feedbacktext",
-  "section_break_rgoy",
   "tan",
   "tbn",
-  "section_break_vieu",
   "fe",
   "ag",
   "al",
@@ -53,23 +46,28 @@
   "v",
   "zn",
   "ti",
-  "section_break_lpja",
   "v40",
   "v100",
   "oxi",
   "soot",
-  "section_break_aptg",
   "iso4",
   "iso6",
   "iso14",
   "pq",
-  "checksum"
+  "profileid",
+  "samp_taker",
+  "section_break_aptg",
+  "checksum",
+  "asset",
+  "company",
+  "location"
  ],
  "fields": [
   {
    "fieldname": "sampno",
    "fieldtype": "Int",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "sampno",
    "reqd": 1,
    "unique": 1
@@ -93,12 +91,12 @@
    "fieldname": "machine",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "machine"
   },
   {
    "fieldname": "component",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "component"
   },
   {
@@ -109,27 +107,17 @@
   {
    "fieldname": "status",
    "fieldtype": "Int",
-   "in_list_view": 1,
    "label": "status"
-  },
-  {
-   "fieldname": "section_break_gscc",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "sampledate",
    "fieldtype": "Date",
-   "in_list_view": 1,
    "label": "sampledate"
   },
   {
    "fieldname": "registerdate",
    "fieldtype": "Date",
    "label": "registerdate"
-  },
-  {
-   "fieldname": "section_break_tabl",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "machread",
@@ -152,10 +140,6 @@
    "label": "fueldilution"
   },
   {
-   "fieldname": "section_break_qnbg",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "oilsupplier",
    "fieldtype": "Data",
    "label": "oilsupplier"
@@ -169,10 +153,6 @@
    "fieldname": "samp_taker",
    "fieldtype": "Data",
    "label": "samp_taker"
-  },
-  {
-   "fieldname": "section_break_rfha",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "commentstext",
@@ -190,10 +170,6 @@
    "label": "feedbacktext"
   },
   {
-   "fieldname": "section_break_rgoy",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "tan",
    "fieldtype": "Float",
    "label": "tan"
@@ -202,10 +178,6 @@
    "fieldname": "tbn",
    "fieldtype": "Float",
    "label": "tbn"
-  },
-  {
-   "fieldname": "section_break_vieu",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "fe",
@@ -303,10 +275,6 @@
    "label": "ti"
   },
   {
-   "fieldname": "section_break_lpja",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "v40",
    "fieldtype": "Float",
    "label": "v40"
@@ -328,7 +296,8 @@
   },
   {
    "fieldname": "section_break_aptg",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "ERP Processing"
   },
   {
    "fieldname": "iso4",
@@ -353,18 +322,48 @@
   {
    "fieldname": "checksum",
    "fieldtype": "Data",
-   "hidden": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "checksum",
    "read_only": 1
+  },
+  {
+   "fieldname": "json_source_section",
+   "fieldtype": "Section Break",
+   "label": "JSON Source"
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Asset",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Location",
+   "options": "Location"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-03 15:55:50.460142",
+ "modified": "2026-02-06 09:29:51.479524",
  "modified_by": "Administrator",
  "module": "Engineering",
- "name": "API Wearcheck",
+ "name": "WearCheck Results",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

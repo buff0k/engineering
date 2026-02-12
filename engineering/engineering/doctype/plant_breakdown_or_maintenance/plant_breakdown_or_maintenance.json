@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{asset_name}-{YYYY}{MM}{DD}-{breakdown_reason_category}",
+ "autoname": "format:{asset_name}-{breakdown_start_key}-{breakdown_reason_category}-.#####",
  "creation": "2025-11-13 09:32:55.404198",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -30,7 +30,8 @@
   "column_break_zygn",
   "resolution_summary",
   "resolved_datetime",
-  "breakdown_situation"
+  "breakdown_situation",
+  "breakdown_start_key"
  ],
  "fields": [
   {
@@ -178,16 +179,23 @@
    "label": "Breakdown/Maintenance Reason Category",
    "options": "Unknown\nEngine\nTransmission\nDropbox\nDifferentials\nFinal Drive\nHydraulics\nElectricals\nTyres\nTracks\nCylinder",
    "reqd": 1
+  },
+  {
+   "fieldname": "breakdown_start_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "breakdown_start_key",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-24 10:17:45.859881",
+ "modified": "2026-02-11 14:43:17.129609",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
