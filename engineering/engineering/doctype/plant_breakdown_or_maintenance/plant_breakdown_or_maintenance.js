@@ -9,7 +9,9 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
 
   resolved_datetime(frm) {
     frm.trigger("calculate_hours");
+    frm.trigger("set_open_closed");
   },
+
 
   // Build YYYYMMDD from breakdown_start_datetime
   set_breakdown_start_key(frm) {
@@ -20,6 +22,12 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     }
     frm.set_value("breakdown_start_key", moment(dt).format("YYYYMMDD"));
   },
+
+
+  set_open_closed(frm) {
+    frm.set_value("open_closed", frm.doc.resolved_datetime ? "Closed" : "Open");
+  },
+
 
 
   calculate_hours(frm) {
@@ -43,15 +51,55 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     }
   },
 
-  validate(frm) {
+  async validate(frm) {
     frm.trigger("set_breakdown_start_key");
+    frm.trigger("set_open_closed");
+    await frm.trigger("enforce_single_open_breakdown");
   },
+
+  async enforce_single_open_breakdown(frm) {
+    if (!frm.is_new() || !frm.doc.asset_name) return;
+
+    const r = await frappe.call({
+      method: "frappe.client.get_list",
+      args: {
+        doctype: "Plant Breakdown or Maintenance",
+        filters: {
+          asset_name: frm.doc.asset_name,
+          open_closed: "Open",
+        },
+        fields: ["name", "breakdown_start_datetime"],
+        order_by: "breakdown_start_datetime desc",
+        limit_page_length: 1,
+      },
+    });
+
+    const row = (r.message || [])[0];
+    if (!row) return;
+
+    const link = frappe.utils.get_form_link(
+      "Plant Breakdown or Maintenance",
+      row.name,
+      true
+    );
+
+    frappe.msgprint(
+      `Cannot create a new record. Last record for this asset is still Open: ${link}`
+    );
+    frappe.validated = false;
+  },
+
+
 
 
 
   refresh(frm) {
     // Make breakdown_hours read-only
     frm.set_df_property("breakdown_hours", "read_only", 1);
+
+    // Make open_closed read-only + sync value
+    frm.set_df_property("open_closed", "read_only", 1);
+    frm.trigger("set_open_closed");
 
     // Show alert if excluded from A&U
     if (frm.doc.exclude_from_au) {

@@ -9,14 +9,35 @@ from frappe.utils import get_datetime
 
 class PlantBreakdownorMaintenance(Document):
 
+    def before_insert(self):
+        self._enforce_previous_closed()
+
+    def _enforce_previous_closed(self):
+        if not self.asset_name:
+            return
+
+        open_name = frappe.db.get_value(
+            "Plant Breakdown or Maintenance",
+            {"asset_name": self.asset_name, "open_closed": "Open"},
+            "name"
+        )
+
+        if open_name:
+            frappe.throw(
+                f"Cannot create a new breakdown for asset {self.asset_name}. "
+                f"Previous record is still Open: {open_name}. "
+                f"Please close it first (set Resolved Datetime)."
+            )
 
     def autoname(self):
-
         dt = get_datetime(self.breakdown_start_datetime) if self.breakdown_start_datetime else None
         date_key = dt.strftime("%Y%m%d") if dt else ""
         self.name = make_autoname(
             f"{self.asset_name}-{date_key}-{self.breakdown_reason_category}-.#####"
         )
+
+
+
     
     """Main doctype for recording equipment breakdowns or maintenance."""
 
@@ -31,10 +52,14 @@ class PlantBreakdownorMaintenance(Document):
             self.update_breakdown_history()
             return
 
+        # Set Open/Closed
+        self.open_closed = "Closed" if self.resolved_datetime else "Open"
+
         # Calculate duration, update summary, and sync breakdown history
         self.calculate_breakdown_hours()
         self.update_summary()
         self.update_breakdown_history()
+
 
     # ---------------------------------------------------------------
     # CORE CALCULATIONS
@@ -161,8 +186,13 @@ class PlantBreakdownorMaintenance(Document):
 # ---------------------------------------------------------------
 # GLOBAL HOOK
 # ---------------------------------------------------------------
+
 def on_update(doc, method):
     """Always ensure Breakdown History stays updated after saving."""
+
+    # Set Open/Closed
+    doc.open_closed = "Closed" if doc.resolved_datetime else "Open"
+
     # Recalculate only if included
     if doc.exclude_from_au:
         doc.breakdown_hours = 0
@@ -171,3 +201,6 @@ def on_update(doc, method):
 
     # Always sync to Breakdown History, so exclude flag propagates
     doc.update_breakdown_history()
+
+
+

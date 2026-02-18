@@ -35,6 +35,24 @@ def fetch_and_sync():
     settings = frappe.get_single("API Wearcheck Settings")
     if not getattr(settings, "enabled", 1):
         return {"ok": True, "skipped": "disabled"}
+    
+    # Build mapping from child table (table_jqnq)
+    # item_type: Company / Location / Asset
+    def _norm(s):
+        return (s or "").strip()
+
+    def _key(s):
+        return (s or "").strip().lower()
+
+    mapping = {"Company": {}, "Location": {}, "Asset": {}}
+    for m in (settings.get("table_jqnq") or []):
+        it = _norm(getattr(m, "item_type", ""))
+        jv = _key(getattr(m, "json_value", ""))
+        fv = _norm(getattr(m, "frappe_value", ""))
+        if it and jv and fv:
+            mapping.setdefault(it, {})[jv] = fv
+
+
 
     url = getattr(settings, "endpoint_url", None)
     if not url:
@@ -77,9 +95,30 @@ def fetch_and_sync():
 
         doc.sampno = sampno
         doc.bottleno = _to_int(r.get("bottleno"))
-        doc.customer = r.get("customer") or ""
-        doc.site = r.get("site") or ""
-        doc.machine = r.get("machine") or ""
+        raw_customer = r.get("customer") or ""
+        raw_site = r.get("site") or ""
+        raw_machine = r.get("machine") or ""
+
+        # display/raw fields: trimmed
+        raw_customer_s = raw_customer.strip()
+        raw_site_s = raw_site.strip()
+        raw_machine_s = raw_machine.strip()
+
+
+        # Keep raw JSON source fields (optional, but nice for traceability)
+        doc.customer = raw_customer_s
+        doc.site = raw_site_s
+        doc.machine = raw_machine_s
+
+        # Save mapped values into ERP link fields
+        # First try mapping (json_value -> frappe_value). If no match, pass raw JSON through.
+        # Map using normalized keys, but fall back to trimmed raw
+        doc.company = mapping.get("Company", {}).get(_key(raw_customer)) or (raw_customer_s or None)
+        doc.location = mapping.get("Location", {}).get(_key(raw_site)) or (raw_site_s or None)
+        doc.asset = mapping.get("Asset", {}).get(_key(raw_machine)) or (raw_machine_s or None)
+
+
+
         doc.component = r.get("component") or ""
         doc.profileid = _to_int(r.get("profileid"))
         doc.status = _to_int(r.get("status"))
@@ -112,14 +151,15 @@ def fetch_and_sync():
         doc.pq = _to_int(r.get("pq"))
 
         doc.checksum = new_cs
-        frappe.db.set_value("WearCheck Results", name, "checksum", new_cs, update_modified=False)
+
 
         if exists:
-            doc.save(ignore_permissions=True)
+            doc.save(ignore_permissions=True, ignore_links=True)
             updated += 1
         else:
-            doc.insert(ignore_permissions=True)
+            doc.insert(ignore_permissions=True, ignore_links=True)
             created += 1
+
 
         n += 1
         if n % BATCH == 0:

@@ -480,21 +480,6 @@ class AvailabilityandUtilisation(Document):
 
         for parent_record in parent_records:
             try:
-                breakdown_history_rows = frappe.get_all(
-                    "Breakdown History",
-                    filters={
-                        "location": parent_record["location"],
-                        "asset_name": parent_record["asset_name"],
-                        "exclude_from_au": 0,  # only include unexcluded breakdowns
-                    },
-                    fields=["update_date_time", "breakdown_status"],
-                    order_by="update_date_time",
-                )
-
-                if not breakdown_history_rows:
-                    append_log(parent_record["name"], f"Phase 7: No breakdown history found for doc={parent_record['name']}")
-                    continue
-
                 # shift start/end times
                 shift_start, shift_end = get_shift_timings(
                     parent_record["shift_system"],
@@ -502,36 +487,86 @@ class AvailabilityandUtilisation(Document):
                     str(parent_record["shift_date"]),
                 )
 
-                breakdown_start = breakdown_history_rows[0]["update_date_time"]
-                breakdown_end = None
-                for row in breakdown_history_rows:
-                    if str(row["breakdown_status"]) == "3":
-                        breakdown_end = row["update_date_time"]
+                base_filters = {
+                    "location": parent_record["location"],
+                    "asset_name": parent_record["asset_name"],
+                    "exclude_from_au": 0,  # only include unexcluded breakdowns
+                }
 
-                if not breakdown_end:
-                    breakdown_end = shift_end
+                # Last event BEFORE shift start (tells us if breakdown already active at shift_start)
+                last_before = frappe.get_all(
+                    "Breakdown History",
+                    filters={**base_filters, "update_date_time": ["<", shift_start]},
+                    fields=["update_date_time", "breakdown_status"],
+                    order_by="update_date_time desc",
+                    limit=1,
+                )
 
-                shift_breakdown_hours = 0
-                scenario = None
+                # Events DURING the shift window
+                events_in_shift = frappe.get_all(
+                    "Breakdown History",
+                    filters={**base_filters, "update_date_time": ["between", [shift_start, shift_end]]},
+                    fields=["update_date_time", "breakdown_status"],
+                    order_by="update_date_time asc",
+                )
 
-                if breakdown_start < shift_end and breakdown_end > shift_start:
-                    if breakdown_start >= shift_start:
-                        if breakdown_end <= shift_end:
-                            shift_breakdown_hours = time_diff_in_hours(breakdown_end, breakdown_start)
-                            scenario = "Scenario 3: Breakdown within shift."
-                        else:
-                            shift_breakdown_hours = time_diff_in_hours(shift_end, breakdown_start)
-                            scenario = "Scenario 4: Breakdown started during shift and continued."
-                    else:
-                        if breakdown_end <= shift_end:
-                            shift_breakdown_hours = time_diff_in_hours(breakdown_end, shift_start)
-                            scenario = "Scenario 2: Breakdown started before shift and ended during shift."
-                        else:
-                            shift_breakdown_hours = time_diff_in_hours(shift_end, shift_start)
-                            scenario = "Scenario 1: Breakdown spanned the entire shift."
-                else:
-                    shift_breakdown_hours = 0
-                    scenario = "No Breakdown During Shift"
+                # No event before shift, and no events during shift => no breakdown for this shift
+                if not last_before and not events_in_shift:
+                    append_log(parent_record["name"], f"Phase 7: No breakdown history in/near shift window for doc={parent_record['name']}")
+                    continue
+
+                in_breakdown = False
+                current_start = None
+
+                # If last_before exists and is NOT "3", breakdown is active at shift_start
+                if last_before and str(last_before[0].get("breakdown_status")) != "3":
+                    in_breakdown = True
+                    current_start = shift_start
+
+                total_hours = 0.0
+                intervals = []
+
+                for ev in events_in_shift:
+                    ev_time = ev["update_date_time"]
+                    ev_status = str(ev.get("breakdown_status") or "")
+
+                    # Start: any non-"3" while not already in breakdown
+                    if ev_status != "3" and not in_breakdown:
+                        in_breakdown = True
+                        current_start = ev_time
+
+                    # End: status "3" while in breakdown
+                    elif ev_status == "3" and in_breakdown:
+                        clip_start = max(current_start, shift_start)
+                        clip_end = min(ev_time, shift_end)
+
+                        if clip_end > clip_start:
+                            hrs = float(time_diff_in_hours(clip_end, clip_start))
+                            total_hours += hrs
+                            intervals.append((clip_start, clip_end, hrs))
+
+                        in_breakdown = False
+                        current_start = None
+
+
+
+                # If still in breakdown at end of shift, assume it continued until shift_end
+                if in_breakdown and current_start:
+                    clip_start = max(current_start, shift_start)
+                    clip_end = shift_end
+
+                    if clip_end > clip_start:
+                        hrs = float(time_diff_in_hours(clip_end, clip_start))
+                        total_hours += hrs
+                        intervals.append((clip_start, clip_end, hrs))
+
+                shift_breakdown_hours = total_hours
+                scenario = "No Breakdown During Shift" if shift_breakdown_hours == 0 else f"Intervals={len(intervals)}"
+
+
+
+
+
 
                 # Cap breakdown hours: does not exceed (required - working)
                 doc = frappe.get_doc("Availability and Utilisation", parent_record["name"])
@@ -552,10 +587,10 @@ class AvailabilityandUtilisation(Document):
                     (
                         f"Phase 7: shift_breakdown_hours updated for doc={parent_record['name']}. "
                         f"{scenario} => {shift_breakdown_hours} hour(s). "
-                        f"(Shift Start: {shift_start}, Shift End: {shift_end}, "
-                        f"Breakdown Start: {breakdown_start}, Breakdown End: {breakdown_end})"
+                        f"(Shift Start: {shift_start}, Shift End: {shift_end})"
                     ),
                 )
+
 
             except Exception as e:
                 asset_name, item_name = _get_doc_asset_item_name(parent_record["name"])

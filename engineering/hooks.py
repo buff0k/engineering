@@ -42,13 +42,17 @@ doctype_js = {
 scheduler_events = {
     "cron": {
         # Run every day at 06:00
-        "0 6 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
-        ],
+    "0 6 * * *": [
+        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+        "engineering.controllers.notifications.send_open_breakdowns_digest",
+],
+
         # Run every day at 18:00
-        "0 18 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
-        ],
+    "0 18 * * *": [
+        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+        "engineering.controllers.notifications.send_open_breakdowns_digest",
+],
+
 
         # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)

@@ -1,13 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{asset_name}-{breakdown_start_key}-{breakdown_reason_category}-.#####",
+ "autoname": "format:{asset_name}-{breakdown_start_key}-{breakdown_reason_category}-.#####-{open_closed}",
  "creation": "2025-11-13 09:32:55.404198",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "breakdown_details_tab",
   "location",
+  "shift",
   "downtime_type",
   "asset_name",
   "item_name",
@@ -31,7 +32,8 @@
   "resolution_summary",
   "resolved_datetime",
   "breakdown_situation",
-  "breakdown_start_key"
+  "breakdown_start_key",
+  "open_closed"
  ],
  "fields": [
   {
@@ -186,12 +188,24 @@
    "hidden": 1,
    "label": "breakdown_start_key",
    "read_only": 1
+  },
+  {
+   "fieldname": "open_closed",
+   "fieldtype": "Data",
+   "label": "Open/Closed"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "Day Shift\nNight Shift",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-11 14:43:17.129609",
+ "modified": "2026-02-13 16:03:37.691067",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
