@@ -10,7 +10,8 @@
   "weekday_b",
   "adt_b",
   "excavator_b",
-  "dozer_b"
+  "dozer_b",
+  "test"
  ],
  "fields": [
   {
@@ -44,13 +45,19 @@
    "fieldtype": "Float",
    "label": "Dozer %",
    "precision": "2"
+  },
+  {
+   "fieldname": "test",
+   "fieldtype": "Button",
+   "hidden": 1,
+   "label": "Test"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-20 05:48:49.003920",
+ "modified": "2026-02-20 07:09:34.767294",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability Day Entry 1",
