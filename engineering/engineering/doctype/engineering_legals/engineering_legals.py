@@ -4,6 +4,8 @@ from typing import Optional
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import now
+
 
 # Drive Team that will own all Engineering Legals links.
 # This must match the Drive Team "Title" exactly.
@@ -85,6 +87,21 @@ class EngineeringLegals(Document):
 
         if section != "Lifting Equipment":
             self.lifting_type = None
+
+        # -----------------------------
+        # HSEC integration requirements
+        # -----------------------------
+        if getattr(self, "hsec_send", 0):
+            # Required by HSEC: Qualification_ID_External
+            if not getattr(self, "hsec_qualification_id_external", None):
+                frappe.throw("HSEC External Qualification Code is required when 'Send to HSEC' is enabled.")
+
+            # HSEC needs a timestamp so they can pull the latest
+            self.hsec_inserted_at = now()
+        else:
+            # Keep clean when not sending
+            self.hsec_inserted_at = None
+
 
 
 

@@ -17,6 +17,13 @@
   "attach_paper",
   "start_date",
   "expiry_date",
+
+  "hsec_section",
+  "hsec_send",
+  "hsec_qual_category_id",
+  "hsec_qualification_id_external",
+  "hsec_inserted_at",
+
   "near_expire",
   "legals"
  ],
@@ -64,6 +71,37 @@
    "label": "Expiry Date",
    "read_only": 1
   },
+
+  {
+   "fieldname": "hsec_section",
+   "fieldtype": "Section Break",
+   "label": "HSEC Integration"
+  },
+  {
+   "default": "0",
+   "fieldname": "hsec_send",
+   "fieldtype": "Check",
+   "label": "Send to HSEC"
+  },
+  {
+   "default": "EQP",
+   "fieldname": "hsec_qual_category_id",
+   "fieldtype": "Select",
+   "label": "HSEC Qualification Category",
+   "options": "EQP\nEMP"
+  },
+  {
+   "fieldname": "hsec_qualification_id_external",
+   "fieldtype": "Data",
+   "label": "HSEC External Qualification Code"
+  },
+  {
+   "fieldname": "hsec_inserted_at",
+   "fieldtype": "Datetime",
+   "label": "HSEC Inserted At",
+   "read_only": 1
+  },
+
   {
    "fieldname": "column_break_neqp",
    "fieldtype": "Column Break"

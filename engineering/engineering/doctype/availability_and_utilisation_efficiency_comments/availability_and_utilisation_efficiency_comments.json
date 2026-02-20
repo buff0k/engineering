@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-19 08:50:32.036200",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "author_b_b",
+  "name_b_b",
+  "comments_b"
+ ],
+ "fields": [
+  {
+   "fieldname": "author_b_b",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "COY Number",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "author_b_b.employee_name",
+   "fieldname": "name_b_b",
+   "fieldtype": "Read Only",
+   "label": "Name"
+  },
+  {
+   "fieldname": "comments_b",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Comments On Past 7 Days"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-19 13:38:09.906836",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Availability and Utilisation Efficiency Comments",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

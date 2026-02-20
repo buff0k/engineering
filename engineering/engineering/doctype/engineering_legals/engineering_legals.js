@@ -1,6 +1,7 @@
 frappe.ui.form.on('Engineering Legals', {
   refresh(frm) {
     apply_section_rules(frm);
+    apply_hsec_rules(frm);
     set_expiry_date(frm);
     set_near_expire_table(frm);
   },
@@ -23,6 +24,10 @@ frappe.ui.form.on('Engineering Legals', {
 
   start_date(frm) {
     set_expiry_date(frm);
+  },
+
+  hsec_send(frm) {
+    apply_hsec_rules(frm);
   }
 });
 
@@ -45,6 +50,22 @@ function apply_section_rules(frm) {
     frm.toggle_reqd('lifting_type', true);
   }
 }
+
+
+function apply_hsec_rules(frm) {
+  const send = !!frm.doc.hsec_send;
+
+  // Only required if we are sending to HSEC
+  frm.toggle_reqd('hsec_qualification_id_external', send);
+
+  // Optional: hide the fields unless enabled
+  frm.toggle_display('hsec_qual_category_id', send);
+  frm.toggle_display('hsec_qualification_id_external', send);
+  frm.toggle_display('hsec_inserted_at', send);
+}
+
+
+
 
 function set_expiry_date(frm) {
   const section = (frm.doc.sections || '').trim();
