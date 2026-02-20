@@ -4,8 +4,69 @@
 import frappe
 from frappe.email.doctype.email_account.email_account import EmailAccount
 
-# Temporary recipient list (your email)
-OEM_BOOKING_RECIPIENTS = ["juan@isambane.co.za"]
+# Always receive notifications (all sites)
+ALL_SITES_RECIPIENTS = [
+    "msani@isambane.co.za",
+]
+
+# Site-specific recipients
+SITE_RECIPIENTS = {
+    "Koppie": [
+        "wimpie@isambane.co.za",
+        "dian@isambane.co.za",
+    ],
+    "Klipfontein": [
+        "kobus@isambane.co.za",
+        "richard@isambane.co.za",
+        "werner.french@isambane.co.za",
+    ],
+    "Uitgevallen": [
+        "charles@excavo.co.za",
+        "saul@isambane.co.za",
+    ],
+    "Gwab": [
+        "shawn@isambane.co.za",
+        "mandla@isambane.co.za",
+    ],
+    "Bankfontein": [
+        "noel@isambane.co.za",
+        "j.semelane@excavo.co.za",
+    ],
+    "Kriel Rehabilitation": [
+        "carel@isambane.co.za",
+        "xolani@isambane.co.za",
+        "ishmael@isambane.co.za",
+    ],
+}
+
+
+def _clean_email(email: str) -> str:
+    """Normalize/clean an email address; supports 'Name <email@x.com>'."""
+    email = (email or "").strip()
+    if "<" in email and ">" in email:
+        email = email[email.find("<") + 1 : email.find(">")]
+    return email.strip().lower()
+
+
+def get_recipients_for_site(site: str | None) -> list[str]:
+    """
+    Returns recipients for a given site + ALL_SITES_RECIPIENTS.
+    Deduplicated, lowercased.
+    """
+    site_key = (site or "").strip()
+
+    recipients = []
+    recipients.extend(SITE_RECIPIENTS.get(site_key, []))
+    recipients.extend(ALL_SITES_RECIPIENTS)
+
+    seen = set()
+    out = []
+    for r in recipients:
+        e = _clean_email(r)
+        if e and e not in seen:
+            out.append(e)
+            seen.add(e)
+    return out
 
 
 def send_open_breakdowns_digest():
@@ -25,42 +86,78 @@ def send_open_breakdowns_digest():
     rows = frappe.get_all(
         "Plant Breakdown or Maintenance",
         filters={"open_closed": "Open"},
-        fields=["name", "asset_name", "breakdown_start_datetime"],
+        fields=[
+            "name",
+            "asset_name",
+            "breakdown_start_datetime",
+            "site",
+            "breakdown_maintenance_reason",
+        ],
         order_by="breakdown_start_datetime asc",
         limit_page_length=5000,
     )
 
-    subject = f"Open Plant Breakdowns / Maintenance ({len(rows)})"
+    # Group rows by site so each site gets only their list
+    by_site = {}
+    for r in rows:
+        site = (r.get("site") or "").strip() or "Unknown"
+        by_site.setdefault(site, []).append(r)
 
-    lines = [
-        "Hi Juan",
-        "",
-        f"Open Plant Breakdown or Maintenance records: {len(rows)}",
-        "",
-    ]
-
+    # If there are no open rows, notify ALL_SITES recipients once
     if not rows:
-        lines += ["No open records found."]
-    else:
-        lines += ["<b>Open Records</b>", ""]
-        for r in rows:
+        subject = "Open Plant Breakdowns / Maintenance (0)"
+        message = "<br>".join(["Hi,", "", "No open records found."])
+        try:
+            frappe.sendmail(
+                recipients=get_recipients_for_site(None),  # ALL_SITES only
+                sender=sender,
+                subject=subject,
+                message=message,
+            )
+        except frappe.OutgoingEmailError:
+            frappe.log_error(frappe.get_traceback(), "Open Breakdown Digest OutgoingEmailError")
+        return
+
+    # Send one email per site
+    for site, site_rows in by_site.items():
+        recipients = get_recipients_for_site(site)
+        if not recipients:
+            continue
+
+        subject = f"Open Plant Breakdowns / Maintenance - {site} ({len(site_rows)})"
+
+        lines = [
+            "Hi,",
+            "",
+            f"Site: {site}",
+            f"Open Plant Breakdown or Maintenance records: {len(site_rows)}",
+            "",
+            "<b>Open Records</b>",
+            "",
+        ]
+
+        for r in site_rows:
             doc_url = frappe.utils.get_url_to_form("Plant Breakdown or Maintenance", r["name"])
             asset_url = frappe.utils.get_url_to_form("Asset", r["asset_name"]) if r.get("asset_name") else ""
             asset_link = f'<a href="{asset_url}">{r["asset_name"]}</a>' if asset_url else (r.get("asset_name") or "")
             dt = r.get("breakdown_start_datetime") or ""
+            reason = r.get("breakdown_maintenance_reason") or ""
+
             lines.append(f'• {asset_link} | {dt} | <a href="{doc_url}">{r["name"]}</a>')
+            if reason:
+                lines.append(f'&nbsp;&nbsp;&nbsp;&nbsp;Breakdown/Maintenance Reason: {reason}')
 
-    message = "<br>".join(lines)
+        message = "<br>".join(lines)
 
-    try:
-        frappe.sendmail(
-            recipients=OEM_BOOKING_RECIPIENTS,
-            sender=sender,
-            subject=subject,
-            message=message,
-        )
-    except frappe.OutgoingEmailError:
-        frappe.log_error(frappe.get_traceback(), "Open Breakdown Digest OutgoingEmailError")
+        try:
+            frappe.sendmail(
+                recipients=recipients,
+                sender=sender,
+                subject=subject,
+                message=message,
+            )
+        except frappe.OutgoingEmailError:
+            frappe.log_error(frappe.get_traceback(), "Open Breakdown Digest OutgoingEmailError")
 
 
 def oem_booking_on_update(doc, method=None):
@@ -88,7 +185,7 @@ def _send_oem_booking_email(doc, action: str):
     )
 
     lines = [
-        "Hi Juan",
+        "Hi,",
         "",
         f"An OEM Booking has been {action}.",
         "",
@@ -116,7 +213,7 @@ def _send_oem_booking_email(doc, action: str):
 
     try:
         frappe.sendmail(
-            recipients=OEM_BOOKING_RECIPIENTS,
+            recipients=get_recipients_for_site(getattr(doc, "site", None)),
             sender=sender,
             subject=subject,
             message=message,

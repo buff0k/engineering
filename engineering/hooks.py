@@ -41,18 +41,35 @@ doctype_js = {
 # ---------------------------------------------------------------------
 scheduler_events = {
     "cron": {
-        # Run every day at 06:00
-    "0 6 * * *": [
-        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-        "engineering.controllers.notifications.send_open_breakdowns_digest",
-],
+        # ==========================================================
+        # OPEN BREAKDOWN DIGEST + A&U DAILY RUN
+        # Weekdays: 06:00 and 18:00
+        # Weekends: 06:00 and 15:00
+        # ==========================================================
 
-        # Run every day at 18:00
-    "0 18 * * *": [
-        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-        "engineering.controllers.notifications.send_open_breakdowns_digest",
-],
+        # Weekdays at 06:00 (Mon-Fri)
+        "0 6 * * 1-5": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "engineering.controllers.notifications.send_open_breakdowns_digest",
+        ],
 
+        # Weekdays at 18:00 (Mon-Fri)
+        "0 18 * * 1-5": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "engineering.controllers.notifications.send_open_breakdowns_digest",
+        ],
+
+        # Weekends at 06:00 (Sat,Sun)
+        "0 6 * * 6,0": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "engineering.controllers.notifications.send_open_breakdowns_digest",
+        ],
+
+        # Weekends at 15:00 (Sat,Sun)
+        "0 15 * * 6,0": [
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "engineering.controllers.notifications.send_open_breakdowns_digest",
+        ],
 
         # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
@@ -69,7 +86,6 @@ scheduler_events = {
         ],
     }
 }
-
 
 # ---------------------------------------------------------------------
 # DocType event hooks
