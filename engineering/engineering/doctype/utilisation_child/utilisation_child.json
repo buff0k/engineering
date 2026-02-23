@@ -1,0 +1,59 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-20 15:02:59.083884",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "date_d",
+  "weekdays_c",
+  "assets_c",
+  "utilasazation_c"
+ ],
+ "fields": [
+  {
+   "fieldname": "date_d",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "weekdays_c",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Weekdays",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday",
+   "reqd": 1
+  },
+  {
+   "fieldname": "assets_c",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assets",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "utilasazation_c",
+   "fieldtype": "Float",
+   "label": "Utilisation %",
+   "precision": "2"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-21 09:33:13.670002",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Utilisation Child",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

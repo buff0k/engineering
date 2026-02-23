@@ -55,12 +55,12 @@ def get_recipients_for_site(site: str | None) -> list[str]:
     """
     site_key = (site or "").strip()
 
-    recipients = []
+    recipients: list[str] = []
     recipients.extend(SITE_RECIPIENTS.get(site_key, []))
     recipients.extend(ALL_SITES_RECIPIENTS)
 
     seen = set()
-    out = []
+    out: list[str] = []
     for r in recipients:
         e = _clean_email(r)
         if e and e not in seen:
@@ -69,19 +69,38 @@ def get_recipients_for_site(site: str | None) -> list[str]:
     return out
 
 
-def send_open_breakdowns_digest():
-    """Twice daily digest: all Plant Breakdown or Maintenance records still Open."""
-    # pick ANY outgoing account (same pattern as OEM Booking)
-    email_account = EmailAccount.find_outgoing(match_by_doctype="Plant Breakdown or Maintenance", _raise_error=False)
+def _get_outgoing_sender(match_by_doctype: str | None = None) -> str | None:
+    """
+    Find an outgoing sender email address.
+    Uses a doctype-matched outgoing account if possible, otherwise falls back
+    to ANY enabled outgoing Email Account. This avoids failing when Default
+    Outgoing isn't set.
+    """
+    email_account = EmailAccount.find_outgoing(match_by_doctype=match_by_doctype, _raise_error=False)
     if not email_account:
         row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
         email_account = row and frappe.get_doc("Email Account", row[0]) or None
 
     if not email_account or not getattr(email_account, "email_id", None):
-        frappe.log_error("No outgoing Email Account configured/enabled. Skipping Open Breakdown digest.", "Open Breakdown Digest")
-        return
+        return None
 
-    sender = email_account.email_id
+    return email_account.email_id
+
+
+def send_open_breakdowns_digest():
+    """
+    Digest: send Plant Breakdown or Maintenance records still Open per site.
+
+    NOTE: scheduling is controlled by hooks.py (cron).
+    This function just sends the digest whenever it's called.
+    """
+    sender = _get_outgoing_sender(match_by_doctype="Plant Breakdown or Maintenance")
+    if not sender:
+        frappe.log_error(
+            "No outgoing Email Account configured/enabled. Skipping Open Breakdown digest.",
+            "Open Breakdown Digest",
+        )
+        return
 
     rows = frappe.get_all(
         "Plant Breakdown or Maintenance",
@@ -98,7 +117,7 @@ def send_open_breakdowns_digest():
     )
 
     # Group rows by site so each site gets only their list
-    by_site = {}
+    by_site: dict[str, list[dict]] = {}
     for r in rows:
         site = (r.get("site") or "").strip() or "Unknown"
         by_site.setdefault(site, []).append(r)
@@ -166,17 +185,14 @@ def oem_booking_on_update(doc, method=None):
 
 
 def _send_oem_booking_email(doc, action: str):
-    # pick ANY outgoing account (even if default is not set)
-    email_account = EmailAccount.find_outgoing(match_by_doctype=doc.doctype, _raise_error=False)
-    if not email_account:
-        row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
-        email_account = row and frappe.get_doc("Email Account", row[0]) or None
-
-    if not email_account or not getattr(email_account, "email_id", None):
-        frappe.log_error("No outgoing Email Account configured/enabled. Skipping OEM Booking email.", "OEM Booking Email")
+    sender = _get_outgoing_sender(match_by_doctype=doc.doctype)
+    if not sender:
+        frappe.log_error(
+            "No outgoing Email Account configured/enabled. Skipping OEM Booking email.",
+            "OEM Booking Email",
+        )
         return
 
-    sender = email_account.email_id
     url = frappe.utils.get_url(doc.get_url())
 
     subject = (
@@ -219,5 +235,4 @@ def _send_oem_booking_email(doc, action: str):
             message=message,
         )
     except frappe.OutgoingEmailError:
-        # don't block saving if mail isn't configured properly yet
         frappe.log_error(frappe.get_traceback(), "OEM Booking Email OutgoingEmailError")
