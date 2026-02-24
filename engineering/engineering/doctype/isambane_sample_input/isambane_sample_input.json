@@ -1,0 +1,101 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{fleet_number}-{component_replaced}",
+ "creation": "2026-02-24 10:58:22.083524",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "component_replaced_details_column",
+  "site",
+  "fleet_number",
+  "date_replacement",
+  "component_replaced",
+  "section_break_cjyk",
+  "general_oil_information_column",
+  "date_flushed",
+  "substances",
+  "comment"
+ ],
+ "fields": [
+  {
+   "fieldname": "component_replaced_details_column",
+   "fieldtype": "Column Break",
+   "label": "Component Replaced Details"
+  },
+  {
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "label": "Fleet number",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "component_replaced",
+   "fieldtype": "Data",
+   "label": "Component Replaced"
+  },
+  {
+   "fieldname": "comment",
+   "fieldtype": "Small Text",
+   "label": "Comment on Machine to Oilwatch"
+  },
+  {
+   "fieldname": "date_flushed",
+   "fieldtype": "Date",
+   "label": "Oil Flush Date"
+  },
+  {
+   "fieldname": "section_break_cjyk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "general_oil_information_column",
+   "fieldtype": "Column Break",
+   "label": "General Oil Information"
+  },
+  {
+   "fieldname": "substances",
+   "fieldtype": "Small Text",
+   "label": "Substances added to oil"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "date_replacement",
+   "fieldtype": "Date",
+   "label": "Date of replacement"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-24 14:03:36.727103",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Isambane sample input",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

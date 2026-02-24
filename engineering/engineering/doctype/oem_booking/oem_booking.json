@@ -124,7 +124,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-29 13:12:11.215413",
+ "modified": "2026-02-24 10:46:22.896521",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "OEM Booking",
@@ -141,6 +141,7 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -153,6 +154,7 @@
    "report": 1,
    "role": "Engineering Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -165,6 +167,7 @@
    "report": 1,
    "role": "Engineering User",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -177,6 +180,7 @@
    "report": 1,
    "role": "Fleet Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],
