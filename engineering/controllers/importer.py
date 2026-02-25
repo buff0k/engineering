@@ -4,7 +4,32 @@ from frappe.utils import now
 import json
 import hashlib
 
+# WearCheck critical recipients per Site/Location
+# NOTE: msani@isambane.co.za must always be included
+WEARCHECK_SITE_RECIPIENTS = {
+    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za"],
+    "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za"],
+    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "msani@isambane.co.za"],
+    "Gwab": ["shawn@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za"],
+    "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za"],
+    "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za"],
+}
+WEARCHECK_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
 
+def _recipients_for_location(location_name: str):
+    location_name = (location_name or "").strip()
+    recipients = WEARCHECK_SITE_RECIPIENTS.get(location_name) or WEARCHECK_DEFAULT_RECIPIENTS
+    # ensure msani always present
+    if "msani@isambane.co.za" not in recipients:
+        recipients = list(recipients) + ["msani@isambane.co.za"]
+    # de-dupe keep order
+    seen = set()
+    out = []
+    for r in recipients:
+        if r and r not in seen:
+            out.append(r)
+            seen.add(r)
+    return out
 
 def _to_float(v):
     if v in (None, "", "null"):
@@ -29,6 +54,46 @@ def _checksum(row: dict) -> str:
     raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
+
+def _queue_critical_email(doc):
+    subject, message = _build_critical_email(doc)
+
+    recipients = _recipients_for_location(getattr(doc, "location", None))
+
+    eq = frappe.get_doc({
+        "doctype": "Email Queue",
+        "message": message,
+        "send_now": 0,
+        "recipients": [{"recipient": r} for r in recipients],
+    })
+    eq.insert(ignore_permissions=True)
+    return eq.name
+
+
+def _build_critical_email(doc):
+    asset = (getattr(doc, "asset", None) or "").strip() or "Unknown Asset"
+    sampno = getattr(doc, "sampno", None)
+    machine = (getattr(doc, "machine", None) or "").strip()
+    site = (getattr(doc, "location", None) or "").strip()
+
+    subject = f"‼️ CRITICAL oil sample — {asset} !!"
+    message = f"""
+    <h2>{frappe.utils.escape_html(asset)}</h2>
+    <p>‼️‼️ The machine oil sample is flagged critical, and it requires immediate attention! !!</p>
+    <p><b>Sample:</b> {frappe.utils.escape_html(str(sampno) if sampno is not None else "")}
+       | <b>Machine:</b> {frappe.utils.escape_html(machine)}
+       | <b>Site:</b> {frappe.utils.escape_html(site)}</p>
+    """
+    return subject, message
+
+
+def _send_critical_email(doc):
+    subject, message = _build_critical_email(doc)
+    frappe.sendmail(
+        recipients=["juan@isambane.co.za"],
+        subject=subject,
+        message=message,
+    )
 
 @frappe.whitelist()
 def fetch_and_sync():
@@ -159,6 +224,10 @@ def fetch_and_sync():
         else:
             doc.insert(ignore_permissions=True, ignore_links=True)
             created += 1
+
+            if (doc.status or 0) == 4:
+                _queue_critical_email(doc)
+
 
 
         n += 1

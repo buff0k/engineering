@@ -5,7 +5,7 @@ import frappe
 from frappe.email.doctype.email_account.email_account import EmailAccount
 
 # OEM Booking recipients (unchanged)
-OEM_BOOKING_RECIPIENTS = ["juan@isambane.co.za"]
+OEM_BOOKING_RECIPIENTS = ["juan@isambane.co.za", "renier@isambane.co.za"]
 
 # Plant Breakdown / Maintenance digest recipients per site/location
 # NOTE: "msani@isambane.co.za" must always be included for all sites
@@ -22,22 +22,10 @@ OPEN_BREAKDOWN_SITE_RECIPIENTS = {
 OPEN_BREAKDOWN_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
 
 
-def send_open_breakdowns_digest():
-    """Twice daily digest: send separate emails per Site/Location for Open records."""
-    # pick ANY outgoing account (same pattern as OEM Booking)
-    email_account = EmailAccount.find_outgoing(match_by_doctype="Plant Breakdown or Maintenance", _raise_error=False)
-    if not email_account:
-        row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
-        email_account = row and frappe.get_doc("Email Account", row[0]) or None
-
-    if not email_account or not getattr(email_account, "email_id", None):
-        frappe.log_error(
-            "No outgoing Email Account configured/enabled. Skipping Open Breakdown digest.",
-            "Open Breakdown Digest",
-        )
-        return
-
-    sender = email_account.email_id
+def send_open_breakdowns_digest(dry_run: bool = False):
+    """Twice daily digest: send separate emails per Site/Location for Open records.
+    dry_run=True: returns payloads instead of sending (lab-safe).
+    """
 
     # Pull ALL open records, including the Site field ("location" is labelled "Site" in the DocType)
     rows = frappe.get_all(
@@ -58,34 +46,55 @@ def send_open_breakdowns_digest():
         loc = (r.get("location") or "").strip() or "Unknown"
         by_location.setdefault(loc, []).append(r)
 
+    # Build payloads (per site)
+    payloads = {}
+
     # If nothing open, send only to default recipients (so at least someone knows)
     if not rows:
         subject = "Open Plant Breakdowns / Maintenance (0)"
-        message = "<br>".join(
-            [
-                "Hi Team",
-                "",
-                "Open Plant Breakdown or Maintenance records: 0",
-                "",
-                "No open records found.",
-            ]
-        )
+        lines = [
+            "Hi Team",
+            "",
+            "Site: All",
+            "Open Plant Breakdown or Maintenance records: 0",
+            "",
+            "No open records found.",
+        ]
+        message = "<br>".join(lines)
+
+        payloads["__default__"] = {
+            "recipients": OPEN_BREAKDOWN_DEFAULT_RECIPIENTS,
+            "subject": subject,
+            "message": message,
+        }
+
+        if dry_run:
+            return payloads
+
+        # pick ANY outgoing account (same pattern as OEM Booking)
+        email_account = EmailAccount.find_outgoing(match_by_doctype="Plant Breakdown or Maintenance", _raise_error=False)
+        if not email_account:
+            row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
+            email_account = row and frappe.get_doc("Email Account", row[0]) or None
+
+        if not email_account or not getattr(email_account, "email_id", None):
+            frappe.log_error("No outgoing Email Account configured/enabled. Skipping Open Breakdown digest.", "Open Breakdown Digest")
+            return
+
         try:
             frappe.sendmail(
                 recipients=OPEN_BREAKDOWN_DEFAULT_RECIPIENTS,
-                sender=sender,
+                sender=email_account.email_id,
                 subject=subject,
                 message=message,
             )
         except frappe.OutgoingEmailError:
             frappe.log_error(frappe.get_traceback(), "Open Breakdown Digest OutgoingEmailError")
-        return
+        return payloads
 
-    # Send one email per location
     for loc, loc_rows in by_location.items():
         recipients = _recipients_for_location(loc)
-
-        subject = f"Open Plant Breakdowns / Maintenance - {loc} ({len(loc_rows)})"
+        subject = f"Open Plant Breakdowns / Maintenance — {loc} ({len(loc_rows)})"
 
         lines = [
             "Hi Team",
@@ -93,9 +102,10 @@ def send_open_breakdowns_digest():
             f"Site: {loc}",
             f"Open Plant Breakdown or Maintenance records: {len(loc_rows)}",
             "",
+            "<b>Open Records</b>",
+            "",
         ]
 
-        lines += ["<b>Open Records</b>", ""]
         for r in loc_rows:
             doc_url = frappe.utils.get_url_to_form("Plant Breakdown or Maintenance", r["name"])
             asset_url = frappe.utils.get_url_to_form("Asset", r["asset_name"]) if r.get("asset_name") else ""
@@ -105,36 +115,35 @@ def send_open_breakdowns_digest():
 
         message = "<br>".join(lines)
 
+        payloads[loc] = {"recipients": recipients, "subject": subject, "message": message}
+
+    if dry_run:
+        return payloads
+
+    # pick ANY outgoing account (same pattern as OEM Booking)
+    email_account = EmailAccount.find_outgoing(match_by_doctype="Plant Breakdown or Maintenance", _raise_error=False)
+    if not email_account:
+        row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
+        email_account = row and frappe.get_doc("Email Account", row[0]) or None
+
+    if not email_account or not getattr(email_account, "email_id", None):
+        frappe.log_error("No outgoing Email Account configured/enabled. Skipping Open Breakdown digest.", "Open Breakdown Digest")
+        return payloads
+
+    sender = email_account.email_id
+
+    for loc, p in payloads.items():
         try:
             frappe.sendmail(
-                recipients=recipients,
+                recipients=p["recipients"],
                 sender=sender,
-                subject=subject,
-                message=message,
+                subject=p["subject"],
+                message=p["message"],
             )
         except frappe.OutgoingEmailError:
             frappe.log_error(frappe.get_traceback(), f"Open Breakdown Digest OutgoingEmailError ({loc})")
-        lines += ["No open records found."]
-    else:
-        lines += ["<b>Open Records</b>", ""]
-        for r in rows:
-            doc_url = frappe.utils.get_url_to_form("Plant Breakdown or Maintenance", r["name"])
-            asset_url = frappe.utils.get_url_to_form("Asset", r["asset_name"]) if r.get("asset_name") else ""
-            asset_link = f'<a href="{asset_url}">{r["asset_name"]}</a>' if asset_url else (r.get("asset_name") or "")
-            dt = r.get("breakdown_start_datetime") or ""
-            lines.append(f'• {asset_link} | {dt} | <a href="{doc_url}">{r["name"]}</a>')
 
-    message = "<br>".join(lines)
-
-    try:
-        frappe.sendmail(
-            recipients=OEM_BOOKING_RECIPIENTS,
-            sender=sender,
-            subject=subject,
-            message=message,
-        )
-    except frappe.OutgoingEmailError:
-        frappe.log_error(frappe.get_traceback(), "Open Breakdown Digest OutgoingEmailError")
+    return payloads
 
 
 def oem_booking_on_update(doc, method=None):
@@ -162,7 +171,7 @@ def _send_oem_booking_email(doc, action: str):
     )
 
     lines = [
-        "Hi Juan",
+        "Hi,",
         "",
         f"An OEM Booking has been {action}.",
         "",
@@ -198,3 +207,56 @@ def _send_oem_booking_email(doc, action: str):
     except frappe.OutgoingEmailError:
         # don't block saving if mail isn't configured properly yet
         frappe.log_error(frappe.get_traceback(), "OEM Booking Email OutgoingEmailError")
+
+
+
+
+ISAMBANE_SAMPLE_INPUT_RECIPIENTS = ["henco@oilwatch.co.za", "juan@isambane.co.za"]
+
+
+def isambane_sample_input_on_update(doc, method=None):
+    # Fires on every SAVE (create + edit)
+    _send_isambane_sample_input_email(doc, action="saved")
+
+
+def _send_isambane_sample_input_email(doc, action: str):
+    email_account = EmailAccount.find_outgoing(match_by_doctype=doc.doctype, _raise_error=False)
+    if not email_account:
+        row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
+        email_account = row and frappe.get_doc("Email Account", row[0]) or None
+
+    if not email_account or not getattr(email_account, "email_id", None):
+        frappe.log_error("No outgoing Email Account configured/enabled. Skipping Isambane sample input email.", "Isambane Sample Input Email")
+        return
+
+    sender = email_account.email_id
+    url = frappe.utils.get_url(doc.get_url())
+
+    subject = f"Isambane sample input {action}: {doc.name}"
+
+    lines = [
+        "Hi,",
+        "",
+        f"An Isambane sample input record has been {action}.",
+        "",
+        f"• Name: {doc.name}",
+        f"• Site: {getattr(doc, 'site', '')}",
+        f"• Fleet Number: {getattr(doc, 'fleet_number', '')}",
+        f"• Date of replacement: {getattr(doc, 'date_replacement', '')}",
+        f"• Component Replaced: {getattr(doc, 'component_replaced', '')}",
+        "",
+        f'<a href="{url}">Click here to view</a>',
+    ]
+
+    message = "<br>".join(lines)
+
+    try:
+        frappe.sendmail(
+            recipients=ISAMBANE_SAMPLE_INPUT_RECIPIENTS,
+            sender=sender,
+            subject=subject,
+            message=message,
+            delayed=True,  # queue (creates Email Queue)
+        )
+    except frappe.OutgoingEmailError:
+        frappe.log_error(frappe.get_traceback(), "Isambane Sample Input Email OutgoingEmailError")

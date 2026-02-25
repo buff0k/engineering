@@ -43,30 +43,15 @@ scheduler_events = {
     "cron": {
         # ==========================================================
         # OPEN BREAKDOWN DIGEST + A&U DAILY RUN
-        # Weekdays: 06:00 and 18:00
-        # Weekends: 06:00 and 15:00
+        # Daily: 06:00 and 18:00
         # ==========================================================
 
-        # Weekdays at 06:00 (Mon-Fri)
-        "0 6 * * 1-5": [
+        "0 6 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
             "engineering.controllers.notifications.send_open_breakdowns_digest",
         ],
 
-        # Weekdays at 18:00 (Mon-Fri)
-        "0 18 * * 1-5": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
-
-        # Weekends at 06:00 (Sat,Sun)
-        "0 6 * * 6,0": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
-
-        # Weekends at 15:00 (Sat,Sun)
-        "0 15 * * 6,0": [
+        "0 18 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
             "engineering.controllers.notifications.send_open_breakdowns_digest",
         ],
@@ -84,6 +69,13 @@ scheduler_events = {
         "0 * * * *": [
             "engineering.controllers.importer.fetch_and_sync"
         ],
+
+        # ==========================================================
+        # NEW — ISAMBANE SAMPLE INPUT DAILY (Runs at 10:00)
+        # ==========================================================
+        "0 10 * * *": [
+            "engineering.controllers.isambane_sample_input.run_daily"
+        ],
     }
 }
 
@@ -100,8 +92,13 @@ doc_events = {
     },
     "OEM Booking": {
         "on_update": "engineering.controllers.notifications.oem_booking_on_update",
-},
-
+    },
+    "Component Replacement Report": {
+        "on_update": "engineering.controllers.isambane_sample_input.component_replacement_report_on_update"
+    },
+    "Isambane sample input": {
+        "on_update": "engineering.controllers.notifications.isambane_sample_input_on_update"
+    },
 }
 
 # ---------------------------------------------------------------------

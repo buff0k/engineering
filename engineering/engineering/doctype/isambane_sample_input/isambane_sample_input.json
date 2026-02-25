@@ -10,12 +10,7 @@
   "site",
   "fleet_number",
   "date_replacement",
-  "component_replaced",
-  "section_break_cjyk",
-  "general_oil_information_column",
-  "date_flushed",
-  "substances",
-  "comment"
+  "component_replaced"
  ],
  "fields": [
   {
@@ -35,30 +30,6 @@
    "label": "Component Replaced"
   },
   {
-   "fieldname": "comment",
-   "fieldtype": "Small Text",
-   "label": "Comment on Machine to Oilwatch"
-  },
-  {
-   "fieldname": "date_flushed",
-   "fieldtype": "Date",
-   "label": "Oil Flush Date"
-  },
-  {
-   "fieldname": "section_break_cjyk",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "general_oil_information_column",
-   "fieldtype": "Column Break",
-   "label": "General Oil Information"
-  },
-  {
-   "fieldname": "substances",
-   "fieldtype": "Small Text",
-   "label": "Substances added to oil"
-  },
-  {
    "fieldname": "site",
    "fieldtype": "Link",
    "label": "Site",
@@ -73,7 +44,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-24 14:03:36.727103",
+ "modified": "2026-02-25 13:07:15.801863",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane sample input",
