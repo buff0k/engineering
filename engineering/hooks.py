@@ -71,9 +71,9 @@ scheduler_events = {
         ],
 
         # ==========================================================
-        # NEW — ISAMBANE SAMPLE INPUT DAILY (Runs at 10:00)
+        # NEW — ISAMBANE SAMPLE INPUT DAILY (Runs at 03:00)
         # ==========================================================
-        "0 10 * * *": [
+        "0 3 * * *": [
             "engineering.controllers.isambane_sample_input.run_daily"
         ],
     }
@@ -96,9 +96,7 @@ doc_events = {
     "Component Replacement Report": {
         "on_update": "engineering.controllers.isambane_sample_input.component_replacement_report_on_update"
     },
-    "Isambane sample input": {
-        "on_update": "engineering.controllers.notifications.isambane_sample_input_on_update"
-    },
+
 }
 
 # ---------------------------------------------------------------------

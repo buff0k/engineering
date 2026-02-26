@@ -62,3 +62,52 @@ def run_daily():
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Isambane sample input: daily run failed")
+
+
+from typing import Optional
+
+@frappe.whitelist(allow_guest=True)
+def api_isambane_sample_input(
+    site: Optional[str] = None,
+    limit: int = 200,
+    since: Optional[str] = None,   # "YYYY-MM-DD"
+):
+    """
+    Public endpoint (share with Henco):
+    /api/method/engineering.controllers.isambane_sample_input.api_isambane_sample_input?site=Gwab&limit=200&since=2026-02-01
+    """
+    try:
+        limit = int(limit or 200)
+    except Exception:
+        limit = 200
+
+    limit = min(max(limit, 1), 1000)
+
+    filters = {}
+    if site:
+        filters["site"] = site
+    if since:
+        filters["date_replacement"] = [">=", since]
+
+    rows = frappe.get_all(
+        TARGET_DOCTYPE,
+        filters=filters,
+        fields=[
+            "name",
+            "site",
+            "fleet_number",
+            "date_replacement",
+            "component_replaced",
+            "modified",
+        ],
+        order_by="modified desc",
+        limit_page_length=limit,
+        ignore_permissions=True,  # required for allow_guest=True
+    )
+
+    return {
+        "doctype": TARGET_DOCTYPE,
+        "count": len(rows),
+        "filters": {"site": site, "since": since, "limit": limit},
+        "data": rows,
+    }
