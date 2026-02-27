@@ -40,22 +40,11 @@ doctype_js = {
 # Scheduled jobs
 # ---------------------------------------------------------------------
 scheduler_events = {
+    "hourly": [
+        # Runs hourly, but function only executes at 06:00 and 18:00
+        "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
+    ],
     "cron": {
-        # ==========================================================
-        # OPEN BREAKDOWN DIGEST + A&U DAILY RUN
-        # Daily: 06:00 and 18:00
-        # ==========================================================
-
-        "0 6 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
-
-        "0 18 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
-
         # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
         # ==========================================================

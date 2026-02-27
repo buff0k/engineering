@@ -21,6 +21,23 @@ OPEN_BREAKDOWN_SITE_RECIPIENTS = {
 # Fallback if a Location name doesn't match any key above
 OPEN_BREAKDOWN_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
 
+from frappe.utils import now_datetime
+
+def send_open_breakdowns_digest_hourly_gate():
+    """Run digest only at 06:00 and 18:00 server time."""
+    dt = now_datetime()  # server TZ
+    if not (dt.minute == 0 and dt.hour in (6, 18)):
+        return
+
+    # Once-per-slot guard (prevents duplicates if scheduler retries)
+    key = f"open_breakdowns_digest_ran::{dt.date()}::{dt.hour:02d}"
+    if frappe.cache().get_value(key):
+        return
+
+    frappe.cache().set_value(key, 1, expires_in_sec=60 * 60 * 3)
+    return send_open_breakdowns_digest(dry_run=False)
+
+
 
 def send_open_breakdowns_digest(dry_run: bool = False):
     """Twice daily digest: send separate emails per Site/Location for Open records.
