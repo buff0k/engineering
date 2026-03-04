@@ -43,6 +43,7 @@ scheduler_events = {
     "hourly": [
         # Runs hourly, but function only executes at 06:00 and 18:00
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
+        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
     ],
     "cron": {
 
@@ -56,29 +57,7 @@ scheduler_events = {
         # Weekends: 06:00 and 15:00
         # ==========================================================
 
-        # Weekdays at 06:00 (Mon-Fri)
-        "0 6 * * 1-5": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
 
-        # Weekdays at 18:00 (Mon-Fri)
-        "0 18 * * 1-5": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
-
-        # Weekends at 06:00 (Sat,Sun)
-        "0 6 * * 6,0": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
-
-        # Weekends at 15:00 (Sat,Sun)
-        "0 15 * * 6,0": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.controllers.notifications.send_open_breakdowns_digest",
-        ],
 
 
 

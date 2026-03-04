@@ -849,6 +849,40 @@ def sync_single_au(au_name: str):
 # Scheduled job: enqueue heavy processing on long queue
 # =============================================================================
 
+
+
+
+@frappe.whitelist()
+def run_hourly_gate():
+    """Hourly scheduler gate.
+    Weekdays: 06:00 and 18:00
+    Weekends: 06:00 and 15:00
+    """
+    now = now_datetime()
+    hour = now.hour
+    dow = now.weekday()  # Mon=0 ... Sun=6
+
+    is_weekend = dow in (5, 6)  # Sat/Sun
+    allowed_hours = {6, 15} if is_weekend else {6, 18}
+
+    if hour not in allowed_hours:
+        return "SKIP"
+
+    # Same enqueue as run_daily
+    frappe.enqueue(
+        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.create_availability_and_utilisation",
+        queue="long",
+        job_name=f"Availability & Utilisation Engine (Hourly Gate {now.strftime('%Y-%m-%d %H:%M')})",
+        timeout=60 * 60,
+    )
+    return "ENQUEUED"
+
+
+
+
+
+
+
 @frappe.whitelist()
 def run_daily():
     """Scheduled job: enqueue heavy processing on the long queue."""
