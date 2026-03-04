@@ -9,7 +9,7 @@ from frappe.utils import now
 
 # Drive Team that will own all Engineering Legals links.
 # This must match the Drive Team "Title" exactly.
-ENGINEERING_DRIVE_TEAM_TITLE = "Engineering team"
+ENGINEERING_DRIVE_TEAM_TITLE = "Engineering Legals"
 
 
 class EngineeringLegals(Document):

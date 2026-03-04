@@ -1,0 +1,71 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-03-04 09:23:02.422313",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site ",
+   "mandatory": 0,
+   "options": "Location",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "Start Date",
+   "mandatory": 1,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "End Date",
+   "mandatory": 1,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "all_sites",
+   "fieldtype": "Check",
+   "label": "All Sites",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  }
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-03-04 13:58:22.133693",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Availability & Utilisation Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Availability and Utilisation",
+ "report_name": "Availability & Utilisation Report",
+ "report_script": "def execute(filters=None):\r\n    filters = filters or {}\r\n\r\n    from_date = filters.get(\"from_date\")\r\n    to_date = filters.get(\"to_date\")\r\n\r\n    site = (filters.get(\"site\") or \"\").strip()\r\n    category = (filters.get(\"category\") or \"\").strip()\r\n\r\n    all_sites = int(filters.get(\"all_sites\") or 0)\r\n    all_categories = int(filters.get(\"all_categories\") or 0)\r\n\r\n    if not from_date or not to_date:\r\n        frappe.throw(\"Start Date and End Date are required\")\r\n\r\n    columns = [\r\n        {\"label\": \"Category\", \"fieldname\": \"category\", \"fieldtype\": \"Data\", \"width\": 120},\r\n        {\"label\": \"Asset\", \"fieldname\": \"asset\", \"fieldtype\": \"Data\", \"width\": 140},\r\n        {\"label\": \"Site\", \"fieldname\": \"site\", \"fieldtype\": \"Data\", \"width\": 120},\r\n        {\"label\": \"Req Hrs\", \"fieldname\": \"req_hrs\", \"fieldtype\": \"Float\", \"width\": 90},\r\n        {\"label\": \"Work Hrs\", \"fieldname\": \"work_hrs\", \"fieldtype\": \"Float\", \"width\": 90},\r\n        {\"label\": \"Brkdwn\", \"fieldname\": \"brkdwn_hrs\", \"fieldtype\": \"Float\", \"width\": 90},\r\n        {\"label\": \"Avail Hrs\", \"fieldname\": \"avail_hrs\", \"fieldtype\": \"Float\", \"width\": 90},\r\n        {\"label\": \"Lost Hrs\", \"fieldname\": \"lost_hrs\", \"fieldtype\": \"Float\", \"width\": 90},\r\n        {\"label\": \"Avail %\", \"fieldname\": \"avail_pct\", \"fieldtype\": \"Percent\", \"width\": 90},\r\n        {\"label\": \"Util %\", \"fieldname\": \"util_pct\", \"fieldtype\": \"Percent\", \"width\": 90},\r\n    ]\r\n\r\n    params = {\"from_date\": from_date, \"to_date\": to_date}\r\n\r\n    # Filter MASTER asset list so zeros still show even when AU is missing\r\n    asset_where = [\"IFNULL(a.disabled, 0) = 0\"]\r\n\r\n    if (not all_sites) and site:\r\n        asset_where.append(\"a.location = %(site)s\")\r\n        params[\"site\"] = site\r\n\r\n    if (not all_categories) and category:\r\n        asset_where.append(\"IFNULL(a.asset_category, 'Uncategorised') LIKE %(category)s\")\r\n        params[\"category\"] = \"%\" + category + \"%\"\r\n\r\n    asset_where_sql = \" AND \".join(asset_where)\r\n\r\n    query = f\"\"\"\r\n        WITH asset_list AS (\r\n            SELECT\r\n                a.name AS asset,\r\n                IFNULL(a.asset_category, 'Uncategorised') AS category,\r\n                IFNULL(a.location, '') AS site\r\n            FROM `tabAsset` a\r\n            WHERE {asset_where_sql}\r\n        ),\r\n        au_agg AS (\r\n            SELECT\r\n                au.asset_name AS asset,\r\n                au.location AS site,\r\n\r\n                SUM(IFNULL(au.shift_required_hours, 0)) AS req_hrs,\r\n                SUM(IFNULL(au.shift_working_hours, 0)) AS work_hrs,\r\n                SUM(IFNULL(au.shift_breakdown_hours, 0)) AS brkdwn_hrs,\r\n                SUM(IFNULL(au.shift_available_hours, 0)) AS avail_hrs,\r\n                SUM(IFNULL(au.shift_other_lost_hours, 0)) AS lost_hrs,\r\n\r\n                CASE\r\n                    WHEN SUM(IFNULL(au.shift_required_hours, 0)) > 0 THEN\r\n                        ROUND(\r\n                            SUM(IFNULL(au.plant_shift_availability, 0) * IFNULL(au.shift_required_hours, 0))\r\n                            / SUM(IFNULL(au.shift_required_hours, 0)),\r\n                            1\r\n                        )\r\n                    ELSE 0\r\n                END AS avail_pct,\r\n\r\n                CASE\r\n                    WHEN SUM(IFNULL(au.shift_required_hours, 0)) > 0 THEN\r\n                        ROUND(\r\n                            SUM(IFNULL(au.plant_shift_utilisation, 0) * IFNULL(au.shift_required_hours, 0))\r\n                            / SUM(IFNULL(au.shift_required_hours, 0)),\r\n                            1\r\n                        )\r\n                    ELSE 0\r\n                END AS util_pct\r\n\r\n            FROM `tabAvailability and Utilisation` au\r\n            WHERE au.shift_date BETWEEN %(from_date)s AND %(to_date)s\r\n            GROUP BY au.asset_name, au.location\r\n        )\r\n        SELECT\r\n            al.category AS category,\r\n            al.asset AS asset,\r\n            al.site AS site,\r\n\r\n            IFNULL(aa.req_hrs, 0) AS req_hrs,\r\n            IFNULL(aa.work_hrs, 0) AS work_hrs,\r\n            IFNULL(aa.brkdwn_hrs, 0) AS brkdwn_hrs,\r\n            IFNULL(aa.avail_hrs, 0) AS avail_hrs,\r\n            IFNULL(aa.lost_hrs, 0) AS lost_hrs,\r\n            IFNULL(aa.avail_pct, 0) AS avail_pct,\r\n            IFNULL(aa.util_pct, 0) AS util_pct\r\n\r\n        FROM asset_list al\r\n        LEFT JOIN au_agg aa\r\n            ON aa.asset = al.asset\r\n            AND aa.site = al.site\r\n\r\n        ORDER BY al.category ASC, al.asset ASC\r\n    \"\"\"\r\n\r\n    asset_rows = frappe.db.sql(query, params, as_dict=True)\r\n\r\n    # Category totals (sandbox-safe: no \"+=\" on dict items)\r\n    by_cat = {}\r\n    for r in asset_rows:\r\n        cat = r.get(\"category\") or \"Uncategorised\"\r\n\r\n        if cat not in by_cat:\r\n            by_cat[cat] = {\r\n                \"category\": cat,\r\n                \"asset\": \"\",\r\n                \"site\": \"\",\r\n                \"req_hrs\": 0.0,\r\n                \"work_hrs\": 0.0,\r\n                \"brkdwn_hrs\": 0.0,\r\n                \"avail_hrs\": 0.0,\r\n                \"lost_hrs\": 0.0,\r\n                \"_w_req\": 0.0,\r\n                \"_w_av\": 0.0,\r\n                \"_w_ut\": 0.0,\r\n            }\r\n\r\n        row = by_cat[cat]\r\n        req = float(r.get(\"req_hrs\") or 0)\r\n\r\n        row[\"req_hrs\"] = float(row.get(\"req_hrs\") or 0) + req\r\n        row[\"work_hrs\"] = float(row.get(\"work_hrs\") or 0) + float(r.get(\"work_hrs\") or 0)\r\n        row[\"brkdwn_hrs\"] = float(row.get(\"brkdwn_hrs\") or 0) + float(r.get(\"brkdwn_hrs\") or 0)\r\n        row[\"avail_hrs\"] = float(row.get(\"avail_hrs\") or 0) + float(r.get(\"avail_hrs\") or 0)\r\n        row[\"lost_hrs\"] = float(row.get(\"lost_hrs\") or 0) + float(r.get(\"lost_hrs\") or 0)\r\n\r\n        row[\"_w_req\"] = float(row.get(\"_w_req\") or 0) + req\r\n        row[\"_w_av\"] = float(row.get(\"_w_av\") or 0) + (float(r.get(\"avail_pct\") or 0) * req)\r\n        row[\"_w_ut\"] = float(row.get(\"_w_ut\") or 0) + (float(r.get(\"util_pct\") or 0) * req)\r\n\r\n    cat_rows = []\r\n    cats = list(by_cat.keys())\r\n    cats.sort()\r\n\r\n    for cat in cats:\r\n        row = by_cat[cat]\r\n        w_req = float(row.get(\"_w_req\") or 0)\r\n\r\n        if w_req > 0:\r\n            row[\"avail_pct\"] = round(float(row.get(\"_w_av\") or 0) / w_req, 1)\r\n            row[\"util_pct\"] = round(float(row.get(\"_w_ut\") or 0) / w_req, 1)\r\n        else:\r\n            row[\"avail_pct\"] = 0\r\n            row[\"util_pct\"] = 0\r\n\r\n        del row[\"_w_req\"]\r\n        del row[\"_w_av\"]\r\n        del row[\"_w_ut\"]\r\n\r\n        cat_rows.append(row)\r\n\r\n    # Merge: category row then assets\r\n    assets_by_cat = {}\r\n    for r in asset_rows:\r\n        cat = r.get(\"category\") or \"Uncategorised\"\r\n        if cat not in assets_by_cat:\r\n            assets_by_cat[cat] = []\r\n        assets_by_cat[cat].append(r)\r\n\r\n    data = []\r\n    for c in cat_rows:\r\n        data.append(c)\r\n        for r in assets_by_cat.get(c[\"category\"], []):\r\n            data.append(r)\r\n\r\n    # Chart\r\n    chart_labels = []\r\n    chart_av = []\r\n    chart_ut = []\r\n    max_bars = 40\r\n    i = 0\r\n\r\n    for r in asset_rows:\r\n        if i >= max_bars:\r\n            break\r\n        chart_labels.append(r.get(\"asset\"))\r\n        chart_av.append(float(r.get(\"avail_pct\") or 0))\r\n        chart_ut.append(float(r.get(\"util_pct\") or 0))\r\n        i = i + 1\r\n\r\n    chart = {\r\n        \"data\": {\r\n            \"labels\": chart_labels,\r\n            \"datasets\": [\r\n                {\"name\": \"Availability %\", \"values\": chart_av},\r\n                {\"name\": \"Utilisation %\", \"values\": chart_ut},\r\n            ],\r\n        },\r\n        \"type\": \"bar\",\r\n    }\r\n\r\n    skip_total_row = 1\r\n    return columns, data, None, chart, None, skip_total_row",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Production User"
+  },
+  {
+   "role": "Engineering User"
+  }
+ ],
+ "timeout": 0
+}

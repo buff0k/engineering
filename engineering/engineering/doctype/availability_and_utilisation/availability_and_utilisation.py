@@ -147,6 +147,68 @@ def get_shift_timings(shift_system, shift, shift_date):
     return shift_start, shift_end
 
 
+
+def _overlap_hours(a_start, a_end, b_start, b_end) -> float:
+    """Return overlap in hours between [a_start,a_end] and [b_start,b_end]."""
+    s = max(a_start, b_start)
+    e = min(a_end, b_end)
+    if e <= s:
+        return 0.0
+    return float(time_diff_in_hours(e, s))
+
+
+def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
+    """
+    Windows where breakdown time should NOT be counted.
+    - Always exclude 06:00–07:00 for Day shift (and Morning if it uses 06:00 start)
+    - Always exclude 18:00–19:00 for Night shift (and Night if it uses 18:00 start)
+    - Fatigue windows are site-specific for Day, and 01:00–02:00 for Night.
+    """
+    loc = (location or "").strip().lower()
+    sh = (shift or "").strip().lower()
+
+    windows = []
+
+    # Helper: build a datetime window on a specific date (YYYY-MM-DD)
+    def _dt(d, hhmmss):
+        return get_datetime(f"{d} {hhmmss}")
+
+    shift_date_str = getdate(shift_start).strftime("%Y-%m-%d")
+    next_date_str = getdate(shift_end).strftime("%Y-%m-%d")  # handles crossing midnight
+
+    # Always-exclude per shift
+    # Day-style shifts that start at 06:00
+    if get_datetime(shift_start).strftime("%H:%M:%S") == "06:00:00" and sh in ("day", "morning"):
+        windows.append((_dt(shift_date_str, "06:00:00"), _dt(shift_date_str, "07:00:00")))
+
+    # Night-style shifts that start at 18:00
+    if get_datetime(shift_start).strftime("%H:%M:%S") == "18:00:00" and sh in ("night",):
+        windows.append((_dt(shift_date_str, "18:00:00"), _dt(shift_date_str, "19:00:00")))
+
+    # Fatigue windows (site-specific)
+    # Day fatigue:
+    day_13_1330 = {"uitgevallen", "koppie", "bankfontein"}
+    day_13_14 = {"gwab", "klipfontein", "kriel"}
+
+    if sh in ("day",):
+        if loc in day_13_1330:
+            windows.append((_dt(shift_date_str, "13:00:00"), _dt(shift_date_str, "13:30:00")))
+        elif loc in day_13_14:
+            windows.append((_dt(shift_date_str, "13:00:00"), _dt(shift_date_str, "14:00:00")))
+
+    # Night fatigue (01:00–02:00 happens after midnight for 18:00–06:00 shifts)
+    if sh in ("night",):
+        windows.append((_dt(next_date_str, "01:00:00"), _dt(next_date_str, "02:00:00")))
+
+    # Only keep windows that actually intersect the shift window
+    filtered = []
+    for ws, we in windows:
+        if we <= shift_start or ws >= shift_end:
+            continue
+        filtered.append((max(ws, shift_start), min(we, shift_end)))
+
+    return filtered
+
 # =============================================================================
 # Main DocType
 # =============================================================================
@@ -353,14 +415,29 @@ class AvailabilityandUtilisation(Document):
                 planning_doc = frappe.get_doc("Monthly Production Planning", planning_doc_row[0].name)
                 for day in planning_doc.month_prod_days:
                     if getdate(day.shift_start_date) == shift_date:
+                        base_hours = 0
+
                         if doc.shift == "Day":
-                            doc.shift_required_hours = day.shift_day_hours
+                            base_hours = day.shift_day_hours or 0
                         elif doc.shift == "Night":
-                            doc.shift_required_hours = day.shift_night_hours
+                            base_hours = day.shift_night_hours or 0
                         elif doc.shift == "Morning":
-                            doc.shift_required_hours = day.shift_morning_hours
+                            base_hours = day.shift_morning_hours or 0
                         elif doc.shift == "Afternoon":
-                            doc.shift_required_hours = day.shift_afternoon_hours
+                            base_hours = day.shift_afternoon_hours or 0
+
+                        # Small rule: if 9 add 1.5, if 7 add 0.5
+                        try:
+                            base_val = float(base_hours or 0)
+                        except Exception:
+                            base_val = 0.0
+
+                        if abs(base_val - 9.0) < 0.001:
+                            base_val += 1.5
+                        elif abs(base_val - 7.0) < 0.001:
+                            base_val += 0.5
+
+                        doc.shift_required_hours = base_val
 
                         doc.save(ignore_permissions=True)
                         append_log(doc.name, f"Phase 4: shift_required_hours updated for doc={doc.name}")
@@ -548,8 +625,6 @@ class AvailabilityandUtilisation(Document):
                         in_breakdown = False
                         current_start = None
 
-
-
                 # If still in breakdown at end of shift, assume it continued until shift_end
                 if in_breakdown and current_start:
                     clip_start = max(current_start, shift_start)
@@ -560,8 +635,27 @@ class AvailabilityandUtilisation(Document):
                         total_hours += hrs
                         intervals.append((clip_start, clip_end, hrs))
 
-                shift_breakdown_hours = total_hours
-                scenario = "No Breakdown During Shift" if shift_breakdown_hours == 0 else f"Intervals={len(intervals)}"
+                # NEW: subtract excluded windows (fatigue + 06-07 / 18-19) from breakdown intervals
+                excluded_windows = _exclusion_windows(parent_record["location"], parent_record["shift"], shift_start, shift_end)
+
+                excluded_hours = 0.0
+                effective_hours = 0.0
+
+                for (a_s, a_e, a_hrs) in intervals:
+                    overlap = 0.0
+                    for (w_s, w_e) in excluded_windows:
+                        overlap += _overlap_hours(a_s, a_e, w_s, w_e)
+
+                    overlap = min(overlap, a_hrs)  # never subtract more than the interval
+                    excluded_hours += overlap
+                    effective_hours += max(a_hrs - overlap, 0.0)
+
+                shift_breakdown_hours = effective_hours
+
+                if shift_breakdown_hours == 0:
+                    scenario = "No Breakdown During Shift"
+                else:
+                    scenario = f"Intervals={len(intervals)}, Excluded={excluded_hours:.2f}h, Windows={len(excluded_windows)}"
 
 
 
