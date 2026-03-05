@@ -120,32 +120,38 @@ function set_expiry_date(frm) {
   frm.set_value('expiry_date', expiry);
 }
 
-function set_near_expire_table(frm, selected_site = "All Sites") {
-  get_near_expire_rows(frm, selected_site, (rows) => {
-    render_near_expire_table(frm, rows);
+function set_near_expire_table(frm, selected_site = "All Sites", range_days = 7) {
+  // remember last selections
+  frm.__near_expire_site = selected_site;
+  frm.__near_expire_range = range_days;
+
+  get_near_expire_rows(frm, selected_site, range_days, (rows) => {
+    render_near_expire_table(frm, rows, selected_site, range_days);
   });
 }
 
 
-function render_near_expire_table(frm, rows) {
+function render_near_expire_table(frm, rows, selected_site = "All Sites", range_days = 7) {
   const wrapper = frm.fields_dict.legals && frm.fields_dict.legals.$wrapper;
   if (!wrapper) return;
 
-const sections = [
-  "Brake Test",
-  "Fire Suppression",
-  "FRCS",
-  "Lifting Equipment",
-  "NDT",
-  "PDS",
-  "Tyre Inspection Report",
-  "Illumination Baseline"
-];
+  const sections = [
+    "Brake Test",
+    "Fire Suppression",
+    "FRCS",
+    "Lifting Equipment",
+    "NDT",
+    "PDS",
+    "Tyre Inspection Report",
+    "Illumination Baseline"
+  ];
 
   const today = frappe.datetime.get_today();
   const dates = [];
-  for (let i = 0; i < 7; i++) dates.push(frappe.datetime.add_days(today, i));
+  dates.push("__OVERDUE__");
+  for (let i = 0; i < range_days; i++) dates.push(frappe.datetime.add_days(today, i));
 
+  // bucket[dateKey][section] = [fleet...]
   const bucket = {};
   for (const d of dates) bucket[d] = {};
   for (const sec of sections) for (const d of dates) bucket[d][sec] = [];
@@ -153,27 +159,71 @@ const sections = [
   for (const x of (rows || [])) {
     const sec = (x.sections || "").trim();
     const d = x.expiry_date;
-    if (!sec || !bucket[d] || !bucket[d][sec]) continue;
-    bucket[d][sec].push(x.fleet_number || "");
+    const fleet = (x.fleet_number || "").trim();
+    const site = (x.site || "").trim();
+
+    if (!sec || !fleet) continue;
+
+    const is_overdue = d && (d < today); // yyyy-mm-dd string compare works
+    const key = is_overdue ? "__OVERDUE__" : d;
+
+    if (!bucket[key] || !bucket[key][sec]) continue;
+
+    bucket[key][sec].push({ fleet, sec, site });
   }
 
+  const ranges = [7, 14, 21, 28, 35];
+
   let html = `
-<div style="display:flex; gap:12px; align-items:center; margin:8px 0 12px 0;">
-  <div style="min-width:80px; font-weight:600;">Site</div>
+<div style="display:flex; gap:12px; align-items:center; margin:8px 0 12px 0; flex-wrap:wrap;">
+  <div style="min-width:60px; font-weight:600;">Site</div>
   <select id="near-expire-site" class="form-control" style="max-width:280px;"></select>
+
+  <div style="min-width:70px; font-weight:600;">Range</div>
+  <select id="near-expire-range" class="form-control" style="max-width:160px;">
+    ${ranges.map(d => `<option value="${d}">${d} days</option>`).join("")}
+  </select>
+
+  <div style="opacity:.75; font-size:12px;">
+    Click a fleet number to open the filtered list.
+  </div>
 </div>
+
 <div class="near-expire-table" style="overflow:auto">
   <table class="table table-bordered near-expire-grid">
-    <thead><tr><th class="sticky-col">Expiry Date</th>`;
+    <thead><tr><th class="sticky-col">Expiry</th>`;
 
   for (const sec of sections) html += `<th style="min-width:180px">${frappe.utils.escape_html(sec)}</th>`;
   html += `</tr></thead><tbody>`;
 
-  for (const d of dates) {
-    html += `<tr><td class="sticky-col date-cell" data-row="${dates.indexOf(d)}"><b>${frappe.datetime.str_to_user(d)}</b></td>`;
+  const dateLabel = (d) => {
+    if (d === "__OVERDUE__") return "OVERDUE";
+    return frappe.datetime.str_to_user(d);
+  };
+
+  const dateCellStyle = (d, idx) => {
+    if (d === "__OVERDUE__") return "background:#8b0000;color:#fff;font-weight:700;";
+    if (idx === 1) return "background:#b22222;color:#fff;font-weight:700;"; // today
+    if (idx <= 7) return "background:#d96c6c;color:#fff;font-weight:700;"; // next 7
+    return "background:#f3c5c5;color:#000;font-weight:700;"; // later
+  };
+
+  for (let idx = 0; idx < dates.length; idx++) {
+    const d = dates[idx];
+    html += `<tr><td class="sticky-col date-cell" style="${dateCellStyle(d, idx)}"><b>${dateLabel(d)}</b></td>`;
+
     for (const sec of sections) {
-      const fleets = (bucket[d][sec] || []).filter(Boolean);
-      const cell = fleets.length ? fleets.map(f => frappe.utils.escape_html(f)).join("<br>") : "";
+      const fleets = (bucket[d][sec] || []);
+
+      const cell = fleets.length
+        ? fleets.map(obj => {
+            const f = frappe.utils.escape_html(obj.fleet);
+            const s = frappe.utils.escape_html(obj.sec);
+            const site = frappe.utils.escape_html(obj.site || "");
+            return `<a href="#" class="near-expire-fleet" data-fleet="${f}" data-sec="${s}" data-site="${site}">${f}</a>`;
+          }).join("<br>")
+        : "";
+
       html += `<td style="white-space:normal; vertical-align:top">${cell}</td>`;
     }
     html += `</tr>`;
@@ -189,14 +239,7 @@ const sections = [
     min-width: 140px; box-shadow: 2px 0 5px rgba(0,0,0,0.05);
   }
   .near-expire-grid thead .sticky-col { z-index: 3; background: #f8f9fa; }
-  .near-expire-grid td.date-cell { color: #fff; font-weight: 600; }
-  .near-expire-grid td.date-cell[data-row="0"] { background: #8b0000; }
-  .near-expire-grid td.date-cell[data-row="1"] { background: #a11212; }
-  .near-expire-grid td.date-cell[data-row="2"] { background: #b22222; }
-  .near-expire-grid td.date-cell[data-row="3"] { background: #c94a4a; }
-  .near-expire-grid td.date-cell[data-row="4"] { background: #d96c6c; }
-  .near-expire-grid td.date-cell[data-row="5"] { background: #e89a9a; }
-  .near-expire-grid td.date-cell[data-row="6"] { background: #f3c5c5; color:#000; }
+  .near-expire-grid a.near-expire-fleet { text-decoration: underline; }
 </style>
 `;
 
@@ -206,41 +249,90 @@ const sections = [
   const siteSet = new Set((rows || []).map(r => (r.site || "").trim()).filter(Boolean));
   const sites = ["All Sites", ...Array.from(siteSet).sort()];
 
-  const $select = wrapper.find("#near-expire-site");
-  $select.empty();
-  sites.forEach(s => $select.append(`<option value="${frappe.utils.escape_html(s)}">${frappe.utils.escape_html(s)}</option>`));
+  const $site = wrapper.find("#near-expire-site");
+  $site.empty();
+  sites.forEach(s => $site.append(`<option value="${frappe.utils.escape_html(s)}">${frappe.utils.escape_html(s)}</option>`));
 
-  // Default selection: current doc site if present else All
-  const defaultSite = (frm.doc.site || "").trim();
-  if (defaultSite && sites.includes(defaultSite)) $select.val(defaultSite);
-  else $select.val("All Sites");
+  // defaults: remembered > doc.site > All Sites
+  const rememberedSite = (frm.__near_expire_site || "").trim();
+  const docSite = (frm.doc.site || "").trim();
+  const defaultSite = (rememberedSite && sites.includes(rememberedSite)) ? rememberedSite
+                    : (docSite && sites.includes(docSite)) ? docSite
+                    : "All Sites";
+  $site.val(defaultSite);
 
-  // Filter table by site by re-running query
-  $select.on("change", () => set_near_expire_table(frm, $select.val()));
+  const $range = wrapper.find("#near-expire-range");
+  const rememberedRange = parseInt(frm.__near_expire_range || range_days || 7, 10);
+  $range.val(String(ranges.includes(rememberedRange) ? rememberedRange : 7));
+
+  // re-run query when controls change
+  $site.on("change", () => set_near_expire_table(frm, $site.val(), parseInt($range.val(), 10)));
+  $range.on("change", () => set_near_expire_table(frm, $site.val(), parseInt($range.val(), 10)));
+
+  // click fleet => open filtered list
+  wrapper.find(".near-expire-fleet").on("click", function (e) {
+    e.preventDefault();
+    const fleet = $(this).data("fleet");
+    const sec = $(this).data("sec");
+    const site = $site.val();
+
+    const route_opts = { fleet_number: fleet, sections: sec };
+    if (site && site !== "All Sites") route_opts.site = site;
+
+    frappe.set_route("List", "Engineering Legals", route_opts);
+  });
 }
 
-function get_near_expire_rows(frm, selected_site, callback) {
-  const today = frappe.datetime.get_today();
-  const end = frappe.datetime.add_days(today, 6);
 
-  const filters = [
+
+
+
+
+
+
+
+function get_near_expire_rows(frm, selected_site, range_days, callback) {
+  const today = frappe.datetime.get_today();
+  const end = frappe.datetime.add_days(today, (parseInt(range_days || 7, 10) - 1));
+
+  const base = [
     ["expiry_date", "is", "set"],
-    ["expiry_date", "between", [today, end]],
     ["docstatus", "<", 2]
   ];
 
   if (selected_site && selected_site !== "All Sites") {
-    filters.push(["site", "=", selected_site]);
+    base.push(["site", "=", selected_site]);
   }
 
+  const due_filters = [...base, ["expiry_date", "between", [today, end]]];
+  const overdue_filters = [...base, ["expiry_date", "<", today]];
+
+  // 1) overdue
   frappe.call({
     method: "frappe.client.get_list",
     args: {
       doctype: "Engineering Legals",
       fields: ["name", "sections", "fleet_number", "expiry_date", "site"],
-      filters,
+      filters: overdue_filters,
       limit_page_length: 1000
     },
-    callback: (r) => callback(r.message || [])
+    callback: (r1) => {
+      const overdue = r1.message || [];
+
+      // 2) due window
+      frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+          doctype: "Engineering Legals",
+          fields: ["name", "sections", "fleet_number", "expiry_date", "site"],
+          filters: due_filters,
+          limit_page_length: 1000
+        },
+        callback: (r2) => {
+          const due = r2.message || [];
+          callback([...(overdue || []), ...(due || [])]);
+        }
+      });
+    }
   });
 }

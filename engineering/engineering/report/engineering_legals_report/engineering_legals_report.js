@@ -1,0 +1,461 @@
+
+
+
+
+frappe.query_reports["Engineering Legals Report"] = {
+  filters: [
+    {
+      fieldname: "site",
+      label: "Site",
+      fieldtype: "Link",
+      options: "Location"
+    },
+    {
+      fieldname: "section",
+      label: "Section",
+      fieldtype: "Select",
+      options: [
+        "",
+        "Brake Test",
+        "Fire Suppression",
+        "FRCS",
+        "Lifting Equipment",
+        "Machine Service Records",
+        "NDT",
+        "PDS",
+        "Service Schedule",
+        "Tyre Inspection Report",
+        "Wearcheck",
+        "Illumination Baseline"
+      ].join("\n")
+    },
+    {
+      fieldname: "as_at_date",
+      label: "As-at Date",
+      fieldtype: "Date",
+      default: frappe.datetime.get_today()
+    },
+    // internal click-driven filters
+    {
+      fieldname: "view",
+      label: "View",
+      fieldtype: "Select",
+      options: "Summary\nAssets",
+      default: "Summary",
+      hidden: 1
+    },
+    {
+      fieldname: "bucket",
+      label: "Bucket",
+      fieldtype: "Select",
+      options: "\noverdue\nd0_7\nd8_14\nd15_21\nd22_28",
+      hidden: 1
+    }
+  ],
+
+  onload(report) {
+    report.page.add_inner_button("Back to Summary", () => {
+      report.set_filter_value("view", "Summary");
+      report.set_filter_value("bucket", "");
+      frappe.query_report.refresh();
+    });
+
+    // delegated click handler for pills (works inside datatable)
+    $(report.page.wrapper)
+      .off("click.el_buckets")
+      .on("click.el_buckets", ".el-bucket-pill", function () {
+        const section = $(this).attr("data-section") || "";
+        const bucket = $(this).attr("data-bucket") || "";
+
+const site = frappe.query_report.get_filter_value("site") || "";
+const as_at = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
+
+frappe.call({
+  method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_assets",
+  args: { site, section, as_at_date: as_at, bucket },
+  callback: (r) => {
+    const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
+    render_drilldown(report, { site, section, as_at, bucket, rows });
+  }
+});
+
+
+      });
+  },
+
+
+  after_refresh(report) {
+    const view = frappe.query_report.get_filter_value("view") || "Summary";
+    if (view !== "Summary") return;
+
+    // let datatable finish painting, then inject UI
+    setTimeout(() => {
+      ensure_summary_title(report);
+      ensure_clean_summary_grid(report);
+      refresh_dashboard(report);
+      const site = frappe.query_report.get_filter_value("site") || "";
+const as_at = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
+render_audit_summary(report, { site, as_at });
+    }, 0);
+  },
+
+  formatter(value, row, column, data, default_formatter) {
+    value = default_formatter(value, row, column, data);
+
+    // Only format summary buckets (numbers) as coloured clickable pills
+    const view = frappe.query_report.get_filter_value("view") || "Summary";
+    if (view !== "Summary") return value;
+
+const bucketCols = {
+  overdue: { bg: "#f6b3b3", fg: "#6b1b1b" }, // soft red
+  d0_7:    { bg: "#f6c59f", fg: "#6b3a00" }, // soft orange
+  d8_14:   { bg: "#f5e29a", fg: "#5c4a00" }, // soft yellow
+  d15_21:  { bg: "#bfe5c6", fg: "#1f5e2b" }, // soft green
+  d22_28:  { bg: "#b8d6f6", fg: "#0b5394" }  // soft blue
+};
+
+
+    const field = column.fieldname;
+    if (!bucketCols[field]) return value;
+
+    const n = (data && typeof data[field] !== "undefined") ? data[field] : 0;
+const style =
+  `display:inline-block; min-width:34px; text-align:center; ` +
+  `padding:0; width:34px; height:34px; line-height:34px; border-radius:10px; cursor:pointer; ` +
+  `background:${bucketCols[field].bg}; color:${bucketCols[field].fg}; ` +
+  `border:1px solid rgba(0,0,0,0.10); font-weight:800;`;
+
+    // clickable drilldown (no inline onclick - blocked by sanitizer)
+    const section = (data && data.section) ? data.section : "";
+    return `<span
+      class="el-bucket-pill"
+      data-section="${frappe.utils.escape_html(section)}"
+      data-bucket="${field}"
+      style="${style}"
+      title="Click to open assets"
+    >${n}</span>`;
+  }
+};
+
+
+function ensure_summary_title(report) {
+  const main = $(report.page.main);
+  const reportWrapper = main.find(".report-wrapper").first();
+  if (!reportWrapper.length) return;
+
+  // stable top area ABOVE the datatable wrapper
+  let top = main.find("#el-top-area");
+  if (!top.length) {
+    reportWrapper.before(`<div id="el-top-area" style="margin:6px 0 10px;"></div>`);
+    top = main.find("#el-top-area");
+  }
+
+  // Total Fleet heading + bubbles (top)
+  if (!top.find("#el-dashboard-title").length) {
+    top.append(`
+      <div id="el-dashboard-title" style="text-align:center; font-weight:900; font-size:14px; margin:0 0 8px;">
+        Total Fleet
+      </div>
+    `);
+  }
+  if (!top.find("#el-dashboard").length) {
+    top.append(`<div id="el-dashboard" style="display:flex; gap:10px; flex-wrap:wrap; margin:0 0 14px;"></div>`);
+  }
+
+  // SUMMARY centered
+  if (!top.find("#el-summary-title").length) {
+    top.append(`
+      <div id="el-summary-title" style="text-align:center; margin:6px 0 10px; font-weight:900; font-size:14px;">
+        SUMMARY
+      </div>
+    `);
+  }
+
+  // Legend UNDER SUMMARY, ABOVE table (dot size doubled)
+  if (!top.find("#el-legend").length) {
+    top.append(`
+<div id="el-legend" style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; align-items:center; margin:0 0 10px; font-size:12px;">
+  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f6b3b3;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>Overdue</b></span>
+  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f6c59f;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>0–7 days</b></span>
+  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f5e29a;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>8–14 days</b></span>
+  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#bfe5c6;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>15–21 days</b></span>
+  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#b8d6f6;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>22–28 days</b></span>
+</div>
+    `);
+  }
+}
+
+
+
+function ensure_clean_summary_grid(report) {
+  const wrap = $(report.page.wrapper);
+  if (wrap.find("#el-summary-style").length) return;
+
+  wrap.append(`
+    <style id="el-summary-style">
+      /* Hide row index / row header */
+      .report-wrapper .dt-row-header,
+      .report-wrapper .dt-cell--row-header,
+      .report-wrapper .datatable .dt-row-header,
+      .report-wrapper .datatable .dt-cell--row-header {
+        display: none !important;
+      }
+
+
+      /* Center the SUMMARY datatable block under the legend */
+      .report-wrapper .datatable {
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+
+      /* Remove any left padding that makes it look offset */
+      .report-wrapper .datatable .dt-scrollable,
+      .report-wrapper .datatable .dt-body,
+      .report-wrapper .datatable .dt-header {
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+
+      /* Make the internal table size to content, so centering is accurate */
+      .report-wrapper .datatable .dt-table {
+        width: auto !important;
+      }     
+
+
+
+
+      /* Layout: let top area + report wrapper span full width, but center content */
+      #el-top-area,
+      .report-wrapper {
+        max-width: 1200px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+
+      /* Center the Total Fleet title */
+      #el-dashboard-title { text-align: center !important; width: 100% !important; }
+
+      /* Make bubbles use full available width and center them */
+      #el-dashboard {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+
+            /* Center everything in the report area */
+      #el-top-area { max-width: 1100px; margin-left: auto; margin-right: auto; }
+      .report-wrapper { max-width: 1100px; margin-left: auto !important; margin-right: auto !important; }
+
+      /* Center the summary datatable itself */
+            .report-wrapper .datatable {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        width: auto !important;
+      }
+
+      /* Center drilldown block too */
+      #el-drilldown { max-width: 1100px; margin-left: auto; margin-right: auto; }
+
+      /* Hide checkbox/select first column */
+      .report-wrapper .dt-cell--col-0,
+      .report-wrapper .dt-header .dt-cell--col-0 {
+        display: none !important;
+      }
+
+      /* Hide column filter row under headers */
+      .report-wrapper .dt-row-filter,
+      .report-wrapper .datatable .dt-row-filter,
+      .report-wrapper .dt-filter,
+      .report-wrapper .datatable .dt-filter {
+        display: none !important;
+      }
+
+      /* Remove grid lines */
+      .report-wrapper .datatable .dt-cell,
+      .report-wrapper .datatable .dt-header {
+        border: none !important;
+      }
+
+      /* Don’t cut cell text */
+      .report-wrapper .datatable .dt-cell__content {
+        overflow: visible !important;
+        text-overflow: clip !important;
+        white-space: nowrap !important;
+      }
+
+      /* Remove the “For comparison...” hint line */
+      .report-wrapper .datatable .dt-scrollable__hint,
+      .report-wrapper .datatable .dt-help,
+      .report-wrapper .datatable .dt-ellipsis,
+      .report-wrapper .datatable + .text-muted {
+        display: none !important;
+      }
+    </style>
+  `);
+
+  // Extra safety: remove any element containing the hint text
+  setTimeout(() => {
+    wrap.find("*").filter(function () {
+      return $(this).text().trim().startsWith("For comparison, use");
+    }).remove();
+  }, 0);
+}
+
+function refresh_dashboard(report) {
+  const site = frappe.query_report.get_filter_value("site") || "";
+
+  frappe.call({
+    method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_asset_category_counts",
+    args: { site },
+    callback: (r) => {
+      const rows = (r && r.message) ? r.message : [];
+      render_dashboard(report, rows, site);
+    }
+  });
+}
+
+function render_dashboard(report, rows, site) {
+  const wrap = $(report.page.wrapper);
+  const dash = wrap.find("#el-dashboard");
+
+  if (!rows.length) {
+    dash.html(`<div style="opacity:.7;">No assets found for Site=${frappe.utils.escape_html(site || "All")}</div>`);
+    return;
+  }
+
+  dash.html(rows.map(x => {
+    const cat = frappe.utils.escape_html(x.category || "Unknown");
+    const cnt = frappe.utils.escape_html(String(x.count ?? 0));
+
+    // auto size based on label length (keeps it neat)
+    const w = Math.min(260, Math.max(140, (cat.length * 8) + 60)); // px
+
+    return `
+      <div style="
+        width:${w}px;
+        padding:10px 12px;
+        border-radius:999px;
+        border:1px solid rgba(0,0,0,0.08);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        background:#fff;
+        text-align:center;
+      ">
+        <div style="font-size:12px; font-weight:800; opacity:.75; margin-bottom:3px;">${cat}</div>
+        <div style="font-size:20px; font-weight:900; line-height:1;">${cnt}</div>
+      </div>
+    `;
+  }).join(""));
+}
+
+
+
+function render_drilldown(report, ctx) {
+  const { site, section, as_at, bucket, rows } = ctx;
+
+  const wrap = $(report.page.wrapper);
+  wrap.find("#el-drilldown").remove();
+
+  const title = `Assets due: Site=${site || "All"}, Section=${section || "All"}, Bucket=${bucket}, As-at=${as_at}`;
+
+  const tableRows = rows.map(r => `
+    <tr>
+      <td>${frappe.utils.escape_html(r.asset || "")}</td>
+      <td>${frappe.utils.escape_html(r.site || "")}</td>
+	<td>${frappe.utils.escape_html(r.section || "")}</td>
+	<td>${frappe.utils.escape_html(r.start_date ? String(r.start_date) : "")}</td>
+	<td>${frappe.utils.escape_html(r.expiry_date ? String(r.expiry_date) : "")}</td>
+	<td style="text-align:right;">${frappe.utils.escape_html(String(r.days_left ?? ""))}</td>
+      <td style="text-align:center; font-size:16px;">${frappe.utils.escape_html(r.status || "")}</td>
+    </tr>
+  `).join("");
+
+  const html = `
+    <div id="el-drilldown" style="margin-top:14px; padding:12px; border:1px solid rgba(0,0,0,0.08); border-radius:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-weight:800;">${frappe.utils.escape_html(title)}</div>
+        <button class="btn btn-sm btn-default" id="el-drilldown-close">Close</button>
+      </div>
+
+      <div style="overflow:auto;">
+        <table class="table table-bordered" style="margin:0;">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Site</th>
+				<th>Section</th>
+				<th>Start Date</th>
+				<th>Expiry Date</th>
+				<th style="text-align:right;">Days Left</th>
+              <th style="text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows || `<tr><td colspan="7" style="text-align:center; padding:14px;">No assets found</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Insert UNDER the main datatable area
+  wrap.find(".report-wrapper").append(html);
+
+  wrap.find("#el-drilldown-close").on("click", () => {
+    wrap.find("#el-drilldown").remove();
+  });
+
+const as_at2 = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
+render_audit_summary(report, { site, as_at: as_at2 });
+}
+
+function render_audit_summary(report, ctx) {
+  const { site, as_at } = ctx;
+
+  const main = $(report.page.main);
+
+  // stable container always at bottom
+  let host = main.find("#el-audit-host");
+  if (!host.length) {
+    main.append(`
+      <div id="el-audit-host" style="max-width:1100px; margin:18px auto 0; text-align:center;"></div>
+    `);
+    host = main.find("#el-audit-host");
+  }
+
+  host.html(`
+    <div style="font-weight:900; font-size:16px; margin-bottom:4px;">Document Audit Summary</div>
+    <div style="font-weight:800; font-size:13px; opacity:.75; margin-bottom:10px;">Legals Submitted (last 10 days)</div>
+    <div style="opacity:.7;">Loading…</div>
+  `);
+
+  frappe.call({
+    method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_recent_submitted_legals",
+    args: { site, days: 10, as_at_date: as_at },
+    callback: (r) => {
+      const rows = (r && r.message) ? r.message : [];
+
+      const links = rows.map(x => {
+        const name = x.name;
+        const fleet = x.fleet_number || name;
+        const url = `/app/engineering-legals/${encodeURIComponent(name)}`;
+
+        return `
+          <a href="${url}" style="
+            display:inline-block;
+            padding:6px 12px;
+            border-radius:999px;
+            border:1px solid rgba(0,0,0,0.10);
+            text-decoration:none;
+            margin:4px;
+            font-weight:800;
+          ">${frappe.utils.escape_html(fleet)}</a>
+        `;
+      }).join("");
+
+      host.html(`
+        <div style="font-weight:900; font-size:16px; margin-bottom:4px;">Document Audit Summary</div>
+        <div style="font-weight:800; font-size:13px; opacity:.75; margin-bottom:10px;">Legals Submitted (last 10 days)</div>
+        <div>${links || `<div style="opacity:.7;">No submitted legals in the last 10 days</div>`}</div>
+      `);
+    }
+  });
+}
