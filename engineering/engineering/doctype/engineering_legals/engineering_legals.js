@@ -31,6 +31,24 @@ frappe.ui.form.on('Engineering Legals', {
   }
 });
 
+
+// Block save until the uploaded file actually exists as a File record.
+// Prevents "Error Attaching File" race condition on slow uploads.
+frappe.ui.form.on("Engineering Legals", {
+  validate: async function (frm) {
+    const url = (frm.doc.attach_paper || "").trim();
+    if (!url) return;
+
+    // If user typed/pasted a path, it might not exist yet
+    const r = await frappe.db.get_value("File", { file_url: url }, "name");
+
+    if (!r || !r.message || !r.message.name) {
+      frappe.throw("Attachment is still uploading (or not saved). Please wait a few seconds, then Save again.");
+    }
+  }
+});
+
+
 function apply_section_rules(frm) {
   const section = (frm.doc.sections || '').trim();
 
