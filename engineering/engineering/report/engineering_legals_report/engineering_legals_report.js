@@ -1,7 +1,4 @@
-
-
-
-
+const EL_DOC_CACHE = {}; // key: site|section|fleet -> rows
 frappe.query_reports["Engineering Legals Report"] = {
   filters: [
     {
@@ -54,6 +51,7 @@ frappe.query_reports["Engineering Legals Report"] = {
   ],
 
   onload(report) {
+    bind_doc_history_lazy_loader(report);
     report.page.add_inner_button("Back to Summary", () => {
       report.set_filter_value("view", "Summary");
       report.set_filter_value("bucket", "");
@@ -84,6 +82,10 @@ frappe.call({
   },
 
 
+
+
+
+
   after_refresh(report) {
     const view = frappe.query_report.get_filter_value("view") || "Summary";
     if (view !== "Summary") return;
@@ -93,9 +95,15 @@ frappe.call({
       ensure_summary_title(report);
       ensure_clean_summary_grid(report);
       refresh_dashboard(report);
+
       const site = frappe.query_report.get_filter_value("site") || "";
-const as_at = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
-render_audit_summary(report, { site, as_at });
+      const as_at = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
+
+      render_audit_summary(report, { site, as_at });
+
+      // NEW: collapsible tree at bottom
+      const section = frappe.query_report.get_filter_value("section") || "";
+render_doc_history_tree(report, { site, section });
     }, 0);
   },
 
@@ -110,8 +118,8 @@ const bucketCols = {
   overdue: { bg: "#f6b3b3", fg: "#6b1b1b" }, // soft red
   d0_7:    { bg: "#f6c59f", fg: "#6b3a00" }, // soft orange
   d8_14:   { bg: "#f5e29a", fg: "#5c4a00" }, // soft yellow
-  d15_21:  { bg: "#bfe5c6", fg: "#1f5e2b" }, // soft green
-  d22_28:  { bg: "#b8d6f6", fg: "#0b5394" }  // soft blue
+  d15_21:  { bg: "#b8d6f6", fg: "#0b5394" }, // NOW blue
+  d22_28:  { bg: "#bfe5c6", fg: "#1f5e2b" }  // NOW green
 };
 
 
@@ -178,8 +186,8 @@ function ensure_summary_title(report) {
   <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f6b3b3;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>Overdue</b></span>
   <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f6c59f;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>0–7 days</b></span>
   <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f5e29a;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>8–14 days</b></span>
-  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#bfe5c6;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>15–21 days</b></span>
-  <span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#b8d6f6;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>22–28 days</b></span>
+<span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#b8d6f6;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>15–21 days</b></span>
+<span><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#bfe5c6;border:1px solid rgba(0,0,0,.12);margin-right:6px;vertical-align:middle;"></span><b>22–28 days</b></span>
 </div>
     `);
   }
@@ -193,6 +201,10 @@ function ensure_clean_summary_grid(report) {
 
   wrap.append(`
     <style id="el-summary-style">
+          /* Make first (Section) column bold */
+      .report-wrapper .datatable .dt-cell--col-1 .dt-cell__content {
+        font-weight: 900 !important;
+      }
       /* Hide row index / row header */
       .report-wrapper .dt-row-header,
       .report-wrapper .dt-cell--row-header,
@@ -334,13 +346,15 @@ function render_dashboard(report, rows, site) {
         width:${w}px;
         padding:10px 12px;
         border-radius:999px;
-        border:1px solid rgba(0,0,0,0.08);
+        border:2px solid #118DFF;
         box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         background:#fff;
         text-align:center;
+        color:#262A76;
+        font-weight:900;
       ">
-        <div style="font-size:12px; font-weight:800; opacity:.75; margin-bottom:3px;">${cat}</div>
-        <div style="font-size:20px; font-weight:900; line-height:1;">${cnt}</div>
+        <div style="font-size:12px; font-weight:900; margin-bottom:3px; color:#262A76;">${cat}</div>
+        <div style="font-size:20px; font-weight:900; line-height:1; color:#262A76;">${cnt}</div>
       </div>
     `;
   }).join(""));
@@ -422,7 +436,7 @@ function render_audit_summary(report, ctx) {
   }
 
   host.html(`
-    <div style="font-weight:900; font-size:16px; margin-bottom:4px;">Document Audit Summary</div>
+    <div style="font-weight:900; font-size:18px; margin-bottom:4px;">Document Audit Summary</div>
     <div style="font-weight:800; font-size:13px; opacity:.75; margin-bottom:10px;">Legals Submitted (last 10 days)</div>
     <div style="opacity:.7;">Loading…</div>
   `);
@@ -438,15 +452,17 @@ function render_audit_summary(report, ctx) {
         const fleet = x.fleet_number || name;
         const url = `/app/engineering-legals/${encodeURIComponent(name)}`;
 
-        return `
-          <a href="${url}" style="
+return `
+<a href="${url}" target="_blank" rel="noopener noreferrer" style="
             display:inline-block;
             padding:6px 12px;
             border-radius:999px;
-            border:1px solid rgba(0,0,0,0.10);
+            border:1px solid rgba(31, 94, 43, 0.25);
+            background: rgba(191, 229, 198, 0.85);
+            color: #1f5e2b;
             text-decoration:none;
             margin:4px;
-            font-weight:800;
+            font-weight:900;
           ">${frappe.utils.escape_html(fleet)}</a>
         `;
       }).join("");
@@ -458,4 +474,205 @@ function render_audit_summary(report, ctx) {
       `);
     }
   });
+}
+
+
+
+function render_doc_history_tree(report, ctx) {
+  const { site, section } = ctx;
+
+  const main = $(report.page.main);
+
+  let host = main.find("#el-doc-history");
+  if (!host.length) {
+    main.append(`
+      <div id="el-doc-history" style="max-width:1100px; margin:18px auto 0;"></div>
+    `);
+    host = main.find("#el-doc-history");
+  }
+
+  host.html(`
+    <div style="text-align:center; font-weight:900; font-size:16px; margin-bottom:6px;">Doc History</div>
+    <div style="text-align:center; font-weight:800; font-size:13px; opacity:.75; margin-bottom:10px;">
+      All records
+    </div>
+    <div style="text-align:center; opacity:.7;">Loading…</div>
+  `);
+
+  frappe.call({
+    method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_doc_history_tree_meta",
+    args: { site, section },
+    callback: (r) => {
+      const payload = (r && r.message) ? r.message : {};
+      const tree = payload.tree || [];
+      host.html(build_doc_history_html(tree, payload));
+    }
+  });
+}
+
+
+
+function build_doc_history_html(tree, payload) {
+  if (!tree.length) {
+    return `<div style="text-align:center; opacity:.7;">No records</div>`;
+  }
+
+  const esc = frappe.utils.escape_html;
+
+  const siteHtml = tree.map(siteNode => {
+    const siteLabel = esc(siteNode.label || "Unknown");
+    const siteCount = esc(String(siteNode.count ?? 0));
+
+    const sectionHtml = (siteNode.children || []).map(secNode => {
+      const secLabel = esc(secNode.label || "Unknown");
+      const secCount = esc(String(secNode.count ?? 0));
+
+      const fleetHtml = (secNode.children || []).map(fleetNode => {
+        const fleet = esc(fleetNode.label || "Unknown");
+        const cnt = esc(String(fleetNode.count ?? 0));
+
+        // IMPORTANT: no docs loaded yet (fast)
+        return `
+          <details
+            class="el-fleet-node"
+            data-site="${esc(siteNode.label || "")}"
+            data-section="${esc(secNode.label || "")}"
+            data-fleet="${esc(fleetNode.label || "")}"
+            style="border:1px solid rgba(0,0,0,0.08); border-radius:10px; padding:8px 10px; margin:8px 0;"
+          >
+            <summary style="cursor:pointer; font-weight:900;">
+              → ${fleet} <span style="opacity:.65;">(${cnt})</span>
+            </summary>
+            <div class="el-fleet-body" style="margin-top:8px; opacity:.7;">Expand to load…</div>
+          </details>
+        `;
+      }).join("");
+
+      return `
+        <details open style="border:1px solid rgba(0,0,0,0.10); border-radius:12px; padding:10px 12px; margin:10px 0;">
+          <summary style="cursor:pointer; font-weight:900; font-size:14px;">
+            → ${secLabel} <span style="opacity:.65;">(${secCount})</span>
+          </summary>
+          <div style="margin-top:8px;">
+            ${fleetHtml}
+          </div>
+        </details>
+      `;
+    }).join("");
+
+    return `
+      <details open style="border:1px solid rgba(0,0,0,0.12); border-radius:14px; padding:12px 14px; margin:12px 0;">
+        <summary style="cursor:pointer; font-weight:900; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+          <span>▼ ${siteLabel} <span style="opacity:.65;">(${siteCount})</span></span>
+          <button type="button" class="btn btn-xs btn-default el-collapse-all" title="Collapse all">Collapse all</button>
+        </summary>
+        <div style="margin-top:10px;">
+          ${sectionHtml}
+        </div>
+      </details>
+    `;
+  }).join("");
+
+  return siteHtml;
+}
+
+
+function render_doc_rows_table(rows) {
+  if (!rows || !rows.length) {
+    return `<div style="text-align:center; padding:10px;">No docs</div>`;
+  }
+
+  const trs = rows.map(d => {
+    const name = frappe.utils.escape_html(d.name || "");
+    const start = frappe.utils.escape_html(d.start_date ? String(d.start_date) : "");
+    const exp = frappe.utils.escape_html(d.expiry_date ? String(d.expiry_date) : "");
+    const mod = frappe.utils.escape_html(d.modified ? String(d.modified) : "");
+const url = `/app/engineering-legals/${encodeURIComponent(d.name || "")}`;
+
+return `
+  <tr>
+    <td><a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a></td>
+        <td>${start}</td>
+        <td>${exp}</td>
+        <td>${mod}</td>
+      </tr>
+    `;
+  }).join("");
+
+  return `
+    <div style="overflow:auto;">
+      <table class="table table-bordered" style="margin:0;">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Start</th>
+            <th>Expiry</th>
+            <th>Modified</th>
+          </tr>
+        </thead>
+        <tbody>${trs}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+
+function bind_doc_history_lazy_loader(report) {
+  const wrap = $(report.page.wrapper);
+    // Collapse all inside Doc History (don’t toggle the <summary> itself)
+  wrap.off("click.el_collapse_all").on("click.el_collapse_all", ".el-collapse-all", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const siteDetails = $(this).closest("details");
+    // close all nested details first
+    siteDetails.find("details").prop("open", false);
+    // keep the site itself open (so header stays visible)
+    siteDetails.prop("open", true);
+  });
+
+
+
+
+
+
+  // Load docs immediately when user clicks the fleet SUMMARY (feels instant)
+  wrap.off("click.el_doc_history").on("click.el_doc_history", "details.el-fleet-node > summary", function () {
+    const node = $(this).closest("details.el-fleet-node");
+
+    if (node.data("loaded") || node.data("loading")) return;
+
+    const site = node.attr("data-site") || "";
+    const section = node.attr("data-section") || "";
+    const fleet = node.attr("data-fleet") || "";
+    const body = node.find(".el-fleet-body");
+
+    const cache_key = `${site}|${section}|${fleet}`;
+    if (EL_DOC_CACHE[cache_key]) {
+      node.data("loaded", 1);
+      body.html(render_doc_rows_table(EL_DOC_CACHE[cache_key]));
+      return;
+    }
+
+    node.data("loading", 1);
+    body.html("Loading…");
+
+    frappe.call({
+      method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_doc_history_docs",
+      args: { site, section, fleet_number: fleet, limit: 50, offset: 0 },
+      callback: (r) => {
+        const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
+        EL_DOC_CACHE[cache_key] = rows;
+
+        node.data("loading", 0);
+        node.data("loaded", 1);
+
+        body.html(render_doc_rows_table(rows));
+      }
+    });
+  });
+
+
+  
 }

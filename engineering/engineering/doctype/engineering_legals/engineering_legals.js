@@ -184,6 +184,10 @@ function render_near_expire_table(frm, rows, selected_site = "All Sites", range_
     ${ranges.map(d => `<option value="${d}">${d} days</option>`).join("")}
   </select>
 
+  <button id="open-eng-legals-report" class="btn btn-primary btn-sm open-eng-legals-btn">
+    Open Engineering Legals Report
+  </button>
+
   <div style="opacity:.75; font-size:12px;">
     Click a fleet number to open the filtered list.
   </div>
@@ -233,6 +237,7 @@ function render_near_expire_table(frm, rows, selected_site = "All Sites", range_
 
   html += `
 <style>
+  .open-eng-legals-btn { background:#1f6feb; border-color:#1f6feb; color:#fff; }
   .near-expire-grid { border-collapse: separate; }
   .near-expire-grid .sticky-col {
     position: sticky; left: 0; background: #fff; z-index: 2;
@@ -264,6 +269,18 @@ function render_near_expire_table(frm, rows, selected_site = "All Sites", range_
   const $range = wrapper.find("#near-expire-range");
   const rememberedRange = parseInt(frm.__near_expire_range || range_days || 7, 10);
   $range.val(String(ranges.includes(rememberedRange) ? rememberedRange : 7));
+
+  // open Engineering Legals Report (Query Report)
+  wrapper.find("#open-eng-legals-report").on("click", () => {
+    const site = $site.val();
+    const params = {
+      as_at_date: frappe.datetime.get_today(),
+      view: "Summary"
+    };
+    if (site && site !== "All Sites") params.site = site;
+
+    frappe.set_route("query-report", "Engineering Legals Report", params);
+  });
 
   // re-run query when controls change
   $site.on("change", () => set_near_expire_table(frm, $site.val(), parseInt($range.val(), 10)));
