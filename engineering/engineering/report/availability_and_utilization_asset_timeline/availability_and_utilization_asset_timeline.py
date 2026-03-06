@@ -18,9 +18,13 @@ FATIGUE_13_14 = {"gwab", "klipfontein", "kriel"}
 def execute(filters=None):
     filters = filters or {}
 
-    # Site fallback
     site = (
-        (filters.get("site") or filters.get("location") or frappe.defaults.get_user_default("location") or "")
+        (
+            filters.get("site")
+            or filters.get("location")
+            or frappe.defaults.get_user_default("location")
+            or ""
+        )
     ).strip()
     if not site:
         frappe.throw("Site is required (set the Site filter at the top of the report).")
@@ -44,10 +48,7 @@ def execute(filters=None):
         shift_system = _get_shift_system(site, d)
         fixed = _fixed_windows(site, window_start, shift_system)
 
-        # Asset list filtered by site + category
         asset_list = _get_assets(site, asset_category)
-
-        # If multiple days, append date so rows stay unique per day
         show_date_in_asset = start_date != end_date
 
         for plant_no in asset_list:
@@ -65,21 +66,24 @@ def execute(filters=None):
             row = {"no": row_no, "asset": asset_label}
 
             for i, (hs, he) in enumerate(_hour_slots(window_start)):
+                cell_value = ""
+
                 # Priority:
                 # Startup > Fatigue > Breakdown > Blank
-                status = ""
                 if _overlaps_any(hs, he, fixed["startup"]):
-                    status = "S"
+                    cell_value = "S"
                 elif _overlaps_any(hs, he, fixed["fatigue"]):
-                    status = "F"
-                elif _overlaps_any(hs, he, breakdown_intervals):
-                    status = "B"
+                    cell_value = "F"
+                else:
+                    breakdown_docname = _get_breakdown_doc_for_slot(
+                        hs, he, breakdown_intervals
+                    )
+                    if breakdown_docname:
+                        cell_value = f"B::{breakdown_docname}"
 
-                row[f"h_{i:02d}"] = status
+                row[f"h_{i:02d}"] = cell_value
 
-            # Right-side boundary label "06:00" (blank cell, only for look)
             row["end_0600"] = ""
-
             data.append(row)
             row_no += 1
 
@@ -94,17 +98,17 @@ def _get_columns():
         {"label": "ASSETS", "fieldname": "asset", "fieldtype": "Data", "width": 180},
     ]
 
-    # Wider columns + full range labels: 06:00 - 07:00, etc.
     for i in range(24):
         start_h = (START_HOUR + i) % 24
         end_h = (start_h + 1) % 24
         label = f"{start_h:02d}:00 - {end_h:02d}:00"
         cols.append(
-            {"label": label, "fieldname": f"h_{i:02d}", "fieldtype": "Data", "width": 95}
+            {"label": label, "fieldname": f"h_{i:02d}", "fieldtype": "Data", "width": 130}
         )
 
-    # boundary (like Excel)
-    cols.append({"label": "06:00", "fieldname": "end_0600", "fieldtype": "Data", "width": 60})
+    cols.append(
+        {"label": "06:00", "fieldname": "end_0600", "fieldtype": "Data", "width": 60}
+    )
     return cols
 
 
@@ -115,7 +119,6 @@ def _get_assets(site, asset_category):
       - Asset.asset_category == asset_category (if provided)
     Fallback: if Asset not usable, returns distinct Breakdown History.asset_name for the site.
     """
-    # Best: use Asset doctype so we can filter by category
     if frappe.db.exists("DocType", "Asset"):
         try:
             meta = frappe.get_meta("Asset")
@@ -145,7 +148,6 @@ def _get_assets(site, asset_category):
         except Exception:
             pass
 
-    # Fallback: cannot filter by category here because Breakdown History doesn't store category
     rows = frappe.db.sql(
         """
         select distinct asset_name
@@ -161,7 +163,6 @@ def _get_assets(site, asset_category):
 
 
 def _get_shift_system(site, shift_date):
-    # Optional: use Monthly Production Planning if it exists
     if frappe.db.exists("DocType", "Monthly Production Planning"):
         row = frappe.get_all(
             "Monthly Production Planning",
@@ -227,6 +228,16 @@ def _clip_to_window(intervals, w_start, w_end):
 
 
 def _get_breakdown_intervals(site, plant_no, window_start, window_end):
+    """
+    Return intervals like:
+    [
+        {
+            "start": datetime,
+            "end": datetime,
+            "parent_breakdown": "PBM-00001"
+        }
+    ]
+    """
     if not frappe.db.exists("DocType", "Breakdown History"):
         return []
 
@@ -239,7 +250,7 @@ def _get_breakdown_intervals(site, plant_no, window_start, window_end):
     last_before = frappe.get_all(
         "Breakdown History",
         filters={**base_filters, "update_date_time": ["<", window_start]},
-        fields=["update_date_time", "breakdown_status"],
+        fields=["update_date_time", "breakdown_status", "parent_breakdown"],
         order_by="update_date_time desc",
         limit=1,
     )
@@ -247,7 +258,7 @@ def _get_breakdown_intervals(site, plant_no, window_start, window_end):
     events = frappe.get_all(
         "Breakdown History",
         filters={**base_filters, "update_date_time": ["between", [window_start, window_end]]},
-        fields=["update_date_time", "breakdown_status"],
+        fields=["update_date_time", "breakdown_status", "parent_breakdown"],
         order_by="update_date_time asc",
     )
 
@@ -256,12 +267,14 @@ def _get_breakdown_intervals(site, plant_no, window_start, window_end):
 
     in_breakdown = False
     current_start = None
+    current_parent_breakdown = None
     intervals = []
 
     # Active at window start?
     if last_before and str(last_before[0].get("breakdown_status") or "") != RESOLVED_STATUS:
         in_breakdown = True
         current_start = window_start
+        current_parent_breakdown = last_before[0].get("parent_breakdown")
 
     for ev in events:
         ev_time = ev.get("update_date_time")
@@ -269,27 +282,52 @@ def _get_breakdown_intervals(site, plant_no, window_start, window_end):
             continue
 
         ev_status = str(ev.get("breakdown_status") or "")
+        ev_parent_breakdown = ev.get("parent_breakdown")
 
-        # Start
+        # Start / reported / in progress
         if ev_status != RESOLVED_STATUS and not in_breakdown:
             in_breakdown = True
             current_start = ev_time
+            current_parent_breakdown = ev_parent_breakdown
 
-        # End
+        # Resolved
         elif ev_status == RESOLVED_STATUS and in_breakdown:
             s = max(current_start, window_start)
             e = min(ev_time, window_end)
+
             if e > s:
-                intervals.append((s, e))
+                intervals.append(
+                    {
+                        "start": s,
+                        "end": e,
+                        "parent_breakdown": current_parent_breakdown,
+                    }
+                )
+
             in_breakdown = False
             current_start = None
+            current_parent_breakdown = None
 
-    # Still active at window end
+    # Still active now / at window end
     if in_breakdown and current_start:
+        now_dt = get_datetime()
         s = max(current_start, window_start)
-        e = window_end
+
+        # If this is today's active report window, stop at current time
+        # so future hours do not show red.
+        if window_start <= now_dt < window_end:
+            e = min(now_dt, window_end)
+        else:
+            e = window_end
+
         if e > s:
-            intervals.append((s, e))
+            intervals.append(
+                {
+                    "start": s,
+                    "end": e,
+                    "parent_breakdown": current_parent_breakdown,
+                }
+            )
 
     return intervals
 
@@ -302,7 +340,28 @@ def _hour_slots(window_start):
 
 
 def _overlaps_any(a_start, a_end, intervals):
-    for s, e in intervals:
+    for item in intervals:
+        if isinstance(item, dict):
+            s = item.get("start")
+            e = item.get("end")
+        else:
+            s, e = item
+
         if e > a_start and s < a_end:
             return True
     return False
+
+
+def _get_breakdown_doc_for_slot(a_start, a_end, intervals):
+    """
+    Return Plant Breakdown or Maintenance docname for the hour slot.
+    """
+    for item in intervals:
+        s = item.get("start")
+        e = item.get("end")
+        parent_breakdown = item.get("parent_breakdown")
+
+        if e > a_start and s < a_end and parent_breakdown:
+            return parent_breakdown
+
+    return None

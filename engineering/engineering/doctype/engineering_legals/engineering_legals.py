@@ -464,7 +464,6 @@ def _get_or_create_drive_folder(title: str, parent_entity: Optional[str], team: 
 def on_update(doc, method=None):
     try:
         move_engineering_legal_file_to_folder(doc)
-        create_drive_link_for_engineering_legals(doc)
     except Exception:
         frappe.log_error(
             title="Engineering Legals file move failed",
@@ -472,10 +471,4 @@ def on_update(doc, method=None):
         )
 
 def on_trash(doc, method=None):
-    try:
-        remove_drive_links_for_engineering_legals(doc)
-    except Exception:
-        frappe.log_error(
-            title="Engineering Legals drive link removal failed",
-            message=frappe.get_traceback(),
-        )
+    pass

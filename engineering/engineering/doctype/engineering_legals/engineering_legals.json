@@ -17,23 +17,21 @@
   "attach_paper",
   "start_date",
   "expiry_date",
-
   "hsec_section",
   "hsec_send",
   "hsec_qual_category_id",
   "hsec_qualification_id_external",
   "hsec_inserted_at",
-
   "near_expire",
   "legals"
  ],
  "fields": [
   {
    "fieldname": "sections",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Sections",
-   "options": "Brake Test\nFire Suppression\nFRCS\nLifting Equipment\nMachine Service Records\nNDT\nPDS\nService Schedule\nTyre Inspection Report\nWearcheck\nIllumination Baseline",
+   "options": "Engineering Legals Sections",
    "reqd": 1
   },
   {
@@ -71,7 +69,6 @@
    "label": "Expiry Date",
    "read_only": 1
   },
-
   {
    "fieldname": "hsec_section",
    "fieldtype": "Section Break",
@@ -101,7 +98,6 @@
    "label": "HSEC Inserted At",
    "read_only": 1
   },
-
   {
    "fieldname": "column_break_neqp",
    "fieldtype": "Column Break"
@@ -142,11 +138,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-09 14:52:12.296688",
+ "modified": "2026-03-06 11:15:44.317280",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {

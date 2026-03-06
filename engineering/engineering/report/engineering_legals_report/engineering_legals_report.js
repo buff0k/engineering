@@ -549,7 +549,7 @@ function build_doc_history_html(tree, payload) {
       }).join("");
 
       return `
-        <details open style="border:1px solid rgba(0,0,0,0.10); border-radius:12px; padding:10px 12px; margin:10px 0;">
+        <details style="border:1px solid rgba(0,0,0,0.10); border-radius:12px; padding:10px 12px; margin:10px 0;">
           <summary style="cursor:pointer; font-weight:900; font-size:14px;">
             → ${secLabel} <span style="opacity:.65;">(${secCount})</span>
           </summary>
@@ -560,8 +560,9 @@ function build_doc_history_html(tree, payload) {
       `;
     }).join("");
 
+
     return `
-      <details open style="border:1px solid rgba(0,0,0,0.12); border-radius:14px; padding:12px 14px; margin:12px 0;">
+      <details style="border:1px solid rgba(0,0,0,0.12); border-radius:14px; padding:12px 14px; margin:12px 0;">
         <summary style="cursor:pointer; font-weight:900; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
           <span>▼ ${siteLabel} <span style="opacity:.65;">(${siteCount})</span></span>
           <button type="button" class="btn btn-xs btn-default el-collapse-all" title="Collapse all">Collapse all</button>
@@ -573,63 +574,84 @@ function build_doc_history_html(tree, payload) {
     `;
   }).join("");
 
-  return siteHtml;
+  return `
+    <div style="text-align:right; margin:0 0 10px 0;">
+      <button type="button" class="btn btn-sm btn-default el-collapse-all-sites" title="Collapse all sites">
+        Collapse all sites
+      </button>
+    </div>
+    ${siteHtml}
+  `;
 }
-
 
 function render_doc_rows_table(rows) {
   if (!rows || !rows.length) {
     return `<div style="text-align:center; padding:10px;">No docs</div>`;
   }
 
-  const trs = rows.map(d => {
-    const name = frappe.utils.escape_html(d.name || "");
-    const start = frappe.utils.escape_html(d.start_date ? String(d.start_date) : "");
-    const exp = frappe.utils.escape_html(d.expiry_date ? String(d.expiry_date) : "");
-    const mod = frappe.utils.escape_html(d.modified ? String(d.modified) : "");
-const url = `/app/engineering-legals/${encodeURIComponent(d.name || "")}`;
+  const esc = frappe.utils.escape_html;
+  const groups = {};
 
-return `
-  <tr>
-    <td><a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a></td>
-        <td>${start}</td>
-        <td>${exp}</td>
-        <td>${mod}</td>
-      </tr>
+  (rows || []).forEach(d => {
+    const key = d.start_date ? String(d.start_date) : "No Start Date";
+    groups[key] = groups[key] || [];
+    groups[key].push(d);
+  });
+
+  const dateHtml = Object.keys(groups).map(dateKey => {
+    const docs = groups[dateKey] || [];
+    const safeDate = esc(dateKey);
+    const safeCount = esc(String(docs.length));
+
+    const trs = docs.map(d => {
+      const name = esc(d.name || "");
+      const exp = esc(d.expiry_date ? String(d.expiry_date) : "");
+      const mod = esc(d.modified ? String(d.modified) : "");
+      const url = `/app/engineering-legals/${encodeURIComponent(d.name || "")}`;
+
+      return `
+        <tr>
+          <td><a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a></td>
+          <td>${exp}</td>
+          <td>${mod}</td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <details style="border:1px solid rgba(0,0,0,0.08); border-radius:10px; padding:8px 10px; margin:8px 0;" open>
+        <summary style="cursor:pointer; font-weight:900;">
+          → ${safeDate} <span style="opacity:.65;">(${safeCount})</span>
+        </summary>
+        <div style="margin-top:8px; overflow:auto;">
+          <table class="table table-bordered" style="margin:0;">
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Expiry</th>
+                <th>Modified</th>
+              </tr>
+            </thead>
+            <tbody>${trs}</tbody>
+          </table>
+        </div>
+      </details>
     `;
   }).join("");
 
-  return `
-    <div style="overflow:auto;">
-      <table class="table table-bordered" style="margin:0;">
-        <thead>
-          <tr>
-            <th>Document</th>
-            <th>Start</th>
-            <th>Expiry</th>
-            <th>Modified</th>
-          </tr>
-        </thead>
-        <tbody>${trs}</tbody>
-      </table>
-    </div>
-  `;
+  return `<div>${dateHtml}</div>`;
 }
 
 
 
 function bind_doc_history_lazy_loader(report) {
   const wrap = $(report.page.wrapper);
-    // Collapse all inside Doc History (don’t toggle the <summary> itself)
-  wrap.off("click.el_collapse_all").on("click.el_collapse_all", ".el-collapse-all", function (e) {
+
+  wrap.off("click.el_collapse_all_sites").on("click.el_collapse_all_sites", ".el-collapse-all-sites", function (e) {
     e.preventDefault();
     e.stopPropagation();
 
-    const siteDetails = $(this).closest("details");
-    // close all nested details first
-    siteDetails.find("details").prop("open", false);
-    // keep the site itself open (so header stays visible)
-    siteDetails.prop("open", true);
+    wrap.find("#el-doc-history details.el-site-node").prop("open", false);
   });
 
 

@@ -36,7 +36,19 @@ def get_asset_category_counts(site=None):
 
     Asset = DocType("Asset")
 
-    excluded = ("All items group", "Lightning Plant", "Water pump", "Cellular Telephone")
+    included = (
+        "LDV",
+        "ADT",
+        "Excavator",
+        "Dozer",
+        "Diesel Bowsers",
+        "Drills",
+        "Water Bowser",
+        "Service Truck",
+        "Grader",
+        "TLB",
+        "Loader",
+    )
 
     q = (
         frappe.qb.from_(Asset)
@@ -45,7 +57,7 @@ def get_asset_category_counts(site=None):
             Count(Asset.name).as_("count"),
         )
         .where(Asset.docstatus == 1)                 # only submitted
-        .where(Asset.asset_category.notin(excluded)) # exclude categories
+        .where(Asset.asset_category.isin(included))  # include only these categories
         .groupby(Asset.asset_category)
         .orderby(Count(Asset.name), order=frappe.qb.desc)
     )
@@ -158,7 +170,7 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, limit=50, o
         "Engineering Legals",
         filters=filters,
         fields=["name", "fleet_number", "start_date", "expiry_date", "modified"],
-        order_by="modified desc",
+        order_by="start_date desc, modified desc",
         limit_start=int(offset or 0),
         limit_page_length=int(limit or 50),
     )
