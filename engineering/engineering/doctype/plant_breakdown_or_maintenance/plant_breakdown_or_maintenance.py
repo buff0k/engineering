@@ -29,14 +29,16 @@ class PlantBreakdownorMaintenance(Document):
                 f"Please close it first (set Resolved Datetime)."
             )
 
+
+
     def autoname(self):
+
         dt = get_datetime(self.breakdown_start_datetime) if self.breakdown_start_datetime else None
         date_key = dt.strftime("%Y%m%d") if dt else ""
+        open_closed = (self.open_closed or "").strip()
         self.name = make_autoname(
-            f"{self.asset_name}-{date_key}-{self.breakdown_reason_category}-.#####"
+            f"{self.asset_name}-{date_key}-.#####{('-' + open_closed) if open_closed else ''}"
         )
-
-
 
     
     """Main doctype for recording equipment breakdowns or maintenance."""
