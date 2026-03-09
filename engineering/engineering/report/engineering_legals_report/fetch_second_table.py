@@ -48,6 +48,8 @@ def get_asset_category_counts(site=None):
         "Grader",
         "TLB",
         "Loader",
+        "Lightning Plant",
+        "Water pump",
     )
 
     q = (
@@ -169,7 +171,7 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, limit=50, o
     rows = frappe.get_all(
         "Engineering Legals",
         filters=filters,
-        fields=["name", "fleet_number", "start_date", "expiry_date", "modified"],
+        fields=["name", "fleet_number", "start_date", "expiry_date", "modified", "attach_paper"],
         order_by="start_date desc, modified desc",
         limit_start=int(offset or 0),
         limit_page_length=int(limit or 50),

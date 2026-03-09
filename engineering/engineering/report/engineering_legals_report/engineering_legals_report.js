@@ -607,11 +607,12 @@ function render_doc_rows_table(rows) {
       const name = esc(d.name || "");
       const exp = esc(d.expiry_date ? String(d.expiry_date) : "");
       const mod = esc(d.modified ? String(d.modified) : "");
-      const url = `/app/engineering-legals/${encodeURIComponent(d.name || "")}`;
+      const fileUrl = (d.attach_paper || "").trim();
+      const href = fileUrl ? encodeURI(fileUrl) : `/app/engineering-legals/${encodeURIComponent(d.name || "")}`;
 
       return `
         <tr>
-          <td><a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a></td>
+          <td><a href="${href}" target="_blank" rel="noopener noreferrer">${name}</a></td>
           <td>${exp}</td>
           <td>${mod}</td>
         </tr>

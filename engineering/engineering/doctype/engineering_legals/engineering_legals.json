@@ -60,7 +60,7 @@
   {
    "fieldname": "start_date",
    "fieldtype": "Date",
-   "label": "Start Date",
+   "label": "Document Start Date",
    "reqd": 1
   },
   {
@@ -95,6 +95,7 @@
   {
    "fieldname": "hsec_inserted_at",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "HSEC Inserted At",
    "read_only": 1
   },
@@ -138,7 +139,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 11:15:44.317280",
+ "modified": "2026-03-07 11:59:55.308792",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
