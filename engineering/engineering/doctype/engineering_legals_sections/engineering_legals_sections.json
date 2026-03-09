@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:section",
  "creation": "2026-03-06 11:09:51.827071",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -11,16 +12,18 @@
   {
    "fieldname": "section",
    "fieldtype": "Data",
-   "label": "Section"
+   "label": "Section",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 11:10:27.125895",
+ "modified": "2026-03-09 10:12:27.136807",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals Sections",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -40,5 +43,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "section"
 }

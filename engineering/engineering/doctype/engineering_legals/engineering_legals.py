@@ -91,13 +91,23 @@ class EngineeringLegals(Document):
         # -----------------------------
         # HSEC integration requirements
         # -----------------------------
+        section = (self.sections or "").strip()
+
+        # Always populate external qualification code from Sections
+        self.hsec_qualification_id_external = section or None
+
+        # Brake Test must always send to HSEC
+        if section == "Brake Test":
+            self.hsec_send = 1
+
         if getattr(self, "hsec_send", 0):
             # Required by HSEC: Qualification_ID_External
             if not getattr(self, "hsec_qualification_id_external", None):
                 frappe.throw("HSEC External Qualification Code is required when 'Send to HSEC' is enabled.")
 
-            # HSEC needs a timestamp so they can pull the latest
-            self.hsec_inserted_at = now()
+            # Keep the original creation timestamp only once
+            if not self.hsec_inserted_at:
+                self.hsec_inserted_at = now()
         else:
             # Keep clean when not sending
             self.hsec_inserted_at = None

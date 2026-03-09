@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{site}-{start_date}-{fleet_number}",
+ "autoname": "format:{site}-{sections}-{start_date}-{fleet_number}",
  "creation": "2025-12-08 11:24:30.008350",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -78,18 +78,21 @@
    "default": "0",
    "fieldname": "hsec_send",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Send to HSEC"
   },
   {
    "default": "EQP",
    "fieldname": "hsec_qual_category_id",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "HSEC Qualification Category",
    "options": "EQP\nEMP"
   },
   {
    "fieldname": "hsec_qualification_id_external",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "HSEC External Qualification Code"
   },
   {
@@ -139,7 +142,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-07 11:59:55.308792",
+ "modified": "2026-03-09 12:21:03.646537",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",

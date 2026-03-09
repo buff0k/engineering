@@ -10,7 +10,18 @@ frappe.ui.form.on('Engineering Legals', {
     frm.set_value('vehicle_type', null);
     frm.set_value('lifting_type', null);
 
+    const section = (frm.doc.sections || '').trim();
+
+    // populate HSEC external code from selected section
+    frm.set_value('hsec_qualification_id_external', section || null);
+
+    // Brake Test must send to HSEC
+    if (section === 'Brake Test') {
+      frm.set_value('hsec_send', 1);
+    }
+
     apply_section_rules(frm);
+    apply_hsec_rules(frm);
     set_expiry_date(frm);
   },
 
