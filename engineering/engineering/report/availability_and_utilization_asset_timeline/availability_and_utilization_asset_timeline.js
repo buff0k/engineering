@@ -34,15 +34,39 @@ frappe.query_reports["Availability and utilization Asset timeline"] = {
         {
             fieldname: "asset_category",
             label: "Asset Category",
-            fieldtype: "Data",
+            fieldtype: "Select",
+            options: [
+                "",
+                "Excavator",
+                "Dozer",
+                "ADT",
+                "Water Bowser",
+                "Diesel Bowser",
+                "Drills",
+                "Grader",
+                "FEL",
+                "TLB"
+            ].join("\n"),
             on_change: function (query_report) {
                 schedule_report_refresh(query_report);
             }
         }
     ],
 
-    onload: function () {
+    onload: function (report) {
         inject_timeline_styles();
+        render_timeline_legend(report);
+
+        // expose popup globally so onclick from HTML works
+        window.show_bd_popup = show_bd_popup;
+    },
+
+    refresh: function (report) {
+        inject_timeline_styles();
+        render_timeline_legend(report);
+
+        // keep popup globally available after refresh
+        window.show_bd_popup = show_bd_popup;
     },
 
     formatter: function (value, row, column, data, default_formatter) {
@@ -61,16 +85,17 @@ frappe.query_reports["Availability and utilization Asset timeline"] = {
             return formatted;
         }
 
-        // Breakdown button with popup
         if (typeof raw === "string" && raw.startsWith("B::")) {
             const docname = raw.split("B::")[1] || "";
-            const safe_docname = frappe.utils.escape_html(docname);
+            const safe_docname = String(docname).replace(/'/g, "\\'");
+            const slot_label = String(column.label || "").replace(/'/g, "\\'");
 
             return `
                 <div class="au-cell au-cell-breakdown">
                     <button
+                        type="button"
                         class="au-bd-btn"
-                        onclick="show_bd_popup('${safe_docname}')"
+                        onclick="window.show_bd_popup('${safe_docname}', '${slot_label}')"
                     >
                         B/D Detail
                     </button>
@@ -78,12 +103,10 @@ frappe.query_reports["Availability and utilization Asset timeline"] = {
             `;
         }
 
-        // Startup = yellow only, no text
         if (raw === "S") {
             return `<div class="au-cell au-cell-startup"></div>`;
         }
 
-        // Fatigue = blue only, no text
         if (raw === "F") {
             return `<div class="au-cell au-cell-fatigue"></div>`;
         }
@@ -101,12 +124,14 @@ function schedule_report_refresh(query_report) {
     }
 
     au_report_refresh_timer = setTimeout(() => {
-        const filters = query_report.get_values();
+        const filters = query_report.get_values() || {};
         if (!filters.site || !filters.start_date || !filters.end_date) {
             return;
         }
+
+        // immediate refresh without user hard refresh
         query_report.refresh();
-    }, 200);
+    }, 100);
 }
 
 function sync_end_date_if_blank(query_report) {
@@ -118,7 +143,47 @@ function sync_end_date_if_blank(query_report) {
     }
 }
 
-function show_bd_popup(docname) {
+function render_timeline_legend(report) {
+    if (!report || !report.page) {
+        return;
+    }
+
+    const page = report.page;
+    const wrapper =
+        page.main && page.main.parent ? page.main.parent() : null;
+
+    if (!wrapper || !wrapper.length) {
+        return;
+    }
+
+    wrapper.find(".au-legend-wrapper").remove();
+
+    const legend_html = `
+        <div class="au-legend-wrapper">
+            <div class="au-legend-item">
+                <span class="au-legend-box au-legend-startup"></span>
+                <span class="au-legend-text">YELL = startup color only</span>
+            </div>
+            <div class="au-legend-item">
+                <span class="au-legend-box au-legend-fatigue"></span>
+                <span class="au-legend-text">BLUE = fatigue color only</span>
+            </div>
+            <div class="au-legend-item">
+                <span class="au-legend-box au-legend-breakdown"></span>
+                <span class="au-legend-text">RED = B/D Detail button</span>
+            </div>
+            <div class="au-legend-item">
+                <span class="au-legend-box au-legend-empty"></span>
+                <span class="au-legend-text">WHITE = nothing captured</span>
+            </div>
+        </div>
+    `;
+
+    // place legend directly under filters/header area
+    wrapper.find(".report-wrapper, .layout-main-section").first().before(legend_html);
+}
+
+function show_bd_popup(docname, slot_label) {
     if (!docname) {
         frappe.msgprint("Breakdown document not found.");
         return;
@@ -144,7 +209,15 @@ function show_bd_popup(docname) {
 
             const html = `
                 <div style="font-size:13px;line-height:1.6;">
-                    <div style="margin-bottom:10px;"><strong>${frappe.utils.escape_html(doc.name || "")}</strong></div>
+                    <div style="margin-bottom:10px;">
+                        <strong>${frappe.utils.escape_html(doc.name || "")}</strong>
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <span style="display:inline-block;padding:4px 10px;border-radius:12px;background:#f5f5f5;color:#333;font-size:12px;">
+                            Hour Slot: ${frappe.utils.escape_html(slot_label || "")}
+                        </span>
+                    </div>
 
                     <table style="width:100%;border-collapse:collapse;">
                         <tr>
@@ -206,7 +279,7 @@ function show_bd_popup(docname) {
             `;
 
             const dialog = new frappe.ui.Dialog({
-                title: "B/D Detail",
+                title: `B/D Detail${slot_label ? " - " + slot_label : ""}`,
                 size: "large",
                 fields: [
                     {
@@ -223,6 +296,9 @@ function show_bd_popup(docname) {
 
             dialog.fields_dict.bd_html.$wrapper.html(html);
             dialog.show();
+        },
+        error: function () {
+            frappe.msgprint("Unable to load breakdown details.");
         }
     });
 }
@@ -235,6 +311,55 @@ function inject_timeline_styles() {
     const style = document.createElement("style");
     style.id = "au-timeline-styles";
     style.innerHTML = `
+        .au-legend-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            margin: 8px 0 12px 0;
+            padding: 8px 0 2px 0;
+        }
+
+        .au-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .au-legend-box {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            border-radius: 2px;
+            border: 1px solid #d1d8dd;
+            box-sizing: border-box;
+        }
+
+        .au-legend-startup {
+            background: #fff200;
+            border-color: #d6cc00;
+        }
+
+        .au-legend-fatigue {
+            background: #29a3e1;
+            border-color: #1b82b7;
+        }
+
+        .au-legend-breakdown {
+            background: #ff1a1a;
+            border-color: #d00000;
+        }
+
+        .au-legend-empty {
+            background: #ffffff;
+            border-color: #d1d8dd;
+        }
+
+        .au-legend-text {
+            font-size: 12px;
+            color: #36414c;
+        }
+
         .au-cell {
             width: 100%;
             min-height: 22px;
@@ -247,7 +372,7 @@ function inject_timeline_styles() {
         }
 
         .au-cell-empty {
-            background: transparent;
+            background: #ffffff;
         }
 
         .au-cell-startup {

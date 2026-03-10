@@ -28,6 +28,14 @@ SATURDAY_18_06_SITES = {
 FATIGUE_13_1330 = {"uitgevallen", "koppie", "bankfontein"}
 FATIGUE_13_14 = {"gwab", "klipfontein", "kriel", "kriel rehabilitation"}
 
+# Saturday special fatigue sites
+SATURDAY_SPECIAL_FATIGUE_1330 = {
+    "uitgevallen",
+    "kriel rehabilitation",
+    "koppie",
+    "bankfontein",
+}
+
 
 def execute(filters=None):
     filters = filters or {}
@@ -50,14 +58,12 @@ def execute(filters=None):
     if end_date < start_date:
         frappe.throw("End Date must be >= Start Date")
 
-    # Determine max slot count across selected dates
     max_slots = _get_max_slots_for_range(site, start_date, end_date)
     columns = _get_columns(max_slots)
 
     data = []
     row_no = 1
 
-    # Load assets once for speed
     asset_list = _get_assets(site, asset_category)
     show_date_in_asset = start_date != end_date
 
@@ -71,7 +77,6 @@ def execute(filters=None):
         shift_system = _get_shift_system(site, d)
         fixed = _fixed_windows(site, d, window_start, shift_system)
 
-        # Load all PBM intervals for all assets in one go for speed
         intervals_map = _get_breakdown_intervals_map(
             site=site,
             asset_list=asset_list,
@@ -88,7 +93,6 @@ def execute(filters=None):
 
             row = {"no": row_no, "asset": asset_label}
 
-            # Fill only active slots for this day/site config
             for i, (hs, he) in enumerate(_hour_slots(window_start, slot_count)):
                 cell_value = ""
 
@@ -107,7 +111,6 @@ def execute(filters=None):
 
                 row[f"h_{i:02d}"] = cell_value
 
-            # Blank out unused trailing columns if this date has fewer slots
             for i in range(slot_count, max_slots):
                 row[f"h_{i:02d}"] = ""
 
@@ -145,12 +148,11 @@ def _get_window_config(site, shift_date):
     loc = (site or "").strip().lower()
     window_start = get_datetime(f"{shift_date} {START_HOUR:02d}:00:00")
 
-    # Saturday = 5
     if shift_date.weekday() == 5 and loc in SATURDAY_15_00_SITES:
         return {
             "window_start": window_start,
             "window_end": get_datetime(f"{shift_date} 23:59:59"),
-            "slot_count": 18,  # 06:00 -> 00:00
+            "slot_count": 18,
         }
 
     return {
@@ -186,13 +188,6 @@ def _get_columns(slot_count):
 
 
 def _get_assets(site, asset_category):
-    """
-    Returns Asset document names filtered by:
-      - Asset.location == site (if field exists)
-      - Asset.asset_category == asset_category (if provided)
-
-    PBM.asset_name is a Link to Asset, so matching uses Asset.name.
-    """
     if frappe.db.exists("DocType", "Asset"):
         try:
             meta = frappe.get_meta("Asset")
@@ -237,14 +232,6 @@ def _get_assets(site, asset_category):
 
 
 def _get_shift_system(site, shift_date):
-    """
-    Saturday overrides:
-      Uitgevallen / Koppie / Kriel Rehabilitation / Bankfontein
-        startup at 06:00 and 15:00
-
-      Klipfontein / Gwab
-        startup at 06:00 and 18:00
-    """
     loc = (site or "").strip().lower()
 
     if shift_date.weekday() == 5:
@@ -282,33 +269,36 @@ def _fixed_windows(site, shift_date, window_start, shift_system):
     startup = []
     fatigue = []
 
-    # Always startup 06:00–07:00
     startup.append((dt(d0, "06:00:00"), dt(d0, "07:00:00")))
 
     shift_system_key = (shift_system or "").strip().lower()
 
-    # Saturday overrides
     if shift_system_key == "saturday_2x9":
         startup.append((dt(d0, "15:00:00"), dt(d0, "16:00:00")))
     elif shift_system_key == "saturday_2x12":
         startup.append((dt(d0, "18:00:00"), dt(d0, "19:00:00")))
-    # Normal rules
     elif shift_system_key == "2x12hour":
         startup.append((dt(d0, "18:00:00"), dt(d0, "19:00:00")))
     elif shift_system_key == "3x8hour":
         startup.append((dt(d0, "14:00:00"), dt(d0, "15:00:00")))
         startup.append((dt(d0, "22:00:00"), dt(d0, "23:00:00")))
 
-    # Fatigue
-    if loc in FATIGUE_13_1330:
+    # Saturday special fatigue:
+    # Uitgevallen / Kriel Rehabilitation / Koppie / Bankfontein
+    # 13:00-13:30 day shift
+    # 22:00-22:30 night shift
+    if shift_date.weekday() == 5 and loc in SATURDAY_SPECIAL_FATIGUE_1330:
         fatigue.append((dt(d0, "13:00:00"), dt(d0, "13:30:00")))
-    elif loc in FATIGUE_13_14:
-        fatigue.append((dt(d0, "13:00:00"), dt(d0, "14:00:00")))
+        fatigue.append((dt(d0, "22:00:00"), dt(d0, "22:30:00")))
+    else:
+        # Normal fatigue
+        if loc in FATIGUE_13_1330:
+            fatigue.append((dt(d0, "13:00:00"), dt(d0, "13:30:00")))
+        elif loc in FATIGUE_13_14:
+            fatigue.append((dt(d0, "13:00:00"), dt(d0, "14:00:00")))
 
-    # Night fatigue 01:00–02:00
-    fatigue.append((dt(d1, "01:00:00"), dt(d1, "02:00:00")))
+        fatigue.append((dt(d1, "01:00:00"), dt(d1, "02:00:00")))
 
-    # Clip to actual report window
     return {
         "startup": _clip_to_window(startup, window_start, _get_window_end(site, shift_date)),
         "fatigue": _clip_to_window(fatigue, window_start, _get_window_end(site, shift_date)),
@@ -329,18 +319,11 @@ def _clip_to_window(intervals, w_start, w_end):
 
 
 def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
-    """
-    Fast path:
-      1) Load PBM rows for all assets in one query
-      2) Group intervals by asset
-      3) Fallback to Breakdown History only for assets with no PBM interval
-    """
     out = defaultdict(list)
 
     if not asset_list:
         return out
 
-    # 1) Primary source: PBM
     if frappe.db.exists("DocType", "Plant Breakdown or Maintenance"):
         pbm_rows = frappe.get_all(
             "Plant Breakdown or Maintenance",
@@ -399,7 +382,6 @@ def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
                     }
                 )
 
-    # 2) Fallback: Breakdown History only for missing assets
     if frappe.db.exists("DocType", "Breakdown History"):
         missing_assets = [a for a in asset_list if not out.get(a)]
         for plant_no in missing_assets:
