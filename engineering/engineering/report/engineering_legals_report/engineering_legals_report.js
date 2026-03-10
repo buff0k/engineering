@@ -27,10 +27,10 @@ frappe.query_reports["Engineering Legals Report"] = {
       ].join("\n")
     },
     {
-      fieldname: "as_at_date",
-      label: "As-at Date",
-      fieldtype: "Date",
-      default: frappe.datetime.get_today()
+      fieldname: "asset",
+      label: "Asset",
+      fieldtype: "Link",
+      options: "Asset"
     },
     // internal click-driven filters
     {
@@ -66,14 +66,14 @@ frappe.query_reports["Engineering Legals Report"] = {
         const bucket = $(this).attr("data-bucket") || "";
 
 const site = frappe.query_report.get_filter_value("site") || "";
-const as_at = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
+const asset = frappe.query_report.get_filter_value("asset") || "";
 
 frappe.call({
   method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_assets",
-  args: { site, section, as_at_date: as_at, bucket },
+  args: { site, section, asset, bucket },
   callback: (r) => {
     const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
-    render_drilldown(report, { site, section, as_at, bucket, rows });
+    render_drilldown(report, { site, section, asset, bucket, rows });
   }
 });
 
@@ -97,13 +97,12 @@ frappe.call({
       refresh_dashboard(report);
 
       const site = frappe.query_report.get_filter_value("site") || "";
-      const as_at = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
-
-      render_audit_summary(report, { site, as_at });
+      const asset = frappe.query_report.get_filter_value("asset") || "";
+      render_audit_summary(report, { site, asset });
 
       // NEW: collapsible tree at bottom
       const section = frappe.query_report.get_filter_value("section") || "";
-render_doc_history_tree(report, { site, section });
+      render_doc_history_tree(report, { site, section, asset });
     }, 0);
   },
 
@@ -363,12 +362,12 @@ function render_dashboard(report, rows, site) {
 
 
 function render_drilldown(report, ctx) {
-  const { site, section, as_at, bucket, rows } = ctx;
+  const { site, section, asset, bucket, rows } = ctx;
 
   const wrap = $(report.page.wrapper);
   wrap.find("#el-drilldown").remove();
 
-  const title = `Assets due: Site=${site || "All"}, Section=${section || "All"}, Bucket=${bucket}, As-at=${as_at}`;
+  const title = `Assets due: Site=${site || "All"}, Section=${section || "All"}, Asset=${asset || "All"}, Bucket=${bucket}`;
 
   const tableRows = rows.map(r => `
     <tr>
@@ -417,12 +416,12 @@ function render_drilldown(report, ctx) {
     wrap.find("#el-drilldown").remove();
   });
 
-const as_at2 = frappe.query_report.get_filter_value("as_at_date") || frappe.datetime.get_today();
-render_audit_summary(report, { site, as_at: as_at2 });
+render_audit_summary(report, { site });
 }
 
 function render_audit_summary(report, ctx) {
-  const { site, as_at } = ctx;
+  const { site, asset } = ctx;
+  const as_at = frappe.datetime.get_today();
 
   const main = $(report.page.main);
 
@@ -443,7 +442,7 @@ function render_audit_summary(report, ctx) {
 
   frappe.call({
     method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_recent_submitted_legals",
-    args: { site, days: 10, as_at_date: as_at },
+    args: { site, asset, days: 10, as_at_date: as_at },
     callback: (r) => {
       const rows = (r && r.message) ? r.message : [];
 
@@ -479,7 +478,7 @@ return `
 
 
 function render_doc_history_tree(report, ctx) {
-  const { site, section } = ctx;
+  const { site, section, asset } = ctx;
 
   const main = $(report.page.main);
 
@@ -501,7 +500,7 @@ function render_doc_history_tree(report, ctx) {
 
   frappe.call({
     method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_doc_history_tree_meta",
-    args: { site, section },
+    args: { site, section, asset },
     callback: (r) => {
       const payload = (r && r.message) ? r.message : {};
       const tree = payload.tree || [];
@@ -562,7 +561,7 @@ function build_doc_history_html(tree, payload) {
 
 
     return `
-      <details style="border:1px solid rgba(0,0,0,0.12); border-radius:14px; padding:12px 14px; margin:12px 0;">
+      <details class="el-site-node" style="border:1px solid rgba(0,0,0,0.12); border-radius:14px; padding:12px 14px; margin:12px 0;">
         <summary style="cursor:pointer; font-weight:900; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
           <span>▼ ${siteLabel} <span style="opacity:.65;">(${siteCount})</span></span>
           <button type="button" class="btn btn-xs btn-default el-collapse-all" title="Collapse all">Collapse all</button>
@@ -657,7 +656,14 @@ function bind_doc_history_lazy_loader(report) {
 
 
 
+  wrap.off("click.el_collapse_one_site").on("click.el_collapse_one_site", ".el-collapse-all", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
 
+    const siteNode = $(this).closest("details.el-site-node");
+    siteNode.find("details").prop("open", false);
+    siteNode.prop("open", false);
+  });
 
 
   // Load docs immediately when user clicks the fleet SUMMARY (feels instant)
@@ -669,6 +675,7 @@ function bind_doc_history_lazy_loader(report) {
     const site = node.attr("data-site") || "";
     const section = node.attr("data-section") || "";
     const fleet = node.attr("data-fleet") || "";
+    const asset = frappe.query_report.get_filter_value("asset") || "";
     const body = node.find(".el-fleet-body");
 
     const cache_key = `${site}|${section}|${fleet}`;
@@ -683,7 +690,7 @@ function bind_doc_history_lazy_loader(report) {
 
     frappe.call({
       method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_doc_history_docs",
-      args: { site, section, fleet_number: fleet, limit: 50, offset: 0 },
+      args: { site, section, fleet_number: fleet, asset, limit: 50, offset: 0 },
       callback: (r) => {
         const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
         EL_DOC_CACHE[cache_key] = rows;

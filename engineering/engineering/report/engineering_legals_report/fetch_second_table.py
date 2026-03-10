@@ -6,11 +6,11 @@ from collections import defaultdict
 
 
 @frappe.whitelist()
-def get_assets(site=None, section=None, as_at_date=None, bucket=None):
+def get_assets(site=None, section=None, asset=None, as_at_date=None, bucket=None):
     from engineering.engineering.report.engineering_legals_report.engineering_legals_report import _assets_view
 
     as_at = getdate(as_at_date) if as_at_date else frappe.utils.getdate()
-    cols, rows, msg, chart = _assets_view(as_at, site, section, bucket)
+    cols, rows, msg, chart = _assets_view(as_at, site, section, asset, bucket)
     return {"rows": rows}
 
 
@@ -80,7 +80,7 @@ def get_asset_category_counts(site=None):
 
 
 @frappe.whitelist()
-def get_recent_submitted_legals(site=None, days=10, as_at_date=None):
+def get_recent_submitted_legals(site=None, asset=None, days=10, as_at_date=None):
     base = getdate(as_at_date) if as_at_date else today()
     cutoff = add_days(base, -int(days or 10))
     """
@@ -95,6 +95,9 @@ def get_recent_submitted_legals(site=None, days=10, as_at_date=None):
     }
     if site:
         filters["site"] = site
+    if asset:
+        filters["fleet_number"] = asset
+
 
     rows = frappe.get_all(
         "Engineering Legals",
@@ -110,7 +113,7 @@ def get_recent_submitted_legals(site=None, days=10, as_at_date=None):
 
 
 @frappe.whitelist()
-def get_doc_history_tree_meta(site=None, section=None):
+def get_doc_history_tree_meta(site=None, section=None, asset=None):
     """
     FAST: returns ONLY counts (no doc rows)
       Site -> Section -> Fleet (+count)
@@ -120,6 +123,10 @@ def get_doc_history_tree_meta(site=None, section=None):
         filters.append(["site", "=", site])
     if section:
         filters.append(["sections", "=", section])
+    if asset:
+        filters.append(["fleet_number", "=", asset])
+
+
 
     rows = frappe.get_all(
         "Engineering Legals",
@@ -155,7 +162,7 @@ def get_doc_history_tree_meta(site=None, section=None):
 
 
 @frappe.whitelist()
-def get_doc_history_docs(site=None, section=None, fleet_number=None, limit=50, offset=0):
+def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None, limit=50, offset=0):
     """
     FAST: fetch docs for ONE fleet only (paged)
     """
@@ -167,7 +174,11 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, limit=50, o
         filters.append(["site", "=", site])
     if section:
         filters.append(["sections", "=", section])
+    if asset:
+        filters.append(["fleet_number", "=", asset])
 
+
+        
     rows = frappe.get_all(
         "Engineering Legals",
         filters=filters,

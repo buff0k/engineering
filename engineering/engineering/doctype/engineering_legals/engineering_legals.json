@@ -21,9 +21,7 @@
   "hsec_send",
   "hsec_qual_category_id",
   "hsec_qualification_id_external",
-  "hsec_inserted_at",
-  "near_expire",
-  "legals"
+  "hsec_inserted_at"
  ],
  "fields": [
   {
@@ -123,16 +121,7 @@
    "label": "Lifting Type",
    "options": "Inspection\nCertificate"
   },
-  {
-   "fieldname": "near_expire",
-   "fieldtype": "Tab Break",
-   "label": "Legals 7 days before expiry date"
-  },
-  {
-   "fieldname": "legals",
-   "fieldtype": "HTML",
-   "label": "Legals"
-  },
+
   {
    "fieldname": "upload_tab",
    "fieldtype": "Tab Break",

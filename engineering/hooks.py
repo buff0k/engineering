@@ -34,6 +34,7 @@ doctype_js = {
     "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js",
     "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js",
     "Service Schedule": "engineering/engineering/doctype/service_schedule/service_schedule.js",
+    "Engineering Legals": "engineering/engineering/doctype/engineering_legals/engineering_legals.js",
 }
 
 # ---------------------------------------------------------------------

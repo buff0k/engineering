@@ -27,19 +27,20 @@ BUCKETS = [
 def execute(filters=None):
     filters = filters or {}
 
-    as_at = getdate(filters.get("as_at_date") or today())
+    as_at = getdate(today())
     site = (filters.get("site") or "").strip() or None
     section = (filters.get("section") or "").strip() or None
+    asset = (filters.get("asset") or "").strip() or None
     view = (filters.get("view") or "Summary").strip() or "Summary"
     bucket = (filters.get("bucket") or "").strip() or None
 
     # Click behaviour:
     # - Summary view (default): show section rows + bucket counts
-    # - Assets view: show list of assets inside one chosen bucket (and optional section)
+    # - Assets view: show list of assets inside one chosen bucket (and optional section/asset)
     if view == "Assets" and bucket:
-        return _assets_view(as_at, site, section, bucket)
+        return _assets_view(as_at, site, section, asset, bucket)
 
-    return _summary_view(as_at, site, section)
+    return _summary_view(as_at, site, section, asset)
 
 
 def _base_latest_expiry_sql(where_sql: str) -> str:
@@ -62,7 +63,7 @@ def _base_latest_expiry_sql(where_sql: str) -> str:
     """
 
 
-def _summary_view(as_at, site, section):
+def _summary_view(as_at, site, section, asset):
     columns = [
         {"label": "Section", "fieldname": "section", "fieldtype": "Data", "width": 220},
         {"label": "🔴 Overdue", "fieldname": "overdue", "fieldtype": "Int", "width": 110},
@@ -82,6 +83,13 @@ def _summary_view(as_at, site, section):
     if section:
         where.append("AND el.sections = %(section)s")
         params["section"] = section
+
+
+    if asset:
+        where.append("AND el.fleet_number = %(asset)s")
+        params["asset"] = asset
+
+
 
     latest_sql = _base_latest_expiry_sql("\n".join(where))
 
@@ -109,7 +117,7 @@ def _summary_view(as_at, site, section):
     return columns, data, None, None
 
 
-def _assets_view(as_at, site, section, bucket):
+def _assets_view(as_at, site, section, asset, bucket):
     columns = [
         {"label": "Asset", "fieldname": "asset", "fieldtype": "Link", "options": "Asset", "width": 130},
         {"label": "Site", "fieldname": "site", "fieldtype": "Link", "options": "Location", "width": 120},
@@ -133,6 +141,12 @@ def _assets_view(as_at, site, section, bucket):
     if section:
         where.append("AND el.sections = %(section)s")
         params["section"] = section
+
+
+    if asset:
+        where.append("AND el.fleet_number = %(asset)s")
+        params["asset"] = asset
+
 
     latest_sql = _base_latest_expiry_sql("\n".join(where))
 
