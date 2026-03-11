@@ -7,6 +7,11 @@
 
 import frappe
 from frappe.utils import getdate, today
+from collections import defaultdict
+from engineering.engineering.report.engineering_legals_report.fetch_second_table import (
+    _get_expiry_bucket,
+    _build_combined_status,
+)
 
 
 NO_EXPIRY_SECTIONS = (
@@ -122,119 +127,138 @@ def _assets_view(as_at, site, section, asset, bucket):
         {"label": "Asset", "fieldname": "asset", "fieldtype": "Link", "options": "Asset", "width": 130},
         {"label": "Site", "fieldname": "site", "fieldtype": "Link", "options": "Location", "width": 120},
         {"label": "Section", "fieldname": "section", "fieldtype": "Data", "width": 170},
+        {"label": "Start Date", "fieldname": "start_date", "fieldtype": "Date", "width": 110},
         {"label": "Expiry Date", "fieldname": "expiry_date", "fieldtype": "Date", "width": 110},
         {"label": "Days Left", "fieldname": "days_left", "fieldtype": "Int", "width": 90},
-        {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 80},
+        {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 180},
     ]
 
-    where = []
-    params = {
-        "no_expiry_sections": NO_EXPIRY_SECTIONS,
-        "as_at": as_at,
-        "bucket": bucket,
-    }
-
+    filters = [["docstatus", "<", 2]]
     if site:
-        where.append("AND el.site = %(site)s")
-        params["site"] = site
-
+        filters.append(["site", "=", site])
     if section:
-        where.append("AND el.sections = %(section)s")
-        params["section"] = section
-
-
+        filters.append(["sections", "=", section])
     if asset:
-        where.append("AND el.fleet_number = %(asset)s")
-        params["asset"] = asset
+        filters.append(["fleet_number", "=", asset])
 
-
-    latest_sql = _base_latest_expiry_sql("\n".join(where))
-
-    # bucket condition
-    if bucket == "overdue":
-        bucket_sql = "days_left < 0"
-    elif bucket == "d0_7":
-        bucket_sql = "days_left BETWEEN 0 AND 7"
-    elif bucket == "d8_14":
-        bucket_sql = "days_left BETWEEN 8 AND 14"
-    elif bucket == "d15_21":
-        bucket_sql = "days_left BETWEEN 15 AND 21"
-    elif bucket == "d22_28":
-        bucket_sql = "days_left BETWEEN 22 AND 28"
-    else:
-        # safety fallback -> show nothing
-        bucket_sql = "1=0"
-
-    data = frappe.db.sql(
-        f"""
-        WITH latest AS (
-            {latest_sql}
-        ),
-        current AS (
-            SELECT
-                lm.asset,
-                lm.site,
-                lm.section,
-                lm.expiry_date,
-                MAX(el.start_date) AS start_date
-            FROM latest lm
-            JOIN `tabEngineering Legals` el
-                ON el.site = lm.site
-                AND el.sections = lm.section
-                AND el.fleet_number = lm.asset
-                AND el.expiry_date = lm.expiry_date
-            GROUP BY lm.site, lm.section, lm.asset, lm.expiry_date
-        ),
-        due AS (
-            SELECT
-                current.asset,
-                current.site,
-                current.section,
-                current.start_date,
-                current.expiry_date,
-                DATEDIFF(current.expiry_date, %(as_at)s) AS days_left
-            FROM current
-        ),
-        flags AS (
-            SELECT
-                el.fleet_number AS asset,
-                el.site,
-                el.sections AS section,
-                MAX(
-                    CASE
-                        WHEN el.start_date IS NOT NULL
-                         AND el.start_date BETWEEN DATE_SUB(%(as_at)s, INTERVAL 20 DAY) AND %(as_at)s
-                        THEN 1 ELSE 0
-                    END
-                ) AS has_recent
-            FROM `tabEngineering Legals` el
-            WHERE
-                el.sections NOT IN %(no_expiry_sections)s
-                {("\n".join(where))}
-            GROUP BY el.site, el.sections, el.fleet_number
-        )
-        SELECT
-            d.asset,
-            d.site,
-            d.section,
-            d.start_date,
-            d.expiry_date,
-            d.days_left,
-            CASE
-                WHEN IFNULL(f.has_recent, 0) = 1 THEN '✅'
-                ELSE '❌'
-            END AS status
-        FROM due d
-        LEFT JOIN flags f
-            ON f.site = d.site AND f.section = d.section AND f.asset = d.asset
-        WHERE {bucket_sql}
-        ORDER BY d.days_left ASC, d.section ASC, d.asset ASC
-        """,
-        params,
-        as_dict=True,
+    docs = frappe.get_all(
+        "Engineering Legals",
+        filters=filters,
+        fields=[
+            "name",
+            "site",
+            "sections",
+            "fleet_number",
+            "start_date",
+            "expiry_date",
+            "modified",
+            "attach_paper",
+        ],
+        order_by="site asc, sections asc, fleet_number asc, start_date desc, expiry_date desc, modified desc",
+        limit_page_length=0,
     )
 
-    # show a helpful title line in report (no extra status types)
-    message = f"Assets view: Bucket={bucket}, As-at={as_at}"
+    def get_expiry_bucket(expiry_date):
+        if not expiry_date:
+            return ""
 
+        days_left = (getdate(expiry_date) - as_at).days
+
+        if days_left < 0:
+            return "Overdue"
+        if days_left <= 7:
+            return "0-7 days"
+        if days_left <= 14:
+            return "8-14 days"
+        if days_left <= 21:
+            return "15-21 days"
+        if days_left <= 28:
+            return "22-28 days"
+        return ""
+
+    def is_recently_done(previous_expiry_date, latest_start_date):
+        if not previous_expiry_date or not latest_start_date:
+            return False
+
+        previous_expiry_date = getdate(previous_expiry_date)
+        latest_start_date = getdate(latest_start_date)
+
+        window_start = frappe.utils.add_days(previous_expiry_date, -10)
+        window_end = frappe.utils.add_days(previous_expiry_date, 15)
+
+        return window_start <= latest_start_date <= window_end
+
+    def build_combined_status(latest_doc, previous_doc):
+        statuses = []
+
+        prev_expiry = previous_doc.get("expiry_date") if previous_doc else None
+        latest_start = latest_doc.get("start_date")
+        latest_expiry = latest_doc.get("expiry_date")
+
+        is_recent = is_recently_done(prev_expiry, latest_start)
+        expiry_bucket = get_expiry_bucket(latest_expiry)
+
+        if is_recent:
+            statuses.append("Recently done")
+
+        if expiry_bucket and not (is_recent and expiry_bucket == "Overdue"):
+            statuses.append(expiry_bucket)
+
+        return " | ".join(statuses) if statuses else "-"
+
+    def bucket_matches(expiry_bucket_value):
+        if bucket == "overdue":
+            return expiry_bucket_value == "Overdue"
+        if bucket == "d0_7":
+            return expiry_bucket_value == "0-7 days"
+        if bucket == "d8_14":
+            return expiry_bucket_value == "8-14 days"
+        if bucket == "d15_21":
+            return expiry_bucket_value == "15-21 days"
+        if bucket == "d22_28":
+            return expiry_bucket_value == "22-28 days"
+        return False
+
+    grouped = defaultdict(list)
+    for d in docs:
+        sec = (d.get("sections") or "").strip()
+        if sec in NO_EXPIRY_SECTIONS:
+            continue
+
+        key = (
+            (d.get("site") or "").strip(),
+            sec,
+            (d.get("fleet_number") or "").strip(),
+        )
+        grouped[key].append(d)
+
+    data = []
+    for (_, sec, fleet), group_docs in grouped.items():
+        latest_doc = group_docs[0]
+        previous_doc = group_docs[1] if len(group_docs) > 1 else None
+
+        expiry_bucket_value = get_expiry_bucket(latest_doc.get("expiry_date"))
+        if not bucket_matches(expiry_bucket_value):
+            continue
+
+        expiry_date = latest_doc.get("expiry_date")
+        days_left = (getdate(expiry_date) - as_at).days if expiry_date else None
+
+        data.append({
+            "asset": latest_doc.get("fleet_number"),
+            "site": latest_doc.get("site"),
+            "section": latest_doc.get("sections"),
+            "start_date": latest_doc.get("start_date"),
+            "expiry_date": expiry_date,
+            "days_left": days_left,
+            "status": build_combined_status(latest_doc, previous_doc),
+        })
+
+    data.sort(key=lambda x: (
+        x.get("days_left") if x.get("days_left") is not None else 999999,
+        (x.get("section") or "").lower(),
+        (x.get("asset") or "").lower(),
+    ))
+
+    message = f"Assets view: Bucket={bucket}, As-at={as_at}"
     return columns, data, message, None

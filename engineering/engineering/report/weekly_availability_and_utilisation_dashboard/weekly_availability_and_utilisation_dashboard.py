@@ -686,6 +686,14 @@ def get_date_list(start, end):
     return out
 
 
+
+def is_sunday(date_value):
+    if not date_value:
+        return False
+
+    d = frappe.utils.getdate(date_value)
+    return d.weekday() == 6
+
 def fetch_site_rows(site, from_date, to_date):
     # One fetch per site for the whole window (faster, same logic)
     return frappe.get_all(
@@ -739,12 +747,17 @@ def build_daily_series(rows, date_list):
 
 
 def build_7day_averages(series):
-    # Average the 7 daily averages (matches your chart/day logic)
+    # Exclude Sundays from dashboard averages
     out = {}
     for ui_label in UI_CATEGORIES:
-        items = series.get(ui_label, [])
+        items = [
+            it for it in series.get(ui_label, [])
+            if not is_sunday(it.get("date"))
+        ]
+
         av = [float(it["avail"]) for it in items if it.get("avail") is not None]
         ut = [float(it["util"]) for it in items if it.get("util") is not None]
+
         out[ui_label] = {
             "avail": (sum(av) / len(av)) if av else None,
             "util": (sum(ut) / len(ut)) if ut else None,
@@ -775,17 +788,24 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
         points = []
         for i in range(7):
             bucket_vals = []
+            point_date = None
+
             for label in UI_CATEGORIES:
                 items = series_map.get(label, [])
                 if len(items) < 7:
-                    items = ([{"avail": None, "util": None}] * (7 - len(items))) + items
+                    items = ([{"date": "", "avail": None, "util": None}] * (7 - len(items))) + items
                 else:
                     items = items[-7:]
 
+                point_date = items[i].get("date") or point_date
                 v = items[i].get(metric)
                 if v is not None:
                     bucket_vals.append(float(v))
-            points.append((sum(bucket_vals) / len(bucket_vals)) if bucket_vals else None)
+
+            if is_sunday(point_date):
+                points.append(None)
+            else:
+                points.append((sum(bucket_vals) / len(bucket_vals)) if bucket_vals else None)
 
         clean = [p for p in points if p is not None]
         if len(clean) < 2:
@@ -947,14 +967,18 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
     def bars_for(label):
         items = series.get(label, [])
         if len(items) < 7:
-            items = ([{"avail": None, "util": None}] * (7 - len(items))) + items
+            items = ([{"date": "", "avail": None, "util": None}] * (7 - len(items))) + items
         else:
             items = items[-7:]
 
         out = []
         for it in items:
-            out.append(f"<div class='isd-bar avail' style='height:{h(it.get('avail'))}px'></div>")
-            out.append(f"<div class='isd-bar util' style='height:{h(it.get('util'))}px'></div>")
+            if is_sunday(it.get("date")):
+                out.append("<div></div>")
+                out.append("<div></div>")
+            else:
+                out.append(f"<div class='isd-bar avail' style='height:{h(it.get('avail'))}px'></div>")
+                out.append(f"<div class='isd-bar util' style='height:{h(it.get('util'))}px'></div>")
         return "".join(out)
 
 
@@ -968,8 +992,10 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
         out = []
         for it in items:
             d = (it.get("date") or "")
-            # YYYY-MM-DD -> DD
-            dd = d[-2:] if len(d) >= 2 else d
+            if is_sunday(d):
+                dd = ""
+            else:
+                dd = d[-2:] if len(d) >= 2 else d
             out.append(f"<div class='isd-daylab'>{dd}</div>")
         return "".join(out)
 

@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"BWQCk7rvMc\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"Pp7z5uyrsj\",\"type\":\"card\",\"data\":{\"card_name\":\"Work\",\"col\":5}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":4}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"WearCheck\",\"col\":4}}]",
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"BWQCk7rvMc\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"Pp7z5uyrsj\",\"type\":\"card\",\"data\":{\"card_name\":\"Job & Components\",\"col\":5}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
  "creation": "2024-12-11 11:58:53.866876",
  "custom_blocks": [],
  "docstatus": 0,
@@ -9,7 +9,7 @@
  "for_user": "",
  "hide_custom": 0,
  "icon": "tool",
- "idx": 0,
+ "idx": 1,
  "indicator_color": "",
  "is_hidden": 0,
  "label": "Engineering",
@@ -125,75 +125,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Availability and Utilisation Reports",
-   "link_count": 1,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Avail & Util Report",
-   "link_count": 0,
-   "link_to": "Availability & Utilisation- Monthly",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Availability and Utilisation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "WearCheck",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "WearCheck Results",
-   "link_count": 0,
-   "link_to": "WearCheck Results",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "WearCheck API Settings",
-   "link_count": 0,
-   "link_to": "API Wearcheck Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability & Utilisation Dashboard",
-   "link_count": 0,
-   "link_to": "Weekly Availability and Utilisation Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Weekly Performance ",
-   "link_count": 0,
-   "link_to": "Production Efficiency",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Services ",
    "link_count": 3,
    "link_type": "DocType",
@@ -233,6 +164,114 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Availability and Utilisation Reports",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Avail & Util Report",
+   "link_count": 0,
+   "link_to": "Availability & Utilisation- Monthly",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Availability and Utilisation",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability & Utilisation Report (Detailed)",
+   "link_count": 0,
+   "link_to": "Avail and Util report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability & Utilisation Report (Summary)",
+   "link_count": 0,
+   "link_to": "Avail and Util summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Job & Components",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Jobcard",
+   "link_count": 0,
+   "link_to": "Mechanical Service Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Component Replacement Report",
+   "link_count": 0,
+   "link_to": "Component Replacement Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "OEM Booking",
+   "link_count": 0,
+   "link_to": "OEM Booking",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Dashboards",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Weekly Performance ",
+   "link_count": 0,
+   "link_to": "Production Efficiency",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Weekly Availability & Utilisation Dashboard",
+   "link_count": 0,
+   "link_to": "Weekly Availability and Utilisation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Legals",
    "link_count": 2,
    "link_type": "DocType",
@@ -259,68 +298,9 @@
    "onboard": 0,
    "report_ref_doctype": "Engineering Legals",
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Work",
-   "link_count": 5,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Component Replacement Report",
-   "link_count": 0,
-   "link_to": "Component Replacement Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability & Utilisation Report (Detailed)",
-   "link_count": 0,
-   "link_to": "Avail and Util report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability & Utilisation Report (Summary)",
-   "link_count": 0,
-   "link_to": "Avail and Util summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Jobcard",
-   "link_count": 0,
-   "link_to": "Mechanical Service Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "OEM Booking",
-   "link_count": 0,
-   "link_to": "OEM Booking",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2026-03-10 12:17:28.449886",
+ "modified": "2026-03-10 16:05:14.899990",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

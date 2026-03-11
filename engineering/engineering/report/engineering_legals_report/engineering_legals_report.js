@@ -52,32 +52,39 @@ frappe.query_reports["Engineering Legals Report"] = {
 
   onload(report) {
     bind_doc_history_lazy_loader(report);
+
     report.page.add_inner_button("Back to Summary", () => {
       report.set_filter_value("view", "Summary");
       report.set_filter_value("bucket", "");
       frappe.query_report.refresh();
+      $(report.page.wrapper).find("#el-drilldown").remove();
     });
 
-    // delegated click handler for pills (works inside datatable)
     $(report.page.wrapper)
       .off("click.el_buckets")
       .on("click.el_buckets", ".el-bucket-pill", function () {
         const section = $(this).attr("data-section") || "";
         const bucket = $(this).attr("data-bucket") || "";
 
-const site = frappe.query_report.get_filter_value("site") || "";
-const asset = frappe.query_report.get_filter_value("asset") || "";
+        const site = frappe.query_report.get_filter_value("site") || "";
+        const asset = frappe.query_report.get_filter_value("asset") || "";
 
-frappe.call({
-  method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_assets",
-  args: { site, section, asset, bucket },
-  callback: (r) => {
-    const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
-    render_drilldown(report, { site, section, asset, bucket, rows });
-  }
-});
+        frappe.call({
+          method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_assets",
+          args: { site, section, asset, bucket },
+          callback: (r) => {
+            const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
+            render_drilldown(report, { site, section, asset, bucket, rows });
+          }
+        });
+      });
 
-
+    $(report.page.wrapper)
+      .off("click.el_category")
+      .on("click.el_category", ".el-cat-bubble", function () {
+        const category = $(this).attr("data-category") || "";
+        const site = frappe.query_report.get_filter_value("site") || "";
+        open_category_summary(report, { site, category, section: "" });
       });
   },
 
@@ -334,29 +341,165 @@ function render_dashboard(report, rows, site) {
   }
 
   dash.html(rows.map(x => {
-    const cat = frappe.utils.escape_html(x.category || "Unknown");
+    const rawCat = x.category || "Unknown";
+    const cat = frappe.utils.escape_html(rawCat);
     const cnt = frappe.utils.escape_html(String(x.count ?? 0));
 
-    // auto size based on label length (keeps it neat)
-    const w = Math.min(260, Math.max(140, (cat.length * 8) + 60)); // px
+    const w = Math.min(260, Math.max(140, (rawCat.length * 8) + 60));
 
     return `
-      <div style="
-        width:${w}px;
-        padding:10px 12px;
-        border-radius:999px;
-        border:2px solid #118DFF;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-        background:#fff;
-        text-align:center;
-        color:#262A76;
-        font-weight:900;
-      ">
+      <div
+        class="el-cat-bubble"
+        data-category="${frappe.utils.escape_html(rawCat)}"
+        title="Click to view category summary"
+        style="
+          width:${w}px;
+          padding:10px 12px;
+          border-radius:999px;
+          border:2px solid #118DFF;
+          box-shadow:0 1px 2px rgba(0,0,0,0.04);
+          background:#fff;
+          text-align:center;
+          color:#262A76;
+          font-weight:900;
+          cursor:pointer;
+        "
+      >
         <div style="font-size:12px; font-weight:900; margin-bottom:3px; color:#262A76;">${cat}</div>
         <div style="font-size:20px; font-weight:900; line-height:1; color:#262A76;">${cnt}</div>
       </div>
     `;
   }).join(""));
+}
+
+function open_category_summary(report, ctx) {
+  const { site, category, section } = ctx;
+
+  frappe.call({
+    method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_category_summary",
+    args: {
+      site,
+      asset_category: category,
+      section
+    },
+    callback: (r) => {
+      const payload = (r && r.message) ? r.message : {};
+      render_category_summary(report, {
+        site,
+        category,
+        section,
+        rows: payload.rows || [],
+        sections: payload.sections || []
+      });
+    }
+  });
+}
+
+function render_category_summary(report, ctx) {
+  const { site, category, section, rows } = ctx;
+
+  const wrap = $(report.page.wrapper);
+  wrap.find("#el-drilldown").remove();
+
+  const esc = frappe.utils.escape_html;
+
+  const allSections = [
+    "Brake Test",
+    "Fire Suppression",
+    "FRCS",
+    "Lifting Equipment",
+    "Machine Service Records",
+    "NDT",
+    "PDS",
+    "Service Schedule",
+    "Tyre Inspection Report",
+    "Wearcheck",
+    "Illumination Baseline"
+  ];
+
+  const options = [
+    `<option value="">All</option>`,
+    ...allSections.map(sec => `
+      <option value="${esc(sec)}" ${sec === section ? "selected" : ""}>${esc(sec)}</option>
+    `)
+  ].join("");
+
+  const tableRows = (rows || []).map(r => {
+    const recordHref = `/app/engineering-legals/${encodeURIComponent(r.name || "")}`;
+    const attachmentHref = (r.attach_paper || "").trim() ? encodeURI(r.attach_paper) : "";
+
+    return `
+      <tr>
+        <td>
+          <a href="${recordHref}" target="_blank" rel="noopener noreferrer">
+            ${esc(r.fleet_number || "")}
+          </a>
+        </td>
+        <td>${esc(r.section || "")}</td>
+        <td>${esc(r.start_date ? String(r.start_date) : "")}</td>
+        <td>${esc(r.expiry_date ? String(r.expiry_date) : "")}</td>
+        <td>${esc(r.status || "")}</td>
+        <td>
+          ${attachmentHref
+            ? `<a href="${attachmentHref}" target="_blank" rel="noopener noreferrer">Open</a>`
+            : `<span style="opacity:.5;">No File</span>`}
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  const html = `
+    <div id="el-drilldown" style="margin-top:14px; padding:12px; border:1px solid rgba(0,0,0,0.08); border-radius:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+        <div style="font-weight:900;">
+          ${esc(category || "Category")} Summary
+          <span style="opacity:.65;">(${esc(String((rows || []).length))} records)</span>
+        </div>
+        <button class="btn btn-sm btn-default" id="el-drilldown-close">Close</button>
+      </div>
+
+      <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:12px;">
+        <div>
+          <div style="font-size:12px; font-weight:800; margin-bottom:4px;">Section Filter</div>
+          <select id="el-category-section-filter" class="form-control" style="min-width:260px;">
+            ${options}
+          </select>
+        </div>
+      </div>
+
+      <div style="overflow:auto;">
+        <table class="table table-bordered" style="margin:0;">
+          <thead>
+            <tr>
+              <th>Fleet Number</th>
+              <th>Section</th>
+              <th>Start Date</th>
+              <th>Expiry Date</th>
+              <th>Status</th>
+              <th>Document</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows || `<tr><td colspan="6" style="text-align:center; padding:14px;">No records found</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  wrap.find(".report-wrapper").append(html);
+
+  wrap.find("#el-drilldown-close").on("click", () => {
+    wrap.find("#el-drilldown").remove();
+  });
+
+  wrap.find("#el-category-section-filter").on("change", function () {
+    open_category_summary(report, {
+      site,
+      category,
+      section: $(this).val() || ""
+    });
+  });
 }
 
 
