@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-12 09:40:17.132693",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "portal_user",
+  "sections",
+  "site",
+  "fleet_number",
+  "vehicle_type",
+  "lifting_type",
+  "attach_paper",
+  "start_date",
+  "expiry_date",
+  "sent_to_erp",
+  "sent_on",
+  "erp_document"
+ ],
+ "fields": [
+  {
+   "fieldname": "portal_user",
+   "fieldtype": "Link",
+   "label": "portal_user",
+   "options": "User"
+  },
+  {
+   "fieldname": "sections",
+   "fieldtype": "Link",
+   "label": "sections",
+   "options": "Engineering Legals Sections"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "label": "fleet_number",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "vehicle_type",
+   "fieldtype": "Select",
+   "label": "vehicle_type",
+   "options": "LDV\nLDV\\TMM"
+  },
+  {
+   "fieldname": "lifting_type",
+   "fieldtype": "Select",
+   "label": "lifting_type",
+   "options": "Inspection\\nCertificat"
+  },
+  {
+   "fieldname": "attach_paper",
+   "fieldtype": "Attach",
+   "label": "attach_paper"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "start_date"
+  },
+  {
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "label": "expiry_date"
+  },
+  {
+   "default": "0",
+   "fieldname": "sent_to_erp",
+   "fieldtype": "Check",
+   "label": "sent_to_erp"
+  },
+  {
+   "fieldname": "sent_on",
+   "fieldtype": "Datetime",
+   "label": "sent_on"
+  },
+  {
+   "fieldname": "erp_document",
+   "fieldtype": "Link",
+   "label": "erp_document",
+   "options": "Engineering Legals"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-12 09:49:26.581012",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Engineering Legals supplier Portal Draft",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,118 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    <h2>My Engineering Legals</h2>
+    <p>Saved drafts and submitted records</p>
+
+    <div class="mb-3 d-flex gap-2">
+        <a class="btn btn-primary" href="/engineering_legals_sup">New Engineering Legals</a>
+        <button type="button" class="btn btn-danger" id="send_selected_btn">Send Selected</button>
+    </div>
+
+    {% if records %}
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th style="width:40px;">
+                        <input type="checkbox" id="select_all_records">
+                    </th>
+                    <th>ID</th>
+                    <th>Section</th>
+                    <th>Site</th>
+                    <th>Fleet Number</th>
+                    <th>Start Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th style="width:160px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in records %}
+                <tr>
+                    <td>
+                        {% if not row.sent_to_erp %}
+                        <input type="checkbox" class="record-checkbox" value="{{ row.name }}">
+                        {% endif %}
+                    </td>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.sections or "" }}</td>
+                    <td>{{ row.site or "" }}</td>
+                    <td>{{ row.fleet_number or "" }}</td>
+                    <td>{{ row.start_date or "" }}</td>
+                    <td>{{ row.expiry_date or "" }}</td>
+                    <td>{{ row.status }}</td>
+                    <td class="d-flex gap-2">
+                        {% if row.erp_document %}
+                        <span class="text-muted">{{ row.erp_document }}</span>
+                        {% endif %}
+                        {% if not row.sent_to_erp %}
+                        <button type="button" class="btn btn-sm btn-danger send-one-btn" data-name="{{ row.name }}">Send</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No Engineering Legals records found.</div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const selectAll = document.getElementById("select_all_records");
+    const sendSelectedBtn = document.getElementById("send_selected_btn");
+
+    function getCheckedNames() {
+        return Array.from(document.querySelectorAll(".record-checkbox:checked")).map(el => el.value);
+    }
+
+    function sendRecords(names) {
+        if (!names.length) {
+            alert("Please select at least one draft record.");
+            return;
+        }
+
+        frappe.call({
+            method: "engineering.templates.pages.engineering_legals_list.send_engineering_legals",
+            args: {
+                names: names
+            },
+            callback: function (r) {
+                if (r.exc) {
+                    alert("Send failed");
+                    return;
+                }
+                window.location.reload();
+            },
+            error: function () {
+                alert("Send failed");
+            }
+        });
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener("change", function () {
+            document.querySelectorAll(".record-checkbox").forEach(function (el) {
+                el.checked = selectAll.checked;
+            });
+        });
+    }
+
+    if (sendSelectedBtn) {
+        sendSelectedBtn.addEventListener("click", function () {
+            sendRecords(getCheckedNames());
+        });
+    }
+
+    document.querySelectorAll(".send-one-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            sendRecords([btn.dataset.name]);
+        });
+    });
+})();
+</script>
+{% endblock %}

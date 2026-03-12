@@ -9,6 +9,23 @@ source_link = "http://github.com/buff0k/engineering"
 app_logo_url = "/assets/engineering/images/is-logo.svg"
 app_home = "/desk/engineering"
 
+
+standard_portal_menu_items = [
+    {
+        "title": "Engineering Legals",
+        "route": "/engineering_legals_sup",
+        "reference_doctype": "Engineering Legals",
+        "role": "Supplier",
+    },
+    {
+        "title": "My Engineering Legals",
+        "route": "/engineering_legals_list",
+        "reference_doctype": "Engineering Legals",
+        "role": "Supplier",
+    }
+]
+
+
 add_to_apps_screen = [
     {
         "name": app_name,
@@ -26,6 +43,18 @@ fixtures = [
     {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "Rigid", "Excavator"]]]},
     {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]}
 ]
+
+
+
+# ---------------------------------------------------------------------
+# Website route rules
+# ---------------------------------------------------------------------
+website_route_rules = [
+    {"from_route": "/engineering_legals_sup", "to_route": "engineering_legals_sup"},
+    {"from_route": "/engineering_legals_list", "to_route": "engineering_legals_list"},
+]
+
+
 
 # ---------------------------------------------------------------------
 # Doctype-specific client JS

@@ -121,7 +121,6 @@
    "label": "Lifting Type",
    "options": "Inspection\nCertificate"
   },
-
   {
    "fieldname": "upload_tab",
    "fieldtype": "Tab Break",
@@ -131,7 +130,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-09 12:21:03.646537",
+ "modified": "2026-03-11 11:34:07.821760",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
@@ -164,7 +163,6 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -176,13 +174,23 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Fleet Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Supplier",
    "share": 1,
    "write": 1
   }
