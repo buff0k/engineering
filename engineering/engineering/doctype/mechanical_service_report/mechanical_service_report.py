@@ -40,6 +40,43 @@ class MechanicalServiceReport(Document):
             "breakdown_start_datetime"
         )
 
+        if not breakdown_start:
+            self.total_time_unavailable = 0
+            return
+
+        end_dt = frappe.utils.get_datetime(self.end_time)
+        breakdown_dt = frappe.utils.get_datetime(breakdown_start)
+
+        diff_seconds = (end_dt - breakdown_dt).total_seconds()
+        if diff_seconds < 0:
+            diff_seconds = 0
+
+        self.total_time_unavailable = int(diff_seconds)
+
+
+
+        start_dt = frappe.utils.get_datetime(self.start_time)
+        end_dt = frappe.utils.get_datetime(self.end_time)
+
+        diff_seconds = (end_dt - start_dt).total_seconds()
+        if diff_seconds < 0:
+            frappe.msgprint("MSR End Time is BEFORE MSR Start Time. Please fix start_time/end_time.")
+            diff_seconds = 0
+
+        # Duration expects seconds
+        self.total_time = int(diff_seconds)
+
+    def set_total_time_unavailable(self):
+        if not self.plant_breakdown_number or not self.end_time:
+            self.total_time_unavailable = 0
+            return
+
+        breakdown_start = frappe.db.get_value(
+            "Plant Breakdown or Maintenance",
+            self.plant_breakdown_number,
+            "breakdown_start_datetime"
+        )
+
 
         if not breakdown_start:
             self.total_time_unavailable = 0
@@ -81,3 +118,5 @@ def get_last_preuse_hours(asset: str):
         return result[0].eng_hrs_start
 
     return None
+
+

@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{site}-{sections}-{start_date}-{fleet_number}",
  "creation": "2026-03-12 09:40:17.132693",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -91,10 +92,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 09:49:26.581012",
+ "modified": "2026-03-13 15:59:13.570990",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals supplier Portal Draft",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -106,6 +108,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Supplier",
    "share": 1,
    "write": 1
   }

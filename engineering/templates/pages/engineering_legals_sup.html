@@ -1,6 +1,46 @@
 {% extends "templates/web.html" %}
 
 {% block page_content %}
+<style>
+#engineering-legals-portal .portal-link-wrap {
+    position: relative;
+}
+
+#engineering-legals-portal .portal-link-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #d1d8dd;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+}
+
+#engineering-legals-portal .portal-link-option {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f3f3;
+}
+
+#engineering-legals-portal .portal-link-option:last-child {
+    border-bottom: none;
+}
+
+#engineering-legals-portal .portal-link-option:hover {
+    background: #f7fafc;
+}
+
+#engineering-legals-portal .portal-link-empty {
+    padding: 10px 12px;
+    color: #6c757d;
+}
+</style>
+
 <div class="container my-4" id="engineering-legals-portal">
     <h2>Engineering Legals</h2>
     <p>Supplier upload portal</p>
@@ -18,42 +58,63 @@
 
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label for="sections"><strong>Sections</strong></label>
-                <select class="form-control" id="sections" name="sections" required>
-                    <option value="">Select Section</option>
-                    {% for row in sections_options %}
-                    <option value="{{ row }}" {% if form_values.sections == row %}selected{% endif %}>{{ row }}</option>
-                    {% endfor %}
-                </select>
+                <label for="sections"><strong>Sections <span class="text-danger">*</span></strong></label>
+                <div class="portal-link-wrap">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="sections"
+                        name="sections"
+                        value="{{ form_values.sections }}"
+                        placeholder="Search Section"
+                        autocomplete="off"
+                        required
+                    >
+                    <div id="sections_dropdown" class="portal-link-dropdown"></div>
+                </div>
+                <script type="application/json" id="sections_options_json">{{ sections_options | tojson }}</script>
             </div>
-
             <div class="col-md-6 mb-3">
-                <label for="file_input"><strong>Attach Paper</strong></label>
-                <input type="file" class="form-control" id="file_input" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx">
+                <label for="file_input"><strong>Attach Paper <span class="text-danger">*</span></strong></label>
+
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <label for="file_input" class="btn btn-default btn-sm mb-0" id="attach_paper_btn">
+                        Attach
+                    </label>
+                    <span id="selected_file_name" class="text-muted small">No file chosen</span>
+                </div>
+
+                <input
+                    type="file"
+                    id="file_input"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                    style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;"
+                >
+
                 <small id="upload_status" class="form-text text-muted mt-2"></small>
                 <div id="uploaded_file_link" class="mt-2"></div>
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="site"><strong>Site</strong></label>
-                <input
-                    class="form-control"
-                    id="site"
-                    name="site"
-                    list="site_list"
-                    value="{{ form_values.site }}"
-                    placeholder="Search Site"
-                    required
-                >
-                <datalist id="site_list">
-                    {% for row in site_options %}
-                    <option value="{{ row }}">
-                    {% endfor %}
-                </datalist>
+                <label for="site"><strong>Site <span class="text-danger">*</span></strong></label>
+                <div class="portal-link-wrap">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="site"
+                        name="site"
+                        value="{{ form_values.site }}"
+                        placeholder="Search Site"
+                        autocomplete="off"
+                        required
+                    >
+                    <div id="site_dropdown" class="portal-link-dropdown"></div>
+                </div>
+                <script type="application/json" id="site_options_json">{{ site_options | tojson }}</script>
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="start_date"><strong>Document Start Date</strong></label>
+                <label for="start_date"><strong>Document Start Date <span class="text-danger">*</span></strong></label>
                 <input
                     type="date"
                     class="form-control"
@@ -67,21 +128,21 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="fleet_number"><strong>Fleet Number</strong></label>
-                <input
-                    class="form-control"
-                    id="fleet_number"
-                    name="fleet_number"
-                    list="fleet_number_list"
-                    value="{{ form_values.fleet_number }}"
-                    placeholder="Search Fleet Number"
-                    required
-                >
-                <datalist id="fleet_number_list">
-                    {% for row in fleet_options %}
-                    <option value="{{ row }}">
-                    {% endfor %}
-                </datalist>
+                <label for="fleet_number"><strong>Fleet Number <span class="text-danger">*</span></strong></label>
+                <div class="portal-link-wrap">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="fleet_number"
+                        name="fleet_number"
+                        value="{{ form_values.fleet_number }}"
+                        placeholder="Search Fleet Number"
+                        autocomplete="off"
+                        required
+                    >
+                    <div id="fleet_number_dropdown" class="portal-link-dropdown"></div>
+                </div>
+                <script type="application/json" id="fleet_number_options_json">{{ asset_options | tojson }}</script>
             </div>
 
             <div class="col-md-6 mb-3">
@@ -97,7 +158,7 @@
             </div>
 
             <div class="col-md-6 mb-3" id="vehicle_type_wrap" style="display:none;">
-                <label for="vehicle_type"><strong>Vehicle Type</strong></label>
+                <label for="vehicle_type"><strong>Vehicle Type <span class="text-danger">*</span></strong></label>
                 <select class="form-control" id="vehicle_type" name="vehicle_type">
                     <option value="">Select Vehicle Type</option>
                     <option value="LDV" {% if form_values.vehicle_type == "LDV" %}selected{% endif %}>LDV</option>
@@ -106,7 +167,7 @@
             </div>
 
             <div class="col-md-6 mb-3" id="lifting_type_wrap" style="display:none;">
-                <label for="lifting_type"><strong>Lifting Type</strong></label>
+                <label for="lifting_type"><strong>Lifting Type <span class="text-danger">*</span></strong></label>
                 <select class="form-control" id="lifting_type" name="lifting_type">
                     <option value="">Select Lifting Type</option>
                     <option value="Inspection" {% if form_values.lifting_type == "Inspection" %}selected{% endif %}>Inspection</option>
@@ -125,6 +186,8 @@
 <script>
 (function () {
     const sectionsEl = document.getElementById("sections");
+    const siteEl = document.getElementById("site");
+    const fleetNumberEl = document.getElementById("fleet_number");
     const vehicleTypeEl = document.getElementById("vehicle_type");
     const liftingTypeEl = document.getElementById("lifting_type");
     const startDateEl = document.getElementById("start_date");
@@ -135,8 +198,15 @@
     const attachPaperEl = document.getElementById("attach_paper");
     const uploadStatusEl = document.getElementById("upload_status");
     const uploadedFileLinkEl = document.getElementById("uploaded_file_link");
+    const selectedFileNameEl = document.getElementById("selected_file_name");
     const formEl = document.getElementById("engineering-legals-form");
     const submitBtn = document.getElementById("submit_btn");
+    const sectionsDropdownEl = document.getElementById("sections_dropdown");
+    const siteDropdownEl = document.getElementById("site_dropdown");
+    const fleetNumberDropdownEl = document.getElementById("fleet_number_dropdown");
+    const sectionsOptions = JSON.parse(document.getElementById("sections_options_json").textContent || "[]");
+    const siteOptions = JSON.parse(document.getElementById("site_options_json").textContent || "[]");
+    const fleetNumberOptions = JSON.parse(document.getElementById("fleet_number_options_json").textContent || "[]");
 
     function pad(n) {
         return String(n).padStart(2, "0");
@@ -153,6 +223,64 @@
             pad(d.getDate())
         ].join("-");
     }
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function setupSearchableDropdown(inputEl, dropdownEl, options, onSelect) {
+        function render(filterText) {
+            const term = (filterText || "").trim().toLowerCase();
+            const filtered = options.filter(option =>
+                String(option || "").toLowerCase().includes(term)
+            ).slice(0, 12);
+
+            if (!filtered.length) {
+                dropdownEl.innerHTML = '<div class="portal-link-empty">No matches found</div>';
+                dropdownEl.style.display = "block";
+                return;
+            }
+
+            dropdownEl.innerHTML = filtered.map(option =>
+                '<div class="portal-link-option" data-value="' + escapeHtml(option) + '">' + escapeHtml(option) + '</div>'
+            ).join("");
+
+            dropdownEl.style.display = "block";
+        }
+
+        inputEl.addEventListener("focus", function () {
+            render(inputEl.value);
+        });
+
+        inputEl.addEventListener("input", function () {
+            render(inputEl.value);
+        });
+
+        dropdownEl.addEventListener("mousedown", function (e) {
+            const optionEl = e.target.closest(".portal-link-option");
+            if (!optionEl) return;
+
+            const value = optionEl.getAttribute("data-value");
+            inputEl.value = value;
+            dropdownEl.style.display = "none";
+
+            if (onSelect) onSelect(value);
+        });
+
+        document.addEventListener("click", function (e) {
+            const wrap = inputEl.closest(".portal-link-wrap");
+            if (!wrap.contains(e.target)) {
+                dropdownEl.style.display = "none";
+            }
+        });
+    }
+
+
 
     function applySectionRules() {
         const section = (sectionsEl.value || "").trim();
@@ -267,10 +395,22 @@
     liftingTypeEl.addEventListener("change", setExpiryDate);
     startDateEl.addEventListener("change", setExpiryDate);
 
+    setupSearchableDropdown(sectionsEl, sectionsDropdownEl, sectionsOptions, function () {
+        applySectionRules();
+        setExpiryDate();
+    });
+
+    setupSearchableDropdown(siteEl, siteDropdownEl, siteOptions);
+    setupSearchableDropdown(fleetNumberEl, fleetNumberDropdownEl, fleetNumberOptions);
+
     fileInput.addEventListener("change", async function () {
         const file = fileInput.files[0];
-        if (!file) return;
+        if (!file) {
+            selectedFileNameEl.textContent = "No file chosen";
+            return;
+        }
 
+        selectedFileNameEl.textContent = file.name;
         uploadStatusEl.textContent = "Uploading...";
         uploadedFileLinkEl.innerHTML = "";
         attachPaperEl.value = "";
@@ -280,15 +420,15 @@
             const fileUrl = await uploadFile(file);
             attachPaperEl.value = fileUrl;
             uploadStatusEl.textContent = "Upload complete";
-            uploadedFileLinkEl.innerHTML = '<a href="' + fileUrl + '" target="_blank">' + fileUrl + "</a>";
+            uploadedFileLinkEl.innerHTML = '<a href="' + fileUrl + '" target="_blank">View uploaded file</a>';
         } catch (e) {
             uploadStatusEl.textContent = "Upload failed";
             attachPaperEl.value = "";
+            selectedFileNameEl.textContent = "No file chosen";
         } finally {
             submitBtn.disabled = false;
         }
     });
-
     formEl.addEventListener("submit", function (e) {
         if (!attachPaperEl.value) {
             e.preventDefault();
@@ -301,7 +441,9 @@
     setExpiryDate();
 
     if (attachPaperEl.value) {
-        uploadedFileLinkEl.innerHTML = '<a href="' + attachPaperEl.value + '" target="_blank">' + attachPaperEl.value + "</a>";
+        const existingName = attachPaperEl.value.split("/").pop();
+        selectedFileNameEl.textContent = existingName || "Uploaded file";
+        uploadedFileLinkEl.innerHTML = '<a href="' + attachPaperEl.value + '" target="_blank">View uploaded file</a>';
         uploadStatusEl.textContent = "Existing uploaded file loaded";
     }
 })();

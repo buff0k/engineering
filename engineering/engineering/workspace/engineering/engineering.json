@@ -86,45 +86,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Breakdowns",
-   "link_count": 3,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns (Capture)",
-   "link_count": 0,
-   "link_to": "Plant Breakdown or Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Other Lost Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Daily Lost Hours Recon",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Logsheet Report",
-   "link_count": 0,
-   "link_to": "MSR Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Services ",
    "link_count": 3,
    "link_type": "DocType",
@@ -298,9 +259,58 @@
    "onboard": 0,
    "report_ref_doctype": "Engineering Legals",
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns (Capture)",
+   "link_count": 0,
+   "link_to": "Plant Breakdown or Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Breakdown Report",
+   "link_count": 0,
+   "link_to": "Availability and utilization Asset timeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other Lost Hours (Capture)",
+   "link_count": 0,
+   "link_to": "Daily Lost Hours Recon",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Logsheet Report",
+   "link_count": 0,
+   "link_to": "MSR Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-03-10 16:05:14.899990",
+ "modified": "2026-03-12 14:49:21.913471",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

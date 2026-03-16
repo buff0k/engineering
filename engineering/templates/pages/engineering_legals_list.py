@@ -9,7 +9,8 @@ def get_context(context):
     context.title = "My Engineering Legals"
 
     if frappe.session.user == "Guest":
-        frappe.throw(_("Please log in first."))
+        frappe.local.flags.redirect_location = "/login?redirect-to=/engineering_legals_list"
+        raise frappe.Redirect
 
     if "Supplier" not in frappe.get_roles(frappe.session.user):
         frappe.throw(_("Not permitted."), frappe.PermissionError)

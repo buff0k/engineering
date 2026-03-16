@@ -21,7 +21,8 @@
   "hsec_send",
   "hsec_qual_category_id",
   "hsec_qualification_id_external",
-  "hsec_inserted_at"
+  "hsec_inserted_at",
+  "amended_from"
  ],
  "fields": [
   {
@@ -125,12 +126,23 @@
    "fieldname": "upload_tab",
    "fieldtype": "Tab Break",
    "label": "Upload"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Engineering Legals",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-03-11 11:34:07.821760",
+ "modified": "2026-03-16 06:04:21.208781",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
@@ -159,6 +171,7 @@
    "report": 1,
    "role": "Engineering Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {

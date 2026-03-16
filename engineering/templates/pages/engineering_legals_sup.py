@@ -8,7 +8,8 @@ def get_context(context):
     context.title = "Engineering Legals"
 
     if frappe.session.user == "Guest":
-        frappe.throw(_("Please log in first."))
+        frappe.local.flags.redirect_location = "/login?redirect-to=/engineering_legals_sup"
+        raise frappe.Redirect
 
     if "Supplier" not in frappe.get_roles(frappe.session.user):
         frappe.throw(_("Not permitted."), frappe.PermissionError)
@@ -16,10 +17,9 @@ def get_context(context):
     if frappe.request.method == "POST":
         _handle_post(context)
 
-    context.sections_options = _get_link_options("Engineering Legals Sections")
+    context.sections_options = _get_sections_options()
     context.site_options = _get_recent_site_options()
-    context.fleet_options = _get_recent_fleet_options()
-
+    context.asset_options = _get_asset_options()
     context.form_values = {
         "sections": frappe.form_dict.get("sections") or "",
         "site": frappe.form_dict.get("site") or "",
@@ -52,6 +52,12 @@ def _handle_post(context):
     if not start_date:
         frappe.throw(_("Document Start Date is required."))
 
+    if sections in ["Brake Test", "PDS"] and not vehicle_type:
+        frappe.throw(_("Vehicle Type is required for {0}.").format(sections))
+
+    if sections == "Lifting Equipment" and not lifting_type:
+        frappe.throw(_("Lifting Type is required for Lifting Equipment."))
+
     file_name = frappe.db.get_value("File", {"file_url": attach_paper}, "name")
     if not file_name:
         frappe.throw(_("Attachment is still uploading. Please wait a few seconds and submit again."))
@@ -78,9 +84,9 @@ def _handle_post(context):
     raise frappe.Redirect
 
 
-def _get_link_options(doctype_name):
+def _get_sections_options():
     return frappe.get_all(
-        doctype_name,
+        "Engineering Legals Sections",
         pluck="name",
         order_by="name asc",
         limit_page_length=0,
@@ -97,23 +103,12 @@ def _get_asset_options():
 
 
 def _get_recent_site_options():
-    rows = frappe.get_all(
-        "Engineering Legals",
-        fields=["site"],
-        filters={"site": ["is", "set"]},
-        order_by="modified desc",
-        limit_page_length=20,
+    return frappe.get_all(
+        "Location",
+        pluck="name",
+        order_by="name asc",
+        limit_page_length=0,
     )
-
-    seen = []
-    for row in rows:
-        value = (row.get("site") or "").strip()
-        if value and value not in seen:
-            seen.append(value)
-        if len(seen) == 3:
-            break
-
-    return seen
 
 
 def _get_recent_fleet_options():

@@ -425,7 +425,7 @@ function render_category_summary(report, ctx) {
   ].join("");
 
   const tableRows = (rows || []).map(r => {
-    const recordHref = `/app/engineering-legals/${encodeURIComponent(r.name || "")}`;
+    const recordHref = r.record_url || `/app/engineering-legals/${encodeURIComponent(r.name || "")}`;
     const attachmentHref = (r.attach_paper || "").trim() ? encodeURI(r.attach_paper) : "";
 
     return `
@@ -750,7 +750,7 @@ function render_doc_rows_table(rows) {
       const exp = esc(d.expiry_date ? String(d.expiry_date) : "");
       const mod = esc(d.modified ? String(d.modified) : "");
       const fileUrl = (d.attach_paper || "").trim();
-      const href = fileUrl ? encodeURI(fileUrl) : `/app/engineering-legals/${encodeURIComponent(d.name || "")}`;
+      const href = fileUrl ? encodeURI(fileUrl) : (d.record_url || `/app/engineering-legals/${encodeURIComponent(d.name || "")}`);
 
       return `
         <tr>
