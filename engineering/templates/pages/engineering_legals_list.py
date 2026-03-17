@@ -1,6 +1,7 @@
 import json
 import frappe
 from frappe import _
+from erpnext.controllers.website_list_for_contact import get_customers_suppliers
 
 
 def get_context(context):
@@ -39,6 +40,31 @@ def get_context(context):
 
 
 
+
+
+def _get_user_supplier():
+    customers, suppliers = get_customers_suppliers(
+        "Request for Quotation Supplier",
+        frappe.session.user
+    )
+    return suppliers[0] if suppliers else None
+
+
+def _validate_supplier_asset_access(asset_name):
+    supplier = _get_user_supplier()
+    if not supplier:
+        frappe.throw(_("Your user is not linked to a Supplier."))
+
+    if not frappe.db.exists("Asset", {
+        "name": asset_name,
+        "asset_owner": "Supplier",
+        "supplier": supplier,
+    }):
+        frappe.throw(_("This asset is not linked to your supplier."), frappe.PermissionError)
+
+
+
+
 @frappe.whitelist(allow_guest=False)
 def send_engineering_legals():
     if frappe.session.user == "Guest":
@@ -68,6 +94,8 @@ def send_engineering_legals():
 
         if draft.sent_to_erp:
             continue
+
+        _validate_supplier_asset_access(draft.fleet_number)
 
         erp_doc = frappe.get_doc({
             "doctype": "Engineering Legals",

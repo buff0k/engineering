@@ -54,6 +54,7 @@
 
     <form id="engineering-legals-form" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token or '' }}">
+        <input type="hidden" name="draft_name" value="{{ form_values.draft_name or '' }}">
         <input type="hidden" name="attach_paper" id="attach_paper" value="{{ form_values.attach_paper }}">
 
         <div class="row">

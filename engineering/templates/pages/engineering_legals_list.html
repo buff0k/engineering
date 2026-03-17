@@ -36,18 +36,26 @@
                         <input type="checkbox" class="record-checkbox" value="{{ row.name }}">
                         {% endif %}
                     </td>
-                    <td>{{ row.name }}</td>
+                    <td>
+                        {% if not row.sent_to_erp %}
+                        <a href="/engineering_legals_sup?draft_name={{ row.name }}">{{ row.name }}</a>
+                        {% else %}
+                        {{ row.name }}
+                        {% endif %}
+                    </td>
                     <td>{{ row.sections or "" }}</td>
                     <td>{{ row.site or "" }}</td>
                     <td>{{ row.fleet_number or "" }}</td>
                     <td>{{ row.start_date or "" }}</td>
                     <td>{{ row.expiry_date or "" }}</td>
                     <td>{{ row.status }}</td>
-                    <td class="d-flex gap-2">
+                    <td style="white-space: nowrap;">
                         {% if row.erp_document %}
-                        <span class="text-muted">{{ row.erp_document }}</span>
+                        <span class="text-muted d-block mb-1">{{ row.erp_document }}</span>
                         {% endif %}
+
                         {% if not row.sent_to_erp %}
+                        <a href="/engineering_legals_sup?draft_name={{ row.name }}" class="btn btn-sm btn-primary mr-1">Edit</a>
                         <button type="button" class="btn btn-sm btn-danger send-one-btn" data-name="{{ row.name }}">Send</button>
                         {% endif %}
                     </td>

@@ -1,5 +1,32 @@
 import frappe
 from frappe import _
+from erpnext.controllers.website_list_for_contact import get_customers_suppliers
+
+
+def _get_draft_name():
+    draft_name = (frappe.form_dict.get("draft_name") or "").strip()
+
+    if not draft_name and getattr(frappe.request, "args", None):
+        draft_name = (frappe.request.args.get("draft_name") or "").strip()
+
+    return draft_name
+
+
+def _get_editable_draft():
+    draft_name = _get_draft_name()
+    if not draft_name:
+        return None
+
+    draft = frappe.get_doc("Engineering Legals supplier Portal Draft", draft_name)
+
+    if draft.portal_user != frappe.session.user:
+        frappe.throw(_("You can only edit your own draft."), frappe.PermissionError)
+
+    if draft.sent_to_erp:
+        frappe.throw(_("Submitted records cannot be edited."), frappe.PermissionError)
+
+    return draft
+
 
 
 def get_context(context):
@@ -20,15 +47,19 @@ def get_context(context):
     context.sections_options = _get_sections_options()
     context.site_options = _get_recent_site_options()
     context.asset_options = _get_asset_options()
+
+    draft = _get_editable_draft() if frappe.request.method != "POST" else None
+
     context.form_values = {
-        "sections": frappe.form_dict.get("sections") or "",
-        "site": frappe.form_dict.get("site") or "",
-        "fleet_number": frappe.form_dict.get("fleet_number") or "",
-        "vehicle_type": frappe.form_dict.get("vehicle_type") or "",
-        "lifting_type": frappe.form_dict.get("lifting_type") or "",
-        "attach_paper": frappe.form_dict.get("attach_paper") or "",
-        "start_date": frappe.form_dict.get("start_date") or "",
-        "expiry_date": frappe.form_dict.get("expiry_date") or "",
+        "draft_name": frappe.form_dict.get("draft_name") or (draft.name if draft else ""),
+        "sections": frappe.form_dict.get("sections") or (draft.sections if draft else ""),
+        "site": frappe.form_dict.get("site") or (draft.site if draft else ""),
+        "fleet_number": frappe.form_dict.get("fleet_number") or (draft.fleet_number if draft else ""),
+        "vehicle_type": frappe.form_dict.get("vehicle_type") or (draft.vehicle_type if draft else ""),
+        "lifting_type": frappe.form_dict.get("lifting_type") or (draft.lifting_type if draft else ""),
+        "attach_paper": frappe.form_dict.get("attach_paper") or (draft.attach_paper if draft else ""),
+        "start_date": frappe.form_dict.get("start_date") or (draft.start_date if draft else ""),
+        "expiry_date": frappe.form_dict.get("expiry_date") or (draft.expiry_date if draft else ""),
     }
 
 
@@ -52,6 +83,8 @@ def _handle_post(context):
     if not start_date:
         frappe.throw(_("Document Start Date is required."))
 
+    _validate_supplier_asset_access(fleet_number)
+
     if sections in ["Brake Test", "PDS"] and not vehicle_type:
         frappe.throw(_("Vehicle Type is required for {0}.").format(sections))
 
@@ -62,26 +95,112 @@ def _handle_post(context):
     if not file_name:
         frappe.throw(_("Attachment is still uploading. Please wait a few seconds and submit again."))
 
-    doc = frappe.get_doc(
-        {
-            "doctype": "Engineering Legals supplier Portal Draft",
-            "portal_user": frappe.session.user,
-            "sections": sections,
-            "site": site,
-            "fleet_number": fleet_number,
-            "vehicle_type": vehicle_type or None,
-            "lifting_type": lifting_type or None,
-            "attach_paper": attach_paper,
-            "start_date": start_date,
-            "expiry_date": frappe.form_dict.get("expiry_date") or None,
-            "sent_to_erp": 0,
-        }
-    )
+    draft_name = _get_draft_name()
 
-    doc.insert(ignore_permissions=True)
+    if draft_name:
+        doc = frappe.get_doc("Engineering Legals supplier Portal Draft", draft_name)
+
+        if doc.portal_user != frappe.session.user:
+            frappe.throw(_("You can only edit your own draft."), frappe.PermissionError)
+
+        if doc.sent_to_erp:
+            frappe.throw(_("Submitted records cannot be edited."), frappe.PermissionError)
+    else:
+        doc = frappe.get_doc(
+            {
+                "doctype": "Engineering Legals supplier Portal Draft",
+                "portal_user": frappe.session.user,
+                "sent_to_erp": 0,
+            }
+        )
+
+    doc.sections = sections
+    doc.site = site
+    doc.fleet_number = fleet_number
+    doc.vehicle_type = vehicle_type or None
+    doc.lifting_type = lifting_type or None
+    doc.attach_paper = attach_paper
+    doc.start_date = start_date
+    doc.expiry_date = frappe.form_dict.get("expiry_date") or None
+
+    if draft_name:
+        doc.save(ignore_permissions=True)
+    else:
+        doc.insert(ignore_permissions=True)
 
     frappe.local.flags.redirect_location = "/engineering_legals_list"
     raise frappe.Redirect
+
+
+
+
+def _get_user_supplier():
+    customers, suppliers = get_customers_suppliers(
+        "Request for Quotation Supplier",
+        frappe.session.user
+    )
+    return suppliers[0] if suppliers else None
+
+
+def _get_supplier_asset_filters():
+    supplier = _get_user_supplier()
+    if not supplier:
+        return None
+
+    return {
+        "asset_owner": "Supplier",
+        "supplier": supplier,
+    }
+
+
+def _validate_supplier_asset_access(asset_name):
+    supplier = _get_user_supplier()
+    if not supplier:
+        frappe.throw(_("Your user is not linked to a Supplier."))
+
+    if not frappe.db.exists("Asset", {
+        "name": asset_name,
+        "asset_owner": "Supplier",
+        "supplier": supplier,
+    }):
+        frappe.throw(_("This asset is not linked to your supplier."), frappe.PermissionError)
+
+
+def _get_asset_options():
+    filters = _get_supplier_asset_filters()
+    if not filters:
+        return []
+
+    return frappe.get_all(
+        "Asset",
+        filters=filters,
+        pluck="name",
+        order_by="name asc",
+        limit_page_length=0,
+    )
+
+
+def _get_recent_site_options():
+    filters = _get_supplier_asset_filters()
+    if not filters:
+        return []
+
+    rows = frappe.get_all(
+        "Asset",
+        filters=filters,
+        fields=["location"],
+        order_by="location asc",
+        limit_page_length=0,
+    )
+
+    seen = []
+    for row in rows:
+        value = (row.get("location") or "").strip()
+        if value and value not in seen:
+            seen.append(value)
+
+    return seen
+
 
 
 def _get_sections_options():
@@ -93,39 +212,3 @@ def _get_sections_options():
     )
 
 
-def _get_asset_options():
-    return frappe.get_all(
-        "Asset",
-        pluck="name",
-        order_by="name asc",
-        limit_page_length=0,
-    )
-
-
-def _get_recent_site_options():
-    return frappe.get_all(
-        "Location",
-        pluck="name",
-        order_by="name asc",
-        limit_page_length=0,
-    )
-
-
-def _get_recent_fleet_options():
-    rows = frappe.get_all(
-        "Engineering Legals",
-        fields=["fleet_number"],
-        filters={"fleet_number": ["is", "set"]},
-        order_by="modified desc",
-        limit_page_length=20,
-    )
-
-    seen = []
-    for row in rows:
-        value = (row.get("fleet_number") or "").strip()
-        if value and value not in seen:
-            seen.append(value)
-        if len(seen) == 3:
-            break
-
-    return seen
