@@ -7,10 +7,10 @@
  "docstatus": 0,
  "doctype": "Report",
  "filters": [],
- "idx": 0,
+ "idx": 1,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-03-10 10:19:47.692218",
+ "modified": "2026-03-16 21:58:47.909346",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and utilization Asset timeline",
@@ -19,6 +19,22 @@
  "ref_doctype": "Breakdown History",
  "report_name": "Availability and utilization Asset timeline",
  "report_type": "Script Report",
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Production User"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering User"
+  }
+ ],
  "timeout": 0
 }

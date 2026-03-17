@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"BWQCk7rvMc\",\"type\":\"card\",\"data\":{\"card_name\":\"Breakdowns\",\"col\":4}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"Pp7z5uyrsj\",\"type\":\"card\",\"data\":{\"card_name\":\"Job & Components\",\"col\":5}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"Pp7z5uyrsj\",\"type\":\"card\",\"data\":{\"card_name\":\"Job & Components\",\"col\":5}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
  "creation": "2024-12-11 11:58:53.866876",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,71 +16,24 @@
  "links": [
   {
    "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plant Maintenance",
-   "link_count": 6,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset",
+   "is_query_report": 1,
+   "label": "Avail & Util Report",
    "link_count": 0,
-   "link_to": "Asset",
-   "link_type": "DocType",
+   "link_to": "Availability & Utilisation- Monthly",
+   "link_type": "Report",
    "onboard": 0,
+   "report_ref_doctype": "Availability and Utilisation",
    "type": "Link"
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset Movement",
+   "is_query_report": 1,
+   "label": "Engineering Legals Report",
    "link_count": 0,
-   "link_to": "Asset Movement",
-   "link_type": "DocType",
+   "link_to": "Engineering Legals Report",
+   "link_type": "Report",
    "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset Maintenance",
-   "link_count": 0,
-   "link_to": "Asset Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset Repair",
-   "link_count": 0,
-   "link_to": "Asset Repair",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Item",
-   "link_count": 0,
-   "link_to": "Item",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plant Technical Specification",
-   "link_count": 0,
-   "link_to": "Plant Technical Specification",
-   "link_type": "DocType",
-   "onboard": 0,
+   "report_ref_doctype": "Engineering Legals",
    "type": "Link"
   },
   {
@@ -130,17 +83,6 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Avail & Util Report",
-   "link_count": 0,
-   "link_to": "Availability & Utilisation- Monthly",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Availability and Utilisation",
-   "type": "Link"
   },
   {
    "hidden": 0,
@@ -233,45 +175,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Legals",
-   "link_count": 2,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals (Capture)",
-   "link_count": 0,
-   "link_to": "Engineering Legals",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals Report",
-   "link_count": 0,
-   "link_to": "Engineering Legals Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Engineering Legals",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Breakdowns (Capture)",
    "link_count": 0,
    "link_to": "Plant Breakdown or Maintenance",
@@ -308,9 +211,107 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Legals",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Legals (Capture)",
+   "link_count": 0,
+   "link_to": "Engineering Legals",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Engineering Legals Report",
+   "link_count": 0,
+   "link_to": "Engineering Legals Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Maintenance",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset",
+   "link_count": 0,
+   "link_to": "Asset",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Movement",
+   "link_count": 0,
+   "link_to": "Asset Movement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Maintenance",
+   "link_count": 0,
+   "link_to": "Asset Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Repair",
+   "link_count": 0,
+   "link_to": "Asset Repair",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plant Technical Specification",
+   "link_count": 0,
+   "link_to": "Plant Technical Specification",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-03-12 14:49:21.913471",
+ "modified": "2026-03-17 05:45:37.117736",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
