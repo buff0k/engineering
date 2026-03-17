@@ -48,13 +48,13 @@
    "fieldname": "vehicle_type",
    "fieldtype": "Select",
    "label": "vehicle_type",
-   "options": "LDV\nLDV\\TMM"
+   "options": "LDV\nTMM"
   },
   {
    "fieldname": "lifting_type",
    "fieldtype": "Select",
    "label": "lifting_type",
-   "options": "Inspection\\nCertificat"
+   "options": "Inspection\nCertificate"
   },
   {
    "fieldname": "attach_paper",
@@ -92,7 +92,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-13 15:59:13.570990",
+ "modified": "2026-03-17 10:34:57.065557",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals supplier Portal Draft",
