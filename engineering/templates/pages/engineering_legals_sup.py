@@ -45,7 +45,7 @@ def get_context(context):
         _handle_post(context)
 
     context.sections_options = _get_sections_options()
-    context.site_options = _get_recent_site_options()
+    context.site_options = _get_all_site_options()
     context.asset_options = _get_asset_options()
 
     draft = _get_editable_draft() if frappe.request.method != "POST" else None
@@ -180,26 +180,13 @@ def _get_asset_options():
     )
 
 
-def _get_recent_site_options():
-    filters = _get_supplier_asset_filters()
-    if not filters:
-        return []
-
-    rows = frappe.get_all(
-        "Asset",
-        filters=filters,
-        fields=["location"],
-        order_by="location asc",
+def _get_all_site_options():
+    return frappe.get_all(
+        "Location",
+        pluck="name",
+        order_by="name asc",
         limit_page_length=0,
     )
-
-    seen = []
-    for row in rows:
-        value = (row.get("location") or "").strip()
-        if value and value not in seen:
-            seen.append(value)
-
-    return seen
 
 
 
