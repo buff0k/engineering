@@ -15,10 +15,9 @@ frappe.ui.form.on('Engineering Legals', {
     // populate HSEC external code from selected section
     frm.set_value('hsec_qualification_id_external', section || null);
 
-    // Brake Test must send to HSEC
-    if (section === 'Brake Test') {
-      frm.set_value('hsec_send', 1);
-    }
+    // Auto-send only for HSEC sections
+    const HSEC_SEND_SECTIONS = ['Brake Test', 'FRCS'];
+    frm.set_value('hsec_send', HSEC_SEND_SECTIONS.includes(section) ? 1 : 0);
 
     apply_section_rules(frm);
     apply_hsec_rules(frm);

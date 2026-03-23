@@ -96,9 +96,9 @@ class EngineeringLegals(Document):
         # Always populate external qualification code from Sections
         self.hsec_qualification_id_external = section or None
 
-        # Brake Test must always send to HSEC
-        if section == "Brake Test":
-            self.hsec_send = 1
+        # Auto-send only for HSEC sections
+        HSEC_SEND_SECTIONS = {"Brake Test", "FRCS"}
+        self.hsec_send = 1 if section in HSEC_SEND_SECTIONS else 0
 
         if getattr(self, "hsec_send", 0):
             # Required by HSEC: Qualification_ID_External
