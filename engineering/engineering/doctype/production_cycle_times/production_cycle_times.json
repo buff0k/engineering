@@ -1,0 +1,154 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{date}-{shift}-{excavator}",
+ "creation": "2026-03-24 06:57:55.785307",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "measurer_name",
+  "measurer_full_name",
+  "shift",
+  "date",
+  "time",
+  "mining_area",
+  "material_type",
+  "material_loaded",
+  "excavator",
+  "cycle_rows"
+ ],
+ "fields": [
+  {
+   "fieldname": "measurer_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Measurer Name",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "measurer_full_name",
+   "fieldtype": "Read Only",
+   "label": "Measurer Full Name"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Day Shift\nNight Shift",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time",
+   "fieldtype": "Time",
+   "label": "Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mining_area",
+   "fieldtype": "Data",
+   "label": "Mining Area",
+   "reqd": 1
+  },
+  {
+   "fieldname": "material_type",
+   "fieldtype": "Select",
+   "label": "Material Type",
+   "options": "Softs\nHards\nCoal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "material_loaded",
+   "fieldtype": "Select",
+   "label": "Material Loaded",
+   "options": "B Seam Coal\nC Seam Coal\nInterburden\nB# Hards\nC# Hards\nTopsoil\n4 Seam Coal\n2 Seam Coal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "excavator",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Excavator",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cycle_rows",
+   "fieldtype": "Table",
+   "label": "Cycle Rows",
+   "options": "Production Cycle Time Row",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-24 07:11:54.292863",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Production Cycle Times",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
