@@ -124,6 +124,11 @@ doc_events = {
     },
     "Engineering Legals": {
         "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_update",
+        "on_trash": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_trash",
+    },
+    "File": {
+        "after_insert": "engineering.engineering.doctype.engineering_legals.engineering_legals.sync_engineering_legals_from_file",
+        "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.sync_engineering_legals_from_file",
     },
     "OEM Booking": {
         "on_update": "engineering.controllers.notifications.oem_booking_on_update",

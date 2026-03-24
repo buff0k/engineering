@@ -58,7 +58,7 @@ def execute(filters=None):
     columns = _get_columns(max_slots)
 
     assets = _get_assets(site, asset_category)
-    hourly_presence_map, hourly_selected_map = _get_hourly_maps(
+    hourly_presence_map, hourly_active_map = _get_hourly_activity_maps(
         site=site,
         start_date=start_date,
         end_date=end_date,
@@ -119,8 +119,8 @@ def execute(filters=None):
                     elif _is_green_standby_candidate(asset_cat):
                         # Standby only for exact hours that exist in Hourly Production
                         if hs in hourly_presence_map:
-                            selected_assets = hourly_selected_map.get(hs, set())
-                            if not (asset_keys & selected_assets):
+                            active_assets = hourly_active_map.get(hs, set())
+                            if not (asset_keys & active_assets):
                                 cell_value = "G"
 
                 row[f"h_{i:02d}"] = cell_value
@@ -184,9 +184,7 @@ def _get_columns(slot_count):
             }
         )
 
-    cols.append(
-        {"label": "", "fieldname": "end_marker", "fieldtype": "Data", "width": 30}
-    )
+    cols.append({"label": "", "fieldname": "end_marker", "fieldtype": "Data", "width": 30})
     return cols
 
 
@@ -522,12 +520,28 @@ def _get_breakdown_history_intervals(
     return intervals
 
 
-def _get_hourly_maps(site, start_date, end_date):
+def _get_hourly_activity_maps(site, start_date, end_date):
+    """
+    Build two maps:
+    1) presence_map: exact Hourly Production hours that exist
+    2) active_map: exact assets that are active in that hour
+
+    IMPORTANT:
+    A truck row exists for every truck, so a truck is only active if it has real activity.
+    Mirror Hourly Production logic:
+      loads > 0 OR
+      bcms > 0 OR
+      asset_name_shoval present OR
+      excavator_plant_no present OR
+      mining_areas_trucks present OR
+      geo_mat_layer_truck present
+    Excavators are active when assigned.
+    """
     presence_map = set()
-    selected_map = defaultdict(set)
+    active_map = defaultdict(set)
 
     if not frappe.db.exists("DocType", "Hourly Production"):
-        return presence_map, selected_map
+        return presence_map, active_map
 
     buffered_end_date = add_days(end_date, 1)
 
@@ -557,7 +571,7 @@ def _get_hourly_maps(site, start_date, end_date):
         presence_map.add(slot_start)
 
     if not hourly_docs:
-        return presence_map, selected_map
+        return presence_map, active_map
 
     if frappe.db.exists("DocType", "Truck Loads"):
         tl_rows = frappe.db.sql(
@@ -565,7 +579,13 @@ def _get_hourly_maps(site, start_date, end_date):
             select
                 parent,
                 asset_name_truck,
-                asset_name_shoval
+                truck_plant_no,
+                asset_name_shoval,
+                excavator_plant_no,
+                loads,
+                bcms,
+                mining_areas_trucks,
+                geo_mat_layer_truck
             from `tabTruck Loads`
             where parenttype = 'Hourly Production'
               and parentfield = 'truck_loads'
@@ -580,12 +600,30 @@ def _get_hourly_maps(site, start_date, end_date):
             if not slot_start:
                 continue
 
-            for value in [r.get("asset_name_truck"), r.get("asset_name_shoval")]:
-                normalized = _normalize_asset_value(value)
-                if normalized:
-                    selected_map[slot_start].add(normalized)
+            truck_keys = _asset_match_keys(r.get("asset_name_truck"), r.get("truck_plant_no"))
+            excavator_keys = _asset_match_keys(r.get("asset_name_shoval"), r.get("excavator_plant_no"))
 
-    return presence_map, selected_map
+            loads = float(r.get("loads") or 0)
+            bcms = float(r.get("bcms") or 0)
+
+            has_activity = bool(
+                loads > 0
+                or bcms > 0
+                or (r.get("asset_name_shoval") or "").strip()
+                or (r.get("excavator_plant_no") or "").strip()
+                or (r.get("mining_areas_trucks") or "").strip()
+                or (r.get("geo_mat_layer_truck") or "").strip()
+            )
+
+            if has_activity:
+                for key in truck_keys:
+                    active_map[slot_start].add(key)
+
+            if (r.get("asset_name_shoval") or "").strip() or (r.get("excavator_plant_no") or "").strip():
+                for key in excavator_keys:
+                    active_map[slot_start].add(key)
+
+    return presence_map, active_map
 
 
 def _get_slot_start_datetime(prod_date, hour_slot):
@@ -616,19 +654,20 @@ def _normalize_asset_value(value):
     return (value or "").strip().lower()
 
 
-def _asset_match_keys(asset_id, plant_no):
+def _asset_match_keys(*values):
     keys = set()
-    if asset_id:
-        keys.add(_normalize_asset_value(asset_id))
-    if plant_no:
-        keys.add(_normalize_asset_value(plant_no))
-    return {k for k in keys if k}
+    for value in values:
+        normalized = _normalize_asset_value(value)
+        if normalized:
+            keys.add(normalized)
+    return keys
 
 
 def _is_green_standby_candidate(asset_category):
     cat = (asset_category or "").strip().lower()
     return (
         "adt" in cat
+        or "rigid" in cat
         or "excavat" in cat
         or "shovel" in cat
         or "shoval" in cat

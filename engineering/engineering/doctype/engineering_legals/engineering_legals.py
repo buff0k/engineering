@@ -487,6 +487,39 @@ def _get_or_create_drive_folder(title: str, parent_entity: Optional[str], team: 
 # engineering.engineering.doctype.engineering_legals.engineering_legals.on_update)
 # -------------------------------------------------------------------
 
+
+
+def sync_engineering_legals_from_file(file_doc, method=None):
+    try:
+        if getattr(file_doc, "is_folder", 0):
+            return
+
+        if getattr(file_doc, "attached_to_doctype", None) != "Engineering Legals":
+            return
+
+        attached_name = getattr(file_doc, "attached_to_name", None)
+        if not attached_name:
+            return
+
+        doc = frappe.get_doc("Engineering Legals", attached_name)
+
+        # Keep parent doc attach field aligned with actual file row
+        if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
+            doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
+            doc.reload()
+
+        move_engineering_legal_file_to_folder(doc)
+        create_drive_link_for_engineering_legals(doc)
+
+    except Exception:
+        frappe.log_error(
+            title="Engineering Legals file-trigger sync failed",
+            message=frappe.get_traceback(),
+        )
+
+
+
+
 def on_update(doc, method=None):
     try:
         move_engineering_legal_file_to_folder(doc)

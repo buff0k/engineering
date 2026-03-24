@@ -175,7 +175,7 @@ function render_timeline_legend(report) {
             </div>
             <div class="au-legend-item">
                 <span class="au-legend-box au-legend-standby"></span>
-                <span class="au-legend-text">GREEN = ADT / Excavator standby for the exact Hourly Production hour</span>
+                <span class="au-legend-text">GREEN = standby for the exact Hourly Production hour</span>
             </div>
             <div class="au-legend-item">
                 <span class="au-legend-box au-legend-empty"></span>
