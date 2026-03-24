@@ -218,22 +218,21 @@ def move_engineering_legal_file_to_folder(doc: Document):
 
     file_doc = frappe.get_doc("File", file_doc.name)
 
-    if file_doc.is_private:
-        file_doc.is_private = 0
-        file_doc.save(ignore_permissions=True)
+    file_doc.reload()
 
-        if file_doc.file_url.startswith("/private/files/"):
+    if file_doc.is_private:
+        file_doc.db_set("is_private", 0, update_modified=False)
+
+        if file_doc.file_url and file_doc.file_url.startswith("/private/files/"):
             new_url = file_doc.file_url.replace("/private/files/", "/files/")
-            file_doc.file_url = new_url
-            file_doc.save(ignore_permissions=True)
-            doc.db_set("attach_paper", new_url)
-            frappe.db.commit()
+            file_doc.db_set("file_url", new_url, update_modified=False)
+            doc.db_set("attach_paper", new_url, update_modified=False)
+            file_doc.reload()
 
     if file_doc.folder == target_folder_name:
         return
 
-    file_doc.folder = target_folder_name
-    file_doc.save(ignore_permissions=True)
+    file_doc.db_set("folder", target_folder_name, update_modified=False)
 
 
 
@@ -521,14 +520,9 @@ def sync_engineering_legals_from_file(file_doc, method=None):
 
 
 def on_update(doc, method=None):
-    try:
-        move_engineering_legal_file_to_folder(doc)
-        create_drive_link_for_engineering_legals(doc)
-    except Exception:
-        frappe.log_error(
-            title="Engineering Legals Drive sync failed",
-            message=frappe.get_traceback(),
-        )
+    # Do nothing here.
+    # File syncing must happen from File hooks after the attachment exists.
+    pass
 
 def on_trash(doc, method=None):
     pass

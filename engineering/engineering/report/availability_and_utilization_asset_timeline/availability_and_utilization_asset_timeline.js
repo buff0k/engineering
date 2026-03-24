@@ -179,7 +179,7 @@ function render_timeline_legend(report) {
             </div>
             <div class="au-legend-item">
                 <span class="au-legend-box au-legend-empty"></span>
-                <span class="au-legend-text">WHITE = nothing captured</span>
+                <span class="au-legend-text">WHITE = working</span>
             </div>
         </div>
     `;
