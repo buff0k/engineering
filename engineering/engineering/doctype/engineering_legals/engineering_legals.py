@@ -500,9 +500,17 @@ def sync_engineering_legals_from_file(file_doc, method=None):
         if not attached_name:
             return
 
+        # Upload happens before the new Engineering Legals doc is inserted.
+        # Skip silently for temporary unsaved names like:
+        # new-engineering-legals-xxxxxxxxxx
+        if str(attached_name).startswith("new-engineering-legals-"):
+            return
+
+        if not frappe.db.exists("Engineering Legals", attached_name):
+            return
+
         doc = frappe.get_doc("Engineering Legals", attached_name)
 
-        # Keep parent doc attach field aligned with actual file row
         if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
             doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
             doc.reload()
