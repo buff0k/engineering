@@ -56,16 +56,12 @@ frappe.query_reports["Availability and utilization Asset timeline"] = {
     onload: function (report) {
         inject_timeline_styles();
         render_timeline_legend(report);
-
-        // expose popup globally so onclick from HTML works
         window.show_bd_popup = show_bd_popup;
     },
 
     refresh: function (report) {
         inject_timeline_styles();
         render_timeline_legend(report);
-
-        // keep popup globally available after refresh
         window.show_bd_popup = show_bd_popup;
     },
 
@@ -86,8 +82,12 @@ frappe.query_reports["Availability and utilization Asset timeline"] = {
         }
 
         if (typeof raw === "string" && raw.startsWith("B::")) {
-            const docname = raw.split("B::")[1] || "";
+            const parts = raw.split("::");
+            const docname = parts[1] || "";
+            const downtimeType = parts[2] || "Engineering Details";
+
             const safe_docname = String(docname).replace(/'/g, "\\'");
+            const safe_downtime_type = String(downtimeType).replace(/'/g, "\\'");
             const slot_label = String(column.label || "").replace(/'/g, "\\'");
 
             return `
@@ -95,26 +95,30 @@ frappe.query_reports["Availability and utilization Asset timeline"] = {
                     <button
                         type="button"
                         class="au-bd-btn"
-                        onclick="window.show_bd_popup('${safe_docname}', '${slot_label}')"
+                        onclick="window.show_bd_popup('${safe_docname}', '${slot_label}', '${safe_downtime_type}')"
+                        title="${frappe.utils.escape_html(downtimeType)}"
                     >
-                        B/D Detail
+                        ${frappe.utils.escape_html(downtimeType)}
                     </button>
                 </div>
             `;
         }
 
         if (raw === "S") {
-            return `<div class="au-cell au-cell-startup"></div>`;
+            return `<div class="au-cell au-cell-startup" title="Startup"></div>`;
         }
 
         if (raw === "F") {
-            return `<div class="au-cell au-cell-fatigue"></div>`;
+            return `<div class="au-cell au-cell-fatigue" title="Fatigue"></div>`;
+        }
+
+        if (raw === "G") {
+            return `<div class="au-cell au-cell-standby" title="Standby">Standby</div>`;
         }
 
         return `<div class="au-cell au-cell-empty"></div>`;
     }
 };
-
 
 let au_report_refresh_timer = null;
 
@@ -128,8 +132,6 @@ function schedule_report_refresh(query_report) {
         if (!filters.site || !filters.start_date || !filters.end_date) {
             return;
         }
-
-        // immediate refresh without user hard refresh
         query_report.refresh();
     }, 100);
 }
@@ -149,8 +151,7 @@ function render_timeline_legend(report) {
     }
 
     const page = report.page;
-    const wrapper =
-        page.main && page.main.parent ? page.main.parent() : null;
+    const wrapper = page.main && page.main.parent ? page.main.parent() : null;
 
     if (!wrapper || !wrapper.length) {
         return;
@@ -170,7 +171,11 @@ function render_timeline_legend(report) {
             </div>
             <div class="au-legend-item">
                 <span class="au-legend-box au-legend-breakdown"></span>
-                <span class="au-legend-text">RED = B/D Detail button</span>
+                <span class="au-legend-text">RED = Engineering / Maintenance / Breakdown</span>
+            </div>
+            <div class="au-legend-item">
+                <span class="au-legend-box au-legend-standby"></span>
+                <span class="au-legend-text">GREEN = ADT / Excavator standby for the exact Hourly Production hour</span>
             </div>
             <div class="au-legend-item">
                 <span class="au-legend-box au-legend-empty"></span>
@@ -179,11 +184,10 @@ function render_timeline_legend(report) {
         </div>
     `;
 
-    // place legend directly under filters/header area
     wrapper.find(".report-wrapper, .layout-main-section").first().before(legend_html);
 }
 
-function show_bd_popup(docname, slot_label) {
+function show_bd_popup(docname, slot_label, downtimeType) {
     if (!docname) {
         frappe.msgprint("Breakdown document not found.");
         return;
@@ -213,9 +217,12 @@ function show_bd_popup(docname, slot_label) {
                         <strong>${frappe.utils.escape_html(doc.name || "")}</strong>
                     </div>
 
-                    <div style="margin-bottom:12px;">
+                    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
                         <span style="display:inline-block;padding:4px 10px;border-radius:12px;background:#f5f5f5;color:#333;font-size:12px;">
                             Hour Slot: ${frappe.utils.escape_html(slot_label || "")}
+                        </span>
+                        <span style="display:inline-block;padding:4px 10px;border-radius:12px;background:#ffe5e5;color:#b30000;font-size:12px;">
+                            Downtime Type: ${frappe.utils.escape_html(doc.downtime_type || downtimeType || "")}
                         </span>
                     </div>
 
@@ -279,7 +286,7 @@ function show_bd_popup(docname, slot_label) {
             `;
 
             const dialog = new frappe.ui.Dialog({
-                title: `B/D Detail${slot_label ? " - " + slot_label : ""}`,
+                title: `Engineering Details${slot_label ? " - " + slot_label : ""}`,
                 size: "large",
                 fields: [
                     {
@@ -350,6 +357,11 @@ function inject_timeline_styles() {
             border-color: #d00000;
         }
 
+        .au-legend-standby {
+            background: #2ecc71;
+            border-color: #1f9d55;
+        }
+
         .au-legend-empty {
             background: #ffffff;
             border-color: #d1d8dd;
@@ -388,12 +400,22 @@ function inject_timeline_styles() {
             padding: 0;
         }
 
+        .au-cell-standby {
+            background: #2ecc71;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
         .au-bd-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             height: 18px;
-            min-width: 72px;
+            min-width: 110px;
+            max-width: 100%;
             padding: 0 8px;
             border: 0;
             border-radius: 2px;
@@ -403,6 +425,9 @@ function inject_timeline_styles() {
             line-height: 1;
             cursor: pointer;
             margin: auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .au-bd-btn:hover {

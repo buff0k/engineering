@@ -5,13 +5,9 @@ import frappe
 from frappe.utils import add_days, get_datetime, getdate
 
 
-# Default window start
 START_HOUR = 6
-
-# Based on your AU engine: breakdown_status == "3" means resolved
 RESOLVED_STATUS = "3"
 
-# Saturday site rules
 SATURDAY_15_00_SITES = {
     "uitgevallen",
     "koppie",
@@ -24,11 +20,9 @@ SATURDAY_18_06_SITES = {
     "gwab",
 }
 
-# Fatigue rules
 FATIGUE_13_1330 = {"uitgevallen", "koppie", "bankfontein"}
 FATIGUE_13_14 = {"gwab", "klipfontein", "kriel", "kriel rehabilitation"}
 
-# Saturday special fatigue sites
 SATURDAY_SPECIAL_FATIGUE_1330 = {
     "uitgevallen",
     "kriel rehabilitation",
@@ -48,6 +42,7 @@ def execute(filters=None):
             or ""
         )
     ).strip()
+
     if not site:
         frappe.throw("Site is required (set the Site filter at the top of the report).")
 
@@ -55,16 +50,22 @@ def execute(filters=None):
 
     start_date = getdate(filters.get("start_date"))
     end_date = getdate(filters.get("end_date") or filters.get("start_date"))
+
     if end_date < start_date:
         frappe.throw("End Date must be >= Start Date")
 
     max_slots = _get_max_slots_for_range(site, start_date, end_date)
     columns = _get_columns(max_slots)
 
+    assets = _get_assets(site, asset_category)
+    hourly_presence_map, hourly_selected_map = _get_hourly_maps(
+        site=site,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
     data = []
     row_no = 1
-
-    asset_list = _get_assets(site, asset_category)
     show_date_in_asset = start_date != end_date
 
     d = start_date
@@ -79,35 +80,48 @@ def execute(filters=None):
 
         intervals_map = _get_breakdown_intervals_map(
             site=site,
-            asset_list=asset_list,
+            asset_list=[a["plant_no"] for a in assets],
             window_start=window_start,
             window_end=window_end,
         )
 
-        for plant_no in asset_list:
-            breakdown_intervals = intervals_map.get(plant_no) or []
+        for asset in assets:
+            asset_id = asset.get("asset_id") or ""
+            plant_no = asset.get("plant_no") or asset_id
+            asset_cat = (asset.get("asset_category") or "").strip()
+            asset_keys = _asset_match_keys(asset_id, plant_no)
 
-            asset_label = plant_no
+            breakdown_intervals = intervals_map.get(plant_no) or intervals_map.get(asset_id) or []
+
+            display_asset = plant_no
             if show_date_in_asset:
-                asset_label = f"{plant_no} ({d})"
+                display_asset = f"{plant_no} ({d})"
 
-            row = {"no": row_no, "asset": asset_label}
+            row = {"no": row_no, "asset": display_asset}
 
             for i, (hs, he) in enumerate(_hour_slots(window_start, slot_count)):
                 cell_value = ""
 
-                # Fixed windows always win:
-                # Startup > Fatigue > Breakdown > Blank
                 if _overlaps_any(hs, he, fixed["startup"]):
                     cell_value = "S"
+
                 elif _overlaps_any(hs, he, fixed["fatigue"]):
                     cell_value = "F"
+
                 else:
-                    breakdown_docname = _get_breakdown_doc_for_slot(
-                        hs, he, breakdown_intervals
-                    )
-                    if breakdown_docname:
-                        cell_value = f"B::{breakdown_docname}"
+                    breakdown_info = _get_breakdown_doc_for_slot(hs, he, breakdown_intervals)
+
+                    if breakdown_info:
+                        breakdown_docname = breakdown_info.get("parent_breakdown") or ""
+                        downtime_type = breakdown_info.get("downtime_type") or ""
+                        cell_value = f"B::{breakdown_docname}::{downtime_type}"
+
+                    elif _is_green_standby_candidate(asset_cat):
+                        # Standby only for exact hours that exist in Hourly Production
+                        if hs in hourly_presence_map:
+                            selected_assets = hourly_selected_map.get(hs, set())
+                            if not (asset_keys & selected_assets):
+                                cell_value = "G"
 
                 row[f"h_{i:02d}"] = cell_value
 
@@ -134,17 +148,6 @@ def _get_max_slots_for_range(site, start_date, end_date):
 
 
 def _get_window_config(site, shift_date):
-    """
-    Saturday special:
-      Uitgevallen / Koppie / Kriel Rehabilitation / Bankfontein
-        06:00 -> 00:00  (18 slots)
-
-      Klipfontein / Gwab
-        06:00 -> 06:00 next day (24 slots)
-
-    Other days:
-        06:00 -> 06:00 next day (24 slots)
-    """
     loc = (site or "").strip().lower()
     window_start = get_datetime(f"{shift_date} {START_HOUR:02d}:00:00")
 
@@ -188,6 +191,8 @@ def _get_columns(slot_count):
 
 
 def _get_assets(site, asset_category):
+    assets = []
+
     if frappe.db.exists("DocType", "Asset"):
         try:
             meta = frappe.get_meta("Asset")
@@ -202,33 +207,59 @@ def _get_assets(site, asset_category):
             rows = frappe.get_all(
                 "Asset",
                 filters=filters,
-                fields=["name", "asset_name"],
+                fields=["name", "asset_name", "asset_category"],
                 order_by="asset_name asc",
             )
 
-            out = []
             for r in rows:
-                plant_no = (r.get("name") or "").strip()
-                if plant_no:
-                    out.append(plant_no)
+                asset_id = (r.get("name") or "").strip()
+                if not asset_id:
+                    continue
 
-            if out:
-                return out
+                plant_no = (r.get("asset_name") or asset_id).strip()
+
+                assets.append(
+                    {
+                        "asset_id": asset_id,
+                        "plant_no": plant_no,
+                        "asset_category": (r.get("asset_category") or "").strip(),
+                    }
+                )
+
+            if assets:
+                return assets
         except Exception:
             pass
 
     rows = frappe.db.sql(
         """
-        select distinct asset_name
+        select distinct
+            asset_name,
+            asset_category
         from `tabPlant Breakdown or Maintenance`
         where location = %s
           and ifnull(asset_name, '') != ''
+          and (%s = '' or ifnull(asset_category, '') = %s)
         order by asset_name asc
         """,
-        (site,),
+        (site, asset_category, asset_category),
         as_dict=True,
     )
-    return [r["asset_name"] for r in rows]
+
+    for r in rows:
+        plant_no = (r.get("asset_name") or "").strip()
+        if not plant_no:
+            continue
+
+        assets.append(
+            {
+                "asset_id": plant_no,
+                "plant_no": plant_no,
+                "asset_category": (r.get("asset_category") or "").strip(),
+            }
+        )
+
+    return assets
 
 
 def _get_shift_system(site, shift_date):
@@ -283,15 +314,10 @@ def _fixed_windows(site, shift_date, window_start, shift_system):
         startup.append((dt(d0, "14:00:00"), dt(d0, "15:00:00")))
         startup.append((dt(d0, "22:00:00"), dt(d0, "23:00:00")))
 
-    # Saturday special fatigue:
-    # Uitgevallen / Kriel Rehabilitation / Koppie / Bankfontein
-    # 13:00-13:30 day shift
-    # 22:00-22:30 night shift
     if shift_date.weekday() == 5 and loc in SATURDAY_SPECIAL_FATIGUE_1330:
         fatigue.append((dt(d0, "13:00:00"), dt(d0, "13:30:00")))
         fatigue.append((dt(d0, "22:00:00"), dt(d0, "22:30:00")))
     else:
-        # Normal fatigue
         if loc in FATIGUE_13_1330:
             fatigue.append((dt(d0, "13:00:00"), dt(d0, "13:30:00")))
         elif loc in FATIGUE_13_14:
@@ -320,9 +346,10 @@ def _clip_to_window(intervals, w_start, w_end):
 
 def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
     out = defaultdict(list)
-
     if not asset_list:
         return out
+
+    downtime_type_by_parent = {}
 
     if frappe.db.exists("DocType", "Plant Breakdown or Maintenance"):
         pbm_rows = frappe.get_all(
@@ -340,11 +367,6 @@ def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
                 "breakdown_start_datetime",
                 "resolved_datetime",
                 "open_closed",
-                "breakdown_reason",
-                "resolution_summary",
-                "hours_breakdown_starts",
-                "shift",
-                "item_name",
                 "asset_category",
             ],
             order_by="asset_name asc, breakdown_start_datetime asc",
@@ -357,11 +379,13 @@ def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
             start_dt = r.get("breakdown_start_datetime")
             end_dt = r.get("resolved_datetime")
             open_closed = (r.get("open_closed") or "").strip().lower()
+            downtime_type = (r.get("downtime_type") or "").strip()
 
             if not plant_no or not start_dt:
                 continue
 
             start_dt = get_datetime(start_dt)
+            downtime_type_by_parent[r.get("name")] = downtime_type
 
             if not end_dt and open_closed == "open":
                 if window_start <= now_dt < window_end:
@@ -379,6 +403,7 @@ def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
                         "start": max(start_dt, window_start),
                         "end": min(end_dt, window_end),
                         "parent_breakdown": r.get("name"),
+                        "downtime_type": downtime_type,
                     }
                 )
 
@@ -390,6 +415,7 @@ def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
                 plant_no=plant_no,
                 window_start=window_start,
                 window_end=window_end,
+                downtime_type_by_parent=downtime_type_by_parent,
             )
             if fallback_intervals:
                 out[plant_no].extend(fallback_intervals)
@@ -397,7 +423,11 @@ def _get_breakdown_intervals_map(site, asset_list, window_start, window_end):
     return out
 
 
-def _get_breakdown_history_intervals(site, plant_no, window_start, window_end):
+def _get_breakdown_history_intervals(
+    site, plant_no, window_start, window_end, downtime_type_by_parent=None
+):
+    downtime_type_by_parent = downtime_type_by_parent or {}
+
     base_filters = {
         "location": site,
         "asset_name": plant_no,
@@ -458,6 +488,9 @@ def _get_breakdown_history_intervals(site, plant_no, window_start, window_end):
                         "start": s,
                         "end": e,
                         "parent_breakdown": current_parent_breakdown,
+                        "downtime_type": downtime_type_by_parent.get(
+                            current_parent_breakdown, ""
+                        ),
                     }
                 )
 
@@ -480,10 +513,126 @@ def _get_breakdown_history_intervals(site, plant_no, window_start, window_end):
                     "start": s,
                     "end": e,
                     "parent_breakdown": current_parent_breakdown,
+                    "downtime_type": downtime_type_by_parent.get(
+                        current_parent_breakdown, ""
+                    ),
                 }
             )
 
     return intervals
+
+
+def _get_hourly_maps(site, start_date, end_date):
+    presence_map = set()
+    selected_map = defaultdict(set)
+
+    if not frappe.db.exists("DocType", "Hourly Production"):
+        return presence_map, selected_map
+
+    buffered_end_date = add_days(end_date, 1)
+
+    hp_rows = frappe.db.sql(
+        """
+        select
+            name,
+            prod_date,
+            hour_slot
+        from `tabHourly Production`
+        where docstatus < 2
+          and location = %s
+          and prod_date between %s and %s
+        """,
+        (site, start_date, buffered_end_date),
+        as_dict=True,
+    )
+
+    hourly_docs = {}
+
+    for r in hp_rows:
+        slot_start = _get_slot_start_datetime(r.get("prod_date"), r.get("hour_slot"))
+        if not slot_start:
+            continue
+
+        hourly_docs[r.get("name")] = slot_start
+        presence_map.add(slot_start)
+
+    if not hourly_docs:
+        return presence_map, selected_map
+
+    if frappe.db.exists("DocType", "Truck Loads"):
+        tl_rows = frappe.db.sql(
+            """
+            select
+                parent,
+                asset_name_truck,
+                asset_name_shoval
+            from `tabTruck Loads`
+            where parenttype = 'Hourly Production'
+              and parentfield = 'truck_loads'
+              and parent in %(parents)s
+            """,
+            {"parents": tuple(hourly_docs.keys())},
+            as_dict=True,
+        )
+
+        for r in tl_rows:
+            slot_start = hourly_docs.get(r.get("parent"))
+            if not slot_start:
+                continue
+
+            for value in [r.get("asset_name_truck"), r.get("asset_name_shoval")]:
+                normalized = _normalize_asset_value(value)
+                if normalized:
+                    selected_map[slot_start].add(normalized)
+
+    return presence_map, selected_map
+
+
+def _get_slot_start_datetime(prod_date, hour_slot):
+    if not prod_date or not hour_slot:
+        return None
+
+    try:
+        prod_date = getdate(prod_date)
+        slot_text = str(hour_slot).strip()
+
+        if "-" in slot_text:
+            start_text = slot_text.split("-")[0].strip()
+        else:
+            start_text = slot_text
+
+        start_hour = int(start_text.split(":")[0])
+
+        slot_date = prod_date
+        if start_hour < START_HOUR:
+            slot_date = add_days(prod_date, 1)
+
+        return get_datetime(f"{slot_date} {start_hour:02d}:00:00")
+    except Exception:
+        return None
+
+
+def _normalize_asset_value(value):
+    return (value or "").strip().lower()
+
+
+def _asset_match_keys(asset_id, plant_no):
+    keys = set()
+    if asset_id:
+        keys.add(_normalize_asset_value(asset_id))
+    if plant_no:
+        keys.add(_normalize_asset_value(plant_no))
+    return {k for k in keys if k}
+
+
+def _is_green_standby_candidate(asset_category):
+    cat = (asset_category or "").strip().lower()
+    return (
+        "adt" in cat
+        or "excavat" in cat
+        or "shovel" in cat
+        or "shoval" in cat
+    )
 
 
 def _hour_slots(window_start, slot_count):
@@ -513,6 +662,9 @@ def _get_breakdown_doc_for_slot(a_start, a_end, intervals):
         parent_breakdown = item.get("parent_breakdown")
 
         if e > a_start and s < a_end and parent_breakdown:
-            return parent_breakdown
+            return {
+                "parent_breakdown": parent_breakdown,
+                "downtime_type": item.get("downtime_type") or "",
+            }
 
     return None

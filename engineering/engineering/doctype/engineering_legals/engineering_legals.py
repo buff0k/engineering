@@ -4,7 +4,7 @@ from typing import Optional
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now
+from frappe.utils import now, getdate
 
 
 # Drive Team that will own all Engineering Legals links.
@@ -113,6 +113,35 @@ class EngineeringLegals(Document):
             self.hsec_inserted_at = None
 
 
+def _get_engineering_legals_path_parts(doc: Document):
+    """
+    Folder path format:
+    <site>/<month>/<date>/<section>/<asset>
+    """
+    site = (doc.site or "Unknown Site").strip() or "Unknown Site"
+    section = (doc.sections or "Unclassified").strip() or "Unclassified"
+    asset = (doc.fleet_number or "No Fleet").strip() or "No Fleet"
+
+    raw_date = getattr(doc, "start_date", None)
+    if raw_date:
+        dt = getdate(raw_date)
+        month_folder = dt.strftime("%Y-%m")
+        date_folder = dt.strftime("%Y-%m-%d")
+    else:
+        month_folder = "No Month"
+        date_folder = "No Date"
+
+    return {
+        "site": site,
+        "month": month_folder,
+        "date": date_folder,
+        "section": section,
+        "asset": asset,
+    }
+
+
+
+
 
 
 
@@ -151,29 +180,28 @@ def remove_drive_links_for_engineering_legals(doc: Document):
     frappe.db.commit()
 
 
+
 def move_engineering_legal_file_to_folder(doc: Document):
     """Move the File linked in doc.attach_paper into the desired folder tree."""
 
-    # If no file attached, nothing to do
     file_url = getattr(doc, "attach_paper", None)
     if not file_url:
         return
 
-    # Build folder path parts
-    site = (doc.site or "Unknown Site").strip()
-    section = (doc.sections or "Unclassified").strip()
-    fleet = (doc.fleet_number or "No Fleet").strip()
+    parts = _get_engineering_legals_path_parts(doc)
 
-    # Final folder path: Home/Engineering Legals/<Site>/<Section>/<Fleet>/
     root_folder = "Home/Engineering Legals"
-    # Note: File.folder uses "Home/<child>/<child>" naming, not OS paths.
-    # We still use os.path.join only to build a string with "/" separators.
-    target_folder_path = os.path.join(root_folder, site, section, fleet)
+    target_folder_path = os.path.join(
+        root_folder,
+        parts["site"],
+        parts["month"],
+        parts["date"],
+        parts["section"],
+        parts["asset"],
+    )
 
-    # Ensure folder tree exists in File DocType
     target_folder_name = ensure_file_folder_tree(target_folder_path)
 
-    # Find the File record for this attachment
     file_doc = frappe.get_value(
         "File",
         {
@@ -186,38 +214,26 @@ def move_engineering_legal_file_to_folder(doc: Document):
     )
 
     if not file_doc:
-        # Nothing found; maybe an external URL or already detached
         return
 
-    # Load the File document
     file_doc = frappe.get_doc("File", file_doc.name)
 
-    # 🔥 Force file to be public BEFORE moving it
     if file_doc.is_private:
         file_doc.is_private = 0
         file_doc.save(ignore_permissions=True)
 
-        # Update the document’s attach_paper to point to the PUBLIC url
         if file_doc.file_url.startswith("/private/files/"):
             new_url = file_doc.file_url.replace("/private/files/", "/files/")
             file_doc.file_url = new_url
             file_doc.save(ignore_permissions=True)
-
-            # update the parent document so the UI also shows the public URL
             doc.db_set("attach_paper", new_url)
-
             frappe.db.commit()
 
-
-    # If it's already in the correct folder, just return
     if file_doc.folder == target_folder_name:
         return
 
-    # Move the file into the correct folder
     file_doc.folder = target_folder_name
     file_doc.save(ignore_permissions=True)
-
-
 
 
 
@@ -312,16 +328,16 @@ def create_drive_link_for_engineering_legals(doc: Document):
     team = _get_default_drive_team()
     home = _get_drive_home_folder(team)
 
-    # Build folder path: Engineering Legals / <Site> / <Section> / <Fleet>
-    root_title = "Engineering Legals"
-    site_title = (doc.site or "").strip() or "No Site"
-    section_title = (doc.sections or "").strip() or "No Section"
-    fleet_title = (doc.fleet_number or "").strip() or "No Fleet"
+    # Build folder path: Engineering Legals / <Site> / <Month> / <Date> / <Section> / <Asset>
+    parts = _get_engineering_legals_path_parts(doc)
 
+    root_title = "Engineering Legals"
     root_folder = _get_or_create_drive_folder(root_title, home, team)
-    site_folder = _get_or_create_drive_folder(site_title, root_folder, team)
-    section_folder = _get_or_create_drive_folder(section_title, site_folder, team)
-    fleet_folder = _get_or_create_drive_folder(fleet_title, section_folder, team)
+    site_folder = _get_or_create_drive_folder(parts["site"], root_folder, team)
+    month_folder = _get_or_create_drive_folder(parts["month"], site_folder, team)
+    date_folder = _get_or_create_drive_folder(parts["date"], month_folder, team)
+    section_folder = _get_or_create_drive_folder(parts["section"], date_folder, team)
+    asset_folder = _get_or_create_drive_folder(parts["asset"], section_folder, team)
 
 
     # Avoid creating duplicate links for the same file & folder
@@ -332,15 +348,15 @@ def create_drive_link_for_engineering_legals(doc: Document):
 
 
     existing = frappe.db.exists(
-    "Drive File",
-    {
-        "team": team,
-        "parent_entity": fleet_folder,
-        "is_link": 1,
-        "path": absolute_url,   # compare using absolute url
-        "is_active": 1,
-    },
-)
+        "Drive File",
+        {
+            "team": team,
+            "parent_entity": asset_folder,
+            "is_link": 1,
+            "path": absolute_url,
+            "is_active": 1,
+        },
+    )
 
     if existing:
         return
@@ -354,7 +370,7 @@ def create_drive_link_for_engineering_legals(doc: Document):
             "doctype": "Drive File",
             "title": file_row.file_name or "Attachment",
             "team": team,
-            "parent_entity": fleet_folder,
+            "parent_entity": asset_folder,
             "is_group": 0,   # file
             "is_link": 1,    # link entity
             "is_active": 1,
@@ -474,9 +490,10 @@ def _get_or_create_drive_folder(title: str, parent_entity: Optional[str], team: 
 def on_update(doc, method=None):
     try:
         move_engineering_legal_file_to_folder(doc)
+        create_drive_link_for_engineering_legals(doc)
     except Exception:
         frappe.log_error(
-            title="Engineering Legals file move failed",
+            title="Engineering Legals Drive sync failed",
             message=frappe.get_traceback(),
         )
 
