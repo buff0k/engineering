@@ -42,25 +42,25 @@ def get_context(context):
 
 
 
-def _get_user_supplier():
+def _get_user_suppliers():
     customers, suppliers = get_customers_suppliers(
         "Request for Quotation Supplier",
         frappe.session.user
     )
-    return suppliers[0] if suppliers else None
+    return suppliers or []
 
 
 def _validate_supplier_asset_access(asset_name):
-    supplier = _get_user_supplier()
-    if not supplier:
+    suppliers = _get_user_suppliers()
+    if not suppliers:
         frappe.throw(_("Your user is not linked to a Supplier."))
 
     if not frappe.db.exists("Asset", {
         "name": asset_name,
         "asset_owner": "Supplier",
-        "supplier": supplier,
+        "supplier": ["in", suppliers],
     }):
-        frappe.throw(_("This asset is not linked to your supplier."), frappe.PermissionError)
+        frappe.throw(_("This asset is not linked to your supplier access."), frappe.PermissionError)
 
 
 

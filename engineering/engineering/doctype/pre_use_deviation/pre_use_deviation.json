@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-03-25 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "report_date",
+  "site",
+  "fleet_number",
+  "equipment",
+  "pre_use_no",
+  "section_break_deviation",
+  "deviation_details",
+  "reported_by",
+  "section_break_resolution",
+  "resolution_summary",
+  "action_date",
+  "actioned_by",
+  "job_card_number",
+  "section_break_status",
+  "status",
+  "completion_percentage"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Series",
+   "options": "PUD-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "report_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fleet Number",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "equipment",
+   "fieldtype": "Link",
+   "label": "Equipment",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pre_use_no",
+   "fieldtype": "Int",
+   "label": "Pre-Use No."
+  },
+  {
+   "fieldname": "section_break_deviation",
+   "fieldtype": "Section Break",
+   "label": "Deviation"
+  },
+  {
+   "fieldname": "deviation_details",
+   "fieldtype": "Small Text",
+   "label": "Deviation Details",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reported_by",
+   "fieldtype": "Data",
+   "label": "Reported By"
+  },
+  {
+   "fieldname": "section_break_resolution",
+   "fieldtype": "Section Break",
+   "label": "Resolution"
+  },
+  {
+   "fieldname": "resolution_summary",
+   "fieldtype": "Small Text",
+   "label": "Resolution Summary"
+  },
+  {
+   "fieldname": "action_date",
+   "fieldtype": "Date",
+   "label": "Action Date"
+  },
+  {
+   "fieldname": "actioned_by",
+   "fieldtype": "Data",
+   "label": "Actioned By"
+  },
+  {
+   "fieldname": "job_card_number",
+   "fieldtype": "Data",
+   "label": "Job Card Number"
+  },
+  {
+   "fieldname": "section_break_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nDone\nCancelled",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "completion_percentage",
+   "fieldtype": "Percent",
+   "label": "Completion Percentage",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-25 15:43:03.649019",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Pre Use Deviation",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

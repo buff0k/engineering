@@ -45,7 +45,7 @@ def get_context(context):
         _handle_post(context)
 
     context.sections_options = _get_sections_options()
-    context.site_options = _get_all_site_options()
+    context.site_options = _get_allowed_site_options()
     context.asset_options = _get_asset_options()
 
     draft = _get_editable_draft() if frappe.request.method != "POST" else None
@@ -82,7 +82,8 @@ def _handle_post(context):
         frappe.throw(_("Attach Paper is required."))
     if not start_date:
         frappe.throw(_("Document Start Date is required."))
-
+        
+    _validate_supplier_site_access(site)
     _validate_supplier_asset_access(fleet_number)
 
     if sections in ["Brake Test", "PDS"] and not vehicle_type:
@@ -134,36 +135,39 @@ def _handle_post(context):
 
 
 
-def _get_user_supplier():
+ALLOWED_SUPPLIER_SITES = ["GWAB", "Klipfontein"]
+
+
+def _get_user_suppliers():
     customers, suppliers = get_customers_suppliers(
         "Request for Quotation Supplier",
         frappe.session.user
     )
-    return suppliers[0] if suppliers else None
+    return suppliers or []
 
 
 def _get_supplier_asset_filters():
-    supplier = _get_user_supplier()
-    if not supplier:
+    suppliers = _get_user_suppliers()
+    if not suppliers:
         return None
 
     return {
         "asset_owner": "Supplier",
-        "supplier": supplier,
+        "supplier": ["in", suppliers],
     }
 
 
 def _validate_supplier_asset_access(asset_name):
-    supplier = _get_user_supplier()
-    if not supplier:
+    suppliers = _get_user_suppliers()
+    if not suppliers:
         frappe.throw(_("Your user is not linked to a Supplier."))
 
     if not frappe.db.exists("Asset", {
         "name": asset_name,
         "asset_owner": "Supplier",
-        "supplier": supplier,
+        "supplier": ["in", suppliers],
     }):
-        frappe.throw(_("This asset is not linked to your supplier."), frappe.PermissionError)
+        frappe.throw(_("This asset is not linked to your supplier access."), frappe.PermissionError)
 
 
 def _get_asset_options():
@@ -180,13 +184,19 @@ def _get_asset_options():
     )
 
 
-def _get_all_site_options():
+def _get_allowed_site_options():
     return frappe.get_all(
         "Location",
+        filters={"name": ["in", ALLOWED_SUPPLIER_SITES]},
         pluck="name",
         order_by="name asc",
         limit_page_length=0,
     )
+
+
+def _validate_supplier_site_access(site_name):
+    if site_name not in ALLOWED_SUPPLIER_SITES:
+        frappe.throw(_("You can only create records for GWAB or Klipfontein."), frappe.PermissionError)
 
 
 

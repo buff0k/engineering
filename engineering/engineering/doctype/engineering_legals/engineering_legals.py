@@ -1,10 +1,12 @@
 import os
 import mimetypes
 from typing import Optional
+from urllib.parse import quote
 
+import requests
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now, getdate
+from frappe.utils import now, getdate, cint
 
 
 # Drive Team that will own all Engineering Legals links.
@@ -220,19 +222,223 @@ def move_engineering_legal_file_to_folder(doc: Document):
 
     file_doc.reload()
 
-    if file_doc.is_private:
-        file_doc.db_set("is_private", 0, update_modified=False)
-
-        if file_doc.file_url and file_doc.file_url.startswith("/private/files/"):
-            new_url = file_doc.file_url.replace("/private/files/", "/files/")
-            file_doc.db_set("file_url", new_url, update_modified=False)
-            doc.db_set("attach_paper", new_url, update_modified=False)
-            file_doc.reload()
+    # Keep the original privacy/file_url as-is.
+    # Changing DB values alone does not move the physical file on disk.
 
     if file_doc.folder == target_folder_name:
         return
 
     file_doc.db_set("folder", target_folder_name, update_modified=False)
+
+
+
+
+
+
+def _sanitize_sharepoint_part(value: str) -> str:
+    value = (value or "").strip()
+    if not value:
+        return "Unknown"
+
+    for ch in ['"', '*', ':', '<', '>', '?', '/', '\\', '|']:
+        value = value.replace(ch, "-")
+
+    return value.strip().rstrip(".") or "Unknown"
+
+
+def _get_sharepoint_settings() -> dict:
+    settings = {
+        "tenant_id": frappe.conf.get("ms_graph_tenant_id"),
+        "client_id": frappe.conf.get("ms_graph_client_id"),
+        "client_secret": frappe.conf.get("ms_graph_client_secret"),
+        "hostname": frappe.conf.get("sharepoint_hostname"),
+        "site_path": frappe.conf.get("sharepoint_site_path"),
+        "drive_name": frappe.conf.get("sharepoint_drive_name") or "Documents",
+        "root_folder": frappe.conf.get("sharepoint_root_folder") or "Engineering Legals",
+    }
+
+    missing = [k for k, v in settings.items() if not v and k not in ("drive_name", "root_folder")]
+    if missing:
+        frappe.throw("Missing SharePoint/Graph settings in site_config: " + ", ".join(missing))
+
+    return settings
+
+
+def _get_graph_access_token(settings: dict) -> str:
+    token_url = f"https://login.microsoftonline.com/{settings['tenant_id']}/oauth2/v2.0/token"
+
+    response = requests.post(
+        token_url,
+        data={
+            "client_id": settings["client_id"],
+            "client_secret": settings["client_secret"],
+            "scope": "https://graph.microsoft.com/.default",
+            "grant_type": "client_credentials",
+        },
+        timeout=30,
+    )
+
+    if not response.ok:
+        frappe.throw(f"Graph token request failed: {response.status_code} - {response.text}")
+
+    return response.json()["access_token"]
+
+
+def _graph_request(method: str, url: str, token: str, **kwargs):
+    headers = kwargs.pop("headers", {}) or {}
+    headers["Authorization"] = f"Bearer {token}"
+
+    response = requests.request(method, url, headers=headers, timeout=60, **kwargs)
+
+    if not response.ok:
+        frappe.throw(f"Graph request failed: {response.status_code} - {response.text}")
+
+    if response.text:
+        content_type = response.headers.get("Content-Type", "")
+        if "application/json" in content_type.lower():
+            return response.json()
+
+    return None
+
+
+def _get_sharepoint_site_id(settings: dict, token: str) -> str:
+    site_path = settings["site_path"].lstrip("/")
+    url = f"https://graph.microsoft.com/v1.0/sites/{settings['hostname']}:/{site_path}"
+    data = _graph_request("GET", url, token)
+    return data["id"]
+
+
+def _get_sharepoint_drive_id(settings: dict, site_id: str, token: str) -> str:
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives"
+    data = _graph_request("GET", url, token)
+
+    target_name = (settings["drive_name"] or "").strip().lower()
+
+    for row in data.get("value", []):
+        if (row.get("name") or "").strip().lower() == target_name:
+            return row["id"]
+
+    available = ", ".join([row.get("name") or "" for row in data.get("value", [])])
+    frappe.throw(
+        f"SharePoint document library '{settings['drive_name']}' not found. Available: {available}"
+    )
+
+
+def _get_sharepoint_folder_parts(doc: Document, settings: dict) -> list[str]:
+    site = (doc.site or "Unknown Site").strip() or "Unknown Site"
+    section = (doc.sections or "Unclassified").strip() or "Unclassified"
+    asset = (doc.fleet_number or "No Fleet").strip() or "No Fleet"
+
+    raw_date = getattr(doc, "start_date", None)
+    if raw_date:
+        dt = getdate(raw_date)
+        year_folder = dt.strftime("%Y")
+        month_folder = dt.strftime("%B %Y")
+    else:
+        year_folder = "No Year"
+        month_folder = "No Month"
+
+    return [
+        _sanitize_sharepoint_part(site),
+        _sanitize_sharepoint_part(year_folder),
+        _sanitize_sharepoint_part(section),
+        _sanitize_sharepoint_part(month_folder),
+        _sanitize_sharepoint_part(asset),
+    ]
+
+
+def _ensure_sharepoint_folder(drive_id: str, folder_parts: list[str], token: str):
+    parent_item_id = "root"
+
+    for folder_name in folder_parts:
+        encoded_name = quote(folder_name)
+        lookup_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{parent_item_id}:/{encoded_name}"
+
+        response = requests.get(
+            lookup_url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
+
+        if response.status_code == 200:
+            parent_item_id = response.json()["id"]
+            continue
+
+        if response.status_code != 404:
+            frappe.throw(f"Graph folder lookup failed: {response.status_code} - {response.text}")
+
+        create_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{parent_item_id}/children"
+        payload = {
+            "name": folder_name,
+            "folder": {},
+            "@microsoft.graph.conflictBehavior": "replace",
+        }
+        created = _graph_request("POST", create_url, token, json=payload)
+        parent_item_id = created["id"]
+
+    return parent_item_id
+
+
+def upload_engineering_legals_to_sharepoint(doc: Document, source_file_doc: Optional[Document] = None):
+    file_doc = source_file_doc
+
+    if not file_doc:
+        file_url = getattr(doc, "attach_paper", None)
+        if not file_url:
+            return
+
+        file_row = frappe.get_value(
+            "File",
+            {
+                "attached_to_doctype": doc.doctype,
+                "attached_to_name": doc.name,
+                "file_url": file_url,
+                "is_folder": 0,
+            },
+            ["name", "file_name"],
+            as_dict=True,
+        )
+
+        if not file_row:
+            return
+
+        file_doc = frappe.get_doc("File", file_row.name)
+
+    content = file_doc.get_content()
+    if content is None:
+        frappe.throw(f"Could not read attached file content: {file_doc.file_url}")
+
+    if isinstance(content, str):
+        data = content.encode("utf-8")
+    else:
+        data = content
+
+    settings = _get_sharepoint_settings()
+    token = _get_graph_access_token(settings)
+    site_id = _get_sharepoint_site_id(settings, token)
+    drive_id = _get_sharepoint_drive_id(settings, site_id, token)
+
+    folder_parts = _get_sharepoint_folder_parts(doc, settings)
+    parent_item_id = _ensure_sharepoint_folder(drive_id, folder_parts, token)
+
+    filename = _sanitize_sharepoint_part(file_doc.file_name or "attachment")
+    encoded_filename = quote(filename)
+
+    upload_url = (
+        f"https://graph.microsoft.com/v1.0/drives/{drive_id}"
+        f"/items/{parent_item_id}:/{encoded_filename}:/content"
+    )
+
+    mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    _graph_request(
+        "PUT",
+        upload_url,
+        token,
+        data=data,
+        headers={"Content-Type": mime_type},
+    )
+
 
 
 
@@ -486,8 +692,6 @@ def _get_or_create_drive_folder(title: str, parent_entity: Optional[str], team: 
 # engineering.engineering.doctype.engineering_legals.engineering_legals.on_update)
 # -------------------------------------------------------------------
 
-
-
 def sync_engineering_legals_from_file(file_doc, method=None):
     try:
         if getattr(file_doc, "is_folder", 0):
@@ -500,9 +704,6 @@ def sync_engineering_legals_from_file(file_doc, method=None):
         if not attached_name:
             return
 
-        # Upload happens before the new Engineering Legals doc is inserted.
-        # Skip silently for temporary unsaved names like:
-        # new-engineering-legals-xxxxxxxxxx
         if str(attached_name).startswith("new-engineering-legals-"):
             return
 
@@ -515,8 +716,8 @@ def sync_engineering_legals_from_file(file_doc, method=None):
             doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
             doc.reload()
 
+        upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
         move_engineering_legal_file_to_folder(doc)
-        create_drive_link_for_engineering_legals(doc)
 
     except Exception:
         frappe.log_error(
@@ -524,13 +725,74 @@ def sync_engineering_legals_from_file(file_doc, method=None):
             message=frappe.get_traceback(),
         )
 
+def sync_engineering_legals_from_doc(doc, method=None):
+    try:
+        if not getattr(doc, "attach_paper", None):
+            return
 
+        frappe.enqueue(
+            "engineering.engineering.doctype.engineering_legals.engineering_legals.run_engineering_legals_sharepoint_sync",
+            queue="short",
+            timeout=300,
+            enqueue_after_commit=True,
+            docname=doc.name,
+        )
+
+    except Exception:
+        frappe.log_error(
+            title="Engineering Legals doc-trigger enqueue failed",
+            message=frappe.get_traceback(),
+        )
+
+
+
+
+def run_engineering_legals_sharepoint_sync(docname: str):
+    try:
+        if not docname:
+            return
+
+        if not frappe.db.exists("Engineering Legals", docname):
+            return
+
+        doc = frappe.get_doc("Engineering Legals", docname)
+
+        if not getattr(doc, "attach_paper", None):
+            return
+
+        file_row = frappe.get_value(
+            "File",
+            {
+                "attached_to_doctype": doc.doctype,
+                "attached_to_name": doc.name,
+                "is_folder": 0,
+            },
+            ["name"],
+            as_dict=True,
+            order_by="creation desc",
+        )
+
+        if not file_row:
+            return
+
+        file_doc = frappe.get_doc("File", file_row.name)
+
+        if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
+            doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
+            doc.reload()
+
+        upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
+        move_engineering_legal_file_to_folder(doc)
+
+    except Exception:
+        frappe.log_error(
+            title="Engineering Legals background SharePoint sync failed",
+            message=frappe.get_traceback(),
+        )
 
 
 def on_update(doc, method=None):
-    # Do nothing here.
-    # File syncing must happen from File hooks after the attachment exists.
-    pass
+    sync_engineering_legals_from_doc(doc, method)
 
 def on_trash(doc, method=None):
     pass
