@@ -32,25 +32,36 @@ class EngineeringLegals(Document):
         # Core fields must exist (server enforcement)
         if not self.sections:
             frappe.throw("Section is required.")
-        if not self.start_date:
-            frappe.throw("Start Date is required.")
-
 
         section = (self.sections or "").strip()
 
-        # Brake Test & PDS -> require vehicle_type
-        if section in ("Brake Test", "PDS"):
+        no_start_date_sections = {
+            "Machine Service Records",
+            "Service Schedule",
+            "Wearcheck",
+            "Brake Wear Measurements",
+        }
+
+        if section not in no_start_date_sections and not self.start_date:
+            frappe.throw("Start Date is required.")
+
+        if section == "Brake Test":
             if not self.vehicle_type:
                 frappe.throw("Vehicle Type (LDV/TMM) is required for this Section.")
 
             months = 1 if self.vehicle_type == "TMM" else 3
             self.expiry_date = add_months(self.start_date, months)
 
-        # FRCS -> +3 months, no vehicle type required
+        elif section == "PDS":
+            if not self.vehicle_type:
+                frappe.throw("Vehicle Type (LDV/TMM) is required for this Section.")
+
+            months = 3 if self.vehicle_type == "TMM" else 4
+            self.expiry_date = add_months(self.start_date, months)
+
         elif section == "FRCS":
             self.expiry_date = add_months(self.start_date, 3)
 
-        # Lifting Equipment -> require lifting_type
         elif section == "Lifting Equipment":
             if not self.lifting_type:
                 frappe.throw("Lifting Type (Inspection/Certificate) is required for this Section.")
@@ -58,9 +69,11 @@ class EngineeringLegals(Document):
             months = 3 if self.lifting_type == "Inspection" else 12
             self.expiry_date = add_months(self.start_date, months)
 
-       
-        elif section == "NDT":
-            self.expiry_date = add_months(self.start_date, 6)
+        elif section in ("NDT", "Machine NDT"):
+            self.expiry_date = add_months(self.start_date, 12)
+
+        elif section == "C-Track Inspection":
+            self.expiry_date = add_months(self.start_date, 1)
 
         elif section == "Fire Suppression":
             self.expiry_date = add_months(self.start_date, 3)
@@ -68,14 +81,20 @@ class EngineeringLegals(Document):
         elif section == "Tyre Inspection Report":
             self.expiry_date = add_months(self.start_date, 1)
 
-        # Illumination Baseline -> +24 months (2 years)
         elif section == "Illumination Baseline":
             self.expiry_date = add_months(self.start_date, 24)
 
-        # No expiry at all
-        elif section in ("Machine Service Records", "Service Schedule", "Wearcheck"):
+        elif section == "Noise Level Baseline & Measurement":
+            self.expiry_date = add_months(self.start_date, 24)
+
+        elif section == "Brake Wear Measurements":
+            if not self.brake_wear_type:
+                frappe.throw("Brake Wear Type (ADT/FEL) is required for this Section.")
+            self.start_date = None
             self.expiry_date = None
 
+        elif section in ("Machine Service Records", "Service Schedule", "Wearcheck"):
+            self.expiry_date = None
 
         else:
             frappe.throw(f"Unknown Section: {section}")
@@ -89,6 +108,9 @@ class EngineeringLegals(Document):
 
         if section != "Lifting Equipment":
             self.lifting_type = None
+
+        if section != "Brake Wear Measurements":
+            self.brake_wear_type = None
 
         # -----------------------------
         # HSEC integration requirements

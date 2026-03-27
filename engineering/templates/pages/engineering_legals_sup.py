@@ -138,6 +138,27 @@ def _handle_post(context):
 ALLOWED_SUPPLIER_SITES = ["GWAB", "Klipfontein"]
 
 
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_allowed_location_query(doctype, txt, searchfield, start, page_len, filters):
+    return frappe.db.sql(
+        """
+        SELECT name
+        FROM `tabLocation`
+        WHERE name in %(allowed_sites)s
+          AND name like %(txt)s
+        ORDER BY name asc
+        LIMIT %(start)s, %(page_len)s
+        """,
+        {
+            "allowed_sites": tuple(ALLOWED_SUPPLIER_SITES),
+            "txt": f"%{txt}%",
+            "start": start,
+            "page_len": page_len,
+        },
+    )
+
+
 def _get_user_suppliers():
     customers, suppliers = get_customers_suppliers(
         "Request for Quotation Supplier",

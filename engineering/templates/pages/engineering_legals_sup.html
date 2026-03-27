@@ -96,23 +96,23 @@
                 <div id="uploaded_file_link" class="mt-2"></div>
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label for="site"><strong>Site <span class="text-danger">*</span></strong></label>
-                <div class="portal-link-wrap">
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="site"
-                        name="site"
-                        value="{{ form_values.site }}"
-                        placeholder="Search Site"
-                        autocomplete="off"
-                        required
-                    >
-                    <div id="site_dropdown" class="portal-link-dropdown"></div>
-                </div>
-                <script type="application/json" id="site_options_json">{{ site_options | tojson }}</script>
-            </div>
+
+
+
+<div class="col-md-6 mb-3">
+    <label for="site"><strong>Site <span class="text-danger">*</span></strong></label>
+    <input
+        type="text"
+        class="form-control"
+        id="site"
+        name="site"
+        value="{{ form_values.site }}"
+        placeholder="Search Site"
+        autocomplete="off"
+        required
+    >
+</div>
+
 
             <div class="col-md-6 mb-3">
                 <label for="start_date"><strong>Document Start Date <span class="text-danger">*</span></strong></label>
@@ -203,10 +203,8 @@
     const formEl = document.getElementById("engineering-legals-form");
     const submitBtn = document.getElementById("submit_btn");
     const sectionsDropdownEl = document.getElementById("sections_dropdown");
-    const siteDropdownEl = document.getElementById("site_dropdown");
     const fleetNumberDropdownEl = document.getElementById("fleet_number_dropdown");
     const sectionsOptions = JSON.parse(document.getElementById("sections_options_json").textContent || "[]");
-    const siteOptions = JSON.parse(document.getElementById("site_options_json").textContent || "[]");
     const fleetNumberOptions = JSON.parse(document.getElementById("fleet_number_options_json").textContent || "[]");
 
     function pad(n) {
@@ -401,7 +399,11 @@
         setExpiryDate();
     });
 
-    setupSearchableDropdown(siteEl, siteDropdownEl, siteOptions);
+    if (window.frappe && frappe.utils && frappe.utils.setup_search) {
+    frappe.utils.setup_search(siteEl, "Location", {
+        query: "engineering.engineering.web_form.engineering_legals_sup.get_allowed_location_query"
+    });
+}
     setupSearchableDropdown(fleetNumberEl, fleetNumberDropdownEl, fleetNumberOptions);
 
     fileInput.addEventListener("change", async function () {

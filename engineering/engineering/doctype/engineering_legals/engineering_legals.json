@@ -123,6 +123,12 @@
    "options": "Inspection\nCertificate"
   },
   {
+   "fieldname": "brake_wear_type",
+   "fieldtype": "Select",
+   "label": "Brake Wear Type",
+   "options": "\nADT\nFEL"
+  },
+  {
    "fieldname": "upload_tab",
    "fieldtype": "Tab Break",
    "label": "Upload"

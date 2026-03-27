@@ -9,6 +9,7 @@ frappe.ui.form.on('Engineering Legals', {
   sections(frm) {
     frm.set_value('vehicle_type', null);
     frm.set_value('lifting_type', null);
+    frm.set_value('brake_wear_type', null);
 
     const section = (frm.doc.sections || '').trim();
 
@@ -24,6 +25,8 @@ frappe.ui.form.on('Engineering Legals', {
     set_expiry_date(frm);
   },
 
+
+
   vehicle_type(frm) {
     set_expiry_date(frm);
   },
@@ -32,9 +35,14 @@ frappe.ui.form.on('Engineering Legals', {
     set_expiry_date(frm);
   },
 
+  brake_wear_type(frm) {
+    set_expiry_date(frm);
+  },
+
   start_date(frm) {
     set_expiry_date(frm);
   },
+
 
   hsec_send(frm) {
     apply_hsec_rules(frm);
@@ -78,9 +86,14 @@ function apply_section_rules(frm) {
 
   frm.toggle_display('vehicle_type', false);
   frm.toggle_display('lifting_type', false);
+  frm.toggle_display('brake_wear_type', false);
+  frm.toggle_display('start_date', true);
+  frm.toggle_display('expiry_date', true);
 
   frm.toggle_reqd('vehicle_type', false);
   frm.toggle_reqd('lifting_type', false);
+  frm.toggle_reqd('brake_wear_type', false);
+  frm.toggle_reqd('start_date', true);
 
   if (['Brake Test', 'PDS'].includes(section)) {
     frm.toggle_display('vehicle_type', true);
@@ -90,6 +103,15 @@ function apply_section_rules(frm) {
   if (section === 'Lifting Equipment') {
     frm.toggle_display('lifting_type', true);
     frm.toggle_reqd('lifting_type', true);
+  }
+
+  if (section === 'Brake Wear Measurements') {
+    frm.toggle_display('brake_wear_type', true);
+    frm.toggle_reqd('brake_wear_type', true);
+    frm.toggle_display('start_date', false);
+    frm.toggle_display('expiry_date', false);
+    frm.set_value('start_date', null);
+    frm.set_value('expiry_date', null);
   }
 }
 
@@ -113,20 +135,19 @@ function set_expiry_date(frm) {
   const section = (frm.doc.sections || '').trim();
   const start = frm.doc.start_date;
 
-  // default: blank expiry
-  if (!start) {
+  const NO_EXPIRY = new Set([
+    'Machine Service Records',
+    'Service Schedule',
+    'Wearcheck',
+    'Brake Wear Measurements'
+  ]);
+
+  if (NO_EXPIRY.has(section)) {
     frm.set_value('expiry_date', null);
     return;
   }
 
-  // NO expiry sections
-  const NO_EXPIRY = new Set([
-    'Machine Service Records',
-    'Service Schedule',
-    'Wearcheck'
-  ]);
-
-  if (NO_EXPIRY.has(section)) {
+  if (!start) {
     frm.set_value('expiry_date', null);
     return;
   }
@@ -139,25 +160,28 @@ function set_expiry_date(frm) {
     if (frm.doc.vehicle_type === 'TMM') expiry = addMonths(1);
     else if (frm.doc.vehicle_type === 'LDV') expiry = addMonths(3);
   } else if (section === 'PDS') {
-    if (frm.doc.vehicle_type === 'TMM') expiry = addMonths(1);
-    else if (frm.doc.vehicle_type === 'LDV') expiry = addMonths(3);
+    if (frm.doc.vehicle_type === 'TMM') expiry = addMonths(3);
+    else if (frm.doc.vehicle_type === 'LDV') expiry = addMonths(4);
   } else if (section === 'FRCS') {
     expiry = addMonths(3);
   } else if (section === 'Lifting Equipment') {
     if (frm.doc.lifting_type === 'Inspection') expiry = addMonths(3);
     else if (frm.doc.lifting_type === 'Certificate') expiry = addMonths(12);
-  } else if (section === 'NDT') {
-    expiry = addMonths(6);
+  } else if (section === 'NDT' || section === 'Machine NDT') {
+    expiry = addMonths(12);
+  } else if (section === 'C-Track Inspection') {
+    expiry = addMonths(1);
   } else if (section === 'Fire Suppression') {
     expiry = addMonths(3);
-} else if (section === 'Tyre Inspection Report') {
-  expiry = addMonths(1);
-} else if (section === 'Illumination Baseline') {
-  expiry = addMonths(24); // +2 years
-} else {
-  expiry = null; // safe default
-}
-
+  } else if (section === 'Tyre Inspection Report') {
+    expiry = addMonths(1);
+  } else if (section === 'Illumination Baseline') {
+    expiry = addMonths(24);
+  } else if (section === 'Noise Level Baseline & Measurement') {
+    expiry = addMonths(24);
+  } else {
+    expiry = null;
+  }
 
   frm.set_value('expiry_date', expiry);
 }
