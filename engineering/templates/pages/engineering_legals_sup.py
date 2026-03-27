@@ -45,8 +45,8 @@ def get_context(context):
         _handle_post(context)
 
     context.sections_options = _get_sections_options()
-    context.site_options = _get_allowed_site_options()
     context.asset_options = _get_asset_options()
+    context.site_options = ["Gwab", "Klipfontein"]
 
     draft = _get_editable_draft() if frappe.request.method != "POST" else None
 
@@ -83,7 +83,6 @@ def _handle_post(context):
     if not start_date:
         frappe.throw(_("Document Start Date is required."))
         
-    _validate_supplier_site_access(site)
     _validate_supplier_asset_access(fleet_number)
 
     if sections in ["Brake Test", "PDS"] and not vehicle_type:
@@ -135,28 +134,7 @@ def _handle_post(context):
 
 
 
-ALLOWED_SUPPLIER_SITES = ["Gwab", "Klipfontein"]
 
-
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def get_allowed_location_query(doctype, txt, searchfield, start, page_len, filters):
-    return frappe.db.sql(
-        """
-        SELECT name
-        FROM `tabLocation`
-        WHERE name in %(allowed_sites)s
-          AND name like %(txt)s
-        ORDER BY name asc
-        LIMIT %(start)s, %(page_len)s
-        """,
-        {
-            "allowed_sites": tuple(ALLOWED_SUPPLIER_SITES),
-            "txt": f"%{txt}%",
-            "start": start,
-            "page_len": page_len,
-        },
-    )
 
 
 def _get_user_suppliers():
@@ -204,21 +182,6 @@ def _get_asset_options():
         limit_page_length=0,
     )
 
-
-def _get_allowed_site_options():
-    return frappe.get_all(
-        "Location",
-        filters={"name": ["in", ALLOWED_SUPPLIER_SITES]},
-        pluck="name",
-        order_by="name asc",
-        limit_page_length=0,
-    )
-
-
-def _validate_supplier_site_access(site_name):
-    allowed_map = {d.lower(): d for d in ALLOWED_SUPPLIER_SITES}
-    if (site_name or "").strip().lower() not in allowed_map:
-        frappe.throw(_("You can only create records for Gwab or Klipfontein."), frappe.PermissionError)
 
 
 

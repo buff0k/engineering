@@ -101,16 +101,20 @@
 
 <div class="col-md-6 mb-3">
     <label for="site"><strong>Site <span class="text-danger">*</span></strong></label>
-    <input
-        type="text"
-        class="form-control"
-        id="site"
-        name="site"
-        value="{{ form_values.site }}"
-        placeholder="Search Site"
-        autocomplete="off"
-        required
-    >
+    <div class="portal-link-wrap" id="site_wrap">
+        <input
+            type="text"
+            class="form-control"
+            id="site"
+            name="site"
+            value="{{ form_values.site }}"
+            placeholder="Search Site"
+            autocomplete="off"
+            required
+        >
+        <div id="site_dropdown" class="portal-link-dropdown"></div>
+    </div>
+    <script type="application/json" id="site_options_json">{{ site_options | tojson }}</script>
 </div>
 
 
@@ -202,8 +206,10 @@
     const selectedFileNameEl = document.getElementById("selected_file_name");
     const formEl = document.getElementById("engineering-legals-form");
     const submitBtn = document.getElementById("submit_btn");
+
     const sectionsDropdownEl = document.getElementById("sections_dropdown");
     const fleetNumberDropdownEl = document.getElementById("fleet_number_dropdown");
+    const siteDropdownEl = document.getElementById("site_dropdown");
     const sectionsOptions = JSON.parse(document.getElementById("sections_options_json").textContent || "[]");
     const fleetNumberOptions = JSON.parse(document.getElementById("fleet_number_options_json").textContent || "[]");
 
@@ -231,6 +237,75 @@
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;");
     }
+
+
+
+function setupServerSearchDropdown(inputEl, dropdownEl, doctype, queryMethod) {
+    let lastRequest = null;
+
+    async function render(filterText) {
+        const term = (filterText || "").trim();
+
+        try {
+            lastRequest = term;
+
+            const r = await frappe.call({
+                method: "frappe.desk.search.search_link",
+                args: {
+                    doctype: doctype,
+                    txt: term,
+                    query: queryMethod,
+                    page_length: 20
+                }
+            });
+
+            if (lastRequest !== term) return;
+
+            const results = (r.message || []).map(row => row.value || row.name || row);
+
+            if (!results.length) {
+                dropdownEl.innerHTML = '<div class="portal-link-empty">No matches found</div>';
+                dropdownEl.style.display = "block";
+                return;
+            }
+
+            dropdownEl.innerHTML = results.map(option =>
+                '<div class="portal-link-option" data-value="' + escapeHtml(option) + '">' + escapeHtml(option) + '</div>'
+            ).join("");
+
+            dropdownEl.style.display = "block";
+        } catch (e) {
+            dropdownEl.innerHTML = '<div class="portal-link-empty">No matches found</div>';
+            dropdownEl.style.display = "block";
+        }
+    }
+
+    inputEl.addEventListener("focus", function () {
+        render(inputEl.value);
+    });
+
+    inputEl.addEventListener("input", function () {
+        render(inputEl.value);
+    });
+
+    dropdownEl.addEventListener("mousedown", function (e) {
+        const optionEl = e.target.closest(".portal-link-option");
+        if (!optionEl) return;
+
+        const value = optionEl.getAttribute("data-value");
+        inputEl.value = value;
+        dropdownEl.style.display = "none";
+    });
+
+    document.addEventListener("click", function (e) {
+        const wrap = inputEl.closest(".col-md-6");
+        if (!wrap.contains(e.target)) {
+            dropdownEl.style.display = "none";
+        }
+    });
+}
+
+
 
     function setupSearchableDropdown(inputEl, dropdownEl, options, onSelect) {
         function render(filterText) {
@@ -399,11 +474,14 @@
         setExpiryDate();
     });
 
-    if (window.frappe && frappe.utils && frappe.utils.setup_search) {
-    frappe.utils.setup_search(siteEl, "Location", {
-        query: "engineering.engineering.web_form.engineering_legals_sup.get_allowed_location_query"
-    });
-}
+    
+
+    const siteOptions = JSON.parse(document.getElementById("site_options_json").textContent || "[]");
+    setupSearchableDropdown(siteEl, siteDropdownEl, siteOptions);
+
+
+
+
     setupSearchableDropdown(fleetNumberEl, fleetNumberDropdownEl, fleetNumberOptions);
 
     fileInput.addEventListener("change", async function () {
