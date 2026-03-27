@@ -13,6 +13,7 @@
   "fleet_number",
   "vehicle_type",
   "lifting_type",
+  "brake_wear_type",
   "column_break_neqp",
   "attach_paper",
   "start_date",
@@ -126,7 +127,7 @@
    "fieldname": "brake_wear_type",
    "fieldtype": "Select",
    "label": "Brake Wear Type",
-   "options": "\nADT\nFEL"
+   "options": "ADT\nFEL"
   },
   {
    "fieldname": "upload_tab",
@@ -148,7 +149,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-24 13:15:09.995309",
+ "modified": "2026-03-27 12:30:57.129573",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",

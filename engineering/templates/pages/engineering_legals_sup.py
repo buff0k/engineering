@@ -135,7 +135,7 @@ def _handle_post(context):
 
 
 
-ALLOWED_SUPPLIER_SITES = ["GWAB", "Klipfontein"]
+ALLOWED_SUPPLIER_SITES = ["Gwab", "Klipfontein"]
 
 
 @frappe.whitelist()
@@ -216,8 +216,9 @@ def _get_allowed_site_options():
 
 
 def _validate_supplier_site_access(site_name):
-    if site_name not in ALLOWED_SUPPLIER_SITES:
-        frappe.throw(_("You can only create records for GWAB or Klipfontein."), frappe.PermissionError)
+    allowed_map = {d.lower(): d for d in ALLOWED_SUPPLIER_SITES}
+    if (site_name or "").strip().lower() not in allowed_map:
+        frappe.throw(_("You can only create records for Gwab or Klipfontein."), frappe.PermissionError)
 
 
 
