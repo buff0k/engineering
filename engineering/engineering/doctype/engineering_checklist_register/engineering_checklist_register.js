@@ -40,6 +40,8 @@ function ensure_row_state_cache(frm) {
     return frm.__row_state_cache;
 }
 
+const CHECKLIST_CHILD_DOCTYPE = 'Engineering Checklist Register Row';
+
 function get_status_fieldnames() {
     const meta = frappe.get_meta(CHECKLIST_CHILD_DOCTYPE);
 
@@ -325,8 +327,6 @@ function load_machine_rows(frm) {
 /* =========================
    CHECKLIST SUBMISSION
    ========================= */
-
-const CHECKLIST_CHILD_DOCTYPE = 'Engineering Checklist Register Row';
 
 function inject_checklist_submission_styles() {
     if (document.getElementById('checklist-submission-style-block')) return;

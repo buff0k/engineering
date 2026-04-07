@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-03-31 09:17:33.253915",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -117,448 +116,445 @@
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d1_day",
-   "fieldtype": "Check",
-   "label": "1 Day"
+   "fieldtype": "Select",
+   "label": "1 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d1_night",
-   "fieldtype": "Check",
-   "label": "1 Night"
+   "fieldtype": "Select",
+   "label": "1 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d2_day",
-   "fieldtype": "Check",
-   "label": "2 Day"
+   "fieldtype": "Select",
+   "label": "2 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d2_night",
-   "fieldtype": "Check",
-   "label": "2 Night"
+   "fieldtype": "Select",
+   "label": "2 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d3_day",
-   "fieldtype": "Check",
-   "label": "3 Day"
+   "fieldtype": "Select",
+   "label": "3 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d3_night",
-   "fieldtype": "Check",
-   "label": "3 Night"
+   "fieldtype": "Select",
+   "label": "3 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d4_day",
-   "fieldtype": "Check",
-   "label": "4 Day"
+   "fieldtype": "Select",
+   "label": "4 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d4_night",
-   "fieldtype": "Check",
-   "label": "4 Night"
+   "fieldtype": "Select",
+   "label": "4 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d5_day",
-   "fieldtype": "Check",
-   "label": "5 Day"
+   "fieldtype": "Select",
+   "label": "5 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d5_night",
-   "fieldtype": "Check",
-   "label": "5 Night"
+   "fieldtype": "Select",
+   "label": "5 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d6_day",
-   "fieldtype": "Check",
-   "label": "6 Day"
+   "fieldtype": "Select",
+   "label": "6 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d6_night",
-   "fieldtype": "Check",
-   "label": "6 Night"
+   "fieldtype": "Select",
+   "label": "6 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d7_day",
-   "fieldtype": "Check",
-   "label": "7 Day"
+   "fieldtype": "Select",
+   "label": "7 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d7_night",
-   "fieldtype": "Check",
-   "label": "7 Night"
+   "fieldtype": "Select",
+   "label": "7 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d8_day",
-   "fieldtype": "Check",
-   "label": "8 Day"
+   "fieldtype": "Select",
+   "label": "8 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d8_night",
-   "fieldtype": "Check",
-   "label": "8 Night"
+   "fieldtype": "Select",
+   "label": "8 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d9_day",
-   "fieldtype": "Check",
-   "label": "9 Day"
+   "fieldtype": "Select",
+   "label": "9 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d9_night",
-   "fieldtype": "Check",
-   "label": "9 Night"
+   "fieldtype": "Select",
+   "label": "9 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d10_day",
-   "fieldtype": "Check",
-   "label": "10 Day"
+   "fieldtype": "Select",
+   "label": "10 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d10_night",
-   "fieldtype": "Check",
-   "label": "10 Night"
+   "fieldtype": "Select",
+   "label": "10 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d11_day",
-   "fieldtype": "Check",
-   "label": "11 Day"
+   "fieldtype": "Select",
+   "label": "11 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d11_night",
-   "fieldtype": "Check",
-   "label": "11 Night"
+   "fieldtype": "Select",
+   "label": "11 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d12_day",
-   "fieldtype": "Check",
-   "label": "12 Day"
+   "fieldtype": "Select",
+   "label": "12 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d12_night",
-   "fieldtype": "Check",
-   "label": "12 Night"
+   "fieldtype": "Select",
+   "label": "12 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d13_day",
-   "fieldtype": "Check",
-   "label": "13 Day"
+   "fieldtype": "Select",
+   "label": "13 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d13_night",
-   "fieldtype": "Check",
-   "label": "13 Night"
+   "fieldtype": "Select",
+   "label": "13 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d14_day",
-   "fieldtype": "Check",
-   "label": "14 Day"
+   "fieldtype": "Select",
+   "label": "14 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d14_night",
-   "fieldtype": "Check",
-   "label": "14 Night"
+   "fieldtype": "Select",
+   "label": "14 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d15_day",
-   "fieldtype": "Check",
-   "label": "15 Day"
+   "fieldtype": "Select",
+   "label": "15 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d15_night",
-   "fieldtype": "Check",
-   "label": "15 Night"
+   "fieldtype": "Select",
+   "label": "15 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d16_day",
-   "fieldtype": "Check",
-   "label": "16 Day"
+   "fieldtype": "Select",
+   "label": "16 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d16_night",
-   "fieldtype": "Check",
-   "label": "16 Night"
+   "fieldtype": "Select",
+   "label": "16 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d17_day",
-   "fieldtype": "Check",
-   "label": "17 Day"
+   "fieldtype": "Select",
+   "label": "17 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d17_night",
-   "fieldtype": "Check",
-   "label": "17 Night"
+   "fieldtype": "Select",
+   "label": "17 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d18_day",
-   "fieldtype": "Check",
-   "label": "18 Day"
+   "fieldtype": "Select",
+   "label": "18 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d18_night",
-   "fieldtype": "Check",
-   "label": "18 Night"
+   "fieldtype": "Select",
+   "label": "18 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d19_day",
-   "fieldtype": "Check",
-   "label": "19 Day"
+   "fieldtype": "Select",
+   "label": "19 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d19_night",
-   "fieldtype": "Check",
-   "label": "19 Night"
+   "fieldtype": "Select",
+   "label": "19 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d20_day",
-   "fieldtype": "Check",
-   "label": "20 Day"
+   "fieldtype": "Select",
+   "label": "20 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d20_night",
-   "fieldtype": "Check",
-   "label": "20 Night"
+   "fieldtype": "Select",
+   "label": "20 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d21_day",
-   "fieldtype": "Check",
-   "label": "21 Day"
+   "fieldtype": "Select",
+   "label": "21 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d21_night",
-   "fieldtype": "Check",
-   "label": "21 Night"
+   "fieldtype": "Select",
+   "label": "21 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d22_day",
-   "fieldtype": "Check",
-   "label": "22 Day"
+   "fieldtype": "Select",
+   "label": "22 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d22_night",
-   "fieldtype": "Check",
-   "label": "22 Night"
+   "fieldtype": "Select",
+   "label": "22 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d23_day",
-   "fieldtype": "Check",
-   "label": "23 Day"
+   "fieldtype": "Select",
+   "label": "23 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d23_night",
-   "fieldtype": "Check",
-   "label": "23 Night"
+   "fieldtype": "Select",
+   "label": "23 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d24_day",
-   "fieldtype": "Check",
-   "label": "24 Day"
+   "fieldtype": "Select",
+   "label": "24 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d24_night",
-   "fieldtype": "Check",
-   "label": "24 Night"
+   "fieldtype": "Select",
+   "label": "24 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d25_day",
-   "fieldtype": "Check",
-   "label": "25 Day"
+   "fieldtype": "Select",
+   "label": "25 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d25_night",
-   "fieldtype": "Check",
-   "label": "25 Night"
+   "fieldtype": "Select",
+   "label": "25 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d26_day",
-   "fieldtype": "Check",
-   "label": "26 Day"
+   "fieldtype": "Select",
+   "label": "26 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d26_night",
-   "fieldtype": "Check",
-   "label": "26 Night"
+   "fieldtype": "Select",
+   "label": "26 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d27_day",
-   "fieldtype": "Check",
-   "label": "27 Day"
+   "fieldtype": "Select",
+   "label": "27 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d27_night",
-   "fieldtype": "Check",
-   "label": "27 Night"
+   "fieldtype": "Select",
+   "label": "27 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d28_day",
-   "fieldtype": "Check",
-   "label": "28 Day"
+   "fieldtype": "Select",
+   "label": "28 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d28_night",
-   "fieldtype": "Check",
-   "label": "28 Night"
+   "fieldtype": "Select",
+   "label": "28 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d29_day",
-   "fieldtype": "Check",
-   "label": "29 Day"
+   "fieldtype": "Select",
+   "label": "29 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d29_night",
-   "fieldtype": "Check",
-   "label": "29 Night"
+   "fieldtype": "Select",
+   "label": "29 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d30_day",
-   "fieldtype": "Check",
-   "label": "30 Day"
+   "fieldtype": "Select",
+   "label": "30 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d30_night",
-   "fieldtype": "Check",
-   "label": "30 Night"
+   "fieldtype": "Select",
+   "label": "30 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d31_day",
-   "fieldtype": "Check",
-   "label": "31 Day"
+   "fieldtype": "Select",
+   "label": "31 Day",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   },
   {
    "columns": 1,
-   "default": "0",
    "fieldname": "d31_night",
-   "fieldtype": "Check",
-   "label": "31 Night"
+   "fieldtype": "Select",
+   "label": "31 Night",
+   "options": "\nSubmitted\nOffsite\nBreakdown\nService"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-02 07:26:52.649173",
- "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Checklist Register Row",
- "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
