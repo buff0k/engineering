@@ -36,6 +36,8 @@ def execute(filters=None):
     site = (filters.get("site") or "").strip() or None
     section = (filters.get("section") or "").strip() or None
     asset = (filters.get("asset") or "").strip() or None
+    from_expiry_date = getdate(filters.get("from_expiry_date")) if filters.get("from_expiry_date") else None
+    to_expiry_date = getdate(filters.get("to_expiry_date")) if filters.get("to_expiry_date") else None
     view = (filters.get("view") or "Summary").strip() or "Summary"
     bucket = (filters.get("bucket") or "").strip() or None
 
@@ -43,9 +45,9 @@ def execute(filters=None):
     # - Summary view (default): show section rows + bucket counts
     # - Assets view: show list of assets inside one chosen bucket (and optional section/asset)
     if view == "Assets" and bucket:
-        return _assets_view(as_at, site, section, asset, bucket)
+        return _assets_view(as_at, site, section, asset, bucket, from_expiry_date, to_expiry_date)
 
-    return _summary_view(as_at, site, section, asset)
+    return _summary_view(as_at, site, section, asset, from_expiry_date, to_expiry_date)
 
 
 def _base_latest_expiry_sql(where_sql: str) -> str:
@@ -68,7 +70,7 @@ def _base_latest_expiry_sql(where_sql: str) -> str:
     """
 
 
-def _summary_view(as_at, site, section, asset):
+def _summary_view(as_at, site, section, asset, from_expiry_date=None, to_expiry_date=None):
     columns = [
         {"label": "Section", "fieldname": "section", "fieldtype": "Data", "width": 220},
         {"label": "🔴 Overdue", "fieldname": "overdue", "fieldtype": "Int", "width": 110},
@@ -94,7 +96,13 @@ def _summary_view(as_at, site, section, asset):
         where.append("AND el.fleet_number = %(asset)s")
         params["asset"] = asset
 
+    if from_expiry_date:
+        where.append("AND el.expiry_date >= %(from_expiry_date)s")
+        params["from_expiry_date"] = from_expiry_date
 
+    if to_expiry_date:
+        where.append("AND el.expiry_date <= %(to_expiry_date)s")
+        params["to_expiry_date"] = to_expiry_date
 
     latest_sql = _base_latest_expiry_sql("\n".join(where))
 
@@ -122,7 +130,7 @@ def _summary_view(as_at, site, section, asset):
     return columns, data, None, None
 
 
-def _assets_view(as_at, site, section, asset, bucket):
+def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_expiry_date=None):
     columns = [
         {"label": "Asset", "fieldname": "asset", "fieldtype": "Link", "options": "Asset", "width": 130},
         {"label": "Site", "fieldname": "site", "fieldtype": "Link", "options": "Location", "width": 120},
@@ -140,6 +148,15 @@ def _assets_view(as_at, site, section, asset, bucket):
         filters.append(["sections", "=", section])
     if asset:
         filters.append(["fleet_number", "=", asset])
+
+
+    if from_expiry_date:
+        filters.append(["expiry_date", ">=", from_expiry_date])
+
+    if to_expiry_date:
+        filters.append(["expiry_date", "<=", to_expiry_date])
+
+
 
     docs = frappe.get_all(
         "Engineering Legals",

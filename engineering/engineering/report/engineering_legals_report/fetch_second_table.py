@@ -7,11 +7,19 @@ from urllib.parse import quote
 
 
 @frappe.whitelist()
-def get_assets(site=None, section=None, asset=None, as_at_date=None, bucket=None):
+def get_assets(site=None, section=None, asset=None, as_at_date=None, bucket=None, from_expiry_date=None, to_expiry_date=None):
     from engineering.engineering.report.engineering_legals_report.engineering_legals_report import _assets_view
 
     as_at = getdate(as_at_date) if as_at_date else frappe.utils.getdate()
-    cols, rows, msg, chart = _assets_view(as_at, site, section, asset, bucket)
+    cols, rows, msg, chart = _assets_view(
+        as_at,
+        site,
+        section,
+        asset,
+        bucket,
+        getdate(from_expiry_date) if from_expiry_date else None,
+        getdate(to_expiry_date) if to_expiry_date else None,
+    )
     return {"rows": rows}
 
 
@@ -200,7 +208,7 @@ def _get_service_msr_rows(site=None, asset=None, asset_category=None):
 
 
 @frappe.whitelist()
-def get_category_summary(site=None, asset_category=None, section=None):
+def get_category_summary(site=None, asset_category=None, section=None, from_expiry_date=None, to_expiry_date=None):
     if not asset_category:
         return {"rows": [], "sections": []}
 
@@ -239,6 +247,14 @@ def get_category_summary(site=None, asset_category=None, section=None):
             legal_filters.append(["site", "=", site])
         if section:
             legal_filters.append(["sections", "=", section])
+
+
+        if from_expiry_date:
+            legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
+        if to_expiry_date:
+            legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
+
+
 
         docs = frappe.get_all(
             "Engineering Legals",
@@ -338,7 +354,7 @@ def get_recent_submitted_legals(site=None, asset=None, days=10, as_at_date=None)
 
 
 @frappe.whitelist()
-def get_doc_history_tree_meta(site=None, section=None, asset=None):
+def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_date=None, to_expiry_date=None):
     counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
     legal_filters = [["docstatus", "<", 2]]
@@ -348,6 +364,13 @@ def get_doc_history_tree_meta(site=None, section=None, asset=None):
         legal_filters.append(["sections", "=", section])
     if asset:
         legal_filters.append(["fleet_number", "=", asset])
+
+
+    if from_expiry_date:
+        legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
+    if to_expiry_date:
+        legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
+
 
     legal_rows = frappe.get_all(
         "Engineering Legals",
@@ -404,7 +427,7 @@ def get_doc_history_tree_meta(site=None, section=None, asset=None):
 
 
 @frappe.whitelist()
-def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None, limit=50, offset=0):
+def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None, from_expiry_date=None, to_expiry_date=None, limit=50, offset=0):
     if not fleet_number:
         return {"rows": [], "limit": int(limit or 50), "offset": int(offset or 0)}
 
@@ -449,6 +472,14 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
         filters.append(["sections", "=", section])
     if asset:
         filters.append(["fleet_number", "=", asset])
+
+
+    if from_expiry_date:
+        filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
+    if to_expiry_date:
+        filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
+
+
 
     rows = frappe.get_all(
         "Engineering Legals",

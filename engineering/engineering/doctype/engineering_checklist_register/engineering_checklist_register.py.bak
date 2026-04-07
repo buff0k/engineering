@@ -1,0 +1,315 @@
+import frappe
+from frappe.model.document import Document
+
+
+class EngineeringChecklistRegister(Document):
+    pass
+
+
+EXCLUDED_MACHINE_VALUES = {
+    "adt",
+    "all items group",
+    "cellular telephone",
+    "diesel bowsers",
+    "dozer",
+    "drills",
+    "excavator",
+    "generator",
+    "grader",
+    "ldv",
+    "laptop computer",
+    "lightning plant",
+    "mobile crusher",
+    "mobile crasher",
+    "service truck",
+    "tlb",
+    "vehicle mounted radio",
+    "water bowser",
+    "water pump",
+}
+
+
+def _doctype_exists(doctype_name):
+    return bool(frappe.db.exists("DocType", doctype_name))
+
+
+def _get_meta_fieldnames(doctype_name):
+    meta = frappe.get_meta(doctype_name)
+    return [f.fieldname for f in meta.fields if f.fieldname]
+
+
+def _pick_field(fieldnames, candidates):
+    for candidate in candidates:
+        if candidate in fieldnames:
+            return candidate
+    return None
+
+
+def _normalize_text(value):
+    if value is None:
+        return ""
+    return " ".join(str(value).split()).strip()
+
+
+def _is_bad_machine_value(value):
+    text = _normalize_text(value)
+    if not text:
+        return True
+
+    lower_text = text.lower()
+
+    blocked_parts = [
+        "doctype",
+        "not found",
+        "the resource you are looking for is not available",
+    ]
+
+    if any(part in lower_text for part in blocked_parts):
+        return True
+
+    if lower_text in EXCLUDED_MACHINE_VALUES:
+        return True
+
+    return False
+
+
+def _clean_machine_value(value):
+    text = _normalize_text(value)
+    if _is_bad_machine_value(text):
+        return ""
+    return text
+
+
+def _get_employee_site_field():
+    if not _doctype_exists("Employee"):
+        return None
+
+    fieldnames = _get_meta_fieldnames("Employee")
+    return _pick_field(fieldnames, [
+        "branch",
+        "location",
+        "site",
+        "site_code",
+        "work_location",
+        "custom_location",
+        "custom_site",
+        "base",
+    ])
+
+
+def _get_site_source_config():
+    preferred_doctypes = ["Location", "Site Code", "Site Code List"]
+
+    available_doctypes = [d.name for d in frappe.get_all("DocType", fields=["name"])]
+
+    site_like_doctypes = [
+        d for d in available_doctypes
+        if "site" in d.lower() or "location" in d.lower()
+    ]
+
+    candidates = []
+    for d in preferred_doctypes + site_like_doctypes:
+        if d not in candidates:
+            candidates.append(d)
+
+    for doctype_name in candidates:
+        if not _doctype_exists(doctype_name):
+            continue
+
+        fieldnames = _get_meta_fieldnames(doctype_name)
+
+        location_field = _pick_field(fieldnames, [
+            "location",
+            "linked_location",
+            "parent_location",
+            "shift_location",
+            "site",
+            "site_code",
+            "site_name",
+            "branch",
+        ])
+
+        return {
+            "doctype": doctype_name,
+            "location_field": location_field,
+        }
+
+    return None
+
+
+def _get_machine_source_config():
+    doctype_name = "Asset"
+
+    if not _doctype_exists(doctype_name):
+        frappe.throw("DocType 'Asset' does not exist.")
+
+    fieldnames = _get_meta_fieldnames(doctype_name)
+
+    site_field = "location"
+    machine_type_field = "asset_category"
+    item_name_field = "item_name"
+
+    # Asset does not have a real fleet_no field in your system.
+    # Use asset_name as the visible identifier in the Fleet No column.
+    fleet_no_field = "asset_name"
+
+    missing_fields = [
+        field for field in [site_field, machine_type_field, item_name_field, fleet_no_field]
+        if field not in fieldnames
+    ]
+
+    if missing_fields:
+        frappe.throw(
+            "Missing required Asset fields: {0}".format(", ".join(missing_fields))
+        )
+
+    return {
+        "doctype": doctype_name,
+        "site_field": site_field,
+        "machine_type_field": machine_type_field,
+        "fleet_no_field": fleet_no_field,
+        "item_name_field": item_name_field,
+    }
+
+
+@frappe.whitelist()
+def get_user_sites_list():
+    user = frappe.session.user
+
+    employee_site_field = _get_employee_site_field()
+    employee = None
+
+    if employee_site_field:
+        employee = frappe.db.get_value(
+            "Employee",
+            {"user_id": user},
+            ["name", employee_site_field],
+            as_dict=True,
+        )
+
+    site_config = _get_site_source_config()
+    if not site_config:
+        frappe.log_error("No site source config found", "Engineering Checklist Register")
+        return []
+
+    site_doctype = site_config["doctype"]
+    location_field = site_config["location_field"]
+
+    if user == "Administrator":
+        rows = frappe.get_all(
+            site_doctype,
+            fields=["name"],
+            order_by="name asc",
+            limit_page_length=0,
+        )
+        return sorted({_normalize_text(row.name) for row in rows if _normalize_text(row.name)})
+
+    employee_site_value = ""
+    if employee and employee_site_field:
+        employee_site_value = employee.get(employee_site_field) or ""
+
+    if not employee_site_value:
+        rows = frappe.get_all(
+            site_doctype,
+            fields=["name"],
+            order_by="name asc",
+            limit_page_length=0,
+        )
+        return sorted({_normalize_text(row.name) for row in rows if _normalize_text(row.name)})
+
+    filters = {}
+
+    if site_doctype == "Location":
+        filters["name"] = employee_site_value
+    elif location_field:
+        filters[location_field] = employee_site_value
+    else:
+        filters["name"] = employee_site_value
+
+    rows = frappe.get_all(
+        site_doctype,
+        filters=filters,
+        fields=["name"],
+        order_by="name asc",
+        limit_page_length=0,
+    )
+
+    if not rows:
+        rows = frappe.get_all(
+            site_doctype,
+            fields=["name"],
+            order_by="name asc",
+            limit_page_length=0,
+        )
+
+    return sorted({_normalize_text(row.name) for row in rows if _normalize_text(row.name)})
+
+
+@frappe.whitelist()
+def get_machine_type_options(site=None):
+    config = _get_machine_source_config()
+
+    filters = {}
+    if site:
+        filters[config["site_field"]] = site
+
+    rows = frappe.get_all(
+        config["doctype"],
+        filters=filters,
+        fields=[config["machine_type_field"]],
+        order_by="asset_category asc",
+        limit_page_length=0,
+    )
+
+    result = sorted({
+        _clean_machine_value(row.get(config["machine_type_field"]))
+        for row in rows
+        if _clean_machine_value(row.get(config["machine_type_field"]))
+    })
+
+    return result
+
+
+@frappe.whitelist()
+def get_site_machines(site, machine_type=None):
+    if not site:
+        return []
+
+    config = _get_machine_source_config()
+
+    filters = {
+        config["site_field"]: site
+    }
+
+    if machine_type:
+        filters[config["machine_type_field"]] = machine_type
+
+    records = frappe.get_all(
+        config["doctype"],
+        filters=filters,
+        fields=[
+            "name",
+            config["fleet_no_field"],
+            config["item_name_field"],
+            config["machine_type_field"],
+        ],
+        order_by="modified desc",
+        limit_page_length=0,
+    )
+
+    cleaned_records = []
+    for record in records:
+        fleet_no = _normalize_text(record.get(config["fleet_no_field"]))
+        item_name = _normalize_text(record.get(config["item_name_field"]))
+        machine_type_value = _clean_machine_value(record.get(config["machine_type_field"]))
+
+        if not machine_type_value:
+            continue
+
+        cleaned_records.append({
+            "fleet_no": fleet_no,
+            "machine_type": machine_type_value,
+            "item_name": item_name,
+        })
+
+    return cleaned_records

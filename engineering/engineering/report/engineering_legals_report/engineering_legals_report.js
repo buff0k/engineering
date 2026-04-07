@@ -32,6 +32,16 @@ frappe.query_reports["Engineering Legals Report"] = {
       fieldtype: "Link",
       options: "Asset"
     },
+    {
+      fieldname: "from_expiry_date",
+      label: "Start Date",
+      fieldtype: "Date"
+    },
+    {
+      fieldname: "to_expiry_date",
+      label: "End Date",
+      fieldtype: "Date"
+    },
     // internal click-driven filters
     {
       fieldname: "view",
@@ -68,10 +78,12 @@ frappe.query_reports["Engineering Legals Report"] = {
 
         const site = frappe.query_report.get_filter_value("site") || "";
         const asset = frappe.query_report.get_filter_value("asset") || "";
+        const from_expiry_date = frappe.query_report.get_filter_value("from_expiry_date") || "";
+        const to_expiry_date = frappe.query_report.get_filter_value("to_expiry_date") || "";
 
         frappe.call({
           method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_assets",
-          args: { site, section, asset, bucket },
+          args: { site, section, asset, bucket, from_expiry_date, to_expiry_date },
           callback: (r) => {
             const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
             render_drilldown(report, { site, section, asset, bucket, rows });
@@ -375,12 +387,17 @@ function render_dashboard(report, rows, site) {
 function open_category_summary(report, ctx) {
   const { site, category, section } = ctx;
 
+  const from_expiry_date = frappe.query_report.get_filter_value("from_expiry_date") || "";
+  const to_expiry_date = frappe.query_report.get_filter_value("to_expiry_date") || "";
+
   frappe.call({
     method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_category_summary",
     args: {
       site,
       asset_category: category,
-      section
+      section,
+      from_expiry_date,
+      to_expiry_date
     },
     callback: (r) => {
       const payload = (r && r.message) ? r.message : {};
@@ -641,9 +658,12 @@ function render_doc_history_tree(report, ctx) {
     <div style="text-align:center; opacity:.7;">Loading…</div>
   `);
 
+  const from_expiry_date = frappe.query_report.get_filter_value("from_expiry_date") || "";
+  const to_expiry_date = frappe.query_report.get_filter_value("to_expiry_date") || "";
+
   frappe.call({
     method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_doc_history_tree_meta",
-    args: { site, section, asset },
+    args: { site, section, asset, from_expiry_date, to_expiry_date },
     callback: (r) => {
       const payload = (r && r.message) ? r.message : {};
       const tree = payload.tree || [];
@@ -820,6 +840,8 @@ function bind_doc_history_lazy_loader(report) {
     const fleet = node.attr("data-fleet") || "";
     const asset = frappe.query_report.get_filter_value("asset") || "";
     const body = node.find(".el-fleet-body");
+    const from_expiry_date = frappe.query_report.get_filter_value("from_expiry_date") || "";
+    const to_expiry_date = frappe.query_report.get_filter_value("to_expiry_date") || "";
 
     const cache_key = `${site}|${section}|${fleet}`;
     if (EL_DOC_CACHE[cache_key]) {
@@ -833,7 +855,7 @@ function bind_doc_history_lazy_loader(report) {
 
     frappe.call({
       method: "engineering.engineering.report.engineering_legals_report.fetch_second_table.get_doc_history_docs",
-      args: { site, section, fleet_number: fleet, asset, limit: 50, offset: 0 },
+      args: { site, section, fleet_number: fleet, asset, from_expiry_date, to_expiry_date, limit: 50, offset: 0 },
       callback: (r) => {
         const rows = (r && r.message && r.message.rows) ? r.message.rows : [];
         EL_DOC_CACHE[cache_key] = rows;

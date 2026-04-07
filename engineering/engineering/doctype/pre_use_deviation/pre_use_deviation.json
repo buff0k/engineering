@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_import": 1,
- "allow_rename": 1,
  "autoname": "naming_series:",
  "creation": "2026-03-25 00:00:00",
  "default_view": "List",
@@ -9,41 +8,50 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "section_break_psiv",
   "naming_series",
-  "report_date",
+  "report_datetime",
   "site",
   "fleet_number",
-  "equipment",
+  "machine_type",
+  "machine_model",
   "pre_use_no",
   "section_break_deviation",
   "deviation_details",
-  "reported_by",
+  "pre_use_attachment",
+  "section_break_reported_by",
+  "reported_by_coy_number",
+  "reported_by_name_and_surname",
   "section_break_resolution",
   "resolution_summary",
-  "action_date",
-  "actioned_by",
+  "job_card_attachment",
+  "action_date_and_time",
   "job_card_number",
+  "section_break_actioned_by",
+  "actioned_by_coy_number",
+  "actioned_by_name_and_surname",
   "section_break_status",
-  "status",
+  "action_status",
+  "percentage_block_bar",
+  "operating_status",
   "completion_percentage"
  ],
  "fields": [
   {
+   "description": "fleet_number.",
    "fieldname": "naming_series",
    "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Series",
-   "options": "PUD-.YYYY.-",
+   "hidden": 1,
+   "label": "Series"
+  },
+  {
+   "fieldname": "report_datetime",
+   "fieldtype": "Datetime",
+   "label": "Date and Time",
    "reqd": 1
   },
   {
-   "fieldname": "report_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date",
-   "reqd": 1
-  },
-  {
+   "description": "site.",
    "fieldname": "site",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -60,11 +68,14 @@
    "reqd": 1
   },
   {
-   "fieldname": "equipment",
-   "fieldtype": "Link",
-   "label": "Equipment",
-   "options": "Asset",
-   "reqd": 1
+   "fieldname": "machine_type",
+   "fieldtype": "Data",
+   "label": "Machine Type"
+  },
+  {
+   "fieldname": "machine_model",
+   "fieldtype": "Data",
+   "label": "Machine Model"
   },
   {
    "fieldname": "pre_use_no",
@@ -79,13 +90,31 @@
   {
    "fieldname": "deviation_details",
    "fieldtype": "Small Text",
+   "in_list_view": 1,
    "label": "Deviation Details",
    "reqd": 1
   },
   {
-   "fieldname": "reported_by",
-   "fieldtype": "Data",
+   "fieldname": "pre_use_attachment",
+   "fieldtype": "Attach",
+   "label": "Pre-Use Attachment"
+  },
+  {
+   "fieldname": "section_break_reported_by",
+   "fieldtype": "Section Break",
    "label": "Reported By"
+  },
+  {
+   "fieldname": "reported_by_coy_number",
+   "fieldtype": "Link",
+   "label": "Reported By Coy Number",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "reported_by_name_and_surname",
+   "fieldtype": "Data",
+   "label": "Reported By Name and Surname",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_resolution",
@@ -95,17 +124,13 @@
   {
    "fieldname": "resolution_summary",
    "fieldtype": "Small Text",
+   "in_list_view": 1,
    "label": "Resolution Summary"
   },
   {
-   "fieldname": "action_date",
-   "fieldtype": "Date",
-   "label": "Action Date"
-  },
-  {
-   "fieldname": "actioned_by",
-   "fieldtype": "Data",
-   "label": "Actioned By"
+   "fieldname": "job_card_attachment",
+   "fieldtype": "Attach",
+   "label": "Job Card Attachment"
   },
   {
    "fieldname": "job_card_number",
@@ -113,34 +138,72 @@
    "label": "Job Card Number"
   },
   {
+   "fieldname": "section_break_actioned_by",
+   "fieldtype": "Section Break",
+   "label": "Actioned By"
+  },
+  {
+   "fieldname": "actioned_by_coy_number",
+   "fieldtype": "Link",
+   "label": "Actioned By Coy Number",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "actioned_by_name_and_surname",
+   "fieldtype": "Data",
+   "label": "Actioned By Name and Surname",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_status",
    "fieldtype": "Section Break",
    "label": "Status"
   },
   {
-   "default": "Pending",
-   "fieldname": "status",
+   "fieldname": "percentage_block_bar",
+   "fieldtype": "HTML",
+   "label": "Percentage Block / Bar"
+  },
+  {
+   "fieldname": "operating_status",
    "fieldtype": "Select",
-   "label": "Status",
-   "options": "Pending\nDone\nCancelled",
-   "reqd": 1
+   "in_list_view": 1,
+   "label": "Operating Status",
+   "options": "Working\nNot Working\nOff Site\nPending Parts\nPending Incident report"
   },
   {
    "default": "0",
    "fieldname": "completion_percentage",
    "fieldtype": "Percent",
    "label": "Completion Percentage",
+   "precision": "0"
+  },
+  {
+   "fieldname": "action_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Action Date and Time"
+  },
+  {
+   "default": "Open",
+   "fieldname": "action_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Action Status",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_break_psiv",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 15:43:03.649019",
+ "modified": "2026-03-31 07:57:29.965695",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Pre Use Deviation",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -152,8 +215,56 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "select": 1,
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "select": 1,
+   "share": 1
   }
  ],
  "row_format": "Dynamic",

@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 09:51:27.291490",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "site",
+  "month",
+  "year",
+  "machine_type_filter",
+  "checklist_submission_average",
+  "rows",
+  "test"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "month",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Month",
+   "options": "January\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember",
+   "reqd": 1
+  },
+  {
+   "fieldname": "year",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "machine_type_filter",
+   "fieldtype": "Select",
+   "label": "Machine Type Filter"
+  },
+  {
+   "fieldname": "checklist_submission_average",
+   "fieldtype": "Data",
+   "label": "Checklist Submission Average",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Rows",
+   "options": "Engineering Checklist Register Row"
+  },
+  {
+   "fieldname": "test",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Test"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-01 15:16:07.666016",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Engineering Checklist Register",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "site,month,year",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "site",
+ "track_changes": 1
+}

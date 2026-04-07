@@ -1,0 +1,568 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 09:17:33.253915",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "fleet_no",
+  "machine_type",
+  "item_name",
+  "target",
+  "checklist_submission",
+  "d1_day",
+  "d1_night",
+  "d2_day",
+  "d2_night",
+  "d3_day",
+  "d3_night",
+  "d4_day",
+  "d4_night",
+  "d5_day",
+  "d5_night",
+  "d6_day",
+  "d6_night",
+  "d7_day",
+  "d7_night",
+  "d8_day",
+  "d8_night",
+  "d9_day",
+  "d9_night",
+  "d10_day",
+  "d10_night",
+  "d11_day",
+  "d11_night",
+  "d12_day",
+  "d12_night",
+  "d13_day",
+  "d13_night",
+  "d14_day",
+  "d14_night",
+  "d15_day",
+  "d15_night",
+  "d16_day",
+  "d16_night",
+  "d17_day",
+  "d17_night",
+  "d18_day",
+  "d18_night",
+  "d19_day",
+  "d19_night",
+  "d20_day",
+  "d20_night",
+  "d21_day",
+  "d21_night",
+  "d22_day",
+  "d22_night",
+  "d23_day",
+  "d23_night",
+  "d24_day",
+  "d24_night",
+  "d25_day",
+  "d25_night",
+  "d26_day",
+  "d26_night",
+  "d27_day",
+  "d27_night",
+  "d28_day",
+  "d28_night",
+  "d29_day",
+  "d29_night",
+  "d30_day",
+  "d30_night",
+  "d31_day",
+  "d31_night"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "fleet_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Fleet No",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "machine_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Machine Type"
+  },
+  {
+   "columns": 2,
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name"
+  },
+  {
+   "columns": 1,
+   "default": "100",
+   "fieldname": "target",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Target",
+   "precision": "0"
+  },
+  {
+   "columns": 1,
+   "fieldname": "checklist_submission",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Checklist Submission",
+   "precision": "0",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d1_day",
+   "fieldtype": "Check",
+   "label": "1 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d1_night",
+   "fieldtype": "Check",
+   "label": "1 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d2_day",
+   "fieldtype": "Check",
+   "label": "2 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d2_night",
+   "fieldtype": "Check",
+   "label": "2 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d3_day",
+   "fieldtype": "Check",
+   "label": "3 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d3_night",
+   "fieldtype": "Check",
+   "label": "3 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d4_day",
+   "fieldtype": "Check",
+   "label": "4 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d4_night",
+   "fieldtype": "Check",
+   "label": "4 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d5_day",
+   "fieldtype": "Check",
+   "label": "5 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d5_night",
+   "fieldtype": "Check",
+   "label": "5 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d6_day",
+   "fieldtype": "Check",
+   "label": "6 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d6_night",
+   "fieldtype": "Check",
+   "label": "6 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d7_day",
+   "fieldtype": "Check",
+   "label": "7 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d7_night",
+   "fieldtype": "Check",
+   "label": "7 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d8_day",
+   "fieldtype": "Check",
+   "label": "8 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d8_night",
+   "fieldtype": "Check",
+   "label": "8 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d9_day",
+   "fieldtype": "Check",
+   "label": "9 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d9_night",
+   "fieldtype": "Check",
+   "label": "9 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d10_day",
+   "fieldtype": "Check",
+   "label": "10 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d10_night",
+   "fieldtype": "Check",
+   "label": "10 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d11_day",
+   "fieldtype": "Check",
+   "label": "11 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d11_night",
+   "fieldtype": "Check",
+   "label": "11 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d12_day",
+   "fieldtype": "Check",
+   "label": "12 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d12_night",
+   "fieldtype": "Check",
+   "label": "12 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d13_day",
+   "fieldtype": "Check",
+   "label": "13 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d13_night",
+   "fieldtype": "Check",
+   "label": "13 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d14_day",
+   "fieldtype": "Check",
+   "label": "14 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d14_night",
+   "fieldtype": "Check",
+   "label": "14 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d15_day",
+   "fieldtype": "Check",
+   "label": "15 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d15_night",
+   "fieldtype": "Check",
+   "label": "15 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d16_day",
+   "fieldtype": "Check",
+   "label": "16 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d16_night",
+   "fieldtype": "Check",
+   "label": "16 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d17_day",
+   "fieldtype": "Check",
+   "label": "17 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d17_night",
+   "fieldtype": "Check",
+   "label": "17 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d18_day",
+   "fieldtype": "Check",
+   "label": "18 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d18_night",
+   "fieldtype": "Check",
+   "label": "18 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d19_day",
+   "fieldtype": "Check",
+   "label": "19 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d19_night",
+   "fieldtype": "Check",
+   "label": "19 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d20_day",
+   "fieldtype": "Check",
+   "label": "20 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d20_night",
+   "fieldtype": "Check",
+   "label": "20 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d21_day",
+   "fieldtype": "Check",
+   "label": "21 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d21_night",
+   "fieldtype": "Check",
+   "label": "21 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d22_day",
+   "fieldtype": "Check",
+   "label": "22 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d22_night",
+   "fieldtype": "Check",
+   "label": "22 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d23_day",
+   "fieldtype": "Check",
+   "label": "23 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d23_night",
+   "fieldtype": "Check",
+   "label": "23 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d24_day",
+   "fieldtype": "Check",
+   "label": "24 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d24_night",
+   "fieldtype": "Check",
+   "label": "24 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d25_day",
+   "fieldtype": "Check",
+   "label": "25 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d25_night",
+   "fieldtype": "Check",
+   "label": "25 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d26_day",
+   "fieldtype": "Check",
+   "label": "26 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d26_night",
+   "fieldtype": "Check",
+   "label": "26 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d27_day",
+   "fieldtype": "Check",
+   "label": "27 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d27_night",
+   "fieldtype": "Check",
+   "label": "27 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d28_day",
+   "fieldtype": "Check",
+   "label": "28 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d28_night",
+   "fieldtype": "Check",
+   "label": "28 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d29_day",
+   "fieldtype": "Check",
+   "label": "29 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d29_night",
+   "fieldtype": "Check",
+   "label": "29 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d30_day",
+   "fieldtype": "Check",
+   "label": "30 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d30_night",
+   "fieldtype": "Check",
+   "label": "30 Night"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d31_day",
+   "fieldtype": "Check",
+   "label": "31 Day"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "d31_night",
+   "fieldtype": "Check",
+   "label": "31 Night"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-02 07:26:52.649173",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Engineering Checklist Register Row",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
