@@ -117,6 +117,9 @@ doc_events = {
     "OEM Booking": {
         "on_update": "engineering.controllers.notifications.oem_booking_on_update",
     },
+    "WearCheck Results": {
+        "after_insert": "engineering.controllers.notifications.wearcheck_results_after_insert",
+    },
     "Component Replacement Report": {
         "on_update": "engineering.controllers.isambane_sample_input.component_replacement_report_on_update"
     },
