@@ -160,11 +160,11 @@ def _overlap_hours(a_start, a_end, b_start, b_end) -> float:
 def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
     """
     Windows where breakdown time should NOT be counted.
-    - Always exclude 06:00–07:00 for Day shift (and Morning if it uses 06:00 start)
-    - Always exclude 18:00–19:00 for Night shift (and Night if it uses 18:00 start)
-    - Fatigue windows are site-specific for Day, and 01:00–02:00 for Night.
+    - Exclude 06:00–08:00 for Day/Morning shifts that start at 06:00
+    - Exclude 18:00–20:00 for Night shifts that start at 18:00
+    - Exclude 13:00–14:00 for all Day shifts
+    - Exclude 01:00–02:00 for Night shifts
     """
-    loc = (location or "").strip().lower()
     sh = (shift or "").strip().lower()
 
     windows = []
@@ -176,25 +176,17 @@ def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
     shift_date_str = getdate(shift_start).strftime("%Y-%m-%d")
     next_date_str = getdate(shift_end).strftime("%Y-%m-%d")  # handles crossing midnight
 
-    # Always-exclude per shift
-    # Day-style shifts that start at 06:00
+    # Startup exclusion for day-style shifts
     if get_datetime(shift_start).strftime("%H:%M:%S") == "06:00:00" and sh in ("day", "morning"):
-        windows.append((_dt(shift_date_str, "06:00:00"), _dt(shift_date_str, "07:00:00")))
+        windows.append((_dt(shift_date_str, "06:00:00"), _dt(shift_date_str, "08:00:00")))
 
-    # Night-style shifts that start at 18:00
+    # Startup exclusion for night shifts
     if get_datetime(shift_start).strftime("%H:%M:%S") == "18:00:00" and sh in ("night",):
-        windows.append((_dt(shift_date_str, "18:00:00"), _dt(shift_date_str, "19:00:00")))
+        windows.append((_dt(shift_date_str, "18:00:00"), _dt(shift_date_str, "20:00:00")))
 
-    # Fatigue windows (site-specific)
-    # Day fatigue:
-    day_13_1330 = {"uitgevallen", "koppie", "bankfontein"}
-    day_13_14 = {"gwab", "klipfontein", "kriel"}
-
+    # Day fatigue for all sites
     if sh in ("day",):
-        if loc in day_13_1330:
-            windows.append((_dt(shift_date_str, "13:00:00"), _dt(shift_date_str, "13:30:00")))
-        elif loc in day_13_14:
-            windows.append((_dt(shift_date_str, "13:00:00"), _dt(shift_date_str, "14:00:00")))
+        windows.append((_dt(shift_date_str, "13:00:00"), _dt(shift_date_str, "14:00:00")))
 
     # Night fatigue (01:00–02:00 happens after midnight for 18:00–06:00 shifts)
     if sh in ("night",):
@@ -426,18 +418,7 @@ class AvailabilityandUtilisation(Document):
                         elif doc.shift == "Afternoon":
                             base_hours = day.shift_afternoon_hours or 0
 
-                        # Small rule: if 9 add 1.5, if 7 add 0.5
-                        try:
-                            base_val = float(base_hours or 0)
-                        except Exception:
-                            base_val = 0.0
-
-                        if abs(base_val - 9.0) < 0.001:
-                            base_val += 1.5
-                        elif abs(base_val - 7.0) < 0.001:
-                            base_val += 0.5
-
-                        doc.shift_required_hours = base_val
+                        doc.shift_required_hours = base_hours or 0
 
                         doc.save(ignore_permissions=True)
                         append_log(doc.name, f"Phase 4: shift_required_hours updated for doc={doc.name}")

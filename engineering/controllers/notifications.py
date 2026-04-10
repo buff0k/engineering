@@ -13,7 +13,7 @@ OPEN_BREAKDOWN_SITE_RECIPIENTS = {
     "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za"],
     "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za"],
     "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "msani@isambane.co.za"],
-    "Gwab": ["shawn@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za"],
+    "Gwab": ["bongani@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za"],
     "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za"],
     "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za"],
 }
@@ -21,7 +21,29 @@ OPEN_BREAKDOWN_SITE_RECIPIENTS = {
 # Fallback if a Location name doesn't match any key above
 OPEN_BREAKDOWN_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
 
-from frappe.utils import now_datetime
+from frappe.utils import now_datetime, cint
+
+
+
+# Wearcheck urgent / critical recipients per site/location
+WEARCHECK_ALERT_SITE_RECIPIENTS = {
+    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za", "japie@isambane.co.za"],
+    "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za", "gert@isambane.co.za"],
+    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "msani@isambane.co.za", "japie@isambane.co.za"],
+    "Gwab": ["bongani@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za", "gert@isambane.co.za"],
+    "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za", "japie@isambane.co.za"],
+    "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za", "gert@isambane.co.za"],
+}
+
+WEARCHECK_ALERT_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
+WEARCHECK_SEVERITY_MAP = {
+    3: "Urgent",
+    4: "Critical",
+}
+
+
+
+
 
 def send_open_breakdowns_digest_hourly_gate():
     """Run digest only at 06:00 and 18:00 server time."""
@@ -227,4 +249,73 @@ def _send_oem_booking_email(doc, action: str):
 
 
 
+def wearcheck_results_after_insert(doc, method=None):
+    _send_wearcheck_alert_email(doc)
 
+
+def _send_wearcheck_alert_email(doc):
+    status = cint(getattr(doc, "status", None) or 0)
+    if status not in (3, 4):
+        return
+
+    severity = WEARCHECK_SEVERITY_MAP.get(status)
+    if not severity:
+        return
+
+    location = (getattr(doc, "location", "") or getattr(doc, "site", "") or "").strip() or "Unknown"
+    recipients = WEARCHECK_ALERT_SITE_RECIPIENTS.get(location) or WEARCHECK_ALERT_DEFAULT_RECIPIENTS
+
+    email_account = EmailAccount.find_outgoing(match_by_doctype=doc.doctype, _raise_error=False)
+    if not email_account:
+        row = frappe.get_all("Email Account", filters={"enable_outgoing": 1}, pluck="name", limit=1)
+        email_account = row and frappe.get_doc("Email Account", row[0]) or None
+
+    if not email_account or not getattr(email_account, "email_id", None):
+        frappe.log_error("No outgoing Email Account configured/enabled. Skipping Wearcheck alert email.", "Wearcheck Alert Email")
+        return
+
+    sender = email_account.email_id
+    url = frappe.utils.get_url(doc.get_url())
+
+    subject = f"🚨 Oil Sample Alert for {getattr(doc, 'machine', '')} ({location})"
+
+    lines = [
+        "Dear Team,",
+        "",
+        "🚨 <b>Oil Sample Alert</b> 🚨",
+        "",
+        "A new oil sample result has been received for the machine below and requires immediate attention.",
+        "",
+        f"<b>Site:</b> {location}",
+        f"<b>Machine:</b> {getattr(doc, 'machine', '')}",
+        f"<b>Sample No:</b> {getattr(doc, 'sampno', '')}",
+        f"<b>Component:</b> {getattr(doc, 'component', '')}",
+        f"<b>Severity:</b> {severity}",
+        f"<b>Sample Date:</b> {getattr(doc, 'sampledate', '')}",
+        f"<b>Registered Date:</b> {getattr(doc, 'registerdate', '')}",
+        "",
+        "Please monitor this machine closely and take the necessary action as soon as possible to prevent possible failure or further damage.",
+        "",
+        "<b>Comments:</b>",
+        f"{getattr(doc, 'commentstext', '') or '-'}",
+        "",
+        "<b>Recommended Action:</b>",
+        f"{getattr(doc, 'actiontext', '') or '-'}",
+        "",
+        f'<a href="{url}">Click here to view the record</a>',
+        "",
+        "Regards,",
+        "Engineering System",
+    ]
+
+    message = "<br>".join(lines)
+
+    try:
+        frappe.sendmail(
+            recipients=recipients,
+            sender=sender,
+            subject=subject,
+            message=message,
+        )
+    except frappe.OutgoingEmailError:
+        frappe.log_error(frappe.get_traceback(), "Wearcheck Alert Email OutgoingEmailError")
