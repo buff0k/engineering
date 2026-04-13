@@ -47,6 +47,7 @@
    "fieldname": "checklist_submission_average",
    "fieldtype": "Data",
    "label": "Checklist Submission Average",
+   "precision": "0",
    "read_only": 1
   },
   {
@@ -65,7 +66,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-01 15:16:07.666016",
+ "modified": "2026-04-13 12:15:06.575100",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Checklist Register",
@@ -80,6 +81,50 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
    "share": 1,
    "write": 1
   }
