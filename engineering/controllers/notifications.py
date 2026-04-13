@@ -12,7 +12,7 @@ OEM_BOOKING_RECIPIENTS = ["juan@isambane.co.za", "renier@isambane.co.za"]
 OPEN_BREAKDOWN_SITE_RECIPIENTS = {
     "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za"],
     "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za"],
-    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "msani@isambane.co.za"],
+    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "juan@isambane.co.za", "msani@isambane.co.za"],
     "Gwab": ["bongani@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za"],
     "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za"],
     "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za"],
