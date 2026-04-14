@@ -225,9 +225,9 @@ class AvailabilityandUtilisation(Document):
         current_date = getdate(today())
 
         # =============================================================================
-        # Phase 1: Create or Update AU docs (last 7 days)
+        # Phase 1: Create or Update AU docs (last 50 days)
         # =============================================================================
-        start_date = current_date - timedelta(days=7)
+        start_date = current_date - timedelta(days=50)
         end_date = current_date
 
         production_planning_records = frappe.get_all(
@@ -519,7 +519,7 @@ class AvailabilityandUtilisation(Document):
         # Phase 7: Update shift_breakdown_hours
         # =============================================================================
         current_date = getdate(today())
-        start_date = current_date - timedelta(days=7)
+        start_date = current_date - timedelta(days=50)
 
         parent_records = frappe.get_all(
             "Availability and Utilisation",

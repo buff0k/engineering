@@ -426,7 +426,7 @@ function setupServerSearchDropdown(inputEl, dropdownEl, doctype, queryMethod) {
     async function uploadFile(file) {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("is_private", 0);
+        formData.append("is_private", 1);
         formData.append("folder", "Home");
 
         const csrfToken =
