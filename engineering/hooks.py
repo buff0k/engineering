@@ -91,7 +91,7 @@ scheduler_events = {
             "engineering.controllers.notifications.send_open_breakdowns_digest"
         ],
         "5 0 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily_availability_and_utilisation_scheduler"
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
         # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
@@ -130,6 +130,5 @@ doc_events = {
 # Whitelisted method overrides
 # ---------------------------------------------------------------------
 override_whitelisted_methods = {
-    "custom_checkin": "engineering.checkin.custom_checkin"
 }
 

@@ -708,6 +708,12 @@ class AvailabilityandUtilisation(Document):
                 else:
                     doc.plant_shift_availability = (max_val / shift_required_hours) * 100 if shift_required_hours > 0 else 0
 
+                # HARD CAP
+                doc.plant_shift_utilisation = min(doc.plant_shift_utilisation, 100)
+                doc.plant_shift_availability = min(doc.plant_shift_availability, 100)
+
+
+
                 doc.save(ignore_permissions=True)
 
                 append_log(

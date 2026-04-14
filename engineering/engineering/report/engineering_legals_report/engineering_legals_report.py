@@ -8,6 +8,7 @@
 import frappe
 from frappe.utils import getdate, today
 from collections import defaultdict
+from frappe.query_builder import DocType
 from engineering.engineering.report.engineering_legals_report.fetch_second_table import (
     _get_expiry_bucket,
     _build_combined_status,
@@ -27,6 +28,45 @@ BUCKETS = [
     ("d15_21", "15–21", 15, 21),
     ("d22_28", "22–28", 22, 28),
 ]
+
+
+def _get_asset_site_field():
+    meta = frappe.get_meta("Asset")
+
+    for fn in ("location", "site", "custom_location", "custom_site"):
+        if meta.has_field(fn):
+            return fn
+
+    return None
+
+
+def _get_asset_site_map(asset_names):
+    asset_names = [a for a in (asset_names or []) if a]
+    if not asset_names:
+        return {}
+
+    site_field = _get_asset_site_field()
+    if not site_field:
+        return {}
+
+    Asset = DocType("Asset")
+
+    rows = (
+        frappe.qb.from_(Asset)
+        .select(
+            Asset.name,
+            getattr(Asset, site_field).as_("current_site"),
+        )
+        .where(Asset.name.isin(asset_names))
+    ).run(as_dict=True)
+
+    return {
+        (r.get("name") or "").strip(): (r.get("current_site") or "").strip()
+        for r in rows
+    }
+
+
+
 
 
 def execute(filters=None):
@@ -80,53 +120,98 @@ def _summary_view(as_at, site, section, asset, from_expiry_date=None, to_expiry_
         {"label": "🟦 22–28", "fieldname": "d22_28", "fieldtype": "Int", "width": 95},
     ]
 
-    where = []
-    params = {"no_expiry_sections": NO_EXPIRY_SECTIONS, "as_at": as_at}
-
-    if site:
-        where.append("AND el.site = %(site)s")
-        params["site"] = site
+    filters = [["docstatus", "<", 2]]
 
     if section:
-        where.append("AND el.sections = %(section)s")
-        params["section"] = section
-
+        filters.append(["sections", "=", section])
 
     if asset:
-        where.append("AND el.fleet_number = %(asset)s")
-        params["asset"] = asset
+        filters.append(["fleet_number", "=", asset])
 
     if from_expiry_date:
-        where.append("AND el.expiry_date >= %(from_expiry_date)s")
-        params["from_expiry_date"] = from_expiry_date
+        filters.append(["expiry_date", ">=", from_expiry_date])
 
     if to_expiry_date:
-        where.append("AND el.expiry_date <= %(to_expiry_date)s")
-        params["to_expiry_date"] = to_expiry_date
+        filters.append(["expiry_date", "<=", to_expiry_date])
 
-    latest_sql = _base_latest_expiry_sql("\n".join(where))
-
-    # days_left = DATEDIFF(expiry_date, as_at)
-    data = frappe.db.sql(
-        f"""
-        WITH latest AS (
-            {latest_sql}
-        )
-        SELECT
-            latest.section AS section,
-            SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) < 0 THEN 1 ELSE 0 END) AS overdue,
-            SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 0 AND 7 THEN 1 ELSE 0 END) AS d0_7,
-            SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 8 AND 14 THEN 1 ELSE 0 END) AS d8_14,
-            SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 15 AND 21 THEN 1 ELSE 0 END) AS d15_21,
-            SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 22 AND 28 THEN 1 ELSE 0 END) AS d22_28
-        FROM latest
-        GROUP BY latest.section
-        ORDER BY latest.section
-        """,
-        params,
-        as_dict=True,
+    docs = frappe.get_all(
+        "Engineering Legals",
+        filters=filters,
+        fields=[
+            "name",
+            "site",
+            "sections",
+            "fleet_number",
+            "start_date",
+            "expiry_date",
+            "modified",
+            "attach_paper",
+        ],
+        order_by="sections asc, fleet_number asc, start_date desc, expiry_date desc, modified desc",
+        limit_page_length=0,
     )
 
+    asset_site_map = _get_asset_site_map([d.get("fleet_number") for d in docs])
+
+    grouped = {}
+    for d in docs:
+        sec = (d.get("sections") or "").strip()
+        fleet = (d.get("fleet_number") or "").strip()
+
+        if sec in NO_EXPIRY_SECTIONS:
+            continue
+        if not fleet:
+            continue
+
+        current_site = (asset_site_map.get(fleet) or "").strip()
+        if site and current_site != site:
+            continue
+
+        key = (sec, fleet)
+        existing = grouped.get(key)
+
+        if not existing:
+            grouped[key] = d
+            continue
+
+        existing_expiry = existing.get("expiry_date")
+        new_expiry = d.get("expiry_date")
+
+        if new_expiry and (not existing_expiry or getdate(new_expiry) > getdate(existing_expiry)):
+            grouped[key] = d
+
+    summary = defaultdict(lambda: {
+        "section": "",
+        "overdue": 0,
+        "d0_7": 0,
+        "d8_14": 0,
+        "d15_21": 0,
+        "d22_28": 0,
+    })
+
+    for (_, _), latest_doc in grouped.items():
+        sec = (latest_doc.get("sections") or "").strip()
+        expiry_date = latest_doc.get("expiry_date")
+
+        if not expiry_date:
+            continue
+
+        bucket = _get_expiry_bucket(expiry_date, as_at)
+        row = summary[sec]
+        row["section"] = sec
+
+        if bucket == "Overdue":
+            row["overdue"] += 1
+        elif bucket == "0-7 days":
+            row["d0_7"] += 1
+        elif bucket == "8-14 days":
+            row["d8_14"] += 1
+        elif bucket == "15-21 days":
+            row["d15_21"] += 1
+        elif bucket == "22-28 days":
+            row["d22_28"] += 1
+
+    data = [summary[k] for k in sorted(summary.keys())]
     return columns, data, None, None
 
 
@@ -142,13 +227,10 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
     ]
 
     filters = [["docstatus", "<", 2]]
-    if site:
-        filters.append(["site", "=", site])
     if section:
         filters.append(["sections", "=", section])
     if asset:
         filters.append(["fleet_number", "=", asset])
-
 
     if from_expiry_date:
         filters.append(["expiry_date", ">=", from_expiry_date])
@@ -236,16 +318,26 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
             return expiry_bucket_value == "22-28 days"
         return False
 
+    asset_site_map = _get_asset_site_map([d.get("fleet_number") for d in docs])
+
     grouped = defaultdict(list)
     for d in docs:
         sec = (d.get("sections") or "").strip()
+        fleet = (d.get("fleet_number") or "").strip()
+
         if sec in NO_EXPIRY_SECTIONS:
+            continue
+        if not fleet:
+            continue
+
+        current_site = (asset_site_map.get(fleet) or "").strip()
+        if site and current_site != site:
             continue
 
         key = (
-            (d.get("site") or "").strip(),
+            current_site,
             sec,
-            (d.get("fleet_number") or "").strip(),
+            fleet,
         )
         grouped[key].append(d)
 
@@ -263,7 +355,7 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
 
         data.append({
             "asset": latest_doc.get("fleet_number"),
-            "site": latest_doc.get("site"),
+            "site": asset_site_map.get(latest_doc.get("fleet_number")) or "",
             "section": latest_doc.get("sections"),
             "start_date": latest_doc.get("start_date"),
             "expiry_date": expiry_date,
