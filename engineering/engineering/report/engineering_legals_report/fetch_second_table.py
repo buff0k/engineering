@@ -2,6 +2,7 @@ import frappe
 from frappe.utils import getdate, add_days, today
 from frappe.query_builder import DocType
 from frappe.query_builder.functions import Count
+EXCLUDED_SITES = ("Duplicate Assets",)
 from collections import defaultdict
 from urllib.parse import quote
 
@@ -72,6 +73,9 @@ def get_asset_category_counts(site=None):
         .groupby(Asset.asset_category)
         .orderby(Count(Asset.name), order=frappe.qb.desc)
     )
+
+    if site_field:
+        q = q.where(getattr(Asset, site_field).notin(EXCLUDED_SITES))
 
     if site and site_field:
         q = q.where(getattr(Asset, site_field) == site)
@@ -153,6 +157,7 @@ def _get_service_msr_rows(site=None, asset=None, asset_category=None):
     filters = [
         ["docstatus", "<", 2],
         ["service_breakdown", "=", "Service"],
+        ["site", "not in", EXCLUDED_SITES],
     ]
 
     if site:
@@ -225,6 +230,8 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
         "docstatus": 1,
         "asset_category": asset_category,
     }
+    if site_field:
+        asset_filters[site_field] = ["not in", EXCLUDED_SITES]
     if site and site_field:
         asset_filters[site_field] = site
 
@@ -242,6 +249,7 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
         legal_filters = [
             ["docstatus", "<", 2],
             ["fleet_number", "in", fleet_numbers],
+            ["site", "not in", EXCLUDED_SITES],
         ]
         if site:
             legal_filters.append(["site", "=", site])
@@ -333,6 +341,7 @@ def get_recent_submitted_legals(site=None, asset=None, days=10, as_at_date=None)
     filters = {
         "docstatus": 1,
         "modified": (">=", cutoff),
+        "site": ["not in", EXCLUDED_SITES],
     }
     if site:
         filters["site"] = site
@@ -357,7 +366,7 @@ def get_recent_submitted_legals(site=None, asset=None, days=10, as_at_date=None)
 def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_date=None, to_expiry_date=None):
     counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
-    legal_filters = [["docstatus", "<", 2]]
+    legal_filters = [["docstatus", "<", 2], ["site", "not in", EXCLUDED_SITES]]
     if site:
         legal_filters.append(["site", "=", site])
     if section and section != "Machine Service Records":
@@ -390,6 +399,7 @@ def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_d
         msr_filters = [
             ["docstatus", "<", 2],
             ["service_breakdown", "=", "Service"],
+            ["site", "not in", EXCLUDED_SITES],
         ]
         if site:
             msr_filters.append(["site", "=", site])
@@ -465,7 +475,7 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
 
         return {"rows": out, "limit": int(limit or 50), "offset": int(offset or 0)}
 
-    filters = [["docstatus", "<", 2], ["fleet_number", "=", fleet_number]]
+    filters = [["docstatus", "<", 2], ["fleet_number", "=", fleet_number], ["site", "not in", EXCLUDED_SITES]]
     if site:
         filters.append(["site", "=", site])
     if section:
@@ -505,7 +515,7 @@ def get_doc_history_tree(site=None, section=None):
     Doc History tree (ALL records):
       Site (filtered) -> Sections -> Fleet -> Docs
     """
-    filters = [["docstatus", "<", 2]]
+    filters = [["docstatus", "<", 2], ["site", "not in", EXCLUDED_SITES]]
     if site:
         filters.append(["site", "=", site])
     if section:

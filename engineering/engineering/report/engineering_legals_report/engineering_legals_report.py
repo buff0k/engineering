@@ -15,6 +15,8 @@ from engineering.engineering.report.engineering_legals_report.fetch_second_table
 )
 
 
+EXCLUDED_SITES = ("Duplicate Assets",)
+
 NO_EXPIRY_SECTIONS = (
     "Machine Service Records",
     "Service Schedule",
@@ -105,6 +107,7 @@ def _base_latest_expiry_sql(where_sql: str) -> str:
         WHERE
             el.expiry_date IS NOT NULL
             AND el.sections NOT IN %(no_expiry_sections)s
+            AND el.site NOT IN %(excluded_sites)s
             {where_sql}
         GROUP BY el.site, el.sections, el.fleet_number
     """
