@@ -87,13 +87,15 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "HSEC Qualification Category",
-   "options": "EQP\nEMP"
+   "options": "EQP\nEMP",
+   "read_only": 1
   },
   {
    "fieldname": "hsec_qualification_id_external",
    "fieldtype": "Data",
    "hidden": 1,
-   "label": "HSEC External Qualification Code"
+   "label": "HSEC External Qualification Code",
+   "read_only": 1
   },
   {
    "fieldname": "hsec_inserted_at",
@@ -149,7 +151,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-27 12:30:57.129573",
+ "modified": "2026-04-15 15:08:23.142279",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
