@@ -445,6 +445,7 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
         filters = [
             ["docstatus", "<", 2],
             ["service_breakdown", "=", "Service"],
+            ["site", "not in", EXCLUDED_SITES],
             ["asset", "=", fleet_number],
         ]
         if site:

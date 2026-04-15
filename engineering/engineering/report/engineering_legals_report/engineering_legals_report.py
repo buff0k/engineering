@@ -167,6 +167,10 @@ def _summary_view(as_at, site, section, asset, from_expiry_date=None, to_expiry_
             continue
 
         current_site = (asset_site_map.get(fleet) or "").strip()
+
+        if current_site in EXCLUDED_SITES:
+            continue
+
         if site and current_site != site:
             continue
 
@@ -334,6 +338,10 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
             continue
 
         current_site = (asset_site_map.get(fleet) or "").strip()
+
+        if current_site in EXCLUDED_SITES:
+            continue
+
         if site and current_site != site:
             continue
 
