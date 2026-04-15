@@ -373,13 +373,16 @@ class AvailabilityandUtilisation(Document):
                 error_records.append(err_msg)
 
         # =============================================================================
-        # Phase 4: Update shift_required_hours  (FIXED FILTERS)
+        # Phase 4: Update shift_required_hours  (LAST 50 DAYS)
         # =============================================================================
+        current_date = getdate(today())
+        start_date = current_date - timedelta(days=50)
+
         relevant_records = frappe.get_all(
             "Availability and Utilisation",
             filters=[
-                ["shift_date", ">=", get_first_day(today())],
-                ["shift_date", "<=", get_last_day(today())],
+                ["shift_date", ">=", start_date],
+                ["shift_date", "<=", current_date],
             ],
             fields=["name", "shift_date", "location", "shift"],
         )

@@ -35,7 +35,11 @@
   "description_of_breakdown",
   "spares_required_and_comments",
   "description_of_work_done",
-  "amended_from"
+  "amended_from",
+  "section_break_tuqg",
+  "job_card_number",
+  "mechanic",
+  "manager_foreman"
  ],
  "fields": [
   {
@@ -218,12 +222,32 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "section_break_tuqg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "job_card_number",
+   "fieldtype": "Link",
+   "label": "Job Card Number",
+   "options": "Job Card"
+  },
+  {
+   "fieldname": "mechanic",
+   "fieldtype": "Signature",
+   "label": "Mechanic"
+  },
+  {
+   "fieldname": "manager_foreman",
+   "fieldtype": "Signature",
+   "label": "Manager/Foreman"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-08 12:21:07.918430",
+ "modified": "2026-04-15 06:11:45.855535",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",
