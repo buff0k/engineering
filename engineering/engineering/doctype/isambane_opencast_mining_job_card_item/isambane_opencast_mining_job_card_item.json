@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-15 12:27:54.152917",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "part_used",
+  "qty",
+  "date_start_time",
+  "date_finish_time",
+  "downtime_hrs"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "part_used",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parts Used"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty",
+   "precision": "2"
+  },
+  {
+   "columns": 2,
+   "fieldname": "date_start_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date/Start Time"
+  },
+  {
+   "columns": 2,
+   "fieldname": "date_finish_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date/Finish Time"
+  },
+  {
+   "columns": 1,
+   "fieldname": "downtime_hrs",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Downtime (hrs)",
+   "precision": "2",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-15 12:27:54.152917",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Isambane Opencast Mining Job Card Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
