@@ -146,7 +146,7 @@
   {
    "fieldname": "section_parts_times_sign_off",
    "fieldtype": "Section Break",
-   "label": "Parts / Times / Sign-Off"
+   "label": "4. Parts / Times / Sign-Off"
   },
   {
    "fieldname": "items",
@@ -157,7 +157,7 @@
   {
    "fieldname": "section_work_completion_report",
    "fieldtype": "Section Break",
-   "label": "7. Work Completion Report"
+   "label": "5. Work Completion Report"
   },
   {
    "fieldname": "work_carried_out",
@@ -208,7 +208,7 @@
   {
    "fieldname": "section_sign_off",
    "fieldtype": "Section Break",
-   "label": "Sign-Off"
+   "label": "6. Sign-Off"
   },
   {
    "fieldname": "artisan_signature",
@@ -257,7 +257,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 09:06:54.860710",
+ "modified": "2026-04-16 11:37:45.381838",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane Opencast Mining Job Card",

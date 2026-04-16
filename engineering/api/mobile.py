@@ -12,10 +12,16 @@ def get_user_context():
 
     allowed_pages = []
 
-    if _has_any_role(roles, ["Engineering User", "Engineering Manager", "Fleet Manager", "System Manager"]):
-        allowed_pages.append("jobcard")
+    if frappe.has_permission("Mechanical Service Report", "read", user=user):
+        allowed_pages.append("mechanical_service_report")
 
-    if _has_any_role(roles, ["Production Cycle Time User", "Production Cycle Time Manager", "System Manager"]):
+    if frappe.has_permission("Component Replacement Report", "read", user=user):
+        allowed_pages.append("component_replacement_report")
+
+    if frappe.has_permission("Mechanical Service Report", "write", user=user):
+        allowed_pages.append("msr_signoff")
+
+    if frappe.has_permission("Production Cycle Times", "read", user=user):
         allowed_pages.append("production_cycle_times")
 
     return {
