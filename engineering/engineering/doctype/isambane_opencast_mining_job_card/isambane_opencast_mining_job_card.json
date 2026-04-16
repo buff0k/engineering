@@ -13,8 +13,9 @@
   "date",
   "shift",
   "priority",
-  "department",
-  "requested_by",
+  "department_fixed_at",
+  "requested_by_site_engineering_manager",
+  "site_engineering_manager",
   "section_equipment_asset_details",
   "site",
   "equipment_no",
@@ -47,7 +48,6 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "hidden": 1,
-   "in_list_view": 1,
    "label": "Series",
    "options": "JCM-.YYYY.-"
   },
@@ -61,40 +61,32 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Job Card No.",
-   "options": "Name"
+   "options": "Name",
+   "reqd": 1
   },
   {
    "default": "Today",
    "fieldname": "date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Date"
+   "label": "Date",
+   "reqd": 1
   },
   {
    "fieldname": "shift",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Shift",
-   "options": "Day\nNight"
+   "options": "Day\nNight",
+   "reqd": 1
   },
   {
    "fieldname": "priority",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Priority",
-   "options": "Low\nMedium\nHigh\nCritical"
-  },
-  {
-   "fieldname": "department",
-   "fieldtype": "Select",
-   "label": "Department",
-   "options": "Mining Onsite\nPlot 20\nPLOT 22\nPLANT"
-  },
-  {
-   "fieldname": "requested_by",
-   "fieldtype": "Link",
-   "label": "Requested By",
-   "options": "Employee"
+   "options": "Low\nMedium\nHigh\nCritical",
+   "reqd": 1
   },
   {
    "fieldname": "section_equipment_asset_details",
@@ -104,6 +96,7 @@
   {
    "fieldname": "site",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Site",
    "options": "Location"
   },
@@ -116,14 +109,14 @@
   },
   {
    "fieldname": "machine_type",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Machine Type",
    "options": "Asset Category",
    "read_only": 1
   },
   {
    "fieldname": "model",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Model",
    "options": "Item",
    "read_only": 1
@@ -209,7 +202,7 @@
    "fieldname": "total_downtime_hrs",
    "fieldtype": "Float",
    "label": "Total Downtime (hrs)",
-   "precision": "2",
+   "precision": "0",
    "read_only": 1
   },
   {
@@ -239,12 +232,32 @@
    "fieldtype": "Link",
    "label": "Supervisor/Forman Name and Surname",
    "options": "Employee"
+  },
+  {
+   "fieldname": "requested_by_site_engineering_manager",
+   "fieldtype": "Link",
+   "label": "Requested By Site Engineering Manager",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "site_engineering_manager",
+   "fieldtype": "Signature",
+   "label": "Site Engineering Manager"
+  },
+  {
+   "fieldname": "department_fixed_at",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Department Fixed At",
+   "options": "Mining Onsite\nPlot 20\nPLOT 22\nPLANT",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 07:22:50.687880",
+ "modified": "2026-04-16 09:06:54.860710",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane Opencast Mining Job Card",
@@ -284,6 +297,54 @@
    "read": 1,
    "report": 1,
    "role": "Maintenance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
    "share": 1,
    "write": 1
   }
