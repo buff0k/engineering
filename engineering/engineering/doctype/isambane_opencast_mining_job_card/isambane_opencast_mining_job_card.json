@@ -30,15 +30,16 @@
   "work_carried_out",
   "machine_tested",
   "machine_status",
-  "start_of_downtime",
-  "end_of_downtime",
   "further_repair_required",
   "unsafe_to_operate",
+  "start_of_downtime",
+  "end_of_downtime",
   "total_downtime_hrs",
   "section_sign_off",
+  "artisan_name_and_surname",
   "artisan_signature",
-  "supervisor_foreman_signature",
-  "date_closed"
+  "supervisor_forman_name_and_surname",
+  "supervisor_foreman_signature"
  ],
  "fields": [
   {
@@ -115,21 +116,23 @@
   },
   {
    "fieldname": "machine_type",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Machine Type",
+   "options": "Asset Category",
    "read_only": 1
   },
   {
    "fieldname": "model",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Model",
+   "options": "Item",
    "read_only": 1
   },
   {
    "fieldname": "hour_meter",
    "fieldtype": "Float",
    "label": "Hour Meter",
-   "precision": "2"
+   "precision": "0"
   },
   {
    "fieldname": "fault_work_type",
@@ -178,7 +181,7 @@
    "fieldname": "machine_status",
    "fieldtype": "Select",
    "label": "Machine Status",
-   "options": "Awaiting Parts\nAvailable For Service\nRunning with Observation\nFurther Repair Required\nUnsafe to Operate"
+   "options": "Awaiting Parts\nAvailable For Service\nRunning with Observation\nFurther Repair Required\nUnsafe to Operate\nRunning"
   },
   {
    "fieldname": "start_of_downtime",
@@ -216,24 +219,32 @@
   },
   {
    "fieldname": "artisan_signature",
-   "fieldtype": "Data",
+   "fieldtype": "Signature",
    "label": "Artisan Signature"
   },
   {
    "fieldname": "supervisor_foreman_signature",
-   "fieldtype": "Data",
-   "label": "Supervisor/Foreman Signature"
+   "fieldtype": "Signature",
+   "label": "Supervisor/Foreman Signature",
+   "options": "Employee"
   },
   {
-   "fieldname": "date_closed",
-   "fieldtype": "Date",
-   "label": "Date Closed"
+   "fieldname": "artisan_name_and_surname",
+   "fieldtype": "Link",
+   "label": "Artisan Name and Surname",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "supervisor_forman_name_and_surname",
+   "fieldtype": "Link",
+   "label": "Supervisor/Forman Name and Surname",
+   "options": "Employee"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-15 16:01:29.314188",
+ "modified": "2026-04-16 07:22:50.687880",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane Opencast Mining Job Card",

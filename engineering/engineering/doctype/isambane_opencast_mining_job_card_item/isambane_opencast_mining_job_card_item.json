@@ -27,7 +27,7 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Qty",
-   "precision": "2"
+   "precision": "0"
   },
   {
    "columns": 2,
@@ -57,7 +57,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-15 12:27:54.152917",
+ "modified": "2026-04-16 07:50:29.428234",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane Opencast Mining Job Card Item",

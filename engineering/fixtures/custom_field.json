@@ -1,5 +1,6 @@
 [
  {
+  "alignment": null,
   "allow_in_quick_entry": 0,
   "allow_on_submit": 0,
   "bold": 0,
@@ -58,6 +59,7 @@
   "width": null
  },
  {
+  "alignment": null,
   "allow_in_quick_entry": 0,
   "allow_on_submit": 0,
   "bold": 0,
@@ -116,6 +118,7 @@
   "width": null
  },
  {
+  "alignment": null,
   "allow_in_quick_entry": 0,
   "allow_on_submit": 0,
   "bold": 0,
@@ -174,6 +177,7 @@
   "width": null
  },
  {
+  "alignment": null,
   "allow_in_quick_entry": 0,
   "allow_on_submit": 0,
   "bold": 0,
