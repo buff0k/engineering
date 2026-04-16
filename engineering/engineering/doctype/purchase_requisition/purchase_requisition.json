@@ -1,223 +1,247 @@
 {
-  "actions": [],
-  "allow_rename": 1,
-  "autoname": "format:PR-.#####",
-  "creation": "2026-02-20 00:00:00.000000",
-  "doctype": "DocType",
-  "document_type": "Document",
-  "engine": "InnoDB",
-  "field_order": [
-    "basic_information",
-    "pr_no",
-    "requested_by",
-    "requested_by_name",
-    "request_date",
-    "cb_1",
-    "plant_make",
-    "machine_hours",
-    "plant_no",
-    "model",
-    "component",
-    "work_details",
-    "description_of_work",
-    "items_section",
-    "items",
-    "summary",
-    "discount",
-    "vat",
-    "total",
-    "delivery_and_approval",
-    "deliver_to",
-    "official_company_order_no",
-    "supplier",
-    "authorised_by",
-    "authorised_by_name",
-    "cb_2",
-    "code",
-    "site"
-  ],
-  "fields": [
-    {
-      "fieldname": "basic_information",
-      "fieldtype": "Section Break",
-      "label": "Basic Information"
-    },
-    {
-      "fieldname": "pr_no",
-      "fieldtype": "Data",
-      "label": "PR No",
-      "read_only": 1,
-      "reqd": 1
-    },
-    {
-      "fieldname": "requested_by",
-      "fieldtype": "Link",
-      "label": "Requested By",
-      "options": "Employee",
-      "reqd": 1
-    },
-    {
-      "fetch_from": "requested_by.employee_name",
-      "fieldname": "requested_by_name",
-      "fieldtype": "Data",
-      "label": "Requested By Name",
-      "read_only": 1
-    },
-    {
-      "fieldname": "request_date",
-      "fieldtype": "Date",
-      "label": "Date",
-      "reqd": 1
-    },
-    {
-      "fieldname": "cb_1",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "plant_make",
-      "fieldtype": "Data",
-      "label": "Plant Make",
-      "read_only": 1
-    },
-    {
-      "fieldname": "machine_hours",
-      "fieldtype": "Float",
-      "label": "Machine Hours"
-    },
-    {
-      "fieldname": "plant_no",
-      "fieldtype": "Link",
-      "label": "Plant No",
-      "options": "Asset"
-    },
-    {
-      "fieldname": "model",
-      "fieldtype": "Data",
-      "label": "Model",
-      "read_only": 1
-    },
-    {
-      "fieldname": "component",
-      "fieldtype": "Data",
-      "label": "Component"
-    },
-    {
-      "fieldname": "work_details",
-      "fieldtype": "Section Break",
-      "label": "Work Details"
-    },
-    {
-      "fieldname": "description_of_work",
-      "fieldtype": "Small Text",
-      "label": "Description of Work",
-      "reqd": 1
-    },
-    {
-      "fieldname": "items_section",
-      "fieldtype": "Section Break",
-      "label": "Items"
-    },
-    {
-      "fieldname": "items",
-      "fieldtype": "Table",
-      "label": "Items",
-      "options": "Purchase Requisition Item",
-      "reqd": 1
-    },
-    {
-      "fieldname": "summary",
-      "fieldtype": "Section Break",
-      "label": "Summary"
-    },
-    {
-      "fieldname": "discount",
-      "fieldtype": "Currency",
-      "label": "Discount"
-    },
-    {
-      "fieldname": "vat",
-      "fieldtype": "Currency",
-      "label": "VAT"
-    },
-    {
-      "fieldname": "total",
-      "fieldtype": "Currency",
-      "label": "Total",
-      "read_only": 1
-    },
-    {
-      "fieldname": "delivery_and_approval",
-      "fieldtype": "Section Break",
-      "label": "Delivery and Approval"
-    },
-    {
-      "fieldname": "deliver_to",
-      "fieldtype": "Data",
-      "label": "Deliver To"
-    },
-    {
-      "fieldname": "official_company_order_no",
-      "fieldtype": "Data",
-      "label": "Official Company Order No"
-    },
-    {
-      "fieldname": "supplier",
-      "fieldtype": "Link",
-      "label": "Supplier",
-      "options": "Supplier"
-    },
-    {
-      "fieldname": "authorised_by",
-      "fieldtype": "Link",
-      "label": "Authorised By",
-      "options": "Employee"
-    },
-    {
-      "fetch_from": "authorised_by.employee_name",
-      "fieldname": "authorised_by_name",
-      "fieldtype": "Data",
-      "label": "Authorised By Name",
-      "read_only": 1
-    },
-    {
-      "fieldname": "cb_2",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "code",
-      "fieldtype": "Data",
-      "label": "Code"
-    },
-    {
-      "fieldname": "site",
-      "fieldtype": "Data",
-      "label": "Site"
-    }
-  ],
-  "index_web_pages_for_search": 1,
-  "links": [],
-  "modified": "2026-02-20 00:00:00.000000",
-  "modified_by": "Administrator",
-  "module": "Engineering",
-  "name": "Purchase Requisition",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "create": 1,
-      "delete": 1,
-      "email": 1,
-      "export": 1,
-      "print": 1,
-      "read": 1,
-      "report": 1,
-      "role": "System Manager",
-      "share": 1,
-      "write": 1
-    }
-  ],
-  "quick_entry": 0,
-  "sort_field": "modified",
-  "sort_order": "DESC",
-  "states": [],
-  "track_changes": 1
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:PR-.#####",
+ "creation": "2026-02-20 00:00:00",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_information",
+  "request_date",
+  "requested_by",
+  "requested_by_name",
+  "plant_no",
+  "plant_make",
+  "model",
+  "cb_1",
+  "pr_no",
+  "machine_hours",
+  "component",
+  "work_details",
+  "description_of_work",
+  "items_section",
+  "items",
+  "summary",
+  "discount",
+  "vat",
+  "total",
+  "delivery_and_approval",
+  "deliver_to",
+  "official_company_order_no",
+  "supplier",
+  "authorised_by",
+  "authorised_by_name",
+  "cb_2",
+  "code",
+  "site",
+  "status",
+  "attach_hard_copy"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_information",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "pr_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "PR No",
+   "precision": "0",
+   "reqd": 1
+  },
+  {
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "label": "Requested By",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "requested_by.employee_name",
+   "fieldname": "requested_by_name",
+   "fieldtype": "Data",
+   "label": "Requested By Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "request_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "plant_make",
+   "fieldtype": "Data",
+   "label": "Plant Make",
+   "read_only": 1
+  },
+  {
+   "fieldname": "machine_hours",
+   "fieldtype": "Float",
+   "label": "Machine Hours",
+   "precision": "0",
+   "reqd": 1
+  },
+  {
+   "fieldname": "plant_no",
+   "fieldtype": "Link",
+   "label": "Plant No",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "component",
+   "fieldtype": "Data",
+   "label": "Component",
+   "reqd": 1
+  },
+  {
+   "fieldname": "work_details",
+   "fieldtype": "Section Break",
+   "label": "Work Details"
+  },
+  {
+   "fieldname": "description_of_work",
+   "fieldtype": "Small Text",
+   "label": "Description of Work",
+   "reqd": 1
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Purchase Requisition Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "discount",
+   "fieldtype": "Currency",
+   "label": "Discount"
+  },
+  {
+   "fieldname": "vat",
+   "fieldtype": "Currency",
+   "label": "VAT"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_and_approval",
+   "fieldtype": "Section Break",
+   "label": "Delivery and Approval"
+  },
+  {
+   "fieldname": "deliver_to",
+   "fieldtype": "Link",
+   "label": "Deliver To",
+   "options": "Location"
+  },
+  {
+   "fieldname": "official_company_order_no",
+   "fieldtype": "Data",
+   "label": "Official Company Order No"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "authorised_by",
+   "fieldtype": "Link",
+   "label": "Authorised By",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "authorised_by.employee_name",
+   "fieldname": "authorised_by_name",
+   "fieldtype": "Data",
+   "label": "Authorised By Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "code",
+   "fieldtype": "Link",
+   "label": "Code",
+   "options": "Site Code"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending Approval\nApproved\nRejected\nOrdered",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attach_hard_copy",
+   "fieldtype": "Attach",
+   "label": "Attach Hard Copy"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-16 16:11:37.863340",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Purchase Requisition",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
 }

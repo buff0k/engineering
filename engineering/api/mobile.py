@@ -12,10 +12,10 @@ def get_user_context():
 
     allowed_pages = []
 
-    if frappe.has_permission("Mechanical Service Report", "read", user=user):
+    if frappe.has_permission("Mechanical Service Report", "create", user=user):
         allowed_pages.append("mechanical_service_report")
 
-    if frappe.has_permission("Component Replacement Report", "read", user=user):
+    if frappe.has_permission("Component Replacement Report", "create", user=user):
         allowed_pages.append("component_replacement_report")
 
     if frappe.has_permission("Mechanical Service Report", "write", user=user):
