@@ -21,7 +21,7 @@ def get_user_context():
     if frappe.has_permission("Mechanical Service Report", "write", user=user):
         allowed_pages.append("msr_signoff")
 
-    if frappe.has_permission("Production Cycle Times", "read", user=user):
+    if frappe.has_permission("Production Cycle Times", "create", user=user):
         allowed_pages.append("production_cycle_times")
 
     return {

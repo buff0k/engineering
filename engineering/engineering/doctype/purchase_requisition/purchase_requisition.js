@@ -1,40 +1,31 @@
 frappe.ui.form.on('Purchase Requisition', {
+    onload(frm) {
+        if (frm.doc.name && !frm.doc.__islocal) {
+            frm.set_value('pr_no', frm.doc.name);
+        }
+    },
+
     refresh(frm) {
         if (frm.doc.name && !frm.doc.__islocal && frm.doc.pr_no !== frm.doc.name) {
             frm.set_value('pr_no', frm.doc.name);
         }
     },
 
-    requested_by(frm) {
-        if (!frm.doc.requested_by) {
-            frm.set_value('requested_by_name', '');
+    plant_no(frm) {
+        if (!frm.doc.plant_no) {
+            frm.set_value('plant_make', '');
+            frm.set_value('model', '');
             return;
         }
 
         frappe.db.get_value(
-            'Employee',
-            frm.doc.requested_by,
-            ['employee_name']
+            'Asset',
+            frm.doc.plant_no,
+            ['item_name']
         ).then(r => {
             if (r.message) {
-                frm.set_value('requested_by_name', r.message.employee_name || '');
-            }
-        });
-    },
-
-    authorised_by(frm) {
-        if (!frm.doc.authorised_by) {
-            frm.set_value('authorised_by_name', '');
-            return;
-        }
-
-        frappe.db.get_value(
-            'Employee',
-            frm.doc.authorised_by,
-            ['employee_name']
-        ).then(r => {
-            if (r.message) {
-                frm.set_value('authorised_by_name', r.message.employee_name || '');
+                frm.set_value('plant_make', r.message.item_name || '');
+                frm.set_value('model', r.message.item_name || '');
             }
         });
     },

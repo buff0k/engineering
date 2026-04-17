@@ -4,8 +4,8 @@ from frappe.model.naming import make_autoname
 
 class PurchaseRequisition(Document):
     def autoname(self):
-        self.name = make_autoname("PR-.#####")
-        self.pr_no = self.name
+        if not self.name:
+            self.name = make_autoname("PR-.#####")
 
     def validate(self):
         total_items = 0

@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:PR-.#####",
  "creation": "2026-02-20 00:00:00",
  "doctype": "DocType",
  "document_type": "Document",
@@ -46,15 +45,14 @@
   },
   {
    "fieldname": "pr_no",
-   "fieldtype": "Data",
-   "in_list_view": 1,
+   "fieldtype": "Float",
    "label": "PR No",
-   "precision": "0",
-   "reqd": 1
+   "precision": "0"
   },
   {
    "fieldname": "requested_by",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Requested By",
    "options": "Employee",
    "reqd": 1
@@ -69,6 +67,7 @@
   {
    "fieldname": "request_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Date",
    "reqd": 1
   },
@@ -86,12 +85,12 @@
    "fieldname": "machine_hours",
    "fieldtype": "Float",
    "label": "Machine Hours",
-   "precision": "0",
-   "reqd": 1
+   "precision": "0"
   },
   {
    "fieldname": "plant_no",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Plant No",
    "options": "Asset",
    "reqd": 1
@@ -105,8 +104,7 @@
   {
    "fieldname": "component",
    "fieldtype": "Data",
-   "label": "Component",
-   "reqd": 1
+   "label": "Component"
   },
   {
    "fieldname": "work_details",
@@ -116,6 +114,7 @@
   {
    "fieldname": "description_of_work",
    "fieldtype": "Small Text",
+   "in_list_view": 1,
    "label": "Description of Work",
    "reqd": 1
   },
@@ -139,17 +138,20 @@
   {
    "fieldname": "discount",
    "fieldtype": "Currency",
-   "label": "Discount"
+   "label": "Discount",
+   "precision": "0"
   },
   {
    "fieldname": "vat",
    "fieldtype": "Currency",
-   "label": "VAT"
+   "label": "VAT",
+   "precision": "0"
   },
   {
    "fieldname": "total",
    "fieldtype": "Currency",
    "label": "Total",
+   "precision": "0",
    "read_only": 1
   },
   {
@@ -165,8 +167,9 @@
   },
   {
    "fieldname": "official_company_order_no",
-   "fieldtype": "Data",
-   "label": "Official Company Order No"
+   "fieldtype": "Float",
+   "label": "Official Company Order No",
+   "precision": "0"
   },
   {
    "fieldname": "supplier",
@@ -206,10 +209,8 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Status",
-   "options": "Pending Approval\nApproved\nRejected\nOrdered",
-   "reqd": 1
+   "label": "Satus",
+   "options": "Pending Approval\nApproved\nRejected\nOrdered"
   },
   {
    "fieldname": "attach_hard_copy",
@@ -219,11 +220,10 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 16:11:37.863340",
+ "modified": "2026-04-16 16:41:26.010397",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Purchase Requisition",
- "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
