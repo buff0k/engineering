@@ -35,7 +35,8 @@
   "code",
   "site",
   "status",
-  "attach_hard_copy"
+  "attach_hard_copy",
+  "attach_hard_copy_2"
  ],
  "fields": [
   {
@@ -45,14 +46,14 @@
   },
   {
    "fieldname": "pr_no",
-   "fieldtype": "Float",
+   "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "PR No",
-   "precision": "0"
+   "reqd": 1
   },
   {
    "fieldname": "requested_by",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Requested By",
    "options": "Employee",
    "reqd": 1
@@ -61,6 +62,7 @@
    "fetch_from": "requested_by.employee_name",
    "fieldname": "requested_by_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Requested By Name",
    "read_only": 1
   },
@@ -72,22 +74,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "cb_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "plant_make",
-   "fieldtype": "Data",
-   "label": "Plant Make",
-   "read_only": 1
-  },
-  {
-   "fieldname": "machine_hours",
-   "fieldtype": "Float",
-   "label": "Machine Hours",
-   "precision": "0"
-  },
-  {
    "fieldname": "plant_no",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -96,10 +82,28 @@
    "reqd": 1
   },
   {
+   "fetch_from": "plant_no.asset_category",
+   "fieldname": "plant_make",
+   "fieldtype": "Data",
+   "label": "Plant Make",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "plant_no.item_code",
    "fieldname": "model",
    "fieldtype": "Data",
    "label": "Model",
    "read_only": 1
+  },
+  {
+   "fieldname": "cb_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "machine_hours",
+   "fieldtype": "Float",
+   "label": "Machine Hours",
+   "precision": "0"
   },
   {
    "fieldname": "component",
@@ -168,6 +172,7 @@
   {
    "fieldname": "official_company_order_no",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "Official Company Order No",
    "precision": "0"
   },
@@ -187,6 +192,7 @@
    "fetch_from": "authorised_by.employee_name",
    "fieldname": "authorised_by_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Authorised By Name",
    "read_only": 1
   },
@@ -196,7 +202,7 @@
   },
   {
    "fieldname": "code",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Code",
    "options": "Site Code"
   },
@@ -204,11 +210,12 @@
    "fieldname": "site",
    "fieldtype": "Link",
    "label": "Site",
-   "options": "Location"
+   "options": "Site Code"
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Satus",
    "options": "Pending Approval\nApproved\nRejected\nOrdered"
   },
@@ -216,16 +223,105 @@
    "fieldname": "attach_hard_copy",
    "fieldtype": "Attach",
    "label": "Attach Hard Copy"
+  },
+  {
+   "fieldname": "attach_hard_copy_2",
+   "fieldtype": "Attach",
+   "label": "Attach Hard Copy 2"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 16:41:26.010397",
+ "modified": "2026-04-17 10:21:29.366257",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Purchase Requisition",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Procurement User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Procurement Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "share": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,

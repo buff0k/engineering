@@ -1,12 +1,13 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{job_card_no}-{equipment_no}-{site}",
+ "autoname": "f\"{doc.job_card_no}-{doc.equipment_no}-{doc.site}\"",
  "creation": "2026-04-15 15:46:55.518569",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "naming_series",
   "section_general_information",
   "job_card_no",
   "date",
@@ -42,6 +43,14 @@
   "supervisor_foreman_signature"
  ],
  "fields": [
+  {
+   "default": "JCM-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "JCM-.YYYY.-"
+  },
   {
    "fieldname": "section_general_information",
    "fieldtype": "Section Break",
@@ -248,11 +257,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 11:37:45.381838",
+ "modified": "2026-04-17 12:15:39.519202",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane Opencast Mining Job Card",
- "naming_rule": "Expression",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {

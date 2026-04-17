@@ -36,7 +36,7 @@ def get_user_context():
     if frappe.has_permission("Component Replacement Report", "create", user=user):
         allowed_pages.append("component_replacement_report")
 
-    if frappe.has_permission("Mechanical Service Report", "write", user=user):
+    if _has_any_role(roles, ["Engineering Manager"]):
         allowed_pages.append("msr_signoff")
 
     if frappe.has_permission("Production Cycle Times", "create", user=user):
@@ -56,7 +56,25 @@ def _has_any_role(user_roles, allowed_roles):
     return bool(user_role_set.intersection(allowed_role_set))
 
 
+@frappe.whitelist()
+def sign_off_mechanical_service_report(docname, manager_foreman_signature):
+    user = frappe.session.user
 
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    roles = frappe.get_roles(user)
+    if not _has_any_role(roles, ["Engineering Manager"]):
+        frappe.throw("Only Engineering Manager may sign off MSR records", frappe.PermissionError)
+
+    doc = frappe.get_doc("Mechanical Service Report", docname)
+    doc.manager_foreman = manager_foreman_signature
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "name": doc.name,
+    }
 
 @frappe.whitelist()
 def get_unsigned_mechanical_service_reports():
@@ -64,6 +82,10 @@ def get_unsigned_mechanical_service_reports():
 
     if not user or user == "Guest":
         frappe.throw("Not logged in")
+
+    roles = frappe.get_roles(user)
+    if not _has_any_role(roles, ["Engineering Manager"]):
+        frappe.throw("Only Engineering Manager may view unsigned MSR records", frappe.PermissionError)
 
     allowed_locations = _get_allowed_locations(user)
 

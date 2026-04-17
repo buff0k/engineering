@@ -231,7 +231,7 @@
    "fieldname": "job_card_number",
    "fieldtype": "Link",
    "label": "Job Card Number",
-   "options": "Job Card"
+   "options": "Isambane Opencast Mining Job Card"
   },
   {
    "fieldname": "mechanic",
@@ -247,7 +247,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 05:17:39.168380",
+ "modified": "2026-04-17 07:58:00.970211",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

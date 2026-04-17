@@ -1,13 +1,18 @@
+import frappe
 from frappe.model.document import Document
-from frappe.model.naming import make_autoname
 
 
 class PurchaseRequisition(Document):
     def autoname(self):
-        if not self.name:
-            self.name = make_autoname("PR-.#####")
+        if not self.pr_no:
+            frappe.throw("PR No is required")
+
+        self.name = self.pr_no.strip()
 
     def validate(self):
+        if self.pr_no:
+            self.pr_no = self.pr_no.strip()
+
         total_items = 0
 
         for row in self.items or []:
@@ -15,6 +20,3 @@ class PurchaseRequisition(Document):
             total_items += row.total_cost or 0
 
         self.total = total_items - (self.discount or 0) + (self.vat or 0)
-
-        if self.name:
-            self.pr_no = self.name
