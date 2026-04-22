@@ -8,8 +8,8 @@
  "field_order": [
   "section_break_seyr",
   "general_information_column",
+  "is_this_a_new_job",
   "service_date",
-  "reference_number",
   "attach",
   "plant_manager_code",
   "plant_man_name",
@@ -96,13 +96,6 @@
    "fieldname": "time_tracking_column",
    "fieldtype": "Column Break",
    "label": "Time Tracking"
-  },
-  {
-   "fieldname": "reference_number",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Reference Number Manual MSR",
-   "reqd": 1
   },
   {
    "fieldname": "attach",
@@ -242,12 +235,20 @@
    "fieldname": "manager_foreman",
    "fieldtype": "Signature",
    "label": "Manager/Foreman"
+  },
+  {
+   "fieldname": "is_this_a_new_job",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Is this a new Job?",
+   "options": "Yes\nNo",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 07:58:00.970211",
+ "modified": "2026-04-22 06:37:49.492796",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

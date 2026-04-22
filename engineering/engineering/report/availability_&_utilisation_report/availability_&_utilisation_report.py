@@ -1,292 +1,238 @@
 import frappe
-from frappe.utils import getdate, add_days
+from frappe.utils import flt
 
 
-def _label_to_hhmm(label: str) -> str:
-    if not label:
-        return ""
-    return label.split(" ")[0].strip()
+def r1(v):
+    return round(flt(v), 1)
 
 
-def _parse_two_hourly(label: str):
-    if not label or " To " not in label:
-        return "", ""
-    parts = label.split(" To ", 1)
-    start_hhmm = _label_to_hhmm(parts[0].strip())
-    end_hhmm = _label_to_hhmm(parts[1].strip())
-    return start_hhmm, end_hhmm
+def calc_availability(req_hrs, avail_hrs):
+    req_hrs = flt(req_hrs)
+    avail_hrs = flt(avail_hrs)
 
-
-def _day_anchor_offset(start_hhmm: str, is_next_day_variant: bool) -> int:
-    if not start_hhmm:
-        return 0
-    if is_next_day_variant and start_hhmm == "06:00":
-        return -1
-    hh = int(start_hhmm.split(":")[0])
-    if 0 <= hh <= 5:
-        return -1
-    return 0
-
-
-def _r1(x):
-    try:
-        return round(float(x or 0), 1)
-    except Exception:
+    if req_hrs <= 0:
         return 0.0
 
-
-def _round_row_1dp(r: dict) -> dict:
-    # Round values (data-side) - and column precision will enforce display-side.
-    for k in ("required_hrs", "worked_hrs", "brkdwn_hrs", "avail_hrs", "lost_hrs", "availability", "utilisation"):
-        r[k] = _r1(r.get(k))
-    return r
+    return r1((avail_hrs / req_hrs) * 100)
 
 
-def _new_totals():
-    return {
-        "req": 0.0,
-        "work": 0.0,
-        "brkdwn": 0.0,
-        "avail_hrs": 0.0,
-        "lost": 0.0,
-        "w_req": 0.0,
-        "w_av": 0.0,
-        "w_ut": 0.0,
-    }
+def calc_utilisation(work_hrs, avail_hrs):
+    work_hrs = flt(work_hrs)
+    avail_hrs = flt(avail_hrs)
+
+    if avail_hrs <= 0:
+        return 0.0
+
+    return r1((work_hrs / avail_hrs) * 100)
 
 
-def _add_to_totals(t, rr):
-    req = float(rr.get("required_hrs") or 0)
-    t["req"] += req
-    t["work"] += float(rr.get("worked_hrs") or 0)
-    t["brkdwn"] += float(rr.get("brkdwn_hrs") or 0)
-    t["avail_hrs"] += float(rr.get("avail_hrs") or 0)
-    t["lost"] += float(rr.get("lost_hrs") or 0)
+def get_columns():
+    return [
+        {"label": "Asset Category", "fieldname": "asset_category", "fieldtype": "Data", "width": 140},
+        {"label": "Shift Date", "fieldname": "shift_date", "fieldtype": "Date", "width": 110},
+        {"label": "Asset", "fieldname": "asset_name", "fieldtype": "Data", "width": 130},
+        {"label": "Shift", "fieldname": "shift", "fieldtype": "Data", "width": 70},
+        {"label": "Location", "fieldname": "location", "fieldtype": "Data", "width": 90},
 
-    t["w_req"] += req
-    t["w_av"] += float(rr.get("availability") or 0) * req
-    t["w_ut"] += float(rr.get("utilisation") or 0) * req
+        {"label": "Actual Hours", "fieldname": "actual_hours", "fieldtype": "Float", "width": 100, "precision": 1},
+        {"label": "Planned Downtime", "fieldname": "planned_downtime", "fieldtype": "Float", "width": 120, "precision": 1},
+        {"label": "Req Hrs", "fieldname": "shift_required_hours", "fieldtype": "Float", "width": 90, "precision": 1},
+        {"label": "Work Hrs", "fieldname": "shift_working_hours", "fieldtype": "Float", "width": 90, "precision": 1},
+        {"label": "Avail Hrs", "fieldname": "shift_available_hours", "fieldtype": "Float", "width": 90, "precision": 1},
+        {"label": "Mechanical Downtime", "fieldname": "mechanical_downtime", "fieldtype": "Float", "width": 140, "precision": 1},
+        {"label": "Actual Breakdown", "fieldname": "actual_breakdown", "fieldtype": "Float", "width": 130, "precision": 1},
+        {"label": "Actual Inspection", "fieldname": "actual_inspection", "fieldtype": "Float", "width": 130, "precision": 1},
+        {"label": "Actual Service Time", "fieldname": "actual_service_time", "fieldtype": "Float", "width": 140, "precision": 1},
+        {"label": "Other Lost Hours", "fieldname": "other_lost_hours", "fieldtype": "Float", "width": 120, "precision": 1},
+        {"label": "General &...", "fieldname": "general_and", "fieldtype": "Float", "width": 90, "precision": 1},
+        {"label": "Other Lost Hours Variance", "fieldname": "other_lost_hours_variance", "fieldtype": "Float", "width": 160, "precision": 1},
 
-
-def _finalise_pct(t):
-    if t["w_req"] > 0:
-        av = t["w_av"] / t["w_req"]
-        ut = t["w_ut"] / t["w_req"]
-    else:
-        av = 0.0
-        ut = 0.0
-    return _r1(av), _r1(ut)
-
-
-def _agg_rows(rows):
-    t = _new_totals()
-    for rr in rows:
-        _add_to_totals(t, rr)
-    av, ut = _finalise_pct(t)
-    return {
-        "required_hrs": _r1(t["req"]),
-        "worked_hrs": _r1(t["work"]),
-        "brkdwn_hrs": _r1(t["brkdwn"]),
-        "avail_hrs": _r1(t["avail_hrs"]),
-        "lost_hrs": _r1(t["lost"]),
-        "availability": av,
-        "utilisation": ut,
-    }
-
-
-def _merge_comments(rows):
-    seen = set()
-    out = []
-    for r in rows:
-        c = (r.get("comment") or "").strip()
-        if c and c not in seen:
-            seen.add(c)
-            out.append(c)
-    return " | ".join(out)
+        {"label": "Avail (%)", "fieldname": "plant_shift_availability", "fieldtype": "Percent", "width": 85, "precision": 1},
+        {"label": "Util (%)", "fieldname": "plant_shift_utilisation", "fieldtype": "Percent", "width": 85, "precision": 1},
+    ]
 
 
 def execute(filters=None):
-    filters = frappe._dict(filters or {})
+    filters = filters or {}
 
-    from_date = getdate(filters.get("from_date"))
-    to_date = getdate(filters.get("to_date"))
-    if not from_date or not to_date:
-        frappe.throw("Start Date and End Date are required")
-    if from_date > to_date:
-        frappe.throw("Start Date cannot be after End Date")
+    columns = get_columns()
+    data = get_data(filters)
 
-    site = (filters.get("site") or "").strip()
-    all_sites = int(filters.get("all_sites") or 0)
+    return columns, data
 
-    hourly = (filters.get("hourly") or "").strip()
-    two_hourly = (filters.get("two_hourly") or "").strip()
 
-    chosen = hourly or two_hourly
-    chosen_mode = "hourly" if hourly else ("two_hourly" if two_hourly else "")
-    is_next_day_variant = "(next day)" in chosen if chosen else False
+def get_data(filters):
+    conditions = []
+    values = {}
 
-    start_hhmm = ""
-    if chosen:
-        clean = chosen.replace("(next day)", "").strip()
-        if chosen_mode == "hourly":
-            start_hhmm = _label_to_hhmm(clean)
-        else:
-            start_hhmm, _end = _parse_two_hourly(clean)
+    if filters.get("start_date"):
+        conditions.append("shift_date >= %(start_date)s")
+        values["start_date"] = filters.get("start_date")
 
-    anchor_offset = _day_anchor_offset(start_hhmm, is_next_day_variant)
+    if filters.get("end_date"):
+        conditions.append("shift_date <= %(end_date)s")
+        values["end_date"] = filters.get("end_date")
 
-    q_from = add_days(from_date, anchor_offset)
-    q_to = add_days(to_date, anchor_offset)
+    if filters.get("site"):
+        conditions.append("location = %(site)s")
+        values["site"] = filters.get("site")
 
-    # ✅ IMPORTANT: precision=1 forces the grid to display 1 decimal (instead of 3)
-    columns = [
-        {"label": "Category", "fieldname": "category", "fieldtype": "Data", "width": 140},
-        {"label": "Date", "fieldname": "shift_date", "fieldtype": "Date", "width": 110},
-        {"label": "Asset", "fieldname": "asset", "fieldtype": "Data", "width": 120},
-        {"label": "Shift", "fieldname": "shift", "fieldtype": "Data", "width": 70},
-        {"label": "Site", "fieldname": "site", "fieldtype": "Data", "width": 110},
+    where_clause = ""
+    if conditions:
+        where_clause = "WHERE " + " AND ".join(conditions)
 
-        {"label": "Req Hrs", "fieldname": "required_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
-        {"label": "Work Hrs", "fieldname": "worked_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
-        {"label": "Brkdwn", "fieldname": "brkdwn_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
-        {"label": "Avail Hrs", "fieldname": "avail_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
-        {"label": "Lost Hrs", "fieldname": "lost_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
-
-        {"label": "Avail %", "fieldname": "availability", "fieldtype": "Percent", "precision": 1, "width": 90},
-        {"label": "Util %", "fieldname": "utilisation", "fieldtype": "Percent", "precision": 1, "width": 90},
-
-        {"label": "Comment", "fieldname": "comment", "fieldtype": "Data", "width": 260},
-    ]
-
-    conditions = ["au.shift_date BETWEEN %(from_date)s AND %(to_date)s"]
-    params = {"from_date": q_from, "to_date": q_to}
-
-    if site and not all_sites:
-        conditions.append("au.location LIKE %(site)s")
-        params["site"] = f"%{site}%"
-
-    sql = f"""
+    rows = frappe.db.sql(
+        f"""
         SELECT
-            IFNULL(au.asset_category, 'Uncategorised') AS category,
-            au.shift_date,
-            au.shift,
-            au.asset_name AS asset,
-            au.location AS site,
+            IFNULL(asset_category, '') AS asset_category,
+            shift_date,
+            IFNULL(asset_name, '') AS asset_name,
+            IFNULL(shift, '') AS shift,
+            IFNULL(location, '') AS location,
 
-            IFNULL(au.shift_required_hours, 0) AS required_hrs,
-            IFNULL(au.shift_working_hours, 0) AS worked_hrs,
-            IFNULL(au.shift_breakdown_hours, 0) AS brkdwn_hrs,
-            IFNULL(au.shift_available_hours, 0) AS avail_hrs,
-            IFNULL(au.shift_other_lost_hours, 0) AS lost_hrs,
-            IFNULL(au.plant_shift_availability, 0) AS availability,
-            IFNULL(au.plant_shift_utilisation, 0) AS utilisation,
+            IFNULL(actual_hours, 0) AS actual_hours,
+            IFNULL(planned_downtime, 0) AS planned_downtime,
+            IFNULL(shift_required_hours, 0) AS shift_required_hours,
+            IFNULL(shift_working_hours, 0) AS shift_working_hours,
+            IFNULL(shift_available_hours, 0) AS shift_available_hours,
+            IFNULL(mechanical_downtime, 0) AS mechanical_downtime,
+            IFNULL(actual_breakdown, 0) AS actual_breakdown,
+            IFNULL(actual_inspection, 0) AS actual_inspection,
+            IFNULL(actual_service_time, 0) AS actual_service_time,
+            IFNULL(other_lost_hours, 0) AS other_lost_hours,
+            IFNULL(general_and, 0) AS general_and,
+            IFNULL(other_lost_hours_variance, 0) AS other_lost_hours_variance
 
-            (
-                SELECT GROUP_CONCAT(bh.breakdown_reason_updates SEPARATOR ' | ')
-                FROM `tabBreakdown History` bh
-                WHERE
-                    bh.location = au.location
-                    AND bh.asset_name = au.asset_name
-                    AND DATE(bh.update_date_time) = au.shift_date
-                    AND IFNULL(bh.exclude_from_au, 0) = 0
-            ) AS comment
-
-        FROM `tabAvailability and Utilisation` au
-        WHERE {" AND ".join(conditions)}
+        FROM `tabAvailability and Utilisation`
+        {where_clause}
         ORDER BY
-            category ASC,
-            au.shift_date ASC,
-            au.asset_name ASC,
-            FIELD(au.shift, 'Day', 'Night') ASC
-    """
+            asset_category,
+            shift_date,
+            asset_name,
+            FIELD(shift, 'Day', 'Night')
+        """,
+        values,
+        as_dict=True,
+    )
 
-    raw = frappe.db.sql(sql, params, as_dict=True)
+    for row in rows:
+        row["plant_shift_availability"] = calc_availability(
+            row.get("shift_required_hours"),
+            row.get("shift_available_hours"),
+        )
+        row["plant_shift_utilisation"] = calc_utilisation(
+            row.get("shift_working_hours"),
+            row.get("shift_available_hours"),
+        )
 
-    # Round leaf rows too (data-side)
-    for r in raw:
-        _round_row_1dp(r)
+    grouped = build_tree(rows)
+    return grouped
 
-    # Tree: category -> date -> asset -> shift
-    tree = {}
-    for r in raw:
-        cat = r["category"]
-        dt = r["shift_date"]
-        ass = r["asset"]
-        sh = r["shift"]
-        tree.setdefault(cat, {}).setdefault(dt, {}).setdefault(ass, {}).setdefault(sh, []).append(r)
+
+def build_tree(rows):
+    by_category = {}
+
+    for row in rows:
+        cat = row.get("asset_category") or "Uncategorised"
+        dt = row.get("shift_date")
+        asset = row.get("asset_name") or ""
+
+        by_category.setdefault(cat, {})
+        by_category[cat].setdefault(dt, {})
+        by_category[cat][dt].setdefault(asset, [])
+        by_category[cat][dt][asset].append(row)
 
     out = []
 
-    for cat in sorted(tree.keys()):
-        for dt in sorted(tree[cat].keys()):
-            # Level 0: Category+Date totals
-            cat_date_rows = []
-            site_val = site if (site and not all_sites) else ""
+    for category in sorted(by_category.keys()):
+        category_rows = []
+        for shift_date in by_category[category]:
+            for asset_name in by_category[category][shift_date]:
+                category_rows.extend(by_category[category][shift_date][asset_name])
 
-            for ass in tree[cat][dt]:
-                for sh in tree[cat][dt][ass]:
-                    cat_date_rows.extend(tree[cat][dt][ass][sh])
-                    if not site_val and tree[cat][dt][ass][sh]:
-                        site_val = tree[cat][dt][ass][sh][0].get("site") or ""
+        category_total = make_total_row(category_rows)
+        category_total["asset_category"] = category
+        category_total["shift_date"] = None
+        category_total["asset_name"] = ""
+        category_total["shift"] = ""
+        category_total["location"] = ""
+        category_total["indent"] = 0
+        out.append(category_total)
 
-            cat_date_tot = _agg_rows(cat_date_rows)
+        for shift_date in sorted(by_category[category].keys()):
+            day_rows = []
+            for asset_name in by_category[category][shift_date]:
+                day_rows.extend(by_category[category][shift_date][asset_name])
 
-            out.append({
-                "indent": 0,
-                "is_group": 1,
-                "category": cat,
-                "shift_date": dt,
-                "asset": "",
-                "shift": "",
-                "site": site_val,
-                "comment": "",
-                **cat_date_tot,
-            })
+            day_total = make_total_row(day_rows)
+            day_total["asset_category"] = category
+            day_total["shift_date"] = shift_date
+            day_total["asset_name"] = ""
+            day_total["shift"] = ""
+            day_total["location"] = ""
+            day_total["indent"] = 1
+            out.append(day_total)
 
-            # Level 1: Asset totals
-            for ass in sorted(tree[cat][dt].keys()):
-                all_shift_rows = []
-                asset_site = ""
+            for asset_name in sorted(by_category[category][shift_date].keys()):
+                asset_rows = by_category[category][shift_date][asset_name]
 
-                for sh in tree[cat][dt][ass]:
-                    all_shift_rows.extend(tree[cat][dt][ass][sh])
-                    if not asset_site and tree[cat][dt][ass][sh]:
-                        asset_site = tree[cat][dt][ass][sh][0].get("site") or ""
+                asset_total = make_total_row(asset_rows)
+                asset_total["asset_category"] = category
+                asset_total["shift_date"] = shift_date
+                asset_total["asset_name"] = asset_name
+                asset_total["shift"] = ""
+                asset_total["location"] = asset_rows[0].get("location") if asset_rows else ""
+                asset_total["indent"] = 2
+                out.append(asset_total)
 
-                asset_tot = _agg_rows(all_shift_rows)
-                asset_comment = _merge_comments(all_shift_rows)
+                for row in asset_rows:
+                    leaf = dict(row)
+                    leaf["indent"] = 3
+                    out.append(leaf)
 
-                out.append({
-                    "indent": 1,
-                    "is_group": 1,
-                    "category": cat,
-                    "shift_date": dt,
-                    "asset": ass,
-                    "shift": "",
-                    "site": asset_site,
-                    "comment": asset_comment,
-                    **asset_tot,
-                })
+    return out
 
-                # Level 2: Day/Night leaf rows
-                for sh in ["Day", "Night"]:
-                    if sh not in tree[cat][dt][ass]:
-                        continue
 
-                    leaf_rows = tree[cat][dt][ass][sh]
-                    leaf_tot = _agg_rows(leaf_rows)
-                    leaf_comment = _merge_comments(leaf_rows)
+def make_total_row(rows):
+    total = {
+        "actual_hours": 0.0,
+        "planned_downtime": 0.0,
+        "shift_required_hours": 0.0,
+        "shift_working_hours": 0.0,
+        "shift_available_hours": 0.0,
+        "mechanical_downtime": 0.0,
+        "actual_breakdown": 0.0,
+        "actual_inspection": 0.0,
+        "actual_service_time": 0.0,
+        "other_lost_hours": 0.0,
+        "general_and": 0.0,
+        "other_lost_hours_variance": 0.0,
+    }
 
-                    out.append({
-                        "indent": 2,
-                        "is_group": 0,
-                        "category": cat,
-                        "shift_date": dt,
-                        "asset": ass,
-                        "shift": sh,
-                        "site": asset_site,
-                        "comment": leaf_comment,
-                        **leaf_tot,
-                    })
+    for row in rows:
+        total["actual_hours"] += flt(row.get("actual_hours"))
+        total["planned_downtime"] += flt(row.get("planned_downtime"))
+        total["shift_required_hours"] += flt(row.get("shift_required_hours"))
+        total["shift_working_hours"] += flt(row.get("shift_working_hours"))
+        total["shift_available_hours"] += flt(row.get("shift_available_hours"))
+        total["mechanical_downtime"] += flt(row.get("mechanical_downtime"))
+        total["actual_breakdown"] += flt(row.get("actual_breakdown"))
+        total["actual_inspection"] += flt(row.get("actual_inspection"))
+        total["actual_service_time"] += flt(row.get("actual_service_time"))
+        total["other_lost_hours"] += flt(row.get("other_lost_hours"))
+        total["general_and"] += flt(row.get("general_and"))
+        total["other_lost_hours_variance"] += flt(row.get("other_lost_hours_variance"))
 
-    return columns, out
+    for key in list(total.keys()):
+        total[key] = r1(total[key])
+
+    total["plant_shift_availability"] = calc_availability(
+        total["shift_required_hours"],
+        total["shift_available_hours"],
+    )
+    total["plant_shift_utilisation"] = calc_utilisation(
+        total["shift_working_hours"],
+        total["shift_available_hours"],
+    )
+
+    return total

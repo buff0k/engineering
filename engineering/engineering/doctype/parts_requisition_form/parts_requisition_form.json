@@ -34,12 +34,14 @@
   {
    "fieldname": "requested_by",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Requested by",
    "options": "Employee"
   },
   {
    "fieldname": "job_card_no",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Job Card No",
    "options": "Isambane Opencast Mining Job Card"
   },
@@ -132,12 +134,14 @@
   {
    "fieldname": "supervisor_forman_name_and_surname",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Supervisor/Forman Name and Surname",
    "options": "Employee"
   },
   {
    "fieldname": "date111",
    "fieldtype": "Datetime",
+   "in_list_view": 1,
    "label": "Date",
    "reqd": 1
   },
@@ -154,13 +158,14 @@
   {
    "fieldname": "mechanic_name_ad_surname",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Mechanic Name and Surname",
    "options": "Employee"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 13:39:04.427278",
+ "modified": "2026-04-17 14:18:16.972954",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Parts Requisition Form",
@@ -176,6 +181,72 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Mechanic",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Procurement Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Procurement User",
+   "select": 1,
    "share": 1,
    "write": 1
   }

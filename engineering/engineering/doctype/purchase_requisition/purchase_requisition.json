@@ -47,13 +47,13 @@
   {
    "fieldname": "pr_no",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "PR No",
    "reqd": 1
   },
   {
    "fieldname": "requested_by",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Requested By",
    "options": "Employee",
    "reqd": 1
@@ -62,7 +62,6 @@
    "fetch_from": "requested_by.employee_name",
    "fieldname": "requested_by_name",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Requested By Name",
    "read_only": 1
   },
@@ -172,7 +171,6 @@
   {
    "fieldname": "official_company_order_no",
    "fieldtype": "Float",
-   "in_list_view": 1,
    "label": "Official Company Order No",
    "precision": "0"
   },
@@ -192,7 +190,6 @@
    "fetch_from": "authorised_by.employee_name",
    "fieldname": "authorised_by_name",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Authorised By Name",
    "read_only": 1
   },
@@ -215,7 +212,6 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "Satus",
    "options": "Pending Approval\nApproved\nRejected\nOrdered"
   },
@@ -232,7 +228,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 10:21:29.366257",
+ "modified": "2026-04-17 08:46:36.864468",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Purchase Requisition",
@@ -259,78 +255,6 @@
    "read": 1,
    "report": 1,
    "role": "Engineering User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Procurement User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Procurement Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Production Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Production User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
    "share": 1,
    "write": 1
   }

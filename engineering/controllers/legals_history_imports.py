@@ -38,6 +38,33 @@ def _require_exists(doctype: str, name: str, label: str):
         frappe.throw(f"{label} '{name}' does not exist in {doctype}.")
 
 
+
+
+def _get_mapped_value(mapping_type: str, source_value: str):
+    source_value = (source_value or "").strip()
+    if not source_value:
+        return source_value
+
+    row = frappe.db.get_value(
+        "Engineering Legals Import Mapping",
+        {
+            "mapping_type": mapping_type,
+            "source_value": source_value,
+            "enabled": 1,
+        },
+        ["target_value"],
+        as_dict=True,
+    )
+
+    if row and row.get("target_value"):
+        return row.get("target_value").strip()
+
+    return source_value
+
+
+
+
+
 @frappe.whitelist()
 def import_legacy_legal():
     """
@@ -56,9 +83,14 @@ def import_legacy_legal():
     """
     data = frappe.local.form_dict or {}
 
-    site = (data.get("site") or "").strip()
-    sections = (data.get("sections") or "").strip()
-    fleet_number = (data.get("fleet_number") or "").strip()
+    raw_site = (data.get("site") or "").strip()
+    raw_sections = (data.get("sections") or "").strip()
+    raw_fleet_number = (data.get("fleet_number") or "").strip()
+
+    site = _get_mapped_value("Location", raw_site)
+    sections = _get_mapped_value("Section", raw_sections)
+    fleet_number = _get_mapped_value("Asset", raw_fleet_number)
+
     file_name = (data.get("file_name") or "").strip()
     file_b64 = data.get("file_content_base64")
     vehicle_type = (data.get("vehicle_type") or "").strip() or None
