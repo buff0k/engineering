@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"Pp7z5uyrsj\",\"type\":\"card\",\"data\":{\"card_name\":\"Job & Components\",\"col\":5}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
  "creation": "2024-12-11 11:58:53.866876",
  "custom_blocks": [],
  "docstatus": 0,
@@ -78,44 +78,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Availability and Utilisation Reports",
-   "link_count": 3,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability & Utilisation Report (Detailed)",
-   "link_count": 0,
-   "link_to": "Avail and Util report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability & Utilisation Report (Summary)",
-   "link_count": 0,
-   "link_to": "Avail and Util summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Job & Components",
-   "link_count": 3,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Jobcard",
    "link_count": 0,
    "link_to": "Mechanical Service Report",
@@ -140,35 +102,6 @@
    "link_count": 0,
    "link_to": "OEM Booking",
    "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Dashboards",
-   "link_count": 2,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Weekly Performance ",
-   "link_count": 0,
-   "link_to": "Production Efficiency",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Weekly Availability & Utilisation Dashboard",
-   "link_count": 0,
-   "link_to": "Weekly Availability and Utilisation Dashboard",
-   "link_type": "Report",
    "onboard": 0,
    "type": "Link"
   },
@@ -309,9 +242,157 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Availability and Utilisation Reports",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability & Utilisation Report (Detailed)",
+   "link_count": 0,
+   "link_to": "Avail and Util report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability & Utilisation Report (Summary)",
+   "link_count": 0,
+   "link_to": "Avail and Util summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability and utilization Asset timeline",
+   "link_count": 0,
+   "link_to": "Availability and utilization Asset timeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Pre-Use Report",
+   "link_count": 0,
+   "link_to": "Pre-Use Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "MSR Report",
+   "link_count": 0,
+   "link_to": "MSR Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Dashboards",
+   "link_count": 8,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Weekly Performance ",
+   "link_count": 0,
+   "link_to": "Production Efficiency",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Weekly Availability & Utilisation Dashboard",
+   "link_count": 0,
+   "link_to": "Weekly Availability and Utilisation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns (Capture)",
+   "link_count": 0,
+   "link_to": "Plant Breakdown or Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre Use Deviation capture",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Checklist Register",
+   "link_count": 0,
+   "link_to": "Engineering Checklist Register",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Pre Use Deviation Dashboard",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Isambane Opencast Mining Job Card",
+   "link_count": 0,
+   "link_to": "Isambane Opencast Mining Job Card",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Parts Requisition Form",
+   "link_count": 0,
+   "link_to": "Parts Requisition Form",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-03-17 05:45:37.117736",
+ "modified": "2026-04-24 06:35:25.502625",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

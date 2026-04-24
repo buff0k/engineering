@@ -7,6 +7,53 @@ from collections import defaultdict
 from urllib.parse import quote
 
 
+
+
+
+
+def _get_asset_site_field():
+    meta = frappe.get_meta("Asset")
+
+    for fn in ("location", "site", "custom_location", "custom_site"):
+        if meta.has_field(fn):
+            return fn
+
+    return None
+
+
+def _get_asset_site_map(asset_names):
+    asset_names = [a for a in (asset_names or []) if a]
+    if not asset_names:
+        return {}
+
+    site_field = _get_asset_site_field()
+    if not site_field:
+        return {}
+
+    Asset = DocType("Asset")
+
+    rows = (
+        frappe.qb.from_(Asset)
+        .select(
+            Asset.name,
+            getattr(Asset, site_field).as_("current_site"),
+        )
+        .where(Asset.name.isin(asset_names))
+    ).run(as_dict=True)
+
+    return {
+        (r.get("name") or "").strip(): (r.get("current_site") or "").strip()
+        for r in rows
+    }
+
+
+
+
+
+
+
+
+
 @frappe.whitelist()
 def get_assets(site=None, section=None, asset=None, as_at_date=None, bucket=None, from_expiry_date=None, to_expiry_date=None):
     from engineering.engineering.report.engineering_legals_report.engineering_legals_report import _assets_view
@@ -217,14 +264,7 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
     if not asset_category:
         return {"rows": [], "sections": []}
 
-    asset_dt = "Asset"
-    meta = frappe.get_meta(asset_dt)
-
-    site_field = None
-    for fn in ("location", "site", "custom_location", "custom_site"):
-        if meta.has_field(fn):
-            site_field = fn
-            break
+    site_field = _get_asset_site_field()
 
     asset_filters = {
         "docstatus": 1,
@@ -249,20 +289,14 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
         legal_filters = [
             ["docstatus", "<", 2],
             ["fleet_number", "in", fleet_numbers],
-            ["site", "not in", EXCLUDED_SITES],
         ]
-        if site:
-            legal_filters.append(["site", "=", site])
         if section:
             legal_filters.append(["sections", "=", section])
-
 
         if from_expiry_date:
             legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
         if to_expiry_date:
             legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
-
-
 
         docs = frappe.get_all(
             "Engineering Legals",
@@ -281,22 +315,34 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
             limit_page_length=0,
         )
 
+        asset_site_map = _get_asset_site_map(fleet_numbers)
+
         grouped = defaultdict(list)
         for d in docs:
             fleet = (d.get("fleet_number") or "").strip()
             sec = (d.get("sections") or "").strip()
-            key = (fleet, sec)
+            current_site = (asset_site_map.get(fleet) or "").strip()
+
+            if not fleet:
+                continue
+            if current_site in EXCLUDED_SITES:
+                continue
+            if site and current_site != site:
+                continue
+
+            key = (current_site, fleet, sec)
             grouped[key].append(d)
 
         for key, group_docs in grouped.items():
+            current_site, fleet, sec = key
             latest_doc = group_docs[0]
             previous_doc = group_docs[1] if len(group_docs) > 1 else None
 
             out.append({
                 "name": latest_doc.get("name"),
-                "site": latest_doc.get("site"),
-                "section": latest_doc.get("sections"),
-                "fleet_number": latest_doc.get("fleet_number"),
+                "site": current_site,
+                "section": sec,
+                "fleet_number": fleet,
                 "start_date": latest_doc.get("start_date"),
                 "expiry_date": latest_doc.get("expiry_date"),
                 "modified": latest_doc.get("modified"),
@@ -328,26 +374,41 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @frappe.whitelist()
 def get_recent_submitted_legals(site=None, asset=None, days=10, as_at_date=None):
     base = getdate(as_at_date) if as_at_date else today()
     cutoff = add_days(base, -int(days or 10))
     """
     Returns last N days submitted Engineering Legals (docstatus=1),
-    for the selected Site (if provided).
+    filtered by the Asset current site.
     """
-    cutoff = add_days(today(), -int(days or 10))
 
     filters = {
         "docstatus": 1,
         "modified": (">=", cutoff),
-        "site": ["not in", EXCLUDED_SITES],
     }
-    if site:
-        filters["site"] = site
     if asset:
         filters["fleet_number"] = asset
-
 
     rows = frappe.get_all(
         "Engineering Legals",
@@ -357,29 +418,62 @@ def get_recent_submitted_legals(site=None, asset=None, days=10, as_at_date=None)
         limit_page_length=200,
     )
 
-    # Keep it simple: return in modified-desc order
-    out = [{"name": r["name"], "fleet_number": r.get("fleet_number")} for r in rows if r.get("fleet_number")]
+    asset_site_map = _get_asset_site_map([r.get("fleet_number") for r in rows])
+
+    out = []
+    for r in rows:
+        fleet = (r.get("fleet_number") or "").strip()
+        current_site = (asset_site_map.get(fleet) or "").strip()
+
+        if not fleet:
+            continue
+        if current_site in EXCLUDED_SITES:
+            continue
+        if site and current_site != site:
+            continue
+
+        out.append({"name": r["name"], "fleet_number": fleet})
+
     return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 @frappe.whitelist()
 def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_date=None, to_expiry_date=None):
     counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
-    legal_filters = [["docstatus", "<", 2], ["site", "not in", EXCLUDED_SITES]]
-    if site:
-        legal_filters.append(["site", "=", site])
+    legal_filters = [["docstatus", "<", 2]]
     if section and section != "Machine Service Records":
         legal_filters.append(["sections", "=", section])
     if asset:
         legal_filters.append(["fleet_number", "=", asset])
 
-
     if from_expiry_date:
         legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
     if to_expiry_date:
         legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
-
 
     legal_rows = frappe.get_all(
         "Engineering Legals",
@@ -389,10 +483,18 @@ def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_d
         limit_page_length=0,
     )
 
+    asset_site_map = _get_asset_site_map([r.get("fleet_number") for r in legal_rows])
+
     for r in legal_rows:
-        st = (r.get("site") or "Unknown").strip()
-        sec = (r.get("sections") or "Unknown").strip()
         fleet = (r.get("fleet_number") or "Unknown").strip()
+        st = (asset_site_map.get(fleet) or "Unknown").strip()
+        sec = (r.get("sections") or "Unknown").strip()
+
+        if st in EXCLUDED_SITES:
+            continue
+        if site and st != site:
+            continue
+
         counts[st][sec][fleet] += 1
 
     if not section or section == "Machine Service Records":
@@ -436,6 +538,40 @@ def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_d
     return {"tree": out_sites}
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @frappe.whitelist()
 def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None, from_expiry_date=None, to_expiry_date=None, limit=50, offset=0):
     if not fleet_number:
@@ -476,21 +612,25 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
 
         return {"rows": out, "limit": int(limit or 50), "offset": int(offset or 0)}
 
-    filters = [["docstatus", "<", 2], ["fleet_number", "=", fleet_number], ["site", "not in", EXCLUDED_SITES]]
-    if site:
-        filters.append(["site", "=", site])
+    asset_site_map = _get_asset_site_map([fleet_number])
+    current_site = (asset_site_map.get(fleet_number) or "").strip()
+
+    if not current_site or current_site in EXCLUDED_SITES:
+        return {"rows": [], "limit": int(limit or 50), "offset": int(offset or 0)}
+
+    if site and current_site != site:
+        return {"rows": [], "limit": int(limit or 50), "offset": int(offset or 0)}
+
+    filters = [["docstatus", "<", 2], ["fleet_number", "=", fleet_number]]
     if section:
         filters.append(["sections", "=", section])
     if asset:
         filters.append(["fleet_number", "=", asset])
 
-
     if from_expiry_date:
         filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
     if to_expiry_date:
         filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
-
-
 
     rows = frappe.get_all(
         "Engineering Legals",
@@ -504,10 +644,41 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
     out = []
     for r in rows:
         x = dict(r)
+        x["site"] = current_site
         x["record_url"] = f"/app/engineering-legals/{quote(r.get('name') or '')}"
         out.append(x)
 
     return {"rows": out, "limit": int(limit or 50), "offset": int(offset or 0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 @frappe.whitelist()

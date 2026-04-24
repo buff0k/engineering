@@ -38,6 +38,7 @@
    "fieldname": "fleet_number",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Fleet Number",
    "options": "Asset",
    "reqd": 1
@@ -151,7 +152,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-15 15:08:23.142279",
+ "modified": "2026-04-22 14:25:35.127786",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",

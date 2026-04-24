@@ -520,13 +520,15 @@ function normalize_status(value) {
 }
 
 function is_checked(value) {
-    return normalize_status(value) === 'submitted';
+    const status = normalize_status(value);
+    return status === 'submitted' || status === 'late submission';
 }
 
 function get_status_short_label(value) {
     const status = normalize_status(value);
 
     if (status === 'submitted') return 'SUB';
+    if (status === 'late submission') return 'L/S';
     if (status === 'offsite') return 'OFF';
     if (status === 'breakdown') return 'B/D';
     if (status === 'service') return 'SER';
@@ -801,7 +803,7 @@ function style_row_checkbox_cells(frm) {
                 'checklist-box-red checklist-box-green checklist-box-offsite checklist-box-breakdown checklist-box-service'
             );
 
-            if (status === 'submitted') {
+            if (status === 'submitted' || status === 'late submission') {
                 $cell.addClass('checklist-box-green');
             } else if (status === 'offsite') {
                 $cell.addClass('checklist-box-offsite');

@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:MDW-{YYYY}-{#####}",
+ "creation": "2026-04-24 08:19:06.045569",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_section",
+  "site",
+  "date",
+  "clock_out_section",
+  "clock_in_time",
+  "clock_out_time",
+  "total_hours",
+  "work_details_section",
+  "work_details",
+  "total_work_time",
+  "supervisor_section",
+  "supervisor_forman_company_no",
+  "supervisor_forman_name_surname",
+  "supervisor_forman_signature",
+  "column_break_pqqe",
+  "mechanic_company_no",
+  "mechanic_name_surname",
+  "mechanic_signature"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Details"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "clock_out_section",
+   "fieldtype": "Section Break",
+   "label": "Clock In & Out Details"
+  },
+  {
+   "fieldname": "clock_in_time",
+   "fieldtype": "Time",
+   "label": "Clock In Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "clock_out_time",
+   "fieldtype": "Time",
+   "label": "Clock Out Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_hours",
+   "fieldtype": "Float",
+   "label": "Total Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "work_details_section",
+   "fieldtype": "Section Break",
+   "label": "Work Details"
+  },
+  {
+   "fieldname": "work_details",
+   "fieldtype": "Table",
+   "label": "Work Details",
+   "options": "Mechanical Daily Worksheet Detail"
+  },
+  {
+   "fieldname": "total_work_time",
+   "fieldtype": "Float",
+   "label": "Total Work Time",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supervisor_section",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fieldname": "supervisor_forman_company_no",
+   "fieldtype": "Link",
+   "label": "Supervisor/Forman Company No",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "supervisor_forman_company_no.employee_name",
+   "fieldname": "supervisor_forman_name_surname",
+   "fieldtype": "Data",
+   "label": "Supervisor/Forman Name & Surname"
+  },
+  {
+   "fieldname": "supervisor_forman_signature",
+   "fieldtype": "Signature",
+   "label": "Supervisor/Forman Signature"
+  },
+  {
+   "fieldname": "column_break_pqqe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mechanic_company_no",
+   "fieldtype": "Link",
+   "label": "Mechanic Company No",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "mechanic_company_no.employee_name",
+   "fieldname": "mechanic_name_surname",
+   "fieldtype": "Data",
+   "label": "Mechanic Name & Surname"
+  },
+  {
+   "fieldname": "mechanic_signature",
+   "fieldtype": "Signature",
+   "label": "Mechanic Signature"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-24 08:31:10.899486",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Mechanical Daily Worksheet",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

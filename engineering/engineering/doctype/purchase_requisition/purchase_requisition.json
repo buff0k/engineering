@@ -8,11 +8,12 @@
  "field_order": [
   "basic_information",
   "request_date",
-  "requested_by",
-  "requested_by_name",
   "plant_no",
   "plant_make",
   "model",
+  "requested_by_company_no",
+  "requested_by_name",
+  "requested_by_signature",
   "cb_1",
   "pr_no",
   "machine_hours",
@@ -31,6 +32,7 @@
   "supplier",
   "authorised_by",
   "authorised_by_name",
+  "authorised_by_signature",
   "cb_2",
   "code",
   "site",
@@ -51,15 +53,7 @@
    "reqd": 1
   },
   {
-   "fieldname": "requested_by",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Requested By",
-   "options": "Employee",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "requested_by.employee_name",
+   "fetch_from": "requested_by_company_no.employee_name",
    "fieldname": "requested_by_name",
    "fieldtype": "Data",
    "label": "Requested By Name",
@@ -224,11 +218,31 @@
    "fieldname": "attach_hard_copy_2",
    "fieldtype": "Attach",
    "label": "Attach Hard Copy 2"
+  },
+  {
+   "fieldname": "requested_by_company_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Requested By Company No",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "requested_by_signature",
+   "fieldtype": "Signature",
+   "label": "Requested by Signature",
+   "reqd": 1
+  },
+  {
+   "fieldname": "authorised_by_signature",
+   "fieldtype": "Signature",
+   "label": "Authorised By Signature",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 08:46:36.864468",
+ "modified": "2026-04-23 15:31:35.695588",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Purchase Requisition",

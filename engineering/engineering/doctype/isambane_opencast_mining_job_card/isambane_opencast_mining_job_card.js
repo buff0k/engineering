@@ -13,20 +13,19 @@ frappe.ui.form.on('Isambane Opencast Mining Job Card', {
         populate_equipment_details(frm);
     },
 
-    requested_by(frm) {
-        populate_requested_by_display(frm);
+    company_no(frm) {
+        set_employee_name_from_link(frm, 'company_no', 'requested_by_site_engineering_manager');
+        populate_site_engineering_manager_display(frm);
     },
 
-    artisan_name_and_surname(frm) {
+    company_no1(frm) {
+        set_employee_name_from_link(frm, 'company_no1', 'artisan_name_and_surname');
         populate_artisan_display(frm);
     },
 
-    supervisor_forman_name_and_surname(frm) {
+    company_no2(frm) {
+        set_employee_name_from_link(frm, 'company_no2', 'supervisor_forman_name_and_surname');
         populate_supervisor_display(frm);
-    },
-
-    requested_by_site_engineering_manager(frm) {
-        populate_site_engineering_manager_display(frm);
     },
 
     equipment_no(frm) {
@@ -66,48 +65,68 @@ frappe.ui.form.on('Isambane Opencast Mining Job Card Item', {
 });
 
 function set_employee_queries(frm) {
-    frm.set_query('requested_by', function () {
+    frm.set_query('company_no', function () {
         return {};
     });
 
-    frm.set_query('artisan_name_and_surname', function () {
+    frm.set_query('company_no1', function () {
         return {};
     });
 
-    frm.set_query('supervisor_forman_name_and_surname', function () {
+    frm.set_query('company_no2', function () {
         return {};
     });
+}
 
-    frm.set_query('requested_by_site_engineering_manager', function () {
-        return {};
-    });
+async function set_employee_name_from_link(frm, linkFieldname, targetFieldname) {
+    const employeeId = frm.doc[linkFieldname];
+
+    if (!employeeId) {
+        await frm.set_value(targetFieldname, '');
+        return;
+    }
+
+    try {
+        const r = await frappe.db.get_value('Employee', employeeId, [
+            'employee_name',
+            'first_name',
+            'last_name'
+        ]);
+
+        if (r && r.message) {
+            const firstName = r.message.first_name || '';
+            const lastName = r.message.last_name || '';
+            const employeeName = r.message.employee_name || '';
+            const fullName = [firstName, lastName].join(' ').trim() || employeeName || '';
+
+            await frm.set_value(targetFieldname, fullName);
+        }
+    } catch (e) {
+        console.error(`Failed to set ${targetFieldname} from ${linkFieldname}`, e);
+    }
 }
 
 async function populate_requested_by_display(frm) {
-    await set_employee_description(frm, 'requested_by', 'Requested By');
+    await set_employee_description_from_link(frm, 'company_no', 'requested_by_site_engineering_manager', 'Requested By Site Engineering Manager');
 }
 
 async function populate_artisan_display(frm) {
-    await set_employee_description(frm, 'artisan_name_and_surname', 'Artisan');
+    await set_employee_description_from_link(frm, 'company_no1', 'artisan_name_and_surname', 'Artisan');
 }
 
 async function populate_supervisor_display(frm) {
-    await set_employee_description(frm, 'supervisor_forman_name_and_surname', 'Supervisor/Forman');
+    await set_employee_description_from_link(frm, 'company_no2', 'supervisor_forman_name_and_surname', 'Supervisor/Forman');
 }
 
 async function populate_site_engineering_manager_display(frm) {
-    await set_employee_description(
-        frm,
-        'requested_by_site_engineering_manager',
-        'Requested By Site Engineering Manager'
-    );
+    await set_employee_description_from_link(frm, 'company_no', 'requested_by_site_engineering_manager', 'Requested By Site Engineering Manager');
 }
 
-async function set_employee_description(frm, fieldname, title) {
-    frm.set_df_property(fieldname, 'description', '');
-    frm.refresh_field(fieldname);
+async function set_employee_description_from_link(frm, linkFieldname, targetFieldname, title) {
+    frm.set_df_property(targetFieldname, 'description', '');
+    frm.refresh_field(targetFieldname);
 
-    const employeeId = frm.doc[fieldname];
+    const employeeId = frm.doc[linkFieldname];
     if (!employeeId) {
         return;
     }
@@ -120,10 +139,10 @@ async function set_employee_description(frm, fieldname, title) {
         const employeeName = emp.employee_name || '';
         const fullName = [firstName, lastName].join(' ').trim() || employeeName || employeeId;
 
-        frm.set_df_property(fieldname, 'description', `${title} Name: ${fullName}`);
-        frm.refresh_field(fieldname);
+        frm.set_df_property(targetFieldname, 'description', `${title} Name: ${fullName}`);
+        frm.refresh_field(targetFieldname);
     } catch (e) {
-        console.error(`Failed to load Employee details for ${fieldname}`, e);
+        console.error(`Failed to load Employee details for ${targetFieldname}`, e);
     }
 }
 

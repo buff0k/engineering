@@ -977,8 +977,19 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
                 out.append("<div></div>")
                 out.append("<div></div>")
             else:
-                out.append(f"<div class='isd-bar avail' style='height:{h(it.get('avail'))}px'></div>")
-                out.append(f"<div class='isd-bar util' style='height:{h(it.get('util'))}px'></div>")
+                av_text = fmt(it.get("avail")) or "No Availability Data"
+                ut_text = fmt(it.get("util")) or "No Utilisation Data"
+
+                out.append(
+                    f"<div class='isd-bar avail' "
+                    f"title='Availability: {av_text}' "
+                    f"style='height:{h(it.get('avail'))}px'></div>"
+                )
+                out.append(
+                    f"<div class='isd-bar util' "
+                    f"title='Utilisation: {ut_text}' "
+                    f"style='height:{h(it.get('util'))}px'></div>"
+                )
         return "".join(out)
 
 

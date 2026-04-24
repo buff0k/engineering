@@ -16,6 +16,7 @@
   "machine_type",
   "machine_model",
   "pre_use_no",
+  "operating_status",
   "section_break_deviation",
   "deviation_details",
   "pre_use_attachment",
@@ -33,7 +34,6 @@
   "section_break_status",
   "action_status",
   "percentage_block_bar",
-  "operating_status",
   "completion_percentage"
  ],
  "fields": [
@@ -169,7 +169,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Operating Status",
-   "options": "Working\nNot Working\nOff Site\nPending Parts\nPending Incident report"
+   "options": "Off Site\nParts Order\nPending Incident report\nGo But 48 Hours\nGo But Plan ASP (WEEK)"
   },
   {
    "default": "0",
@@ -199,7 +199,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 07:57:29.965695",
+ "modified": "2026-04-23 14:33:05.615849",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Pre Use Deviation",

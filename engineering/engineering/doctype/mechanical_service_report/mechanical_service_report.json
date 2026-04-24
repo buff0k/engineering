@@ -241,14 +241,14 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Is this a new Job?",
-   "options": "Yes\nNo",
+   "options": "\nYes\nNo",
    "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 06:37:49.492796",
+ "modified": "2026-04-22 07:07:29.825289",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

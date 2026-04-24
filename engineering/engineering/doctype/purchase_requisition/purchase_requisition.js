@@ -1,11 +1,21 @@
 frappe.ui.form.on('Purchase Requisition', {
     onload(frm) {
         populate_plant_fields(frm);
+        set_official_company_order_no_read_only(frm);
     },
 
     refresh(frm) {
         populate_plant_fields(frm);
         add_forced_delete(frm);
+        set_official_company_order_no_read_only(frm);
+    },
+
+    after_save(frm) {
+        set_official_company_order_no_read_only(frm);
+    },
+
+    official_company_order_no(frm) {
+        set_official_company_order_no_read_only(frm);
     },
 
     plant_no(frm) {
@@ -35,6 +45,18 @@ frappe.ui.form.on('Purchase Requisition Item', {
     }
 });
 
+function set_official_company_order_no_read_only(frm) {
+    const fieldname = 'official_company_order_no';
+    const has_value = cint(frm.doc.__islocal) === 0 && !!frm.doc[fieldname];
+
+    if (frm.fields_dict[fieldname]) {
+        frm.fields_dict[fieldname].df.read_only = has_value ? 1 : 0;
+        frm.fields_dict[fieldname].refresh();
+    }
+
+    frm.refresh_field(fieldname);
+}
+
 function populate_plant_fields(frm) {
     if (!frm.doc.plant_no) {
         frm.set_value('plant_make', '');
@@ -60,7 +82,7 @@ function add_forced_delete(frm) {
 
     frm.__delete_button_added = true;
 
-    frm.page.add_menu_item(__('Delete'), function () {
+    frm.add_custom_button(__('Delete'), function () {
         frappe.confirm(
             __('Are you sure you want to delete this Purchase Requisition?'),
             function () {

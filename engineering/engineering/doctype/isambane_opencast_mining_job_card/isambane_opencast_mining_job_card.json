@@ -1,350 +1,376 @@
 {
- "actions": [],
- "allow_rename": 1,
- "autoname": "format:{job_card_no}-{equipment_no}-{site}",
- "creation": "2026-04-15 15:46:55.518569",
- "doctype": "DocType",
- "editable_grid": 1,
- "engine": "InnoDB",
- "field_order": [
-  "section_general_information",
-  "job_card_no",
-  "date",
-  "shift",
-  "priority",
-  "department_fixed_at",
-  "requested_by_site_engineering_manager",
-  "site_engineering_manager",
-  "section_equipment_asset_details",
-  "site",
-  "equipment_no",
-  "machine_type",
-  "model",
-  "hour_meter",
-  "fault_work_type",
-  "section_job_description",
-  "fault_work_request_reported",
-  "section_parts_times_sign_off",
-  "items",
-  "section_work_completion_report",
-  "work_carried_out",
-  "machine_tested",
-  "machine_status",
-  "further_repair_required",
-  "unsafe_to_operate",
-  "start_of_downtime",
-  "end_of_downtime",
-  "total_downtime_hrs",
-  "section_sign_off",
-  "artisan_name_and_surname",
-  "artisan_signature",
-  "supervisor_forman_name_and_surname",
-  "supervisor_foreman_signature"
- ],
- "fields": [
-  {
-   "fieldname": "section_general_information",
-   "fieldtype": "Section Break",
-   "label": "1. General Information"
-  },
-  {
-   "fieldname": "job_card_no",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Job Card No.",
-   "options": "Name",
-   "reqd": 1
-  },
-  {
-   "default": "Today",
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date",
-   "reqd": 1
-  },
-  {
-   "fieldname": "shift",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Shift",
-   "options": "Day\nNight",
-   "reqd": 1
-  },
-  {
-   "fieldname": "priority",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Priority",
-   "options": "Low\nMedium\nHigh\nCritical",
-   "reqd": 1
-  },
-  {
-   "fieldname": "section_equipment_asset_details",
-   "fieldtype": "Section Break",
-   "label": "2. Equipment / Asset Details"
-  },
-  {
-   "fieldname": "site",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Site",
-   "options": "Location"
-  },
-  {
-   "fieldname": "equipment_no",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Equipment No.",
-   "options": "Asset"
-  },
-  {
-   "fieldname": "machine_type",
-   "fieldtype": "Data",
-   "label": "Machine Type",
-   "options": "Asset Category",
-   "read_only": 1
-  },
-  {
-   "fieldname": "model",
-   "fieldtype": "Data",
-   "label": "Model",
-   "options": "Item",
-   "read_only": 1
-  },
-  {
-   "fieldname": "hour_meter",
-   "fieldtype": "Float",
-   "label": "Hour Meter",
-   "precision": "0"
-  },
-  {
-   "fieldname": "fault_work_type",
-   "fieldtype": "Select",
-   "label": "Fault / Work Type",
-   "options": "Breakdown Repair\nPreventative Maintenance\nInspection\nService\nTyre Repair\nElectrical Repair\nWelding\nOther"
-  },
-  {
-   "fieldname": "section_job_description",
-   "fieldtype": "Section Break",
-   "label": "3. Job Description"
-  },
-  {
-   "fieldname": "fault_work_request_reported",
-   "fieldtype": "Small Text",
-   "label": "Fault / Work Request Reported"
-  },
-  {
-   "fieldname": "section_parts_times_sign_off",
-   "fieldtype": "Section Break",
-   "label": "4. Parts / Times / Sign-Off"
-  },
-  {
-   "fieldname": "items",
-   "fieldtype": "Table",
-   "label": "Parts / Times",
-   "options": "Isambane Opencast Mining Job Card Item"
-  },
-  {
-   "fieldname": "section_work_completion_report",
-   "fieldtype": "Section Break",
-   "label": "5. Work Completion Report"
-  },
-  {
-   "fieldname": "work_carried_out",
-   "fieldtype": "Small Text",
-   "label": "Work Carried Out"
-  },
-  {
-   "fieldname": "machine_tested",
-   "fieldtype": "Select",
-   "label": "Machine Tested",
-   "options": "Yes\nNo"
-  },
-  {
-   "fieldname": "machine_status",
-   "fieldtype": "Select",
-   "label": "Machine Status",
-   "options": "Awaiting Parts\nAvailable For Service\nRunning with Observation\nFurther Repair Required\nUnsafe to Operate\nRunning"
-  },
-  {
-   "fieldname": "start_of_downtime",
-   "fieldtype": "Datetime",
-   "label": "Start of Downtime"
-  },
-  {
-   "fieldname": "end_of_downtime",
-   "fieldtype": "Datetime",
-   "label": "End of Downtime"
-  },
-  {
-   "fieldname": "further_repair_required",
-   "fieldtype": "Select",
-   "label": "Further Repair Required",
-   "options": "Yes\nNo"
-  },
-  {
-   "fieldname": "unsafe_to_operate",
-   "fieldtype": "Select",
-   "label": "Unsafe to Operate",
-   "options": "Yes\nNo"
-  },
-  {
-   "fieldname": "total_downtime_hrs",
-   "fieldtype": "Float",
-   "label": "Total Downtime (hrs)",
-   "precision": "0",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_sign_off",
-   "fieldtype": "Section Break",
-   "label": "6. Sign-Off"
-  },
-  {
-   "fieldname": "artisan_signature",
-   "fieldtype": "Signature",
-   "label": "Artisan Signature"
-  },
-  {
-   "fieldname": "supervisor_foreman_signature",
-   "fieldtype": "Signature",
-   "label": "Supervisor/Foreman Signature",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "artisan_name_and_surname",
-   "fieldtype": "Link",
-   "label": "Artisan Name and Surname",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "supervisor_forman_name_and_surname",
-   "fieldtype": "Link",
-   "label": "Supervisor/Forman Name and Surname",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "requested_by_site_engineering_manager",
-   "fieldtype": "Link",
-   "label": "Requested By Site Engineering Manager",
-   "options": "Employee",
-   "reqd": 1
-  },
-  {
-   "fieldname": "site_engineering_manager",
-   "fieldtype": "Signature",
-   "label": "Site Engineering Manager"
-  },
-  {
-   "fieldname": "department_fixed_at",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Department Fixed At",
-   "options": "Mining Onsite\nPlot 20\nPLOT 22\nPLANT",
-   "reqd": 1
-  }
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2026-04-16 11:37:45.381838",
- "modified_by": "Administrator",
- "module": "Engineering",
- "name": "Isambane Opencast Mining Job Card",
- "naming_rule": "Expression",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Maintenance User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Maintenance Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Production Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Production User",
-   "share": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "title_field": "equipment_no",
- "track_changes": 1
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "format:{job_card_no}-{equipment_no}-{site}",
+  "creation": "2026-04-17 12:29:53.733452",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "section_general_information",
+    "job_card_no",
+    "date",
+    "shift",
+    "priority",
+    "department_fixed_at",
+    "company_no",
+    "requested_by_site_engineering_manager",
+    "site_engineering_manager_signature",
+    "section_equipment_asset_details",
+    "site",
+    "equipment_no",
+    "machine_type",
+    "model",
+    "hour_meter",
+    "fault_work_type",
+    "section_job_description",
+    "fault_work_request_reported",
+    "section_parts_times_sign_off",
+    "items",
+    "section_work_completion_report",
+    "work_carried_out",
+    "machine_tested",
+    "machine_status",
+    "further_repair_required",
+    "unsafe_to_operate",
+    "start_of_downtime",
+    "end_of_downtime",
+    "total_downtime_hrs",
+    "section_sign_off",
+    "company_no1",
+    "artisan_name_and_surname",
+    "artisan_signature",
+    "company_no2",
+    "supervisor_forman_name_and_surname",
+    "supervisor_foreman_signature"
+  ],
+  "fields": [
+    {
+      "fieldname": "section_general_information",
+      "fieldtype": "Section Break",
+      "label": "1. General Information"
+    },
+    {
+      "fieldname": "job_card_no",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Job Card No.",
+      "options": "Name",
+      "reqd": 1
+    },
+    {
+      "default": "Today",
+      "fieldname": "date",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "label": "Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "shift",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Shift",
+      "options": "Day\nNight",
+      "reqd": 1
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Priority",
+      "options": "Low\nMedium\nHigh\nCritical",
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_equipment_asset_details",
+      "fieldtype": "Section Break",
+      "label": "2. Equipment / Asset Details"
+    },
+    {
+      "fieldname": "site",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Site",
+      "options": "Location"
+    },
+    {
+      "fieldname": "equipment_no",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Equipment No.",
+      "options": "Asset"
+    },
+    {
+      "fieldname": "machine_type",
+      "fieldtype": "Data",
+      "label": "Machine Type",
+      "options": "Asset Category",
+      "read_only": 1
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Data",
+      "label": "Model",
+      "options": "Item",
+      "read_only": 1
+    },
+    {
+      "fieldname": "hour_meter",
+      "fieldtype": "Float",
+      "label": "Hour Meter",
+      "precision": "0"
+    },
+    {
+      "fieldname": "fault_work_type",
+      "fieldtype": "Select",
+      "label": "Fault / Work Type",
+      "options": "Breakdown Repair\nPreventative Maintenance\nInspection\nService\nTyre Repair\nElectrical Repair\nWelding\nOther"
+    },
+    {
+      "fieldname": "section_job_description",
+      "fieldtype": "Section Break",
+      "label": "3. Job Description"
+    },
+    {
+      "fieldname": "fault_work_request_reported",
+      "fieldtype": "Small Text",
+      "label": "Fault / Work Request Reported"
+    },
+    {
+      "fieldname": "section_parts_times_sign_off",
+      "fieldtype": "Section Break",
+      "label": "4. Parts / Times / Sign-Off"
+    },
+    {
+      "fieldname": "items",
+      "fieldtype": "Table",
+      "label": "Parts / Times",
+      "options": "Isambane Opencast Mining Job Card Item"
+    },
+    {
+      "fieldname": "section_work_completion_report",
+      "fieldtype": "Section Break",
+      "label": "5. Work Completion Report"
+    },
+    {
+      "fieldname": "work_carried_out",
+      "fieldtype": "Small Text",
+      "label": "Work Carried Out"
+    },
+    {
+      "fieldname": "machine_tested",
+      "fieldtype": "Select",
+      "label": "Machine Tested",
+      "options": "Yes\nNo"
+    },
+    {
+      "fieldname": "machine_status",
+      "fieldtype": "Select",
+      "label": "Machine Status",
+      "options": "Awaiting Parts\nAvailable For Service\nRunning with Observation\nFurther Repair Required\nUnsafe to Operate\nRunning"
+    },
+    {
+      "fieldname": "start_of_downtime",
+      "fieldtype": "Datetime",
+      "label": "Start of Downtime"
+    },
+    {
+      "fieldname": "end_of_downtime",
+      "fieldtype": "Datetime",
+      "label": "End of Downtime"
+    },
+    {
+      "fieldname": "further_repair_required",
+      "fieldtype": "Select",
+      "label": "Further Repair Required",
+      "options": "Yes\nNo"
+    },
+    {
+      "fieldname": "unsafe_to_operate",
+      "fieldtype": "Select",
+      "label": "Unsafe to Operate",
+      "options": "Yes\nNo"
+    },
+    {
+      "fieldname": "total_downtime_hrs",
+      "fieldtype": "Float",
+      "label": "Total Downtime (hrs)",
+      "precision": "0",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_sign_off",
+      "fieldtype": "Section Break",
+      "label": "6. Sign-Off"
+    },
+    {
+      "fieldname": "artisan_signature",
+      "fieldtype": "Signature",
+      "label": "Artisan Signature"
+    },
+    {
+      "fieldname": "supervisor_foreman_signature",
+      "fieldtype": "Signature",
+      "label": "Supervisor/Foreman Signature",
+      "options": "Employee"
+    },
+    {
+      "fetch_from": "company_no1.employee_name",
+      "fieldname": "artisan_name_and_surname",
+      "fieldtype": "Data",
+      "label": "Artisan Name and Surname",
+      "options": "Employee",
+      "reqd": 1
+    },
+    {
+      "fetch_from": "company_no2.employee_name",
+      "fieldname": "supervisor_forman_name_and_surname",
+      "fieldtype": "Data",
+      "label": "Supervisor/Forman Name and Surname",
+      "options": "Employee"
+    },
+    {
+      "fetch_from": "company_no.employee_name",
+      "fieldname": "requested_by_site_engineering_manager",
+      "fieldtype": "Data",
+      "label": "Requested By Site Engineering Manager",
+      "options": "Employee"
+    },
+    {
+      "fieldname": "department_fixed_at",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Department Fixed At",
+      "options": "Mining Onsite\nPlot 20\nPLOT 22\nPLANT",
+      "reqd": 1
+    },
+    {
+      "fieldname": "site_engineering_manager_signature",
+      "fieldtype": "Signature",
+      "label": "Site Engineering Manager Signature"
+    },
+    {
+      "fieldname": "company_no",
+      "fieldtype": "Link",
+      "label": "Company No",
+      "options": "Employee",
+      "reqd": 1
+    },
+    {
+      "fieldname": "company_no1",
+      "fieldtype": "Link",
+      "label": "Company No",
+      "options": "Employee",
+      "reqd": 1
+    },
+    {
+      "fieldname": "company_no2",
+      "fieldtype": "Link",
+      "label": "Company No",
+      "options": "Employee"
+    }
+  ],
+  "grid_page_length": 50,
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-04-22 09:09:51.316898",
+  "modified_by": "Administrator",
+  "module": "Engineering",
+  "name": "Isambane Opencast Mining Job Card",
+  "naming_rule": "Expression (old style)",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Maintenance User",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Maintenance Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Engineering Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Engineering User",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Production Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Production User",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "row_format": "Dynamic",
+  "rows_threshold_for_grid_search": 20,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "equipment_no",
+  "track_changes": 1
 }

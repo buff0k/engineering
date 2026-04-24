@@ -1,0 +1,84 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-24 08:38:39.448258",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "machine_fleet_no",
+  "km_hours",
+  "job_card",
+  "description_of_work_carried_out",
+  "fault_work_type",
+  "time_started",
+  "time_done",
+  "hours"
+ ],
+ "fields": [
+  {
+   "fieldname": "machine_fleet_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Machine Fleet No",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "km_hours",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "KM/Hours"
+  },
+  {
+   "fieldname": "job_card",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Job Card",
+   "options": "Isambane Opencast Mining Job Card"
+  },
+  {
+   "fieldname": "description_of_work_carried_out",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Description of Work Carried Out"
+  },
+  {
+   "fieldname": "time_started",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Time Started"
+  },
+  {
+   "fieldname": "time_done",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Time Done"
+  },
+  {
+   "fieldname": "hours",
+   "fieldtype": "Float",
+   "label": "Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fault_work_type",
+   "fieldtype": "Select",
+   "label": "Fault / Work Type",
+   "options": "Breakdown Repair\nPreventative Maintenance\nInspection\nService\nTyre Repair\nElectrical Repair\nWelding\nOther",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-24 08:51:04.058925",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Mechanical Daily Worksheet Detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
