@@ -7,17 +7,17 @@
  "engine": "InnoDB",
  "field_order": [
   "basic_information",
-  "request_date",
+  "requested_by_company_no",
+  "requested_by_name",
   "plant_no",
   "plant_make",
   "model",
-  "requested_by_company_no",
-  "requested_by_name",
   "requested_by_signature",
   "cb_1",
-  "pr_no",
+  "request_date",
   "machine_hours",
   "component",
+  "pr_no",
   "work_details",
   "description_of_work",
   "items_section",
@@ -71,8 +71,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Plant No",
-   "options": "Asset",
-   "reqd": 1
+   "options": "Asset"
   },
   {
    "fetch_from": "plant_no.asset_category",
@@ -99,6 +98,7 @@
    "precision": "0"
   },
   {
+   "fetch_from": "code.component",
    "fieldname": "component",
    "fieldtype": "Data",
    "label": "Component"
@@ -193,9 +193,9 @@
   },
   {
    "fieldname": "code",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Code",
-   "options": "Site Code"
+   "options": "Cost Code Sheet"
   },
   {
    "fieldname": "site",
@@ -242,7 +242,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-23 15:31:35.695588",
+ "modified": "2026-04-29 08:29:47.832338",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Purchase Requisition",
