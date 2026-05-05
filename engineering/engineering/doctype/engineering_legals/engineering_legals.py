@@ -349,7 +349,6 @@ def _get_sharepoint_drive_id(settings: dict, site_id: str, token: str) -> str:
 def _get_sharepoint_folder_parts(doc: Document, settings: dict) -> list[str]:
     site = (doc.site or "Unknown Site").strip() or "Unknown Site"
     section = (doc.sections or "Unclassified").strip() or "Unclassified"
-    asset = (doc.fleet_number or "No Fleet").strip() or "No Fleet"
 
     raw_date = getattr(doc, "start_date", None)
     if raw_date:
@@ -365,9 +364,7 @@ def _get_sharepoint_folder_parts(doc: Document, settings: dict) -> list[str]:
         _sanitize_sharepoint_part(year_folder),
         _sanitize_sharepoint_part(section),
         _sanitize_sharepoint_part(month_folder),
-        _sanitize_sharepoint_part(asset),
     ]
-
 
 def _ensure_sharepoint_folder(drive_id: str, folder_parts: list[str], token: str):
     parent_item_id = "root"
@@ -443,14 +440,23 @@ def upload_engineering_legals_to_sharepoint(doc: Document, source_file_doc: Opti
     folder_parts = _get_sharepoint_folder_parts(doc, settings)
     parent_item_id = _ensure_sharepoint_folder(drive_id, folder_parts, token)
 
-    filename = _sanitize_sharepoint_part(file_doc.file_name or "attachment")
+    raw_date = getattr(doc, "start_date", None)
+    if raw_date:
+        date_part = getdate(raw_date).strftime("%Y-%m-%d")
+    else:
+        date_part = "No-Date"
+
+    original_ext = os.path.splitext(file_doc.file_name or "")[1] or ".pdf"
+
+    filename = _sanitize_sharepoint_part(
+        f"{(doc.fleet_number or 'No Fleet').strip()}-{(doc.sections or 'Unclassified').strip()}-{date_part}{original_ext}"
+    )
     encoded_filename = quote(filename)
 
     upload_url = (
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}"
         f"/items/{parent_item_id}:/{encoded_filename}:/content"
     )
-
     mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
     _graph_request(
