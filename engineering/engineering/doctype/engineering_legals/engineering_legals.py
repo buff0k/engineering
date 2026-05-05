@@ -253,7 +253,42 @@ def move_engineering_legal_file_to_folder(doc: Document):
     file_doc.db_set("folder", target_folder_name, update_modified=False)
 
 
+def _clear_sharepoint_sync_status(docname: str):
+    frappe.db.set_value(
+        "Engineering Legals",
+        docname,
+        {
+            "sharepoint_synced": 0,
+            "sharepoint_synced_at": None,
+            "sharepoint_sync_error": None,
+        },
+        update_modified=False,
+    )
 
+
+def _mark_sharepoint_sync_success(docname: str):
+    frappe.db.set_value(
+        "Engineering Legals",
+        docname,
+        {
+            "sharepoint_synced": 1,
+            "sharepoint_synced_at": now(),
+            "sharepoint_sync_error": None,
+        },
+        update_modified=False,
+    )
+
+
+def _mark_sharepoint_sync_failure(docname: str, error_message: str):
+    frappe.db.set_value(
+        "Engineering Legals",
+        docname,
+        {
+            "sharepoint_synced": 0,
+            "sharepoint_sync_error": (error_message or "")[:1400],
+        },
+        update_modified=False,
+    )
 
 
 
@@ -738,6 +773,41 @@ def sync_engineering_legals_from_file(file_doc, method=None):
         if not frappe.db.exists("Engineering Legals", attached_name):
             return
 
+        _clear_sharepoint_sync_status(attached_name)
+
+        doc = frappe.get_doc("Engineering Legals", attached_name)
+
+        if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
+            doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
+            doc.reload()
+
+        upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
+        move_engineering_legal_file_to_folder(doc)
+        _mark_sharepoint_sync_success(attached_name)
+
+    except Exception:
+        attached_name = getattr(file_doc, "attached_to_name", None)
+        if attached_name and frappe.db.exists("Engineering Legals", attached_name):
+            _mark_sharepoint_sync_failure(attached_name, frappe.get_traceback())
+
+        frappe.log_error(
+            title="Engineering Legals file-trigger sync failed",
+            message=frappe.get_traceback(),
+        )
+
+        if getattr(file_doc, "attached_to_doctype", None) != "Engineering Legals":
+            return
+
+        attached_name = getattr(file_doc, "attached_to_name", None)
+        if not attached_name:
+            return
+
+        if str(attached_name).startswith("new-engineering-legals-"):
+            return
+
+        if not frappe.db.exists("Engineering Legals", attached_name):
+            return
+
         doc = frappe.get_doc("Engineering Legals", attached_name)
 
         if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
@@ -757,6 +827,8 @@ def sync_engineering_legals_from_doc(doc, method=None):
     try:
         if not getattr(doc, "attach_paper", None):
             return
+
+        _clear_sharepoint_sync_status(doc.name)
 
         frappe.enqueue(
             "engineering.engineering.doctype.engineering_legals.engineering_legals.run_engineering_legals_sharepoint_sync",
@@ -786,6 +858,7 @@ def run_engineering_legals_sharepoint_sync(docname: str):
         doc = frappe.get_doc("Engineering Legals", docname)
 
         if not getattr(doc, "attach_paper", None):
+            _mark_sharepoint_sync_failure(docname, "Attach Paper is empty.")
             return
 
         file_row = frappe.get_value(
@@ -801,6 +874,7 @@ def run_engineering_legals_sharepoint_sync(docname: str):
         )
 
         if not file_row:
+            _mark_sharepoint_sync_failure(docname, "No File row found for attached document.")
             return
 
         file_doc = frappe.get_doc("File", file_row.name)
@@ -811,12 +885,47 @@ def run_engineering_legals_sharepoint_sync(docname: str):
 
         upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
         move_engineering_legal_file_to_folder(doc)
+        _mark_sharepoint_sync_success(docname)
 
     except Exception:
+        _mark_sharepoint_sync_failure(docname, frappe.get_traceback())
         frappe.log_error(
             title="Engineering Legals background SharePoint sync failed",
             message=frappe.get_traceback(),
         )
+
+
+
+
+
+
+
+def queue_unsynced_engineering_legals():
+    rows = frappe.get_all(
+        "Engineering Legals",
+        filters={
+            "attach_paper": ["is", "set"],
+            "sharepoint_synced": 0,
+            "docstatus": ["<", 2],
+        },
+        pluck="name",
+        order_by="modified asc",
+        limit_page_length=200,
+    )
+
+    for name in rows:
+        frappe.enqueue(
+            "engineering.engineering.doctype.engineering_legals.engineering_legals.run_engineering_legals_sharepoint_sync",
+            queue="short",
+            timeout=300,
+            enqueue_after_commit=False,
+            docname=name,
+        )
+
+
+
+
+
 
 
 def on_update(doc, method=None):

@@ -97,6 +97,9 @@ scheduler_events = {
         "0 1 * * *": [
             "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update"
         ],
+        "0 2 * * *": [
+            "engineering.engineering.doctype.engineering_legals.engineering_legals.queue_unsynced_engineering_legals"
+        ],
     },
 }
 

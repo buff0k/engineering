@@ -23,7 +23,11 @@
   "hsec_qual_category_id",
   "hsec_qualification_id_external",
   "hsec_inserted_at",
-  "amended_from"
+  "amended_from",
+  "sharepoint_sync_column",
+  "sharepoint_synced",
+  "sharepoint_synced_at",
+  "sharepoint_sync_error"
  ],
  "fields": [
   {
@@ -147,12 +151,36 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "sharepoint_sync_column",
+   "fieldtype": "Column Break",
+   "label": "Sharepoint Sync"
+  },
+  {
+   "default": "0",
+   "fieldname": "sharepoint_synced",
+   "fieldtype": "Check",
+   "label": "Synced",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sharepoint_synced_at",
+   "fieldtype": "Datetime",
+   "label": "Synced time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sharepoint_sync_error",
+   "fieldtype": "Small Text",
+   "label": "Error",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 14:25:35.127786",
+ "modified": "2026-05-05 10:45:35.100940",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
