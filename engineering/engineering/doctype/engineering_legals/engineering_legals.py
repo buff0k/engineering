@@ -240,17 +240,25 @@ def move_engineering_legal_file_to_folder(doc: Document):
     if not file_doc:
         return
 
-    file_doc = frappe.get_doc("File", file_doc.name)
-
-    file_doc.reload()
+    file_name = file_doc.name
 
     # Keep the original privacy/file_url as-is.
     # Changing DB values alone does not move the physical file on disk.
+    for attempt in range(2):
+        fresh_file_doc = frappe.get_doc("File", file_name)
+        fresh_file_doc.reload()
 
-    if file_doc.folder == target_folder_name:
-        return
+        if fresh_file_doc.folder == target_folder_name:
+            return
 
-    file_doc.db_set("folder", target_folder_name, update_modified=False)
+        try:
+            fresh_file_doc.db_set("folder", target_folder_name, update_modified=False)
+            return
+        except Exception:
+            if attempt == 0:
+                frappe.db.rollback()
+                continue
+            raise
 
 
 def _clear_sharepoint_sync_status(docname: str):
