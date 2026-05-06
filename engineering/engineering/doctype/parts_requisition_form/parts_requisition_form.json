@@ -59,7 +59,7 @@
   },
   {
    "fieldname": "vin_no",
-   "fieldtype": "Int",
+   "fieldtype": "Data",
    "label": "VIN No"
   },
   {
@@ -186,7 +186,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-06 14:26:21.470958",
+ "modified": "2026-05-06 15:36:13.588040",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Parts Requisition Form",
