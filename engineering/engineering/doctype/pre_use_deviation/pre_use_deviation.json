@@ -169,7 +169,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Operating Status",
-   "options": "Off Site\nParts Order\nPending Incident report\nGo But 48 Hours\nGo But Plan ASP (WEEK)"
+   "options": "Off Site\nParts Order\nPending Incident report\nGo But 48 Hours\nGo But Plan ASP (WEEK)\nPending"
   },
   {
    "default": "0",
@@ -199,7 +199,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-23 14:33:05.615849",
+ "modified": "2026-05-06 11:50:36.002217",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Pre Use Deviation",
