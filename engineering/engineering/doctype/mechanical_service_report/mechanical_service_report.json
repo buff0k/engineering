@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{site}-{service_date}-{asset}-{reference_number}",
+ "autoname": "format:{site}-{service_date}-{asset}-{####}",
  "creation": "2025-11-19 06:21:29.576772",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -252,7 +252,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-06 07:57:58.452532",
+ "modified": "2026-05-06 10:39:03.609488",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

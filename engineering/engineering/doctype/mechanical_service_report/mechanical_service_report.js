@@ -149,10 +149,10 @@ function toggle_new_job_field(frm) {
     const show_new_job = frm.doc.site === "Plot 22";
 
     frm.toggle_display("is_this_a_new_job", show_new_job);
-    frm.toggle_reqd("is_this_a_new_job", show_new_job);
+    frm.toggle_reqd("is_this_a_new_job", false);
 
     frm.toggle_display("job_card_number", show_new_job);
-    frm.toggle_reqd("job_card_number", show_new_job);
+    frm.toggle_reqd("job_card_number", false);
 
     if (!show_new_job && frm.doc.is_this_a_new_job) {
         frm.set_value("is_this_a_new_job", "");
