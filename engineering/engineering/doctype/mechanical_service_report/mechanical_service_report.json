@@ -8,14 +8,15 @@
  "field_order": [
   "section_break_seyr",
   "general_information_column",
+  "site",
   "is_this_a_new_job",
+  "job_card_number",
   "service_date",
   "attach",
   "plant_manager_code",
   "plant_man_name",
   "artisan_employee_code",
   "artisan_fullname",
-  "site",
   "machine_information_column",
   "asset",
   "model",
@@ -37,8 +38,8 @@
   "description_of_work_done",
   "amended_from",
   "section_break_tuqg",
-  "job_card_number",
   "mechanic",
+  "column_break_oqby",
   "manager_foreman"
  ],
  "fields": [
@@ -241,14 +242,17 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Is this a new Job?",
-   "options": "\nYes\nNo",
-   "reqd": 1
+   "options": "\nYes\nNo"
+  },
+  {
+   "fieldname": "column_break_oqby",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 07:07:29.825289",
+ "modified": "2026-05-06 07:57:58.452532",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

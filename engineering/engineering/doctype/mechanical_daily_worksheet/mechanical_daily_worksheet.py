@@ -48,19 +48,39 @@ class MechanicalDailyWorksheet(Document):
         )
 
     def calculate_child_hours(self):
-        for row in self.work_details:
-            row.hours = self.get_hours_difference(
-                row.time_started,
-                row.time_done
-            )
+        pass
 
     def calculate_total_work_time(self):
         total = 0.0
 
         for row in self.work_details:
-            total += float(row.hours or 0)
+            total += self.get_datetime_hours_difference(
+                row.start_time_msr,
+                row.end_time_msr
+            )
 
         self.total_work_time = round(total, 2)
+
+
+
+
+
+    def get_datetime_hours_difference(self, start_value, end_value):
+        if not start_value or not end_value:
+            return 0
+
+        start_datetime = frappe.utils.get_datetime(start_value)
+        end_datetime = frappe.utils.get_datetime(end_value)
+
+        difference_seconds = (end_datetime - start_datetime).total_seconds()
+
+        if difference_seconds < 0:
+            difference_seconds = 0
+
+        return round(difference_seconds / 3600, 2)
+
+
+
 
     def get_hours_difference(self, start_value, end_value):
         if not start_value or not end_value:

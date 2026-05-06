@@ -31,25 +31,17 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
     },
 
     calculate_child_hours(frm) {
-        (frm.doc.work_details || []).forEach(row => {
-            let hours = calculate_hours(row.time_started, row.time_done);
-
-            frappe.model.set_value(
-                row.doctype,
-                row.name,
-                "hours",
-                hours
-            );
-        });
-
-        frm.refresh_field("work_details");
+        frm.trigger("calculate_total_work_time");
     },
 
     calculate_total_work_time(frm) {
         let total_work_time = 0;
 
         (frm.doc.work_details || []).forEach(row => {
-            total_work_time += flt(row.hours);
+            total_work_time += calculate_datetime_hours(
+                row.start_time_msr,
+                row.end_time_msr
+            );
         });
 
         frm.set_value("total_work_time", flt(total_work_time, 2));
@@ -58,15 +50,58 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
 
 
 frappe.ui.form.on("Mechanical Daily Worksheet Detail", {
-    time_started(frm, cdt, cdn) {
-        calculate_child_row_hours(frm, cdt, cdn);
+    msr_number(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (!row.msr_number) {
+            frappe.model.set_value(cdt, cdn, "date", "");
+            frappe.model.set_value(cdt, cdn, "site", "");
+            frappe.model.set_value(cdt, cdn, "machine_fleet_no", "");
+            frappe.model.set_value(cdt, cdn, "fault_work_type", "");
+            frappe.model.set_value(cdt, cdn, "km_hours", "");
+            frappe.model.set_value(cdt, cdn, "description_of_work_carried_out", "");
+            frappe.model.set_value(cdt, cdn, "start_time_msr", "");
+            frappe.model.set_value(cdt, cdn, "end_time_msr", "");
+
+            setTimeout(() => {
+                frm.trigger("calculate_total_work_time");
+            }, 100);
+
+            return;
+        }
+
+        frappe.db.get_value("Mechanical Service Report", row.msr_number, [
+            "service_date",
+            "site",
+            "asset",
+            "service_breakdown",
+            "current_hours",
+            "description_of_work_done",
+            "start_time",
+            "end_time"
+        ]).then(r => {
+            if (r.message) {
+                frappe.model.set_value(cdt, cdn, "date", r.message.service_date);
+                frappe.model.set_value(cdt, cdn, "site", r.message.site);
+                frappe.model.set_value(cdt, cdn, "machine_fleet_no", r.message.asset);
+                frappe.model.set_value(cdt, cdn, "fault_work_type", r.message.service_breakdown);
+                frappe.model.set_value(cdt, cdn, "km_hours", r.message.current_hours);
+                frappe.model.set_value(cdt, cdn, "description_of_work_carried_out", r.message.description_of_work_done);
+                frappe.model.set_value(cdt, cdn, "start_time_msr", r.message.start_time);
+                frappe.model.set_value(cdt, cdn, "end_time_msr", r.message.end_time);
+
+                setTimeout(() => {
+                    frm.trigger("calculate_total_work_time");
+                }, 100);
+            }
+        });
     },
 
-    time_done(frm, cdt, cdn) {
-        calculate_child_row_hours(frm, cdt, cdn);
+    start_time_msr(frm) {
+        frm.trigger("calculate_total_work_time");
     },
 
-    hours(frm) {
+    end_time_msr(frm) {
         frm.trigger("calculate_total_work_time");
     },
 
@@ -90,6 +125,32 @@ function calculate_child_row_hours(frm, cdt, cdn) {
         frm.trigger("calculate_total_work_time");
     }, 100);
 }
+
+
+
+
+function calculate_datetime_hours(start_datetime, end_datetime) {
+    if (!start_datetime || !end_datetime) {
+        return 0;
+    }
+
+    let start = frappe.datetime.str_to_obj(start_datetime);
+    let end = frappe.datetime.str_to_obj(end_datetime);
+
+    if (!start || !end) {
+        return 0;
+    }
+
+    let diff_seconds = (end - start) / 1000;
+
+    if (diff_seconds < 0) {
+        diff_seconds = 0;
+    }
+
+    return flt(diff_seconds / 3600, 2);
+}
+
+
 
 
 function calculate_hours(start_time, end_time) {

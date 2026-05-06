@@ -6,24 +6,23 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "employee_section",
-  "site",
-  "date",
-  "clock_out_section",
-  "clock_in_time",
-  "clock_out_time",
-  "total_hours",
   "work_details_section",
+  "column_break_qwyu",
   "work_details",
   "total_work_time",
-  "supervisor_section",
-  "supervisor_forman_company_no",
-  "supervisor_forman_name_surname",
-  "supervisor_forman_signature",
+  "employee_section",
   "column_break_pqqe",
   "mechanic_company_no",
   "mechanic_name_surname",
-  "mechanic_signature"
+  "mechanic_signature",
+  "details",
+  "clock_in_time",
+  "clock_out_time",
+  "total_hours",
+  "supervisor_section",
+  "supervisor_forman_company_no",
+  "supervisor_forman_name_surname",
+  "supervisor_forman_signature"
  ],
  "fields": [
   {
@@ -32,34 +31,16 @@
    "label": "Employee Details"
   },
   {
-   "fieldname": "site",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Site",
-   "options": "Location",
-   "reqd": 1
-  },
-  {
-   "fieldname": "date",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "Date",
-   "reqd": 1
-  },
-  {
-   "fieldname": "clock_out_section",
-   "fieldtype": "Section Break",
-   "label": "Clock In & Out Details"
-  },
-  {
    "fieldname": "clock_in_time",
    "fieldtype": "Time",
+   "in_list_view": 1,
    "label": "Clock In Time",
    "reqd": 1
   },
   {
    "fieldname": "clock_out_time",
    "fieldtype": "Time",
+   "in_list_view": 1,
    "label": "Clock Out Time",
    "reqd": 1
   },
@@ -130,11 +111,22 @@
    "fieldname": "mechanic_signature",
    "fieldtype": "Signature",
    "label": "Mechanic Signature"
+  },
+  {
+   "description": "Please make sure the information is correct!",
+   "fieldname": "column_break_qwyu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": " (Information should pull from clock in machine in future)",
+   "fieldname": "details",
+   "fieldtype": "Column Break",
+   "label": "Clock In & Out Details"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-05 05:56:23.372622",
+ "modified": "2026-05-06 07:22:02.091892",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

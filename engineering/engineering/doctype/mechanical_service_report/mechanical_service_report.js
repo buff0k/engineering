@@ -11,18 +11,20 @@ frappe.ui.form.on("Mechanical Service Report", {
             }
         });
 
+        toggle_fields_until_site_selected(frm);
+        toggle_new_job_field(frm);
+
         // Handle Service vs Breakdown visibility/requirements
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
-        
-
     },
 
     onload(frm) {
         // Ensure correct state when form loads
+        toggle_fields_until_site_selected(frm);
+        toggle_new_job_field(frm);
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
-        
     },
 
     site(frm) {
@@ -37,11 +39,18 @@ frappe.ui.form.on("Mechanical Service Report", {
             }
         });
 
+        toggle_fields_until_site_selected(frm);
+        toggle_new_job_field(frm);
+
         // Clear asset-related fields when site changes
         frm.set_value("asset", "");
         frm.set_value("model", "");
         frm.set_value("asset_category", "");
         frm.set_value("last_smr_preuse", null);
+
+        if (frm.doc.site !== "Plot 22") {
+            frm.set_value("is_this_a_new_job", "");
+        }
     },
 
     service_breakdown(frm) {
@@ -102,6 +111,62 @@ frappe.ui.form.on("Mechanical Service Report", {
         });
     }
 });
+
+
+
+
+
+function toggle_fields_until_site_selected(frm) {
+    const site_selected = !!frm.doc.site;
+
+    const fields_to_lock = [
+        "is_this_a_new_job",
+        "service_date",
+        "attach",
+        "plant_manager_code",
+        "artisan_employee_code",
+        "asset",
+        "current_hours",
+        "plant_breakdown_number",
+        "start_time",
+        "end_time",
+        "service_breakdown",
+        "service_interval",
+        "description_of_breakdown",
+        "spares_required_and_comments",
+        "description_of_work_done",
+        "job_card_number",
+        "mechanic",
+        "manager_foreman"
+    ];
+
+    fields_to_lock.forEach((fieldname) => {
+        frm.set_df_property(fieldname, "read_only", site_selected ? 0 : 1);
+    });
+}
+
+function toggle_new_job_field(frm) {
+    const show_new_job = frm.doc.site === "Plot 22";
+
+    frm.toggle_display("is_this_a_new_job", show_new_job);
+    frm.toggle_reqd("is_this_a_new_job", show_new_job);
+
+    frm.toggle_display("job_card_number", show_new_job);
+    frm.toggle_reqd("job_card_number", show_new_job);
+
+    if (!show_new_job && frm.doc.is_this_a_new_job) {
+        frm.set_value("is_this_a_new_job", "");
+    }
+
+    if (!show_new_job && frm.doc.job_card_number) {
+        frm.set_value("job_card_number", "");
+    }
+}
+
+
+
+
+
 
 // Helper to control Service Interval field
 function toggle_service_interval(frm) {
