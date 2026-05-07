@@ -101,7 +101,8 @@
    "fetch_from": "code.component",
    "fieldname": "component",
    "fieldtype": "Data",
-   "label": "Component"
+   "label": "Component",
+   "read_only": 1
   },
   {
    "fieldname": "work_details",
@@ -164,7 +165,7 @@
   },
   {
    "fieldname": "official_company_order_no",
-   "fieldtype": "Float",
+   "fieldtype": "Data",
    "label": "Official Company Order No",
    "precision": "0"
   },
@@ -242,7 +243,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-29 08:29:47.832338",
+ "modified": "2026-05-07 06:24:59.168917",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Purchase Requisition",
@@ -250,13 +251,12 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Administrator",
+   "role": "Engineering User",
    "share": 1,
    "write": 1
   },
@@ -268,7 +268,52 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Engineering User",
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Procurement Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Procurement User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Mechanic",
    "share": 1,
    "write": 1
   }

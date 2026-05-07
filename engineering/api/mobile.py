@@ -76,6 +76,74 @@ def sign_off_mechanical_service_report(docname, manager_foreman_signature):
         "name": doc.name,
     }
 
+
+
+
+
+
+
+
+
+
+@frappe.whitelist()
+def get_unsigned_mechanical_daily_worksheets():
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    roles = frappe.get_roles(user)
+    if not _has_any_role(roles, ["Engineering Manager"]):
+        frappe.throw("Only Engineering Manager may view unsigned Daily Worksheet records", frappe.PermissionError)
+
+    filters = [
+        ["supervisor_forman_signature", "in", ["", None]],
+    ]
+
+    return frappe.get_all(
+        "Mechanical Daily Worksheet",
+        filters=filters,
+        fields=[
+            "name",
+            "clock_in_time",
+            "clock_out_time",
+            "total_hours",
+            "total_work_time",
+            "mechanic_company_no",
+            "mechanic_name_surname",
+            "mechanic_signature",
+        ],
+        order_by="creation desc",
+        limit_page_length=200,
+    )
+
+
+@frappe.whitelist()
+def sign_off_mechanical_daily_worksheet(docname, supervisor_forman_signature):
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    roles = frappe.get_roles(user)
+    if not _has_any_role(roles, ["Engineering Manager"]):
+        frappe.throw("Only Engineering Manager may sign off Daily Worksheets", frappe.PermissionError)
+
+    doc = frappe.get_doc("Mechanical Daily Worksheet", docname)
+    doc.supervisor_forman_signature = supervisor_forman_signature
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "name": doc.name,
+    }
+
+
+
+
+
+
+
 @frappe.whitelist()
 def get_unsigned_mechanical_service_reports():
     user = frappe.session.user
