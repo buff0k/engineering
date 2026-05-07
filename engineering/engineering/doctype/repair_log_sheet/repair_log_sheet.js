@@ -19,6 +19,14 @@ frappe.ui.form.on("Repair Log Sheet", {
         }
 
         populate_repair_entries_from_msr(frm);
+    },
+
+    month(frm) {
+        if (!frm.doc.plant_no) {
+            return;
+        }
+
+        populate_repair_entries_from_msr(frm);
     }
 });
 
@@ -27,7 +35,8 @@ function populate_repair_entries_from_msr(frm) {
     frappe.call({
         method: "engineering.engineering.doctype.repair_log_sheet.repair_log_sheet.get_msr_entries_for_asset",
         args: {
-            plant_no: frm.doc.plant_no
+            plant_no: frm.doc.plant_no,
+            month: frm.doc.month || ""
         },
         freeze: true,
         freeze_message: __("Loading MSR entries..."),
@@ -42,7 +51,13 @@ function populate_repair_entries_from_msr(frm) {
 
             if (!entries.length) {
                 frm.refresh_field("repair_entries");
-                frappe.msgprint(__("No Mechanical Service Reports found for Plant No {0}", [frm.doc.plant_no]));
+
+                if (frm.doc.month) {
+                    frappe.msgprint(__("No Mechanical Service Reports found for Plant No {0} in {1}", [frm.doc.plant_no, frm.doc.month]));
+                } else {
+                    frappe.msgprint(__("No Mechanical Service Reports found for Plant No {0}", [frm.doc.plant_no]));
+                }
+
                 return;
             }
 

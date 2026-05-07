@@ -22,16 +22,11 @@ frappe.ui.form.on("Pre Use Deviation", {
 	action_date_and_time(frm) {
 		set_action_status_and_completion(frm);
 		apply_completion_colour(frm);
-	},
-
-	operating_status(frm) {
-		set_operating_status_options(frm);
 	}
 });
 
 function apply_pre_use_deviation_ui(frm) {
 	hide_series_and_id(frm);
-	set_operating_status_options(frm);
 	set_action_status_and_completion(frm);
 	round_completion_percentage(frm);
 	apply_completion_colour(frm);
@@ -48,23 +43,6 @@ function hide_series_and_id(frm) {
 
 	if (frm.fields_dict.document_id) {
 		frm.set_df_property("document_id", "hidden", 1);
-	}
-}
-
-function set_operating_status_options(frm) {
-	if (frm.fields_dict.operating_status) {
-		frm.set_df_property(
-			"operating_status",
-			"options",
-			[
-				"",
-				"Working",
-				"Not Working",
-				"Off Site",
-				"Pending Parts",
-				"Pending Incident report"
-			].join("\n")
-		);
 	}
 }
 

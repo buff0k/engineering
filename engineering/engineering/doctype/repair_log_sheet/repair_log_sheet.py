@@ -1,70 +1,58 @@
-# Copyright (c) 2026, Isambane
-# For license information, please see license.txt
-
 import frappe
-from frappe.model.document import Document
-
-
-class RepairLogSheet(Document):
-    pass
+from datetime import datetime
+from frappe.utils import get_first_day, get_last_day
 
 
 @frappe.whitelist()
-def get_msr_entries_for_asset(plant_no):
-    """
-    Return all Mechanical Service Report entries for the selected Asset / Plant No.
-
-    Repair Log Sheet field:
-        plant_no
-
-    Mechanical Service Report fields used:
-        asset
-        current_hours
-        service_breakdown
-        description_of_breakdown
-        service_interval
-        artisan_fullname
-        site
-        service_date
-    """
-
+def get_msr_entries_for_asset(plant_no, month=None):
     if not plant_no:
         return []
 
-    msr_entries = frappe.get_all(
+    filters = {
+        "plant_no": plant_no,
+        "docstatus": ["!=", 2]
+    }
+
+    if month:
+        try:
+            month_date = datetime.strptime(month, "%b-%y").date()
+        except ValueError:
+            frappe.throw("Month must be in format MMM-YY. Example: Jan-26")
+
+        filters["service_date"] = [
+            "between",
+            [
+                get_first_day(month_date),
+                get_last_day(month_date)
+            ]
+        ]
+
+    msr_list = frappe.get_all(
         "Mechanical Service Report",
-        filters={
-            "asset": plant_no
-        },
+        filters=filters,
         fields=[
             "name",
             "service_date",
-            "current_hours",
-            "service_breakdown",
-            "description_of_breakdown",
-            "service_interval",
-            "artisan_fullname",
+            "hours",
+            "defect",
+            "description",
+            "rep_by",
             "site"
         ],
-        order_by="service_date desc, creation desc"
+        order_by="service_date desc"
     )
 
-    rows = []
+    entries = []
 
-    for msr in msr_entries:
-        description = msr.description_of_breakdown or ""
-
-        if msr.service_breakdown == "Service" and msr.service_interval:
-            description = msr.service_interval
-
-        rows.append({
-            "msr": msr.name,
-            "service_date": msr.service_date,
-            "hours": msr.current_hours,
-            "defect": msr.service_breakdown,
-            "description": description,
-            "rep_by": msr.artisan_fullname,
-            "site": msr.site
+    for msr in msr_list:
+        entries.append({
+            "msr": msr.name or "",
+            "service_date": msr.service_date or "",
+            "hours": msr.hours or 0,
+            "defect": msr.defect or "",
+            "description": msr.description or "",
+            "rep_by": msr.rep_by or "",
+            "site": msr.site or ""
         })
 
-    return rows
+    return entries

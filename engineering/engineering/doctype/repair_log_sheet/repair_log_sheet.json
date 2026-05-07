@@ -8,6 +8,7 @@
   "plant_no",
   "make",
   "model",
+  "month",
   "repair_entries"
  ],
  "fields": [
@@ -38,11 +39,17 @@
    "fieldtype": "Table",
    "label": "Repair Entries",
    "options": "Repair Log Sheet Detail"
+  },
+  {
+   "description": "Example: Jan-26",
+   "fieldname": "month",
+   "fieldtype": "Data",
+   "label": "Month"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-05 13:52:19.668353",
+ "modified": "2026-05-07 07:45:20.279621",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Repair Log Sheet",
