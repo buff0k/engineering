@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-05-04 00:00:00",
+ "creation": "2026-05-07 12:04:22.481992",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -31,6 +31,7 @@
    "fetch_from": "plant_no.asset_category",
    "fieldname": "model",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Model",
    "read_only": 1
   },
@@ -49,7 +50,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-07 07:45:20.279621",
+ "modified": "2026-05-07 12:09:05.115809",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Repair Log Sheet",
@@ -69,6 +70,7 @@
   },
   {
    "create": 1,
+   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -80,6 +82,7 @@
   },
   {
    "create": 1,
+   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,

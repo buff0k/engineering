@@ -1,0 +1,178 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{location}-{shift_date}-{shift}",
+ "creation": "2026-05-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "shift_capturing_tab",
+  "section_break_main",
+  "amended_from",
+  "location",
+  "shift_date",
+  "equipment_category",
+  "column_break_main",
+  "shift_system",
+  "shift",
+  "avail_util_lookup",
+  "pre_use_status_explain",
+  "section_break_assets",
+  "pre_use_assets",
+  "tab_data_integrity",
+  "data_integ_indicator",
+  "data_integrity_summary"
+ ],
+ "fields": [
+  {
+   "fieldname": "shift_capturing_tab",
+   "fieldtype": "Tab Break",
+   "label": "Shift Capturing"
+  },
+  {
+   "fieldname": "section_break_main",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Support Equipment",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Shift Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "equipment_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Equipment Category",
+   "options": "\nWater Pump\nLightning Plant\nGenerator"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shift_system",
+   "fieldtype": "Read Only",
+   "label": "Shift System"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Day\nMorning\nAfternoon\nNight",
+   "reqd": 1
+  },
+  {
+   "fieldname": "avail_util_lookup",
+   "fieldtype": "Data",
+   "label": "Availability and Utilisation Lookup",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pre_use_status_explain",
+   "fieldtype": "HTML",
+   "label": "Plant Status Explanation"
+  },
+  {
+   "fieldname": "section_break_assets",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "pre_use_assets",
+   "fieldtype": "Table",
+   "label": "Support Equipment Assets",
+   "options": "Support Equipment Assets"
+  },
+  {
+   "fieldname": "tab_data_integrity",
+   "fieldtype": "Tab Break",
+   "label": "Data Integrity Summary"
+  },
+  {
+   "fieldname": "data_integ_indicator",
+   "fieldtype": "Data",
+   "label": "Data Integrity Indicator",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_integrity_summary",
+   "fieldtype": "Text Editor",
+   "label": "Data Integrity Summary",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 0,
+ "links": [],
+ "modified": "2026-05-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Support Equipment",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

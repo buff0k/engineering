@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-07 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "asset_name",
+  "plant_number",
+  "equipment_category",
+  "model",
+  "engine_start_hours",
+  "engine_end_hours",
+  "operator_name",
+  "operator_number",
+  "working_hours"
+ ],
+ "fields": [
+  {
+   "fieldname": "asset_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Asset",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "plant_number",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Plant Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "equipment_category",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Equipment Category",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engine_start_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Engine Start Hours",
+   "precision": "0"
+  },
+  {
+   "fieldname": "engine_end_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Engine End Hours",
+   "precision": "0"
+  },
+  {
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Operator Name"
+  },
+  {
+   "fieldname": "operator_number",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Operator Number"
+  },
+  {
+   "fieldname": "working_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Working Hours",
+   "precision": "0",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-07 15:17:52.583147",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Support Equipment Assets",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
