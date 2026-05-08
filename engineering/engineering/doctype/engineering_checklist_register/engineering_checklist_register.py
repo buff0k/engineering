@@ -3,7 +3,24 @@ from frappe.model.document import Document
 
 
 class EngineeringChecklistRegister(Document):
-    pass
+    def autoname(self):
+        self.set_site_month_year_name()
+
+    def before_insert(self):
+        self.set_site_month_year_name()
+
+    def validate(self):
+        self.set_site_month_year_name()
+
+    def set_site_month_year_name(self):
+        site = _make_name_part(self.site)
+        month = _make_name_part(self.month)
+        year = _make_name_part(self.year)
+
+        if not site or not month or not year:
+            frappe.throw("Site, Month and Year are required before saving.")
+
+        self.name = f"{site}-{month}-{year}"
 
 
 ALLOWED_MACHINE_TYPES = [
@@ -29,12 +46,9 @@ MACHINE_TYPE_ALIASES = {
     "diesel bowser": "DIESEL BOWSER",
     "grader": "GRADER",
     "tlb": "TLB",
-
-    # Drills support
     "drill": "DRILLS",
     "drills": "DRILLS",
     "drilling": "DRILLS",
-
     "ldv": "LDV",
     "lighting plant": "LIGHTING PLANT",
     "lightning plant": "LIGHTING PLANT",
@@ -49,6 +63,15 @@ def _normalize_text(value):
         return ""
 
     return " ".join(str(value).split()).strip()
+
+
+def _make_name_part(value):
+    text = _normalize_text(value)
+
+    if not text:
+        return ""
+
+    return text.upper().replace(" ", "-")
 
 
 def _clean_allowed_machine_type(value):
