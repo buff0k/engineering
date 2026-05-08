@@ -152,7 +152,9 @@ class SupportEquipment(Document):
 
             opening_hours = opening_hours_map.get(row.asset_name)
 
-            if opening_hours is None:
+            # Do not overwrite with blank or zero previous closing.
+            # Zero means previous shift end was not captured yet.
+            if opening_hours in [None, "", 0, "0"]:
                 continue
 
             row.engine_start_hours = flt(opening_hours)
@@ -175,7 +177,6 @@ class SupportEquipment(Document):
             start_hours = flt(start_hours)
             end_hours = flt(end_hours)
 
-            # Block only when end is less than start.
             if end_hours < start_hours:
                 frappe.throw(
                     f"Engine End Hours cannot be less than Engine Start Hours "
@@ -184,11 +185,10 @@ class SupportEquipment(Document):
 
             working_hours = round(end_hours - start_hours, 0)
 
-            # Allow 0 to 12 hours.
-            # Block only above 12.
             if working_hours > 12:
                 frappe.throw(
                     f"Working hours above 12 for asset {row.asset_name}. "
+                    f"Start: {start_hours}, End: {end_hours}, Hours: {working_hours}. "
                     f"Please check engine start and end hours."
                 )
 
@@ -383,6 +383,8 @@ def get_previous_shift_closing_hours(
         "parent.shift = %(previous_shift)s",
         "parent.docstatus < 2",
         "child.asset_name in %(asset_names)s",
+        "child.engine_end_hours is not null",
+        "child.engine_end_hours != 0",
     ]
 
     values = {
