@@ -30,6 +30,9 @@ class SupportEquipment(Document):
         self._calculate_working_hours()
         self._evaluate_data_integrity()
 
+    def on_update(self):
+        self._update_next_shift_opening_hours()
+
     def _normalize_asset_links(self):
         rows = self.get("pre_use_assets") or []
 
@@ -152,22 +155,32 @@ class SupportEquipment(Document):
             if opening_hours is None:
                 continue
 
-            row.engine_start_hours = opening_hours
+            row.engine_start_hours = flt(opening_hours)
 
     def _calculate_working_hours(self):
         for row in self.get("pre_use_assets") or []:
-            if row.engine_start_hours is None or row.engine_end_hours is None:
+            start_hours = row.engine_start_hours
+            end_hours = row.engine_end_hours
+
+            if start_hours in [None, ""]:
+                row.working_hours = 0
                 continue
 
-            working_hours = round(
-                flt(row.engine_end_hours) - flt(row.engine_start_hours),
-                0,
-            )
+            # End hours = 0 means not captured yet.
+            # It must be allowed to save.
+            if end_hours in [None, "", 0, "0"]:
+                row.working_hours = 0
+                continue
+
+            start_hours = flt(start_hours)
+            end_hours = flt(end_hours)
+
+            working_hours = round(end_hours - start_hours, 0)
 
             if working_hours < 0:
                 frappe.throw(
                     f"Negative working hours for asset {row.asset_name}. "
-                    f"Start hours cannot be greater than end hours."
+                    f"Engine End Hours cannot be less than Engine Start Hours."
                 )
 
             if working_hours > 12:
@@ -206,10 +219,13 @@ class SupportEquipment(Document):
                     f"Equipment Category is missing for {row.asset_name}."
                 )
 
-            if row.engine_start_hours is None:
+            start_hours = row.engine_start_hours
+            end_hours = row.engine_end_hours
+
+            if start_hours in [None, ""]:
                 warnings.append(f"Missing start hours for {row.asset_name}.")
 
-            if row.engine_end_hours is None:
+            if end_hours in [None, "", 0, "0"]:
                 warnings.append(f"Missing end hours for {row.asset_name}.")
 
             if row.working_hours == 0:
@@ -227,6 +243,80 @@ class SupportEquipment(Document):
             self.data_integ_indicator = "🟢"
             self.data_integrity_summary = "<p><b>All checks passed.</b></p>"
 
+    def _update_next_shift_opening_hours(self):
+        if self.shift not in ["Day", "Night"]:
+            return
+
+        if not self.location or not self.shift_date:
+            return
+
+        next_shift_details = get_next_shift_details(
+            shift_date=self.shift_date,
+            shift=self.shift,
+        )
+
+        if not next_shift_details:
+            return
+
+        next_docs = frappe.get_all(
+            "Support Equipment",
+            filters={
+                "location": self.location,
+                "shift_date": next_shift_details["shift_date"],
+                "shift": next_shift_details["shift"],
+                "docstatus": ["<", 2],
+                "name": ["!=", self.name],
+            },
+            pluck="name",
+        )
+
+        if not next_docs:
+            return
+
+        current_end_hours = {}
+
+        for row in self.get("pre_use_assets") or []:
+            if not row.asset_name:
+                continue
+
+            if row.engine_end_hours in [None, "", 0, "0"]:
+                continue
+
+            current_end_hours[row.asset_name] = flt(row.engine_end_hours)
+
+        if not current_end_hours:
+            return
+
+        for next_doc_name in next_docs:
+            next_doc = frappe.get_doc("Support Equipment", next_doc_name)
+            updated = False
+
+            for next_row in next_doc.get("pre_use_assets") or []:
+                if not next_row.asset_name:
+                    continue
+
+                if next_row.asset_name not in current_end_hours:
+                    continue
+
+                next_row.engine_start_hours = current_end_hours[next_row.asset_name]
+
+                if next_row.engine_end_hours not in [None, "", 0, "0"]:
+                    working_hours = round(
+                        flt(next_row.engine_end_hours) - flt(next_row.engine_start_hours),
+                        0,
+                    )
+
+                    if working_hours >= 0:
+                        next_row.working_hours = working_hours
+                else:
+                    next_row.working_hours = 0
+
+                updated = True
+
+            if updated:
+                next_doc.flags.ignore_validate_update_after_submit = True
+                next_doc.save(ignore_permissions=True)
+
 
 def get_previous_shift_details(shift_date, shift):
     shift_date = getdate(shift_date)
@@ -241,6 +331,24 @@ def get_previous_shift_details(shift_date, shift):
         return {
             "shift_date": add_days(shift_date, -1),
             "shift": "Night",
+        }
+
+    return None
+
+
+def get_next_shift_details(shift_date, shift):
+    shift_date = getdate(shift_date)
+
+    if shift == "Day":
+        return {
+            "shift_date": shift_date,
+            "shift": "Night",
+        }
+
+    if shift == "Night":
+        return {
+            "shift_date": add_days(shift_date, 1),
+            "shift": "Day",
         }
 
     return None

@@ -24,6 +24,33 @@ function normalize_text(value) {
 }
 
 /* =========================
+   LIVE ID / TITLE
+   ========================= */
+
+function build_register_live_id(frm) {
+    const site = normalize_text(frm.doc.site).toUpperCase().replace(/\s+/g, '-');
+    const month = normalize_text(frm.doc.month).toUpperCase().replace(/\s+/g, '-');
+    const year = normalize_text(frm.doc.year).toUpperCase().replace(/\s+/g, '-');
+
+    if (!site || !month || !year) {
+        return '';
+    }
+
+    return `${site}-${month}-${year}`;
+}
+
+function update_register_live_title(frm) {
+    const live_id = build_register_live_id(frm);
+    if (!live_id) return;
+
+    frm.page.set_title(live_id);
+
+    if (frm.is_new()) {
+        frm.doc.__newname = live_id;
+    }
+}
+
+/* =========================
    KEEP ROW STATE WHEN FILTERING
    ========================= */
 
@@ -211,6 +238,9 @@ function apply_month_day_visibility(frm) {
 
 /* =========================
    MACHINE FILTER
+   IMPORTANT:
+   Machine Type Filter only hides/shows rows.
+   It does not delete saved rows.
    ========================= */
 
 function set_select_options(frm, fieldname, values) {
@@ -274,6 +304,29 @@ function populate_machine_type_options(frm) {
     });
 }
 
+function apply_machine_type_row_visibility(frm) {
+    const child_table_fieldname = get_child_table_fieldname(frm);
+    if (!child_table_fieldname) return;
+
+    const grid = frm.fields_dict[child_table_fieldname]?.grid;
+    if (!grid) return;
+
+    const selected_machine_type = normalize_text(frm.doc.machine_type_filter);
+
+    (grid.grid_rows || []).forEach(grid_row => {
+        const row_machine_type = normalize_text(grid_row.doc?.machine_type);
+        const should_show = !selected_machine_type || row_machine_type === selected_machine_type;
+
+        if (grid_row.wrapper) {
+            $(grid_row.wrapper).toggle(should_show);
+        }
+
+        if (grid_row.row) {
+            $(grid_row.row).toggle(should_show);
+        }
+    });
+}
+
 function load_machine_rows(frm) {
     const child_table_fieldname = get_child_table_fieldname(frm);
 
@@ -296,7 +349,10 @@ function load_machine_rows(frm) {
         method: 'engineering.engineering.doctype.engineering_checklist_register.engineering_checklist_register.get_site_machines',
         args: {
             site: frm.doc.site,
-            machine_type: frm.doc.machine_type_filter || ''
+
+            // Always load all machines for the site.
+            // Machine Type Filter only hides/shows rows.
+            machine_type: ''
         },
         freeze: true,
         freeze_message: __('Loading machines...')
@@ -328,6 +384,7 @@ function load_machine_rows(frm) {
 
         setTimeout(() => {
             refresh_checklist_submission_ui(frm);
+            apply_machine_type_row_visibility(frm);
         }, 200);
     }).catch(err => {
         console.error('Failed to load machine rows:', err);
@@ -534,10 +591,6 @@ function get_checklist_submission_average_fieldname(frm) {
     return label_field ? label_field.fieldname : null;
 }
 
-function get_checklist_check_fields() {
-    return get_active_check_fields(cur_frm || {});
-}
-
 function normalize_status(value) {
     return normalize_text(value).toLowerCase();
 }
@@ -607,20 +660,25 @@ function update_checklist_submission_average(frm) {
 
     const rows = frm.doc[child_table_fieldname] || [];
 
-    if (!rows.length) {
-        frm.set_value(average_fieldname, '0.0%');
-        return;
+    let new_average_value = '0.0%';
+
+    if (rows.length) {
+        let total = 0;
+
+        rows.forEach(row => {
+            const row_value = row.checklist_submission || calculate_row_checklist_submission(frm, row);
+            total += parse_percentage_value(row_value);
+        });
+
+        const average = total / rows.length;
+        new_average_value = average.toFixed(1) + '%';
     }
 
-    let total = 0;
+    const current_value = normalize_text(frm.doc[average_fieldname]);
 
-    rows.forEach(row => {
-        const row_value = row.checklist_submission || calculate_row_checklist_submission(frm, row);
-        total += parse_percentage_value(row_value);
-    });
-
-    const average = total / rows.length;
-    frm.set_value(average_fieldname, average.toFixed(1) + '%');
+    if (current_value !== new_average_value) {
+        frm.set_value(average_fieldname, new_average_value);
+    }
 }
 
 function get_grid_cell_wrapper(grid_row, fieldname) {
@@ -916,6 +974,7 @@ function refresh_checklist_submission_ui(frm) {
         apply_month_day_visibility(frm);
         style_row_checkbox_cells(frm);
         freeze_left_columns(frm);
+        apply_machine_type_row_visibility(frm);
     }, 200);
 }
 
@@ -940,6 +999,7 @@ function bind_checklist_checkbox_listener(frm) {
 
 frappe.ui.form.on('Engineering Checklist Register', {
     onload(frm) {
+        update_register_live_title(frm);
         lock_child_table(frm);
 
         if (frm.doc.site) {
@@ -952,18 +1012,29 @@ frappe.ui.form.on('Engineering Checklist Register', {
     },
 
     refresh(frm) {
+        update_register_live_title(frm);
         lock_child_table(frm);
         bind_checklist_checkbox_listener(frm);
         refresh_checklist_submission_ui(frm);
 
         if (frm.doc.site) {
-            populate_machine_type_options(frm);
+            populate_machine_type_options(frm).then(() => {
+                apply_machine_type_row_visibility(frm);
+            });
         } else {
             frm.set_value('checklist_submission_average', '0.0%');
         }
     },
 
+    after_save(frm) {
+        setTimeout(() => {
+            frm.reload_doc();
+        }, 500);
+    },
+
     site(frm) {
+        update_register_live_title(frm);
+
         frm.__row_state_cache = {};
         frm.set_value('machine_type_filter', '');
         frm.set_value('checklist_submission_average', '0.0%');
@@ -974,18 +1045,26 @@ frappe.ui.form.on('Engineering Checklist Register', {
     },
 
     month(frm) {
+        update_register_live_title(frm);
         refresh_checklist_submission_ui(frm);
     },
 
     year(frm) {
+        update_register_live_title(frm);
         refresh_checklist_submission_ui(frm);
     },
 
     machine_type_filter(frm) {
-        return load_machine_rows(frm);
+        snapshot_current_row_state(frm);
+
+        setTimeout(() => {
+            refresh_checklist_submission_ui(frm);
+            apply_machine_type_row_visibility(frm);
+        }, 100);
     },
 
     onload_post_render(frm) {
+        update_register_live_title(frm);
         bind_checklist_checkbox_listener(frm);
         refresh_checklist_submission_ui(frm);
     }

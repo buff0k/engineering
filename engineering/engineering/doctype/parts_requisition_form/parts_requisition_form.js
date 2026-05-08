@@ -1,14 +1,56 @@
+frappe.ui.form.on("Parts Requisition Item", {
+	default_expense_account(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+
+		row.item_code = "";
+		frm.refresh_field("items");
+	}
+});
+
+
+
 frappe.ui.form.on("Parts Requisition Form", {
 	refresh(frm) {
+		set_account_filter(frm);
+
 		if (frm.doc.plant_no) {
 			load_asset_details(frm);
 		}
+	},
+
+	onload(frm) {
+		set_account_filter(frm);
 	},
 
 	plant_no(frm) {
 		load_asset_details(frm);
 	}
 });
+
+function set_account_filter(frm) {
+	frm.set_query("default_expense_account", "items", function(doc, cdt, cdn) {
+		return {};
+	});
+
+	frm.set_query("item_code", "items", function(doc, cdt, cdn) {
+		const row = locals[cdt][cdn];
+
+		if (!row.default_expense_account) {
+			return {
+				filters: {
+					name: ["=", ""]
+				}
+			};
+		}
+
+		return {
+			query: "engineering.engineering.doctype.parts_requisition_form.parts_requisition_form.get_items_by_expense_account",
+			filters: {
+				default_expense_account: row.default_expense_account
+			}
+		};
+	});
+}
 
 function split_item_code(item_code) {
 	if (!item_code) {

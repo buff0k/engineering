@@ -292,8 +292,9 @@ function update_visible_row_count_message(frm) {
     }
   });
 
+  frm.dashboard.clear_comment();
+
   if (selected_category) {
-    frm.dashboard.clear_comment();
     frm.dashboard.add_comment(
       __("Showing {0} {1} machine(s). Other rows are hidden, not deleted.", [
         visible_count,
@@ -302,8 +303,6 @@ function update_visible_row_count_message(frm) {
       "blue",
       true
     );
-  } else {
-    frm.dashboard.clear_comment();
   }
 }
 
@@ -364,15 +363,30 @@ function populate_opening_hours_from_previous_shift(frm) {
             opening_hours
           );
 
-          const end_hours = flt(row.engine_end_hours || 0);
-          const working_hours = end_hours - flt(opening_hours || 0);
+          const has_end =
+            row.engine_end_hours !== undefined &&
+            row.engine_end_hours !== null &&
+            row.engine_end_hours !== "";
 
-          frappe.model.set_value(
-            row.doctype,
-            row.name,
-            "working_hours",
-            working_hours
-          );
+          if (has_end && flt(row.engine_end_hours) !== 0) {
+            const working_hours = Math.round(
+              flt(row.engine_end_hours) - flt(opening_hours)
+            );
+
+            frappe.model.set_value(
+              row.doctype,
+              row.name,
+              "working_hours",
+              working_hours
+            );
+          } else {
+            frappe.model.set_value(
+              row.doctype,
+              row.name,
+              "working_hours",
+              0
+            );
+          }
         }
       });
 
@@ -413,14 +427,32 @@ function set_support_equipment_asset_queries(frm) {
 function calculate_child_working_hours(cdt, cdn) {
   const row = locals[cdt][cdn];
 
-  const has_start = row.engine_start_hours || row.engine_start_hours === 0;
-  const has_end = row.engine_end_hours || row.engine_end_hours === 0;
+  const has_start =
+    row.engine_start_hours !== undefined &&
+    row.engine_start_hours !== null &&
+    row.engine_start_hours !== "";
+
+  const has_end =
+    row.engine_end_hours !== undefined &&
+    row.engine_end_hours !== null &&
+    row.engine_end_hours !== "";
 
   if (!has_start || !has_end) {
+    frappe.model.set_value(cdt, cdn, "working_hours", 0);
     return;
   }
 
-  const working_hours = flt(row.engine_end_hours) - flt(row.engine_start_hours);
+  const start_hours = flt(row.engine_start_hours);
+  const end_hours = flt(row.engine_end_hours);
+
+  // End Hours = 0 means not captured yet.
+  // Allow it and keep Working Hours as 0.
+  if (end_hours === 0) {
+    frappe.model.set_value(cdt, cdn, "working_hours", 0);
+    return;
+  }
+
+  const working_hours = Math.round(end_hours - start_hours);
 
   frappe.model.set_value(
     cdt,
