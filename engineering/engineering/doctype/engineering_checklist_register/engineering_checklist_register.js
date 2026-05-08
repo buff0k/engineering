@@ -238,9 +238,8 @@ function apply_month_day_visibility(frm) {
 
 /* =========================
    MACHINE FILTER
-   IMPORTANT:
-   Machine Type Filter only hides/shows rows.
-   It does not delete saved rows.
+   Machine Type Filter hides/shows rows only.
+   It must not delete saved rows.
    ========================= */
 
 function set_select_options(frm, fieldname, values) {
@@ -274,7 +273,9 @@ function natural_desc_compare(a, b) {
 
 function populate_machine_type_options(frm) {
     if (!frm.doc.site) {
-        frm.set_value('machine_type_filter', '');
+        if (frm.is_new()) {
+            frm.set_value('machine_type_filter', '');
+        }
         set_select_options(frm, 'machine_type_filter', []);
         return Promise.resolve();
     }
@@ -293,9 +294,7 @@ function populate_machine_type_options(frm) {
 
         const allowed_types = [...types, 'DRILLS'];
 
-        if (current_value && allowed_types.includes(current_value)) {
-            frm.set_value('machine_type_filter', current_value);
-        } else if (current_value && !allowed_types.includes(current_value)) {
+        if (current_value && !allowed_types.includes(current_value)) {
             frm.set_value('machine_type_filter', '');
         }
     }).catch(err => {
@@ -349,9 +348,6 @@ function load_machine_rows(frm) {
         method: 'engineering.engineering.doctype.engineering_checklist_register.engineering_checklist_register.get_site_machines',
         args: {
             site: frm.doc.site,
-
-            // Always load all machines for the site.
-            // Machine Type Filter only hides/shows rows.
             machine_type: ''
         },
         freeze: true,
@@ -383,7 +379,7 @@ function load_machine_rows(frm) {
         lock_child_table(frm);
 
         setTimeout(() => {
-            refresh_checklist_submission_ui(frm);
+            refresh_checklist_submission_ui(frm, true);
             apply_machine_type_row_visibility(frm);
         }, 200);
     }).catch(err => {
@@ -964,10 +960,13 @@ function add_top_horizontal_scrollbar(frm) {
     }
 }
 
-function refresh_checklist_submission_ui(frm) {
+function refresh_checklist_submission_ui(frm, update_values = false) {
     inject_checklist_submission_styles();
-    update_row_checklist_submission_values(frm);
-    update_checklist_submission_average(frm);
+
+    if (update_values) {
+        update_row_checklist_submission_values(frm);
+        update_checklist_submission_average(frm);
+    }
 
     setTimeout(() => {
         add_top_horizontal_scrollbar(frm);
@@ -986,28 +985,40 @@ function bind_checklist_checkbox_listener(frm) {
     $(frm.wrapper).on('change', '.grid-body select', function () {
         setTimeout(() => {
             snapshot_current_row_state(frm);
-            refresh_checklist_submission_ui(frm);
+            refresh_checklist_submission_ui(frm, true);
         }, 80);
     });
 
     $(window).off('resize.checklist_freeze').on('resize.checklist_freeze', function () {
         setTimeout(() => {
-            refresh_checklist_submission_ui(frm);
+            refresh_checklist_submission_ui(frm, false);
         }, 120);
     });
+}
+
+function should_load_machine_rows(frm) {
+    const child_table_fieldname = get_child_table_fieldname(frm);
+    if (!child_table_fieldname) return false;
+
+    const rows = frm.doc[child_table_fieldname] || [];
+
+    return frm.is_new() || rows.length === 0;
 }
 
 frappe.ui.form.on('Engineering Checklist Register', {
     onload(frm) {
         update_register_live_title(frm);
         lock_child_table(frm);
+        bind_checklist_checkbox_listener(frm);
 
-        if (frm.doc.site) {
+        if (frm.doc.site && should_load_machine_rows(frm)) {
             populate_machine_type_options(frm).then(() => {
                 return load_machine_rows(frm);
             });
-        } else {
-            frm.set_value('checklist_submission_average', '0.0%');
+        } else if (frm.doc.site) {
+            populate_machine_type_options(frm).then(() => {
+                apply_machine_type_row_visibility(frm);
+            });
         }
     },
 
@@ -1015,19 +1026,26 @@ frappe.ui.form.on('Engineering Checklist Register', {
         update_register_live_title(frm);
         lock_child_table(frm);
         bind_checklist_checkbox_listener(frm);
-        refresh_checklist_submission_ui(frm);
+
+        refresh_checklist_submission_ui(frm, false);
 
         if (frm.doc.site) {
             populate_machine_type_options(frm).then(() => {
                 apply_machine_type_row_visibility(frm);
             });
-        } else {
-            frm.set_value('checklist_submission_average', '0.0%');
         }
+    },
+
+    before_save(frm) {
+        snapshot_current_row_state(frm);
+        update_row_checklist_submission_values(frm);
+        update_checklist_submission_average(frm);
     },
 
     after_save(frm) {
         setTimeout(() => {
+            frm.doc.__unsaved = 0;
+            frm.page.clear_indicator();
             frm.reload_doc();
         }, 500);
     },
@@ -1046,19 +1064,19 @@ frappe.ui.form.on('Engineering Checklist Register', {
 
     month(frm) {
         update_register_live_title(frm);
-        refresh_checklist_submission_ui(frm);
+        refresh_checklist_submission_ui(frm, true);
     },
 
     year(frm) {
         update_register_live_title(frm);
-        refresh_checklist_submission_ui(frm);
+        refresh_checklist_submission_ui(frm, true);
     },
 
     machine_type_filter(frm) {
         snapshot_current_row_state(frm);
 
         setTimeout(() => {
-            refresh_checklist_submission_ui(frm);
+            refresh_checklist_submission_ui(frm, false);
             apply_machine_type_row_visibility(frm);
         }, 100);
     },
@@ -1066,12 +1084,12 @@ frappe.ui.form.on('Engineering Checklist Register', {
     onload_post_render(frm) {
         update_register_live_title(frm);
         bind_checklist_checkbox_listener(frm);
-        refresh_checklist_submission_ui(frm);
+        refresh_checklist_submission_ui(frm, false);
     }
 });
 
 frappe.ui.form.on(CHECKLIST_CHILD_DOCTYPE, {
     form_render(frm, cdt, cdn) {
-        refresh_checklist_submission_ui(frm);
+        refresh_checklist_submission_ui(frm, false);
     }
 });
