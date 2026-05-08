@@ -305,30 +305,10 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Pre Use Deviation capture",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Engineering Checklist Register",
    "link_count": 0,
    "link_to": "Engineering Checklist Register",
    "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Pre Use Deviation Dashboard",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation Dashboard",
-   "link_type": "Report",
    "onboard": 0,
    "type": "Link"
   },
@@ -482,7 +462,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-05-08 08:30:34.456650",
+ "modified": "2026-05-08 12:50:17.019324",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

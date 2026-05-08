@@ -63,7 +63,7 @@
    "fieldname": "asset_category",
    "fieldtype": "Link",
    "label": "Asset Category",
-   "options": "Asset",
+   "options": "Asset Category",
    "read_only": 1
   },
   {
@@ -71,7 +71,7 @@
    "fieldname": "model",
    "fieldtype": "Link",
    "label": "Model",
-   "options": "Asset",
+   "options": "Item",
    "read_only": 1
   },
   {
@@ -159,7 +159,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-08 07:28:31.693768",
+ "modified": "2026-05-08 12:52:04.069377",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane sample input",

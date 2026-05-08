@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_import": 1,
  "autoname": "naming_series:",
  "creation": "2026-03-25 00:00:00",
  "default_view": "List",
@@ -197,9 +196,10 @@
   }
  ],
  "grid_page_length": 50,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-07 07:16:38.085078",
+ "modified": "2026-05-08 12:44:32.312501",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Pre Use Deviation",
