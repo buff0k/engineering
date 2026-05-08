@@ -166,8 +166,8 @@ class SupportEquipment(Document):
                 row.working_hours = 0
                 continue
 
-            # End hours = 0 means not captured yet.
-            # It must be allowed to save.
+            # End Hours = 0 means not captured yet.
+            # Allow save and keep Working Hours as 0.
             if end_hours in [None, "", 0, "0"]:
                 row.working_hours = 0
                 continue
@@ -175,14 +175,17 @@ class SupportEquipment(Document):
             start_hours = flt(start_hours)
             end_hours = flt(end_hours)
 
-            working_hours = round(end_hours - start_hours, 0)
-
-            if working_hours < 0:
+            # Block only when end is less than start.
+            if end_hours < start_hours:
                 frappe.throw(
-                    f"Negative working hours for asset {row.asset_name}. "
-                    f"Engine End Hours cannot be less than Engine Start Hours."
+                    f"Engine End Hours cannot be less than Engine Start Hours "
+                    f"for asset {row.asset_name}."
                 )
 
+            working_hours = round(end_hours - start_hours, 0)
+
+            # Allow 0 to 12 hours.
+            # Block only above 12.
             if working_hours > 12:
                 frappe.throw(
                     f"Working hours above 12 for asset {row.asset_name}. "
@@ -279,6 +282,8 @@ class SupportEquipment(Document):
             if not row.asset_name:
                 continue
 
+            # End Hours = 0 means not captured yet.
+            # Do not push 0 to next shift.
             if row.engine_end_hours in [None, "", 0, "0"]:
                 continue
 
@@ -300,7 +305,9 @@ class SupportEquipment(Document):
 
                 next_row.engine_start_hours = current_end_hours[next_row.asset_name]
 
-                if next_row.engine_end_hours not in [None, "", 0, "0"]:
+                if next_row.engine_end_hours in [None, "", 0, "0"]:
+                    next_row.working_hours = 0
+                else:
                     working_hours = round(
                         flt(next_row.engine_end_hours) - flt(next_row.engine_start_hours),
                         0,
@@ -308,8 +315,6 @@ class SupportEquipment(Document):
 
                     if working_hours >= 0:
                         next_row.working_hours = working_hours
-                else:
-                    next_row.working_hours = 0
 
                 updated = True
 

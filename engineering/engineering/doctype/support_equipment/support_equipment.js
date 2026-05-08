@@ -27,6 +27,10 @@ frappe.ui.form.on("Support Equipment", {
       set_support_equipment_asset_queries(frm);
       apply_equipment_category_row_filter(frm);
 
+      if (frm.doc.shift === "Day" || frm.doc.shift === "Night") {
+        populate_opening_hours_from_previous_shift(frm);
+      }
+
       frappe.show_alert({
         message: __("Site changed. Existing captured rows were kept. Click Fetch Machines to add missing machines."),
         indicator: "orange"
@@ -52,8 +56,8 @@ frappe.ui.form.on("Support Equipment", {
       apply_equipment_category_row_filter(frm);
 
       frappe.show_alert({
-        message: __("Shift changed. Existing captured rows were kept."),
-        indicator: "orange"
+        message: __("Shift changed. Opening hours were updated from the previous shift."),
+        indicator: "green"
       });
     }
   },
@@ -178,6 +182,11 @@ function fetch_support_equipment_assets(frm) {
         row.equipment_category = asset.asset_category || existing.equipment_category || "";
         row.model = asset.item_name || existing.model || "";
 
+        /*
+          Keep captured end hours.
+          Start hours will be corrected by populate_opening_hours_from_previous_shift()
+          for Day/Night flow.
+        */
         if (existing.engine_start_hours !== undefined && existing.engine_start_hours !== null) {
           row.engine_start_hours = existing.engine_start_hours;
         } else if (row.engine_start_hours === undefined || row.engine_start_hours === null) {
@@ -348,45 +357,48 @@ function populate_opening_hours_from_previous_shift(frm) {
           return;
         }
 
-        const current_start_has_value =
-          row.engine_start_hours !== undefined &&
-          row.engine_start_hours !== null &&
-          row.engine_start_hours !== "";
+        /*
+          IMPORTANT FIX:
+          Always overwrite Engine Start Hours from previous shift.
 
-        const current_start_is_zero = flt(row.engine_start_hours) === 0;
+          Night Shift:
+            same date Day Shift Engine End Hours
+            becomes Night Shift Engine Start Hours.
 
-        if (!current_start_has_value || current_start_is_zero) {
+          Day Shift:
+            previous date Night Shift Engine End Hours
+            becomes Day Shift Engine Start Hours.
+        */
+        frappe.model.set_value(
+          row.doctype,
+          row.name,
+          "engine_start_hours",
+          opening_hours
+        );
+
+        const has_end =
+          row.engine_end_hours !== undefined &&
+          row.engine_end_hours !== null &&
+          row.engine_end_hours !== "";
+
+        if (has_end && flt(row.engine_end_hours) !== 0) {
+          const working_hours = Math.round(
+            flt(row.engine_end_hours) - flt(opening_hours)
+          );
+
           frappe.model.set_value(
             row.doctype,
             row.name,
-            "engine_start_hours",
-            opening_hours
+            "working_hours",
+            working_hours
           );
-
-          const has_end =
-            row.engine_end_hours !== undefined &&
-            row.engine_end_hours !== null &&
-            row.engine_end_hours !== "";
-
-          if (has_end && flt(row.engine_end_hours) !== 0) {
-            const working_hours = Math.round(
-              flt(row.engine_end_hours) - flt(opening_hours)
-            );
-
-            frappe.model.set_value(
-              row.doctype,
-              row.name,
-              "working_hours",
-              working_hours
-            );
-          } else {
-            frappe.model.set_value(
-              row.doctype,
-              row.name,
-              "working_hours",
-              0
-            );
-          }
+        } else {
+          frappe.model.set_value(
+            row.doctype,
+            row.name,
+            "working_hours",
+            0
+          );
         }
       });
 
@@ -445,8 +457,10 @@ function calculate_child_working_hours(cdt, cdn) {
   const start_hours = flt(row.engine_start_hours);
   const end_hours = flt(row.engine_end_hours);
 
-  // End Hours = 0 means not captured yet.
-  // Allow it and keep Working Hours as 0.
+  /*
+    End Hours = 0 means not captured yet.
+    Allow it and keep Working Hours as 0.
+  */
   if (end_hours === 0) {
     frappe.model.set_value(cdt, cdn, "working_hours", 0);
     return;
