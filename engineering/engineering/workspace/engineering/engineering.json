@@ -356,7 +356,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Services ",
-   "link_count": 11,
+   "link_count": 12,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -470,9 +470,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Support Equipment",
+   "link_count": 0,
+   "link_to": "Support Equipment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-08 06:57:27.208207",
+ "modified": "2026-05-08 08:30:34.456650",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

@@ -14,7 +14,7 @@ ALLOWED_MACHINE_TYPES = [
     "DIESEL BOWSER",
     "GRADER",
     "TLB",
-    "DRILL",
+    "DRILLS",
     "LDV",
     "LIGHTING PLANT",
     "WATER PUMP",
@@ -29,7 +29,12 @@ MACHINE_TYPE_ALIASES = {
     "diesel bowser": "DIESEL BOWSER",
     "grader": "GRADER",
     "tlb": "TLB",
-    "drill": "DRILL",
+
+    # Drills support
+    "drill": "DRILLS",
+    "drills": "DRILLS",
+    "drilling": "DRILLS",
+
     "ldv": "LDV",
     "lighting plant": "LIGHTING PLANT",
     "lightning plant": "LIGHTING PLANT",
@@ -42,11 +47,13 @@ MACHINE_TYPE_ALIASES = {
 def _normalize_text(value):
     if value is None:
         return ""
+
     return " ".join(str(value).split()).strip()
 
 
 def _clean_allowed_machine_type(value):
     text = _normalize_text(value)
+
     if not text:
         return ""
 
@@ -57,7 +64,14 @@ def _get_asset_source_config():
     meta = frappe.get_meta("Asset")
     fieldnames = [f.fieldname for f in meta.fields if f.fieldname]
 
-    required_fields = ["location", "asset_category", "item_name", "asset_name"]
+    required_fields = [
+        "location",
+        "asset_category",
+        "item_name",
+        "asset_name",
+        "status",
+    ]
+
     missing_fields = [field for field in required_fields if field not in fieldnames]
 
     if missing_fields:
@@ -71,6 +85,7 @@ def _get_asset_source_config():
         "machine_type_field": "asset_category",
         "item_name_field": "item_name",
         "fleet_no_field": "asset_name",
+        "status_field": "status",
     }
 
 
@@ -83,8 +98,13 @@ def get_machine_type_options(site=None):
 
     rows = frappe.get_all(
         config["doctype"],
-        filters={config["site_field"]: site},
-        fields=[config["machine_type_field"]],
+        filters={
+            config["site_field"]: site,
+            config["status_field"]: "Submitted",
+        },
+        fields=[
+            config["machine_type_field"],
+        ],
         order_by="asset_category asc",
         limit_page_length=0,
     )
@@ -96,6 +116,7 @@ def get_machine_type_options(site=None):
         machine_type = _clean_allowed_machine_type(
             row.get(config["machine_type_field"])
         )
+
         if machine_type and machine_type not in seen:
             seen.add(machine_type)
             result.append(machine_type)
@@ -111,19 +132,30 @@ def get_site_machines(site, machine_type=None):
 
     config = _get_asset_source_config()
 
+    cleaned_requested_type = (
+        _clean_allowed_machine_type(machine_type)
+        if machine_type
+        else ""
+    )
+
+    if machine_type and not cleaned_requested_type:
+        return []
+
     asset_rows = frappe.get_all(
         config["doctype"],
-        filters={config["site_field"]: site},
+        filters={
+            config["site_field"]: site,
+            config["status_field"]: "Submitted",
+        },
         fields=[
             config["fleet_no_field"],
             config["machine_type_field"],
             config["item_name_field"],
+            config["status_field"],
         ],
         order_by="asset_name asc",
         limit_page_length=0,
     )
-
-    cleaned_requested_type = _clean_allowed_machine_type(machine_type) if machine_type else ""
 
     result = []
 

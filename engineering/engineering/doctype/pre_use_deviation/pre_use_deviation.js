@@ -1,10 +1,20 @@
 frappe.ui.form.on("Pre Use Deviation", {
 	refresh(frm) {
 		apply_pre_use_deviation_ui(frm);
+		set_fleet_number_filter(frm);
 	},
 
 	onload(frm) {
 		apply_pre_use_deviation_ui(frm);
+		set_fleet_number_filter(frm);
+	},
+
+	site(frm) {
+		frm.set_value("fleet_number", "");
+		frm.set_value("machine_type", "");
+		frm.set_value("machine_model", "");
+
+		set_fleet_number_filter(frm);
 	},
 
 	reported_by_coy_number(frm) {
@@ -25,11 +35,31 @@ frappe.ui.form.on("Pre Use Deviation", {
 	}
 });
 
+function set_fleet_number_filter(frm) {
+	frm.set_query("fleet_number", function () {
+		if (!frm.doc.site) {
+			return {
+				filters: {
+					docstatus: 1
+				}
+			};
+		}
+
+		return {
+			filters: {
+				docstatus: 1,
+				location: frm.doc.site
+			}
+		};
+	});
+}
+
 function apply_pre_use_deviation_ui(frm) {
 	hide_series_and_id(frm);
 	set_action_status_and_completion(frm);
 	round_completion_percentage(frm);
 	apply_completion_colour(frm);
+	set_fleet_number_filter(frm);
 
 	fill_reported_by_name(frm);
 	fill_actioned_by_name(frm);

@@ -214,11 +214,20 @@ function apply_month_day_visibility(frm) {
    ========================= */
 
 function set_select_options(frm, fieldname, values) {
-    const unique_values = [...new Set(
+    let unique_values = [...new Set(
         (Array.isArray(values) ? values : [])
             .map(v => normalize_text(v))
             .filter(v => v)
     )];
+
+    if (fieldname === 'machine_type_filter' && !unique_values.includes('DRILLS')) {
+        unique_values.push('DRILLS');
+    }
+
+    unique_values = unique_values.sort((a, b) => a.localeCompare(b, undefined, {
+        numeric: true,
+        sensitivity: 'base'
+    }));
 
     const options = [''].concat(unique_values);
 
@@ -252,9 +261,11 @@ function populate_machine_type_options(frm) {
 
         set_select_options(frm, 'machine_type_filter', types);
 
-        if (current_value && types.includes(current_value)) {
+        const allowed_types = [...types, 'DRILLS'];
+
+        if (current_value && allowed_types.includes(current_value)) {
             frm.set_value('machine_type_filter', current_value);
-        } else if (current_value && !types.includes(current_value)) {
+        } else if (current_value && !allowed_types.includes(current_value)) {
             frm.set_value('machine_type_filter', '');
         }
     }).catch(err => {
