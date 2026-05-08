@@ -6,45 +6,160 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "component_replaced_details_column",
+  "column_break_tqst",
+  "company",
+  "sample_date",
   "site",
   "fleet_number",
-  "date_replacement",
-  "component_replaced"
+  "asset_category",
+  "model",
+  "machine_hours",
+  "component_replaced",
+  "component_2",
+  "part_photo",
+  "column_break_zrlt",
+  "oilbrand_grade",
+  "oil_capacity",
+  "oil_consumption",
+  "oil_changed",
+  "oil",
+  "was_the_filter_changed",
+  "filter",
+  "employee",
+  "feedback"
  ],
  "fields": [
   {
-   "fieldname": "component_replaced_details_column",
-   "fieldtype": "Column Break",
-   "label": "Component Replaced Details"
-  },
-  {
    "fieldname": "fleet_number",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Fleet number",
-   "options": "Asset"
+   "options": "Asset",
+   "reqd": 1
   },
   {
    "fieldname": "component_replaced",
-   "fieldtype": "Data",
-   "label": "Component Replaced"
+   "fieldtype": "Link",
+   "label": "Component Replaced",
+   "options": "Item"
   },
   {
    "fieldname": "site",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Site",
-   "options": "Location"
+   "options": "Location",
+   "reqd": 1
   },
   {
-   "fieldname": "date_replacement",
+   "fieldname": "sample_date",
    "fieldtype": "Date",
-   "label": "Date of replacement"
+   "in_list_view": 1,
+   "label": "Sample Date",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "fleet_number.asset_category",
+   "fieldname": "asset_category",
+   "fieldtype": "Link",
+   "label": "Asset Category",
+   "options": "Asset",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "fleet_number.item_code",
+   "fieldname": "model",
+   "fieldtype": "Link",
+   "label": "Model",
+   "options": "Asset",
+   "read_only": 1
+  },
+  {
+   "fieldname": "machine_hours",
+   "fieldtype": "Int",
+   "label": "Machine Hours",
+   "reqd": 1
+  },
+  {
+   "description": "Specify the component if it was not found above.",
+   "fieldname": "component_2",
+   "fieldtype": "Data",
+   "label": "Component"
+  },
+  {
+   "fieldname": "oilbrand_grade",
+   "fieldtype": "Data",
+   "label": "Oilbrand + Grade"
+  },
+  {
+   "fieldname": "oil_changed",
+   "fieldtype": "Select",
+   "label": "Was the oil changed?",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "oil",
+   "fieldtype": "Int",
+   "label": "Oil (hrs/km)"
+  },
+  {
+   "fieldname": "was_the_filter_changed",
+   "fieldtype": "Select",
+   "label": "Was the filter changed?",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "filter",
+   "fieldtype": "Int",
+   "label": "Filter (hrs/km)"
+  },
+  {
+   "fieldname": "oil_capacity",
+   "fieldtype": "Float",
+   "label": "Oil Capacity"
+  },
+  {
+   "fieldname": "oil_consumption",
+   "fieldtype": "Float",
+   "label": "Oil Consumption"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee ",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "feedback",
+   "fieldtype": "Small Text",
+   "label": "Feedback"
+  },
+  {
+   "fieldname": "column_break_tqst",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_zrlt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "part_photo",
+   "fieldtype": "Attach",
+   "label": "Part Photo"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 13:07:15.801863",
+ "modified": "2026-05-08 07:28:31.693768",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Isambane sample input",
@@ -60,6 +175,40 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Mechanic",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
    "share": 1,
    "write": 1
   }

@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:{location}-{shift_date}-{shift}",
- "creation": "2026-05-07 00:00:00.000000",
+ "creation": "2026-05-07 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -79,7 +79,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Shift",
-   "options": "Day\nMorning\nAfternoon\nNight",
+   "options": "Day\nNight",
    "reqd": 1
   },
   {
@@ -123,9 +123,8 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 0,
  "links": [],
- "modified": "2026-05-07 00:00:00.000000",
+ "modified": "2026-05-07 16:55:16.116784",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Support Equipment",
@@ -141,11 +140,13 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -158,12 +159,39 @@
   },
   {
    "create": 1,
+   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Engineering Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
    "select": 1,
    "share": 1,
    "write": 1

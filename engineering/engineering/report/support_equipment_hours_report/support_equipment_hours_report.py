@@ -90,43 +90,43 @@ def get_columns(dates):
 
         columns.extend([
             {
-                "label": f"{day_label}<br>{date_label}<br>Day Open",
+                "label": f"Day Open\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_day_open",
                 "fieldtype": "Int",
                 "width": 110,
             },
             {
-                "label": f"{day_label}<br>{date_label}<br>Day Close",
+                "label": f"Day Close\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_day_close",
                 "fieldtype": "Int",
                 "width": 110,
             },
             {
-                "label": f"{day_label}<br>{date_label}<br>Day Total",
+                "label": f"Day Total\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_day_total",
                 "fieldtype": "Int",
                 "width": 110,
             },
             {
-                "label": f"{day_label}<br>{date_label}<br>Night Open",
+                "label": f"Night Open\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_night_open",
                 "fieldtype": "Int",
                 "width": 110,
             },
             {
-                "label": f"{day_label}<br>{date_label}<br>Night Close",
+                "label": f"Night Close\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_night_close",
                 "fieldtype": "Int",
                 "width": 110,
             },
             {
-                "label": f"{day_label}<br>{date_label}<br>Night Total",
+                "label": f"Night Total\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_night_total",
                 "fieldtype": "Int",
                 "width": 110,
             },
             {
-                "label": f"{day_label}<br>{date_label}<br>Full Day Total",
+                "label": f"Full Day Total\n{day_label}\n{date_label}",
                 "fieldname": f"{date_key}_daily_total",
                 "fieldtype": "Int",
                 "width": 130,

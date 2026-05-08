@@ -416,6 +416,18 @@ function inject_checklist_submission_styles() {
             font-weight: 700 !important;
         }
 
+        .engineering-checklist-grid-styled .checklist-top-scrollbar {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            height: 18px !important;
+            margin-bottom: 6px !important;
+            border-bottom: 1px solid #d1d8dd !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-top-scrollbar-inner {
+            height: 1px !important;
+        }
+
         .engineering-checklist-grid-styled .form-grid {
             overflow-x: auto !important;
             overflow-y: hidden !important;
@@ -838,12 +850,58 @@ function style_row_checkbox_cells(frm) {
     });
 }
 
+function add_top_horizontal_scrollbar(frm) {
+    const child_table_fieldname = get_child_table_fieldname(frm);
+    if (!child_table_fieldname) return;
+
+    const grid = frm.fields_dict[child_table_fieldname]?.grid;
+    if (!grid) return;
+
+    grid.wrapper.addClass('engineering-checklist-grid-styled');
+
+    const $formGrid = grid.wrapper.find('.form-grid').first();
+    if (!$formGrid.length) return;
+
+    let $topScrollbar = grid.wrapper.find('.checklist-top-scrollbar').first();
+
+    if (!$topScrollbar.length) {
+        $topScrollbar = $(`
+            <div class="checklist-top-scrollbar">
+                <div class="checklist-top-scrollbar-inner"></div>
+            </div>
+        `);
+
+        $formGrid.before($topScrollbar);
+    }
+
+    const $topScrollbarInner = $topScrollbar.find('.checklist-top-scrollbar-inner').first();
+
+    setTimeout(() => {
+        const scrollWidth = $formGrid.get(0)?.scrollWidth || 0;
+        $topScrollbarInner.css('width', `${scrollWidth}px`);
+        $topScrollbar.scrollLeft($formGrid.scrollLeft());
+    }, 100);
+
+    if (!$formGrid.data('checklist-top-scroll-bound')) {
+        $formGrid.data('checklist-top-scroll-bound', true);
+
+        $formGrid.on('scroll.checklist_top_scroll', function () {
+            $topScrollbar.scrollLeft($formGrid.scrollLeft());
+        });
+
+        $topScrollbar.on('scroll.checklist_bottom_scroll', function () {
+            $formGrid.scrollLeft($topScrollbar.scrollLeft());
+        });
+    }
+}
+
 function refresh_checklist_submission_ui(frm) {
     inject_checklist_submission_styles();
     update_row_checklist_submission_values(frm);
     update_checklist_submission_average(frm);
 
     setTimeout(() => {
+        add_top_horizontal_scrollbar(frm);
         apply_month_day_visibility(frm);
         style_row_checkbox_cells(frm);
         freeze_left_columns(frm);

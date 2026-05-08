@@ -1,10 +1,12 @@
 # Copyright (c) 2026
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe.model.document import Document
 from frappe.utils.data import getdate
-from frappe.utils import flt
+from frappe.utils import flt, add_days
 
 
 SUPPORT_EQUIPMENT_CATEGORIES = [
@@ -18,11 +20,13 @@ class SupportEquipment(Document):
     def before_validate(self):
         self._normalize_asset_links()
         self._fill_missing_child_values()
+        self._populate_opening_hours_from_previous_shift()
 
     def before_save(self):
         if self.shift_date:
             self.shift_date = getdate(self.shift_date)
 
+        self._populate_opening_hours_from_previous_shift()
         self._calculate_working_hours()
         self._evaluate_data_integrity()
 
@@ -115,6 +119,41 @@ class SupportEquipment(Document):
             if not getattr(row, "model", None):
                 row.model = asset.item_name or ""
 
+    def _populate_opening_hours_from_previous_shift(self):
+        if self.shift not in ["Day", "Night"]:
+            return
+
+        if not self.location or not self.shift_date:
+            return
+
+        asset_names = [
+            row.asset_name
+            for row in self.get("pre_use_assets") or []
+            if getattr(row, "asset_name", None)
+        ]
+
+        if not asset_names:
+            return
+
+        opening_hours_map = get_previous_shift_closing_hours(
+            location=self.location,
+            shift_date=self.shift_date,
+            shift=self.shift,
+            asset_names=asset_names,
+            current_docname=self.name,
+        )
+
+        for row in self.get("pre_use_assets") or []:
+            if not row.asset_name:
+                continue
+
+            opening_hours = opening_hours_map.get(row.asset_name)
+
+            if opening_hours is None:
+                continue
+
+            row.engine_start_hours = opening_hours
+
     def _calculate_working_hours(self):
         for row in self.get("pre_use_assets") or []:
             if row.engine_start_hours is None or row.engine_end_hours is None:
@@ -122,7 +161,7 @@ class SupportEquipment(Document):
 
             working_hours = round(
                 flt(row.engine_end_hours) - flt(row.engine_start_hours),
-                1,
+                0,
             )
 
             if working_hours < 0:
@@ -189,6 +228,87 @@ class SupportEquipment(Document):
             self.data_integrity_summary = "<p><b>All checks passed.</b></p>"
 
 
+def get_previous_shift_details(shift_date, shift):
+    shift_date = getdate(shift_date)
+
+    if shift == "Night":
+        return {
+            "shift_date": shift_date,
+            "shift": "Day",
+        }
+
+    if shift == "Day":
+        return {
+            "shift_date": add_days(shift_date, -1),
+            "shift": "Night",
+        }
+
+    return None
+
+
+def get_previous_shift_closing_hours(
+    location,
+    shift_date,
+    shift,
+    asset_names,
+    current_docname=None,
+):
+    if not asset_names:
+        return {}
+
+    previous_shift = get_previous_shift_details(
+        shift_date=shift_date,
+        shift=shift,
+    )
+
+    if not previous_shift:
+        return {}
+
+    conditions = [
+        "parent.location = %(location)s",
+        "parent.shift_date = %(previous_shift_date)s",
+        "parent.shift = %(previous_shift)s",
+        "parent.docstatus < 2",
+        "child.asset_name in %(asset_names)s",
+    ]
+
+    values = {
+        "location": location,
+        "previous_shift_date": previous_shift["shift_date"],
+        "previous_shift": previous_shift["shift"],
+        "asset_names": tuple(asset_names),
+    }
+
+    if current_docname and current_docname != "New Support Equipment":
+        conditions.append("parent.name != %(current_docname)s")
+        values["current_docname"] = current_docname
+
+    where_clause = " and ".join(conditions)
+
+    records = frappe.db.sql(
+        f"""
+        select
+            child.asset_name,
+            child.engine_end_hours
+        from `tabSupport Equipment` parent
+        inner join `tabSupport Equipment Assets` child
+            on child.parent = parent.name
+        where {where_clause}
+        order by parent.modified desc
+        """,
+        values,
+        as_dict=True,
+    )
+
+    result = {}
+
+    for record in records:
+        if record.asset_name not in result:
+            result[record.asset_name] = record.engine_end_hours
+
+    return result
+
+
 @frappe.whitelist()
 def get_support_equipment_assets(location=None, equipment_category=None):
     if not location:
@@ -217,4 +337,33 @@ def get_support_equipment_assets(location=None, equipment_category=None):
         ],
         order_by="asset_category asc, asset_name asc",
         limit_page_length=1000,
+    )
+
+
+@frappe.whitelist()
+def get_opening_hours_from_previous_shift(
+    location=None,
+    shift_date=None,
+    shift=None,
+    asset_names=None,
+):
+    if not location:
+        frappe.throw("Site is required.")
+
+    if not shift_date:
+        frappe.throw("Shift Date is required.")
+
+    if not shift:
+        frappe.throw("Shift is required.")
+
+    if isinstance(asset_names, str):
+        asset_names = json.loads(asset_names)
+
+    asset_names = asset_names or []
+
+    return get_previous_shift_closing_hours(
+        location=location,
+        shift_date=shift_date,
+        shift=shift,
+        asset_names=asset_names,
     )
