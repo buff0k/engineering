@@ -1,26 +1,27 @@
 import frappe
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
 
-class EngineeringChecklistRegister(Document):
+class PreUseDeviation(Document):
     def autoname(self):
-        self.set_site_month_year_name()
+        site = _normalize_text(self.site)
 
-    def before_insert(self):
-        self.set_site_month_year_name()
+        fleet_number = (
+            _normalize_text(getattr(self, "fleet_number", ""))
+            or _normalize_text(getattr(self, "fleet_no", ""))
+            or _normalize_text(getattr(self, "asset", ""))
+        )
 
-    def validate(self):
-        self.set_site_month_year_name()
+        if not site:
+            frappe.throw("Site is required before saving.")
 
-    def set_site_month_year_name(self):
-        site = _make_name_part(self.site)
-        month = _make_name_part(self.month)
-        year = _make_name_part(self.year)
+        if not fleet_number:
+            frappe.throw("Fleet Number is required before saving.")
 
-        if not site or not month or not year:
-            frappe.throw("Site, Month and Year are required before saving.")
+        date_time = now_datetime().strftime("%d-%m-%Y %H:%M:%S")
 
-        self.name = f"{site}-{month}-{year}"
+        self.name = f"{site}-{fleet_number}-{date_time}"
 
 
 ALLOWED_MACHINE_TYPES = [

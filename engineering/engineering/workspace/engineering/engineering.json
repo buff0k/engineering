@@ -266,94 +266,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Dashboards",
-   "link_count": 8,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Weekly Performance ",
-   "link_count": 0,
-   "link_to": "Production Efficiency",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Weekly Availability & Utilisation Dashboard",
-   "link_count": 0,
-   "link_to": "Weekly Availability and Utilisation Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns (Capture)",
-   "link_count": 0,
-   "link_to": "Plant Breakdown or Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Checklist Register",
-   "link_count": 0,
-   "link_to": "Engineering Checklist Register",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Isambane Opencast Mining Job Card",
-   "link_count": 0,
-   "link_to": "Isambane Opencast Mining Job Card",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Parts Requisition Form",
-   "link_count": 0,
-   "link_to": "Parts Requisition Form",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Services ",
-   "link_count": 12,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Service Schedule (Planning)",
-   "link_count": 0,
-   "link_to": "Service Schedule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "OEM Booking",
    "link_count": 0,
    "link_to": "OEM Booking",
@@ -460,9 +372,108 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Checklist Register",
+   "link_count": 0,
+   "link_to": "Engineering Checklist Register",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre Use Deviation",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Dashboards",
+   "link_count": 7,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Weekly Performance ",
+   "link_count": 0,
+   "link_to": "Production Efficiency",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Weekly Availability & Utilisation Dashboard",
+   "link_count": 0,
+   "link_to": "Weekly Availability and Utilisation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns (Capture)",
+   "link_count": 0,
+   "link_to": "Plant Breakdown or Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Checklist Register",
+   "link_count": 0,
+   "link_to": "Engineering Checklist Register",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Isambane Opencast Mining Job Card",
+   "link_count": 0,
+   "link_to": "Isambane Opencast Mining Job Card",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Parts Requisition Form",
+   "link_count": 0,
+   "link_to": "Parts Requisition Form",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Pre Use Deviation Dashboard",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-08 12:50:17.019324",
+ "modified": "2026-05-08 13:48:26.783886",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
