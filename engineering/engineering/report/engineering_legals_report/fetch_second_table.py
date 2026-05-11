@@ -1,5 +1,11 @@
+import csv
+import io
+import os
+import re
+import zipfile
+
 import frappe
-from frappe.utils import getdate, add_days, today
+from frappe.utils import getdate, add_days, today, now_datetime
 from frappe.query_builder import DocType
 from frappe.query_builder.functions import Count
 EXCLUDED_SITES = ("Duplicate Assets",)
@@ -749,3 +755,208 @@ def get_doc_history_tree(site=None, section=None):
     out_sites.sort(key=lambda x: x["label"])
 
     return {"tree": out_sites}
+
+
+
+
+
+def _safe_export_name(value, fallback="Unknown"):
+    value = str(value or "").strip() or fallback
+    value = re.sub(r'[<>:"/\\|?*]+', "-", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    return value[:120] or fallback
+
+
+def _get_file_doc_from_url(file_url):
+    if not file_url:
+        return None
+
+    candidates = {
+        file_url,
+        file_url.replace("/private/files/", "/files/"),
+        file_url.replace("/files/", "/private/files/"),
+    }
+
+    for url in candidates:
+        file_name = frappe.db.get_value("File", {"file_url": url}, "name")
+        if file_name:
+            return frappe.get_doc("File", file_name)
+
+    return None
+
+
+def _add_file_to_zip(zip_file, row, manifest_rows, used_paths):
+    file_url = (row.get("attach_paper") or "").strip()
+
+    manifest_row = {
+        "record_type": row.get("record_type") or "",
+        "record_name": row.get("name") or "",
+        "site": row.get("site") or "",
+        "fleet_number": row.get("fleet_number") or "",
+        "section": row.get("section") or "",
+        "start_date": row.get("start_date") or "",
+        "expiry_date": row.get("expiry_date") or "",
+        "modified": row.get("modified") or "",
+        "source_file": file_url,
+        "exported_file": "",
+        "status": "",
+    }
+
+    if not file_url:
+        manifest_row["status"] = "Missing attachment"
+        manifest_rows.append(manifest_row)
+        return 0
+
+    file_doc = _get_file_doc_from_url(file_url)
+    if not file_doc:
+        manifest_row["status"] = "File record not found"
+        manifest_rows.append(manifest_row)
+        return 0
+
+    content = file_doc.get_content()
+    if content is None:
+        manifest_row["status"] = "File content not readable"
+        manifest_rows.append(manifest_row)
+        return 0
+
+    if isinstance(content, str):
+        content = content.encode("utf-8")
+
+    original_filename = _safe_export_name(file_doc.file_name or os.path.basename(file_url), "document.pdf")
+    site = _safe_export_name(row.get("site"), "Unknown Site")
+    fleet = _safe_export_name(row.get("fleet_number"), "No Fleet")
+    section = _safe_export_name(row.get("section"), "Unclassified")
+    doc_date = _safe_export_name(row.get("start_date") or row.get("expiry_date"), "No Date")
+    record_name = _safe_export_name(row.get("name"), "Record")
+
+    zip_path = f"{site}/{fleet}/{section}/{doc_date} - {record_name} - {original_filename}"
+
+    base, ext = os.path.splitext(zip_path)
+    counter = 2
+    while zip_path in used_paths:
+        zip_path = f"{base} ({counter}){ext}"
+        counter += 1
+
+    used_paths.add(zip_path)
+    zip_file.writestr(zip_path, content)
+
+    manifest_row["exported_file"] = zip_path
+    manifest_row["status"] = "Exported"
+    manifest_rows.append(manifest_row)
+    return 1
+
+
+@frappe.whitelist()
+def export_filtered_documents(site=None, section=None, asset=None, from_expiry_date=None, to_expiry_date=None):
+    legal_rows = []
+
+    if section != "Machine Service Records":
+        legal_filters = [["docstatus", "<", 2], ["site", "not in", EXCLUDED_SITES]]
+
+        if site:
+            legal_filters.append(["site", "=", site])
+        if section:
+            legal_filters.append(["sections", "=", section])
+        if asset:
+            legal_filters.append(["fleet_number", "=", asset])
+        if from_expiry_date:
+            legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
+        if to_expiry_date:
+            legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
+
+        legal_rows = frappe.get_all(
+            "Engineering Legals",
+            filters=legal_filters,
+            fields=[
+                "name",
+                "site",
+                "sections",
+                "fleet_number",
+                "start_date",
+                "expiry_date",
+                "modified",
+                "attach_paper",
+            ],
+            order_by="site asc, fleet_number asc, sections asc, start_date desc, modified desc",
+            limit_page_length=0,
+        )
+
+        for row in legal_rows:
+            row["record_type"] = "Engineering Legals"
+            row["section"] = row.get("sections")
+
+    msr_rows = []
+
+    if not section or section == "Machine Service Records":
+        msr_filters = [
+            ["docstatus", "<", 2],
+            ["service_breakdown", "=", "Service"],
+            ["site", "not in", EXCLUDED_SITES],
+        ]
+
+        if site:
+            msr_filters.append(["site", "=", site])
+        if asset:
+            msr_filters.append(["asset", "=", asset])
+        if from_expiry_date:
+            msr_filters.append(["service_date", ">=", getdate(from_expiry_date)])
+        if to_expiry_date:
+            msr_filters.append(["service_date", "<=", getdate(to_expiry_date)])
+
+        msr_rows = frappe.get_all(
+            "Mechanical Service Report",
+            filters=msr_filters,
+            fields=["name", "site", "asset", "service_date", "modified", "attach"],
+            order_by="site asc, asset asc, service_date desc, modified desc",
+            limit_page_length=0,
+        )
+
+        for row in msr_rows:
+            row["record_type"] = "Mechanical Service Report"
+            row["section"] = "Machine Service Records"
+            row["fleet_number"] = row.get("asset")
+            row["start_date"] = row.get("service_date")
+            row["expiry_date"] = None
+            row["attach_paper"] = row.get("attach")
+
+    rows = list(legal_rows) + list(msr_rows)
+
+    if not rows:
+        frappe.throw("No documents found for the selected filters.")
+
+    zip_buffer = io.BytesIO()
+    manifest_rows = []
+    used_paths = set()
+    files_added = 0
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for row in rows:
+            files_added += _add_file_to_zip(zip_file, row, manifest_rows, used_paths)
+
+        manifest_buffer = io.StringIO()
+        fieldnames = [
+            "record_type",
+            "record_name",
+            "site",
+            "fleet_number",
+            "section",
+            "start_date",
+            "expiry_date",
+            "modified",
+            "source_file",
+            "exported_file",
+            "status",
+        ]
+        writer = csv.DictWriter(manifest_buffer, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(manifest_rows)
+
+        zip_file.writestr("Export Manifest.csv", manifest_buffer.getvalue())
+
+    if files_added == 0:
+        frappe.throw("No attached files could be exported. Check the Export Manifest rules/attachments.")
+
+    timestamp = now_datetime().strftime("%Y%m%d_%H%M%S")
+    frappe.local.response.filename = f"Engineering_Legals_Export_{timestamp}.zip"
+    frappe.local.response.filecontent = zip_buffer.getvalue()
+    frappe.local.response.type = "download"    

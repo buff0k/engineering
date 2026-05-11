@@ -695,52 +695,45 @@ def is_sunday(date_value):
     return d.weekday() == 6
 
 def fetch_site_rows(site, from_date, to_date):
-    # One fetch per site for the whole window (faster, same logic)
-    return frappe.get_all(
-        DT,
-        filters={
-            "location": site,
-            "shift_date": ["between", [from_date, to_date]],
-            "asset_category": ["in", DB_CATEGORIES],
-        },
-        fields=[
-            "shift_date",
-            "asset_category",
-            "plant_shift_availability",
-            "plant_shift_utilisation",
-        ],
-        order_by="shift_date asc",
-        limit_page_length=5000,
+    from is_production.production.report.avail_and_util_summary.avail_and_util_summary import (
+        get_grouped_data,
     )
+
+    return get_grouped_data({
+        "start_date": from_date,
+        "end_date": to_date,
+        "location": site,
+    })
 
 
 def build_daily_series(rows, date_list):
-    # Collect values per category per day
-    bucket = {db_cat: {d: {"avail": [], "util": []} for d in date_list} for db_cat in DB_CATEGORIES}
+    # Use indent 1 rows from Avail and Util summary = category per day totals
+    bucket = {db_cat: {d: {"avail": None, "util": None} for d in date_list} for db_cat in DB_CATEGORIES}
 
     for r in rows:
+        if r.get("indent") != 1:
+            continue
+
         day = str(r.get("shift_date"))
         db_cat = r.get("asset_category")
+
         if db_cat not in bucket or day not in bucket[db_cat]:
             continue
 
-        av = r.get("plant_shift_availability")
-        ut = r.get("plant_shift_utilisation")
-
-        if av is not None:
-            bucket[db_cat][day]["avail"].append(float(av))
-        if ut is not None:
-            bucket[db_cat][day]["util"].append(float(ut))
+        bucket[db_cat][day]["avail"] = r.get("plant_shift_availability")
+        bucket[db_cat][day]["util"] = r.get("plant_shift_utilisation")
 
     out = {}
     for db_cat, ui_label in CATEGORY_MAP.items():
         series = []
         for day in date_list:
-            avs = bucket[db_cat][day]["avail"]
-            uts = bucket[db_cat][day]["util"]
-            av_avg = (sum(avs) / len(avs)) if avs else None
-            ut_avg = (sum(uts) / len(uts)) if uts else None
-            series.append({"date": day, "avail": av_avg, "util": ut_avg})
+            av_v = bucket[db_cat][day]["avail"]
+            ut_v = bucket[db_cat][day]["util"]
+            series.append({
+                "date": day,
+                "avail": float(av_v) if av_v is not None else None,
+                "util": float(ut_v) if ut_v is not None else None,
+            })
         out[ui_label] = series
 
     return out
@@ -778,7 +771,7 @@ def build_site_block_weekly(site, date_list, avgs, series, from_date, to_date):
 
         f"?start_date={frappe.utils.quote(str(from_date))}"
         f"&end_date={frappe.utils.quote(str(to_date))}"
-        f"&site={frappe.utils.quote(site)}"
+        f"&location={frappe.utils.quote(site)}"
     )
 
 

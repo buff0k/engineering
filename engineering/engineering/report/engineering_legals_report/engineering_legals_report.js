@@ -70,6 +70,26 @@ frappe.query_reports["Engineering Legals Report"] = {
       $(report.page.wrapper).find("#el-drilldown").remove();
     });
 
+
+
+
+
+    report.page.add_inner_button("Export Filtered Documents", () => {
+      const params = new URLSearchParams({
+        site: frappe.query_report.get_filter_value("site") || "",
+        section: frappe.query_report.get_filter_value("section") || "",
+        asset: frappe.query_report.get_filter_value("asset") || "",
+        from_expiry_date: frappe.query_report.get_filter_value("from_expiry_date") || "",
+        to_expiry_date: frappe.query_report.get_filter_value("to_expiry_date") || ""
+      });
+
+      window.location.href = `/api/method/engineering.engineering.report.engineering_legals_report.fetch_second_table.export_filtered_documents?${params.toString()}`;
+    });
+
+
+
+
+
     $(report.page.wrapper)
       .off("click.el_buckets")
       .on("click.el_buckets", ".el-bucket-pill", function () {
