@@ -3,6 +3,7 @@ import frappe
 from frappe.utils import now
 import json
 import hashlib
+import hmac
 
 # WearCheck critical recipients per Site/Location
 # NOTE: msani@isambane.co.za must always be included
@@ -95,14 +96,9 @@ def _send_critical_email(doc):
         message=message,
     )
 
-@frappe.whitelist()
-def fetch_and_sync():
+def sync_wearcheck_rows(rows):
     settings = frappe.get_single("API Wearcheck Settings")
-    if not getattr(settings, "enabled", 1):
-        return {"ok": True, "skipped": "disabled"}
-    
-    # Build mapping from child table (table_jqnq)
-    # item_type: Company / Location / Asset
+
     def _norm(s):
         return (s or "").strip()
 
@@ -117,17 +113,6 @@ def fetch_and_sync():
         if it and jv and fv:
             mapping.setdefault(it, {})[jv] = fv
 
-
-
-    url = getattr(settings, "endpoint_url", None)
-    if not url:
-        frappe.throw("API Wearcheck Settings: endpoint_url is required")
-
-    res = requests.get(url, timeout=90)
-    res.raise_for_status()
-    rows = res.json() or []
-
-    # store checksum in a hidden custom field (or reuse a Data field)
     created = 0
     updated = 0
     skipped = 0
@@ -143,46 +128,36 @@ def fetch_and_sync():
         if not sampno:
             continue
 
-        # because autoname is field:sampno
         name = str(sampno)
 
         new_cs = _checksum(r)
         old_cs = frappe.db.get_value("WearCheck Results", name, "checksum")
 
-        # unchanged => skip without loading full doc
         if old_cs and old_cs == new_cs:
             skipped += 1
             continue
 
         exists = frappe.db.exists("WearCheck Results", name)
-
         doc = frappe.get_doc("WearCheck Results", name) if exists else frappe.new_doc("WearCheck Results")
 
         doc.sampno = sampno
         doc.bottleno = _to_int(r.get("bottleno"))
+
         raw_customer = r.get("customer") or ""
         raw_site = r.get("site") or ""
         raw_machine = r.get("machine") or ""
 
-        # display/raw fields: trimmed
         raw_customer_s = raw_customer.strip()
         raw_site_s = raw_site.strip()
         raw_machine_s = raw_machine.strip()
 
-
-        # Keep raw JSON source fields (optional, but nice for traceability)
         doc.customer = raw_customer_s
         doc.site = raw_site_s
         doc.machine = raw_machine_s
 
-        # Save mapped values into ERP link fields
-        # First try mapping (json_value -> frappe_value). If no match, pass raw JSON through.
-        # Map using normalized keys, but fall back to trimmed raw
         doc.company = mapping.get("Company", {}).get(_key(raw_customer)) or (raw_customer_s or None)
         doc.location = mapping.get("Location", {}).get(_key(raw_site)) or (raw_site_s or None)
         doc.asset = mapping.get("Asset", {}).get(_key(raw_machine)) or (raw_machine_s or None)
-
-
 
         doc.component = r.get("component") or ""
         doc.profileid = _to_int(r.get("profileid"))
@@ -207,7 +182,7 @@ def fetch_and_sync():
         doc.tan = _to_float(r.get("tan"))
         doc.tbn = _to_float(r.get("tbn"))
 
-        for k in ("fe","ag","al","ca","cr","cu","mg","na","ni","pb","si","sn","p","b","ba","mo","v","zn","ti"):
+        for k in ("fe", "ag", "al", "ca", "cr", "cu", "mg", "na", "ni", "pb", "si", "sn", "p", "b", "ba", "mo", "v", "zn", "ti"):
             setattr(doc, k, _to_int(r.get(k)))
 
         doc.iso4 = _to_int(r.get("iso4"))
@@ -217,7 +192,6 @@ def fetch_and_sync():
 
         doc.checksum = new_cs
 
-
         if exists:
             doc.save(ignore_permissions=True, ignore_links=True)
             updated += 1
@@ -225,16 +199,53 @@ def fetch_and_sync():
             doc.insert(ignore_permissions=True, ignore_links=True)
             created += 1
 
-            if (doc.status or 0) == 4:
-                _queue_critical_email(doc)
-
-
-
         n += 1
         if n % BATCH == 0:
             frappe.db.commit()
 
-
-
     frappe.db.commit()
     return {"ok": True, "count": len(rows), "created": created, "updated": updated, "skipped": skipped, "ts": now()}
+
+
+@frappe.whitelist()
+def fetch_and_sync():
+    settings = frappe.get_single("API Wearcheck Settings")
+    if not getattr(settings, "enabled", 1):
+        return {"ok": True, "skipped": "disabled"}
+
+    url = getattr(settings, "endpoint_url", None)
+    if not url:
+        frappe.throw("API Wearcheck Settings: endpoint_url is required")
+
+    res = requests.get(url, timeout=90)
+    res.raise_for_status()
+    rows = res.json() or []
+
+    return sync_wearcheck_rows(rows)
+
+
+@frappe.whitelist(allow_guest=True)
+def receive_results():
+    settings = frappe.get_single("API Wearcheck Settings")
+    if not getattr(settings, "enabled", 1):
+        return {"ok": True, "skipped": "disabled"}
+
+    expected_key = settings.get_password("api_key") or ""
+    received_key = frappe.get_request_header("X-API-Key") or ""
+
+    if not expected_key:
+        frappe.throw("API Wearcheck Settings: api_key is required")
+
+    if not hmac.compare_digest(received_key, expected_key):
+        frappe.throw("Invalid X-API-Key")
+
+    raw = frappe.local.request.get_data(as_text=True)
+    rows = json.loads(raw or "[]")
+
+    if isinstance(rows, dict):
+        rows = rows.get("data") or rows.get("results") or [rows]
+
+    if not isinstance(rows, list):
+        frappe.throw("JSON body must be a list of result rows")
+
+    return sync_wearcheck_rows(rows)

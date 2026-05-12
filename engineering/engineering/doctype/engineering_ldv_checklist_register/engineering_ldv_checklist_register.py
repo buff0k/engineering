@@ -2,7 +2,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class EngineeringChecklistRegister(Document):
+class EngineeringLDVChecklistRegister(Document):
     def autoname(self):
         self.set_site_month_year_name()
 
@@ -40,16 +40,10 @@ ALLOWED_MACHINE_TYPES = [
     "Loader",
 ]
 
-
 MACHINE_TYPE_ALIASES = {
     "excavator": "Excavator",
-    "excavators": "Excavator",
-
     "adt": "ADT",
-    "adts": "ADT",
-
     "dozer": "DOZER",
-    "dozers": "DOZER",
 
     "water bowser": "WATER BOWSER",
     "water bowsers": "WATER BOWSER",
@@ -60,37 +54,23 @@ MACHINE_TYPE_ALIASES = {
     "diesel bowswers": "Diesel bowser",
 
     "grader": "GRADER",
-    "graders": "GRADER",
-
     "tlb": "TLB",
-    "tlbs": "TLB",
 
     "drill": "DRILLS",
     "drills": "DRILLS",
     "drilling": "DRILLS",
 
     "ldv": "LDV",
-    "ldvs": "LDV",
-
     "lighting plant": "LIGHTING PLANT",
-    "lighting plants": "LIGHTING PLANT",
     "lightning plant": "LIGHTING PLANT",
-    "lightning plants": "LIGHTING PLANT",
 
     "water pump": "WATER PUMP",
-    "water pumps": "WATER PUMP",
-
     "generator": "GENERATOR",
-    "generators": "GENERATOR",
     "genarator": "GENERATOR",
-    "genarators": "GENERATOR",
 
     "fel": "FEL",
-    "fels": "FEL",
     "front end loader": "FEL",
     "front-end loader": "FEL",
-    "front end loaders": "FEL",
-    "front-end loaders": "FEL",
 
     "loader": "Loader",
     "loaders": "Loader",
@@ -181,19 +161,14 @@ def get_machine_type_options(site=None):
             seen.add(machine_type)
             result.append(machine_type)
 
-    forced_machine_types = [
-        "DRILLS",
-        "FEL",
-        "Loader",
-        "Diesel bowser",
-    ]
+    for forced_type in ["DRILLS", "FEL", "Loader", "Diesel bowser"]:
+        if forced_type not in seen:
+            seen.add(forced_type)
+            result.append(forced_type)
 
-    for machine_type in forced_machine_types:
-        if machine_type not in seen:
-            seen.add(machine_type)
-            result.append(machine_type)
-
-    result.sort(key=lambda value: _normalize_text(value).lower())
+    result.sort(
+        key=lambda value: _normalize_text(value).lower()
+    )
 
     return result
 
