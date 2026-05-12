@@ -28,7 +28,7 @@ ALLOWED_MACHINE_TYPES = [
     "ADT",
     "DOZER",
     "WATER BOWSER",
-    "DIESEL BOWSER",
+    "Diesel bowser",
     "GRADER",
     "TLB",
     "DRILLS",
@@ -36,25 +36,44 @@ ALLOWED_MACHINE_TYPES = [
     "LIGHTING PLANT",
     "WATER PUMP",
     "GENERATOR",
+    "FEL",
+    "Loader",
 ]
 
 MACHINE_TYPE_ALIASES = {
     "excavator": "Excavator",
     "adt": "ADT",
     "dozer": "DOZER",
+
     "water bowser": "WATER BOWSER",
-    "diesel bowser": "DIESEL BOWSER",
+    "water bowsers": "WATER BOWSER",
+
+    "diesel bowser": "Diesel bowser",
+    "diesel bowsers": "Diesel bowser",
+    "diesel bowswer": "Diesel bowser",
+    "diesel bowswers": "Diesel bowser",
+
     "grader": "GRADER",
     "tlb": "TLB",
+
     "drill": "DRILLS",
     "drills": "DRILLS",
     "drilling": "DRILLS",
+
     "ldv": "LDV",
     "lighting plant": "LIGHTING PLANT",
     "lightning plant": "LIGHTING PLANT",
+
     "water pump": "WATER PUMP",
     "generator": "GENERATOR",
     "genarator": "GENERATOR",
+
+    "fel": "FEL",
+    "front end loader": "FEL",
+    "front-end loader": "FEL",
+
+    "loader": "Loader",
+    "loaders": "Loader",
 }
 
 
@@ -92,7 +111,6 @@ def _get_asset_source_config():
         "asset_category",
         "item_name",
         "asset_name",
-        "status",
     ]
 
     missing_fields = [field for field in required_fields if field not in fieldnames]
@@ -108,7 +126,6 @@ def _get_asset_source_config():
         "machine_type_field": "asset_category",
         "item_name_field": "item_name",
         "fleet_no_field": "asset_name",
-        "status_field": "status",
     }
 
 
@@ -123,7 +140,7 @@ def get_machine_type_options(site=None):
         config["doctype"],
         filters={
             config["site_field"]: site,
-            config["status_field"]: "Submitted",
+            "docstatus": 1,
         },
         fields=[
             config["machine_type_field"],
@@ -144,7 +161,15 @@ def get_machine_type_options(site=None):
             seen.add(machine_type)
             result.append(machine_type)
 
-    result.sort()
+    for forced_type in ["DRILLS", "FEL", "Loader", "Diesel bowser"]:
+        if forced_type not in seen:
+            seen.add(forced_type)
+            result.append(forced_type)
+
+    result.sort(
+        key=lambda value: _normalize_text(value).lower()
+    )
+
     return result
 
 
@@ -168,13 +193,12 @@ def get_site_machines(site, machine_type=None):
         config["doctype"],
         filters={
             config["site_field"]: site,
-            config["status_field"]: "Submitted",
+            "docstatus": 1,
         },
         fields=[
             config["fleet_no_field"],
             config["machine_type_field"],
             config["item_name_field"],
-            config["status_field"],
         ],
         order_by="asset_name asc",
         limit_page_length=0,

@@ -23,6 +23,47 @@ function normalize_text(value) {
     return String(value).replace(/\s+/g, ' ').trim();
 }
 
+function normalize_machine_type(value) {
+    const text = normalize_text(value);
+    const key = text.toLowerCase();
+
+    const aliases = {
+        'excavator': 'Excavator',
+        'adt': 'ADT',
+        'dozer': 'DOZER',
+
+        'water bowser': 'WATER BOWSER',
+        'water bowsers': 'WATER BOWSER',
+
+        'diesel bowser': 'Diesel bowser',
+        'diesel bowsers': 'Diesel bowser',
+
+        'grader': 'GRADER',
+        'tlb': 'TLB',
+
+        'drill': 'DRILLS',
+        'drills': 'DRILLS',
+        'drilling': 'DRILLS',
+
+        'ldv': 'LDV',
+        'lighting plant': 'LIGHTING PLANT',
+        'lightning plant': 'LIGHTING PLANT',
+
+        'water pump': 'WATER PUMP',
+        'generator': 'GENERATOR',
+        'genarator': 'GENERATOR',
+
+        'fel': 'FEL',
+        'front end loader': 'FEL',
+        'front-end loader': 'FEL',
+
+        'loader': 'Loader',
+        'loaders': 'Loader'
+    };
+
+    return aliases[key] || text;
+}
+
 /* =========================
    LIVE ID / TITLE
    ========================= */
@@ -56,7 +97,7 @@ function update_register_live_title(frm) {
 
 function get_row_cache_key(row) {
     const fleet_no = normalize_text(row.fleet_no);
-    const machine_type = normalize_text(row.machine_type);
+    const machine_type = normalize_machine_type(row.machine_type);
     return `${fleet_no}||${machine_type}`;
 }
 
@@ -104,9 +145,9 @@ function snapshot_current_row_state(frm) {
 
         const state = {
             fleet_no: normalize_text(row.fleet_no),
-            machine_type: normalize_text(row.machine_type),
+            machine_type: normalize_machine_type(row.machine_type),
             item_name: normalize_text(row.item_name),
-            checklist_submission: row.checklist_submission || ''
+            checklist_submission: row.checklist_submission
         };
 
         status_fields.forEach(fieldname => {
@@ -238,20 +279,27 @@ function apply_month_day_visibility(frm) {
 
 /* =========================
    MACHINE FILTER
-   Machine Type Filter hides/shows rows only.
-   It must not delete saved rows.
    ========================= */
 
 function set_select_options(frm, fieldname, values) {
     let unique_values = [...new Set(
         (Array.isArray(values) ? values : [])
-            .map(v => normalize_text(v))
+            .map(v => normalize_machine_type(v))
             .filter(v => v)
     )];
 
-    if (fieldname === 'machine_type_filter' && !unique_values.includes('DRILLS')) {
-        unique_values.push('DRILLS');
-    }
+    const forced_machine_types = [
+        'DRILLS',
+        'FEL',
+        'Loader',
+        'Diesel bowser'
+    ];
+
+    forced_machine_types.forEach(machine_type => {
+        if (!unique_values.includes(machine_type)) {
+            unique_values.push(machine_type);
+        }
+    });
 
     unique_values = unique_values.sort((a, b) => a.localeCompare(b, undefined, {
         numeric: true,
@@ -280,7 +328,7 @@ function populate_machine_type_options(frm) {
         return Promise.resolve();
     }
 
-    const current_value = normalize_text(frm.doc.machine_type_filter);
+    const current_value = normalize_machine_type(frm.doc.machine_type_filter);
 
     return frappe.call({
         method: 'engineering.engineering.doctype.engineering_checklist_register.engineering_checklist_register.get_machine_type_options',
@@ -292,7 +340,13 @@ function populate_machine_type_options(frm) {
 
         set_select_options(frm, 'machine_type_filter', types);
 
-        const allowed_types = [...types, 'DRILLS'];
+        const allowed_types = [
+            ...types.map(type => normalize_machine_type(type)),
+            'DRILLS',
+            'FEL',
+            'Loader',
+            'Diesel bowser'
+        ];
 
         if (current_value && !allowed_types.includes(current_value)) {
             frm.set_value('machine_type_filter', '');
@@ -310,20 +364,44 @@ function apply_machine_type_row_visibility(frm) {
     const grid = frm.fields_dict[child_table_fieldname]?.grid;
     if (!grid) return;
 
-    const selected_machine_type = normalize_text(frm.doc.machine_type_filter);
+    const selected_machine_type = normalize_machine_type(frm.doc.machine_type_filter);
+    const all_rows = frm.doc[child_table_fieldname] || [];
 
-    (grid.grid_rows || []).forEach(grid_row => {
-        const row_machine_type = normalize_text(grid_row.doc?.machine_type);
-        const should_show = !selected_machine_type || row_machine_type === selected_machine_type;
+    if (selected_machine_type && all_rows.length) {
+        const required_page_length = Math.max(all_rows.length, 50);
 
-        if (grid_row.wrapper) {
-            $(grid_row.wrapper).toggle(should_show);
+        if (grid.grid_pagination) {
+            grid.grid_pagination.page_length = required_page_length;
+            grid.grid_pagination.page = 1;
         }
 
-        if (grid_row.row) {
-            $(grid_row.row).toggle(should_show);
+        grid.page_length = required_page_length;
+
+        if (grid.df) {
+            grid.df.page_length = required_page_length;
         }
-    });
+
+        if (typeof grid.refresh === 'function') {
+            grid.refresh();
+        }
+    }
+
+    setTimeout(() => {
+        (grid.grid_rows || []).forEach(grid_row => {
+            const row_machine_type = normalize_machine_type(grid_row.doc?.machine_type);
+            const should_show = !selected_machine_type || row_machine_type === selected_machine_type;
+
+            if (grid_row.wrapper) {
+                $(grid_row.wrapper).toggle(should_show);
+            }
+
+            if (grid_row.row) {
+                $(grid_row.row).toggle(should_show);
+            }
+        });
+
+        lock_child_table(frm);
+    }, 150);
 }
 
 function load_machine_rows(frm) {
@@ -351,14 +429,14 @@ function load_machine_rows(frm) {
             machine_type: ''
         },
         freeze: true,
-        freeze_message: __('Loading machines...')
+        freeze_message: __('Loading submitted machines...')
     }).then(r => {
         let machines = Array.isArray(r.message) ? r.message : [];
 
         machines = machines
             .map(machine => ({
                 fleet_no: normalize_text(machine.fleet_no),
-                machine_type: normalize_text(machine.machine_type),
+                machine_type: normalize_machine_type(machine.machine_type),
                 item_name: normalize_text(machine.item_name)
             }))
             .filter(machine => machine.fleet_no || machine.machine_type || machine.item_name)
@@ -379,7 +457,7 @@ function load_machine_rows(frm) {
         lock_child_table(frm);
 
         setTimeout(() => {
-            refresh_checklist_submission_ui(frm, true);
+            refresh_checklist_submission_ui(frm, false);
             apply_machine_type_row_visibility(frm);
         }, 200);
     }).catch(err => {
@@ -620,11 +698,11 @@ function calculate_row_checklist_submission(frm, row) {
     });
 
     if (!total_target) {
-        return '0.0%';
+        return 0;
     }
 
     const percentage = (selected_count / total_target) * 100;
-    return percentage.toFixed(1) + '%';
+    return Number(percentage.toFixed(1));
 }
 
 function update_row_checklist_submission_values(frm) {
@@ -643,8 +721,13 @@ function update_row_checklist_submission_values(frm) {
 }
 
 function parse_percentage_value(value) {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+    }
+
     const text = normalize_text(value).replace('%', '');
     const number = parseFloat(text);
+
     return Number.isFinite(number) ? number : 0;
 }
 
@@ -662,7 +745,10 @@ function update_checklist_submission_average(frm) {
         let total = 0;
 
         rows.forEach(row => {
-            const row_value = row.checklist_submission || calculate_row_checklist_submission(frm, row);
+            const row_value = row.checklist_submission !== undefined && row.checklist_submission !== null && row.checklist_submission !== ''
+                ? row.checklist_submission
+                : calculate_row_checklist_submission(frm, row);
+
             total += parse_percentage_value(row_value);
         });
 
@@ -865,6 +951,8 @@ function style_row_checkbox_cells(frm) {
 
     grid.wrapper.addClass('engineering-checklist-grid-styled');
 
+    const is_dirty = frm.is_dirty && frm.is_dirty();
+
     (grid.grid_rows || []).forEach(grid_row => {
         const row_doc = grid_row.doc;
         if (!row_doc) return;
@@ -893,6 +981,7 @@ function style_row_checkbox_cells(frm) {
             }
 
             const $staticArea = $cell.find('.static-area');
+
             if ($staticArea.length) {
                 $staticArea.html(`<span class="checklist-status-short">${short_label}</span>`);
             }
@@ -900,12 +989,29 @@ function style_row_checkbox_cells(frm) {
 
         if (checklist_submission_fieldname) {
             const $submissionCell = get_grid_cell_wrapper(grid_row, checklist_submission_fieldname);
+
             if ($submissionCell && $submissionCell.length) {
                 $submissionCell.removeClass('checklist-submission-red checklist-submission-green');
 
-                const value = row_doc[checklist_submission_fieldname] || '0.0%';
+                const numeric_value = parse_percentage_value(row_doc[checklist_submission_fieldname]);
+                const display_value = numeric_value ? numeric_value.toFixed(1) + '%' : '0.0%';
 
-                if (value !== '0.0%') {
+                const $staticArea = $submissionCell.find('.static-area');
+
+                if (is_dirty) {
+                    if ($staticArea.length) {
+                        $staticArea.html('');
+                    }
+
+                    $submissionCell.removeClass('checklist-submission-red checklist-submission-green');
+                    return;
+                }
+
+                if ($staticArea.length) {
+                    $staticArea.html(display_value);
+                }
+
+                if (numeric_value > 0) {
                     $submissionCell.addClass('checklist-submission-green');
                 } else {
                     $submissionCell.addClass('checklist-submission-red');
@@ -985,7 +1091,7 @@ function bind_checklist_checkbox_listener(frm) {
     $(frm.wrapper).on('change', '.grid-body select', function () {
         setTimeout(() => {
             snapshot_current_row_state(frm);
-            refresh_checklist_submission_ui(frm, true);
+            refresh_checklist_submission_ui(frm, false);
         }, 80);
     });
 
@@ -1064,15 +1170,22 @@ frappe.ui.form.on('Engineering Checklist Register', {
 
     month(frm) {
         update_register_live_title(frm);
-        refresh_checklist_submission_ui(frm, true);
+        refresh_checklist_submission_ui(frm, false);
     },
 
     year(frm) {
         update_register_live_title(frm);
-        refresh_checklist_submission_ui(frm, true);
+        refresh_checklist_submission_ui(frm, false);
     },
 
     machine_type_filter(frm) {
+        const cleaned_value = normalize_machine_type(frm.doc.machine_type_filter);
+
+        if (frm.doc.machine_type_filter && frm.doc.machine_type_filter !== cleaned_value) {
+            frm.set_value('machine_type_filter', cleaned_value);
+            return;
+        }
+
         snapshot_current_row_state(frm);
 
         setTimeout(() => {
