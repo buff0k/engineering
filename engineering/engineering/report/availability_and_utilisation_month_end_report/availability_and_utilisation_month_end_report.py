@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from engineering.engineering.report.avail_and_util_summary import avail_and_util_summary as summary
+from is_production.production.report.avail_and_util_summary import avail_and_util_summary as summary
 
 
 def execute(filters=None):
