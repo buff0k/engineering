@@ -38,7 +38,6 @@ ALLOWED_MACHINE_TYPES = [
     "GENERATOR",
     "FEL",
     "Loader",
-    "Service Truck",
 ]
 
 
@@ -95,9 +94,6 @@ MACHINE_TYPE_ALIASES = {
 
     "loader": "Loader",
     "loaders": "Loader",
-
-    "service truck": "Service Truck",
-    "service trucks": "Service Truck",
 }
 
 

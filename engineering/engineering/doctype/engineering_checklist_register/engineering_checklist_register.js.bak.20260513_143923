@@ -58,10 +58,7 @@ function normalize_machine_type(value) {
         'front-end loader': 'FEL',
 
         'loader': 'Loader',
-        'loaders': 'Loader',
-
-        'service truck': 'Service Truck',
-        'service trucks': 'Service Truck'
+        'loaders': 'Loader'
     };
 
     return aliases[key] || text;
@@ -295,8 +292,7 @@ function set_select_options(frm, fieldname, values) {
         'DRILLS',
         'FEL',
         'Loader',
-        'Diesel bowser',
-        'Service Truck'
+        'Diesel bowser'
     ];
 
     forced_machine_types.forEach(machine_type => {
@@ -349,8 +345,7 @@ function populate_machine_type_options(frm) {
             'DRILLS',
             'FEL',
             'Loader',
-            'Diesel bowser',
-            'Service Truck'
+            'Diesel bowser'
         ];
 
         if (current_value && !allowed_types.includes(current_value)) {

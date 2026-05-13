@@ -682,7 +682,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
 """)
 
     chart_html = build_chart_html(machine_series)
-    trend_html = build_trend_html(machine_series)
+    trend_html = build_trend_html(location, start_date, end_date)
 
     return f"""
 <style>{DASH_CSS}</style>
@@ -712,11 +712,24 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
 """
 
 
-def build_trend_html(machine_series):
-    return """
+def build_trend_html(location, start_date, end_date):
+    report_href = (
+        "/app/query-report/Availability%20and%20Utilisation%20Month%20End%20Report"
+        f"?from_date={frappe.utils.quote(str(start_date))}"
+        f"&to_date={frappe.utils.quote(str(end_date))}"
+        f"&location={frappe.utils.quote(str(location))}"
+    )
+
+    return f"""
 <div class="isd-side">
   <div class="isd-cards">
-    <div class="isd-circle isd-circle-green">Dashboard</div>
+    <a
+      href="{report_href}"
+      class="isd-circle isd-circle-green"
+      style="text-decoration:none;color:inherit;cursor:pointer;"
+    >
+      Open<br>Report
+    </a>
   </div>
 
   <div class="isd-legend">
@@ -725,6 +738,7 @@ def build_trend_html(machine_series):
   </div>
 </div>
 """
+
 
 
 def build_chart_html(machine_series):
