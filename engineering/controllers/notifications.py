@@ -250,10 +250,7 @@ def _send_oem_booking_email(doc, action: str):
 
 
 def wearcheck_results_after_insert(doc, method=None):
-    # TEMP: Wearcheck email alert disabled.
-    # Original logic sends only for status 3 (Urgent) and 4 (Critical).
-    # _send_wearcheck_alert_email(doc)
-    pass
+    _send_wearcheck_alert_email(doc)
 
 def _send_wearcheck_alert_email(doc):
     status = cint(getattr(doc, "status", None) or 0)
