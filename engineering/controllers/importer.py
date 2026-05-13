@@ -217,7 +217,10 @@ def fetch_and_sync():
     if not url:
         frappe.throw("API Wearcheck Settings: endpoint_url is required")
 
-    res = requests.get(url, timeout=90)
+    api_key = settings.get_password("api_key") or ""
+    headers = {"X-API-Key": api_key} if api_key else {}
+
+    res = requests.get(url, headers=headers, timeout=90)
     res.raise_for_status()
     rows = res.json() or []
 
