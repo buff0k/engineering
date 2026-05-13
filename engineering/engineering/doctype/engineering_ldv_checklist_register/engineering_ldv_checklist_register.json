@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-03-31 09:51:27.291490",
+ "creation": "2026-05-12 16:31:51.391936",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -63,10 +63,10 @@
    "label": "Test"
   }
  ],
- "grid_page_length": 50,
+ "grid_page_length": 200,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-23 14:35:05.212419",
+ "modified": "2026-05-12 16:42:27.533633",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering LDV Checklist Register",
@@ -130,7 +130,7 @@
   }
  ],
  "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
+ "rows_threshold_for_grid_search": 9999,
  "search_fields": "site,month,year",
  "sort_field": "creation",
  "sort_order": "DESC",

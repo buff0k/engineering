@@ -61,6 +61,7 @@ MACHINE_TYPE_ALIASES = {
     "drilling": "DRILLS",
 
     "ldv": "LDV",
+
     "lighting plant": "LIGHTING PLANT",
     "lightning plant": "LIGHTING PLANT",
 
@@ -74,6 +75,12 @@ MACHINE_TYPE_ALIASES = {
 
     "loader": "Loader",
     "loaders": "Loader",
+}
+
+
+COMBINED_LDV_SITES = {
+    "gwab",
+    "klipfontein",
 }
 
 
@@ -100,6 +107,15 @@ def _clean_allowed_machine_type(value):
         return ""
 
     return MACHINE_TYPE_ALIASES.get(text.lower(), "")
+
+
+def _get_effective_site_filter(site):
+    site_text = _normalize_text(site)
+
+    if site_text.lower() in COMBINED_LDV_SITES:
+        return ["in", ["Gwab", "Klipfontein"]]
+
+    return site_text
 
 
 def _get_asset_source_config():
@@ -134,43 +150,8 @@ def get_machine_type_options(site=None):
     if not site:
         return []
 
-    config = _get_asset_source_config()
-
-    rows = frappe.get_all(
-        config["doctype"],
-        filters={
-            config["site_field"]: site,
-            "docstatus": 1,
-        },
-        fields=[
-            config["machine_type_field"],
-        ],
-        order_by="asset_category asc",
-        limit_page_length=0,
-    )
-
-    result = []
-    seen = set()
-
-    for row in rows:
-        machine_type = _clean_allowed_machine_type(
-            row.get(config["machine_type_field"])
-        )
-
-        if machine_type and machine_type not in seen:
-            seen.add(machine_type)
-            result.append(machine_type)
-
-    for forced_type in ["DRILLS", "FEL", "Loader", "Diesel bowser"]:
-        if forced_type not in seen:
-            seen.add(forced_type)
-            result.append(forced_type)
-
-    result.sort(
-        key=lambda value: _normalize_text(value).lower()
-    )
-
-    return result
+    # This LDV register should only show LDV as the machine type option.
+    return ["LDV"]
 
 
 @frappe.whitelist()
@@ -179,20 +160,15 @@ def get_site_machines(site, machine_type=None):
         return []
 
     config = _get_asset_source_config()
+    site_filter = _get_effective_site_filter(site)
 
-    cleaned_requested_type = (
-        _clean_allowed_machine_type(machine_type)
-        if machine_type
-        else ""
-    )
-
-    if machine_type and not cleaned_requested_type:
-        return []
+    # This register is specifically for LDVs, so force LDV even if blank is passed.
+    cleaned_requested_type = "LDV"
 
     asset_rows = frappe.get_all(
         config["doctype"],
         filters={
-            config["site_field"]: site,
+            config["site_field"]: site_filter,
             "docstatus": 1,
         },
         fields=[
@@ -214,7 +190,7 @@ def get_site_machines(site, machine_type=None):
         if not machine_type_value:
             continue
 
-        if cleaned_requested_type and machine_type_value != cleaned_requested_type:
+        if machine_type_value != cleaned_requested_type:
             continue
 
         result.append(

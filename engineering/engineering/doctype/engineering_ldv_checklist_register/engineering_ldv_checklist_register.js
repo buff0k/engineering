@@ -28,37 +28,7 @@ function normalize_machine_type(value) {
     const key = text.toLowerCase();
 
     const aliases = {
-        'excavator': 'Excavator',
-        'adt': 'ADT',
-        'dozer': 'DOZER',
-
-        'water bowser': 'WATER BOWSER',
-        'water bowsers': 'WATER BOWSER',
-
-        'diesel bowser': 'Diesel bowser',
-        'diesel bowsers': 'Diesel bowser',
-
-        'grader': 'GRADER',
-        'tlb': 'TLB',
-
-        'drill': 'DRILLS',
-        'drills': 'DRILLS',
-        'drilling': 'DRILLS',
-
-        'ldv': 'LDV',
-        'lighting plant': 'LIGHTING PLANT',
-        'lightning plant': 'LIGHTING PLANT',
-
-        'water pump': 'WATER PUMP',
-        'generator': 'GENERATOR',
-        'genarator': 'GENERATOR',
-
-        'fel': 'FEL',
-        'front end loader': 'FEL',
-        'front-end loader': 'FEL',
-
-        'loader': 'Loader',
-        'loaders': 'Loader'
+        'ldv': 'LDV'
     };
 
     return aliases[key] || text;
@@ -288,18 +258,9 @@ function set_select_options(frm, fieldname, values) {
             .filter(v => v)
     )];
 
-    const forced_machine_types = [
-        'DRILLS',
-        'FEL',
-        'Loader',
-        'Diesel bowser'
-    ];
-
-    forced_machine_types.forEach(machine_type => {
-        if (!unique_values.includes(machine_type)) {
-            unique_values.push(machine_type);
-        }
-    });
+    if (!unique_values.includes('LDV')) {
+        unique_values.push('LDV');
+    }
 
     unique_values = unique_values.sort((a, b) => a.localeCompare(b, undefined, {
         numeric: true,
@@ -320,41 +281,13 @@ function natural_desc_compare(a, b) {
 }
 
 function populate_machine_type_options(frm) {
-    if (!frm.doc.site) {
-        if (frm.is_new()) {
-            frm.set_value('machine_type_filter', '');
-        }
-        set_select_options(frm, 'machine_type_filter', []);
-        return Promise.resolve();
+    set_select_options(frm, 'machine_type_filter', ['LDV']);
+
+    if (frm.doc.machine_type_filter !== 'LDV') {
+        return frm.set_value('machine_type_filter', 'LDV');
     }
 
-    const current_value = normalize_machine_type(frm.doc.machine_type_filter);
-
-    return frappe.call({
-        method: 'engineering.engineering.doctype.engineering_ldv_checklist_register.engineering_ldv_checklist_register.get_machine_type_options',
-        args: {
-            site: frm.doc.site
-        }
-    }).then(r => {
-        const types = Array.isArray(r.message) ? r.message : [];
-
-        set_select_options(frm, 'machine_type_filter', types);
-
-        const allowed_types = [
-            ...types.map(type => normalize_machine_type(type)),
-            'DRILLS',
-            'FEL',
-            'Loader',
-            'Diesel bowser'
-        ];
-
-        if (current_value && !allowed_types.includes(current_value)) {
-            frm.set_value('machine_type_filter', '');
-        }
-    }).catch(err => {
-        console.error('Failed to load machine type options:', err);
-        frappe.msgprint(__('Failed to load Machine Type options. Check browser console.'));
-    });
+    return Promise.resolve();
 }
 
 function apply_machine_type_row_visibility(frm) {
@@ -387,6 +320,8 @@ function apply_machine_type_row_visibility(frm) {
     }
 
     setTimeout(() => {
+        hide_grid_search_row(frm);
+
         (grid.grid_rows || []).forEach(grid_row => {
             const row_machine_type = normalize_machine_type(grid_row.doc?.machine_type);
             const should_show = !selected_machine_type || row_machine_type === selected_machine_type;
@@ -426,10 +361,10 @@ function load_machine_rows(frm) {
         method: 'engineering.engineering.doctype.engineering_ldv_checklist_register.engineering_ldv_checklist_register.get_site_machines',
         args: {
             site: frm.doc.site,
-            machine_type: ''
+            machine_type: 'LDV'
         },
         freeze: true,
-        freeze_message: __('Loading submitted machines...')
+        freeze_message: __('Loading submitted LDVs...')
     }).then(r => {
         let machines = Array.isArray(r.message) ? r.message : [];
 
@@ -461,54 +396,52 @@ function load_machine_rows(frm) {
             apply_machine_type_row_visibility(frm);
         }, 200);
     }).catch(err => {
-        console.error('Failed to load machine rows:', err);
-        frappe.msgprint(__('Failed to load machine rows. Check browser console.'));
+        console.error('Failed to load LDV rows:', err);
+        frappe.msgprint(__('Failed to load LDV rows. Check browser console.'));
     });
 }
 
 /* =========================
-   CHECKLIST SUBMISSION
+   GRID STYLE / SEARCH ROW FIX
    ========================= */
 
 function inject_checklist_submission_styles() {
-    if (document.getElementById('checklist-submission-style-block')) return;
+    const old_style = document.getElementById('ldv-checklist-style-block');
+    if (old_style) {
+        old_style.remove();
+    }
 
     const style = document.createElement('style');
-    style.id = 'checklist-submission-style-block';
+    style.id = 'ldv-checklist-style-block';
     style.innerHTML = `
         .engineering-checklist-grid-styled .checklist-box-red {
             background: #ffb3b8 !important;
             border: 2px solid #dc3545 !important;
             border-radius: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(220, 53, 69, 0.18) !important;
         }
 
         .engineering-checklist-grid-styled .checklist-box-green {
             background: #8fe3b0 !important;
             border: 2px solid #198754 !important;
             border-radius: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(25, 135, 84, 0.18) !important;
         }
 
         .engineering-checklist-grid-styled .checklist-box-offsite {
             background: #d9d9d9 !important;
             border: 2px solid #7a7a7a !important;
             border-radius: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(122, 122, 122, 0.18) !important;
         }
 
         .engineering-checklist-grid-styled .checklist-box-breakdown {
             background: #ffd59e !important;
             border: 2px solid #fd7e14 !important;
             border-radius: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(253, 126, 20, 0.18) !important;
         }
 
         .engineering-checklist-grid-styled .checklist-box-service {
             background: #bfe4ff !important;
             border: 2px solid #0d6efd !important;
             border-radius: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(13, 110, 253, 0.18) !important;
         }
 
         .engineering-checklist-grid-styled .checklist-status-short {
@@ -526,7 +459,6 @@ function inject_checklist_submission_styles() {
             border: 2px solid #dc3545 !important;
             border-radius: 6px !important;
             padding: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(220, 53, 69, 0.18) !important;
         }
 
         .engineering-checklist-grid-styled .checklist-submission-green {
@@ -536,16 +468,32 @@ function inject_checklist_submission_styles() {
             border: 2px solid #198754 !important;
             border-radius: 6px !important;
             padding: 6px !important;
-            box-shadow: inset 0 0 0 1px rgba(25, 135, 84, 0.18) !important;
+        }
+
+        .engineering-checklist-grid-styled .form-grid {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            max-height: 72vh !important;
+        }
+
+        .engineering-checklist-grid-styled .grid-body {
+            overflow: visible !important;
+            position: relative !important;
+        }
+
+        .engineering-checklist-grid-styled .grid-heading-row {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 900 !important;
+            background: #f5f5f5 !important;
         }
 
         .engineering-checklist-grid-styled .grid-heading-row,
-        .engineering-checklist-grid-styled .grid-heading-row [data-fieldname],
-        .engineering-checklist-grid-styled .grid-heading-row .row-index,
-        .engineering-checklist-grid-styled .grid-heading-row div,
-        .engineering-checklist-grid-styled .grid-heading-row span {
+        .engineering-checklist-grid-styled .grid-heading-row * {
             color: #000000 !important;
             font-weight: 800 !important;
+            background-color: #f5f5f5 !important;
         }
 
         .engineering-checklist-grid-styled .grid-body [data-fieldname],
@@ -558,33 +506,31 @@ function inject_checklist_submission_styles() {
             font-weight: 700 !important;
         }
 
+        .engineering-checklist-grid-styled .ldv-grid-search-row-hidden,
+        .engineering-checklist-grid-styled .grid-search-row,
+        .engineering-checklist-grid-styled .grid-filter-row {
+            display: none !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+            visibility: hidden !important;
+        }
+
         .engineering-checklist-grid-styled .checklist-top-scrollbar {
             overflow-x: auto !important;
             overflow-y: hidden !important;
             height: 18px !important;
             margin-bottom: 6px !important;
             border-bottom: 1px solid #d1d8dd !important;
+            background: #ffffff !important;
         }
 
         .engineering-checklist-grid-styled .checklist-top-scrollbar-inner {
             height: 1px !important;
-        }
-
-        .engineering-checklist-grid-styled .form-grid {
-            overflow-x: auto !important;
-            overflow-y: hidden !important;
-            position: relative !important;
-        }
-
-        .engineering-checklist-grid-styled .grid-body {
-            overflow-x: visible !important;
-            overflow-y: visible !important;
-            position: relative !important;
-        }
-
-        .engineering-checklist-grid-styled .grid-heading-row {
-            position: relative !important;
-            z-index: 50 !important;
         }
 
         .engineering-checklist-grid-styled [data-fieldname],
@@ -596,7 +542,7 @@ function inject_checklist_submission_styles() {
         .engineering-checklist-grid-styled .checklist-frozen-header {
             position: sticky !important;
             white-space: nowrap !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             background-clip: padding-box !important;
         }
 
@@ -613,27 +559,31 @@ function inject_checklist_submission_styles() {
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-idx {
-            z-index: 60 !important;
+            z-index: 700 !important;
+            text-align: center !important;
+            color: #000000 !important;
+            font-weight: 800 !important;
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-fleet {
-            z-index: 61 !important;
+            z-index: 701 !important;
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-machine {
-            z-index: 62 !important;
+            z-index: 702 !important;
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-idx {
-            z-index: 70 !important;
+            z-index: 950 !important;
+            text-align: center !important;
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-fleet {
-            z-index: 71 !important;
+            z-index: 951 !important;
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-machine {
-            z-index: 72 !important;
+            z-index: 952 !important;
         }
 
         .engineering-checklist-grid-styled .checklist-hidden-day-column {
@@ -642,6 +592,44 @@ function inject_checklist_submission_styles() {
     `;
     document.head.appendChild(style);
 }
+
+function hide_grid_search_row(frm) {
+    const child_table_fieldname = get_child_table_fieldname(frm);
+    if (!child_table_fieldname) return;
+
+    const grid = frm.fields_dict[child_table_fieldname]?.grid;
+    if (!grid) return;
+
+    grid.wrapper.addClass('engineering-checklist-grid-styled');
+
+    // Frappe known search/filter rows
+    grid.wrapper.find('.grid-search-row, .grid-filter-row')
+        .addClass('ldv-grid-search-row-hidden')
+        .hide();
+
+    // Only inspect the first row directly below the header.
+    // This avoids hiding real data rows.
+    const $header = grid.wrapper.find('.grid-heading-row').first();
+    const $possible_search_row = $header.next('.grid-row');
+
+    if ($possible_search_row.length) {
+        const has_inputs = $possible_search_row.find('input, select, textarea, .input-sm, .filter-input').length > 0;
+        const row_index_text = normalize_text($possible_search_row.find('.row-index').first().text());
+        const has_static_area = $possible_search_row.find('.static-area').length > 0;
+        const has_data_name = !!$possible_search_row.attr('data-name');
+        const has_data_idx = !!$possible_search_row.attr('data-idx');
+
+        if (has_inputs && !has_static_area && !has_data_name && !has_data_idx && row_index_text === '') {
+            $possible_search_row
+                .addClass('ldv-grid-search-row-hidden')
+                .hide();
+        }
+    }
+}
+
+/* =========================
+   CHECKLIST SUBMISSION
+   ========================= */
 
 function get_checklist_submission_fieldname() {
     const meta = frappe.get_meta(CHECKLIST_CHILD_DOCTYPE);
@@ -889,7 +877,7 @@ function freeze_left_columns(frm) {
             type: 'field',
             fieldname: 'fleet_no',
             className: 'checklist-frozen-fleet',
-            width: get_effective_width($fleetHeader, 140),
+            width: get_effective_width($fleetHeader, 200),
             header: $fleetHeader
         });
     }
@@ -1075,18 +1063,24 @@ function refresh_checklist_submission_ui(frm, update_values = false) {
     }
 
     setTimeout(() => {
+        hide_grid_search_row(frm);
         add_top_horizontal_scrollbar(frm);
         apply_month_day_visibility(frm);
         style_row_checkbox_cells(frm);
         freeze_left_columns(frm);
         apply_machine_type_row_visibility(frm);
-    }, 200);
+    }, 250);
+
+    setTimeout(() => {
+        hide_grid_search_row(frm);
+        freeze_left_columns(frm);
+    }, 800);
 }
 
 function bind_checklist_checkbox_listener(frm) {
-    if ($(frm.wrapper).data('checklist-submission-bound')) return;
+    if ($(frm.wrapper).data('ldv-checklist-submission-bound')) return;
 
-    $(frm.wrapper).data('checklist-submission-bound', true);
+    $(frm.wrapper).data('ldv-checklist-submission-bound', true);
 
     $(frm.wrapper).on('change', '.grid-body select', function () {
         setTimeout(() => {
@@ -1095,7 +1089,7 @@ function bind_checklist_checkbox_listener(frm) {
         }, 80);
     });
 
-    $(window).off('resize.checklist_freeze').on('resize.checklist_freeze', function () {
+    $(window).off('resize.ldv_checklist_freeze').on('resize.ldv_checklist_freeze', function () {
         setTimeout(() => {
             refresh_checklist_submission_ui(frm, false);
         }, 120);
@@ -1132,7 +1126,6 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
         update_register_live_title(frm);
         lock_child_table(frm);
         bind_checklist_checkbox_listener(frm);
-
         refresh_checklist_submission_ui(frm, false);
 
         if (frm.doc.site) {
@@ -1160,7 +1153,7 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
         update_register_live_title(frm);
 
         frm.__row_state_cache = {};
-        frm.set_value('machine_type_filter', '');
+        frm.set_value('machine_type_filter', 'LDV');
         frm.set_value('checklist_submission_average', '0.0%');
 
         populate_machine_type_options(frm).then(() => {
@@ -1179,10 +1172,8 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
     },
 
     machine_type_filter(frm) {
-        const cleaned_value = normalize_machine_type(frm.doc.machine_type_filter);
-
-        if (frm.doc.machine_type_filter && frm.doc.machine_type_filter !== cleaned_value) {
-            frm.set_value('machine_type_filter', cleaned_value);
+        if (frm.doc.machine_type_filter !== 'LDV') {
+            frm.set_value('machine_type_filter', 'LDV');
             return;
         }
 

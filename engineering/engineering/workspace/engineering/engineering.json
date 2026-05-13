@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"1aT7BYSmoU\",\"type\":\"card\",\"data\":{\"card_name\":\"Services \",\"col\":4}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Engineering</span>\",\"col\":12}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":4}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"u3mj-UuLH3\",\"type\":\"card\",\"data\":{\"card_name\":\"Plant Maintenance\",\"col\":5}},{\"id\":\"urzKZiJRDP\",\"type\":\"card\",\"data\":{\"card_name\":\"Dashboards\",\"col\":5}}]",
  "creation": "2024-12-11 11:58:53.866876",
  "custom_blocks": [],
  "docstatus": 0,
@@ -207,8 +207,138 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "OEM Booking",
+   "link_count": 0,
+   "link_to": "OEM Booking",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Component Replacement Report",
+   "link_count": 0,
+   "link_to": "Component Replacement Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Jobcard",
+   "link_count": 0,
+   "link_to": "Mechanical Service Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Component Replacement Report",
+   "link_count": 0,
+   "link_to": "Component Replacement Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "OEM Booking",
+   "link_count": 0,
+   "link_to": "OEM Booking",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns (Capture)",
+   "link_count": 0,
+   "link_to": "Plant Breakdown or Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Breakdown Report",
+   "link_count": 0,
+   "link_to": "Availability and utilization Asset timeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other Lost Hours (Capture)",
+   "link_count": 0,
+   "link_to": "Daily Lost Hours Recon",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Logsheet Report",
+   "link_count": 0,
+   "link_to": "MSR Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Repair Log Sheet",
+   "link_count": 0,
+   "link_to": "Repair Log Sheet",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Support Equipment",
+   "link_count": 0,
+   "link_to": "Support Equipment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Checklist Register",
+   "link_count": 0,
+   "link_to": "Engineering Checklist Register",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre Use Deviation",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Availability and Utilisation Reports",
-   "link_count": 5,
+   "link_count": 19,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -396,8 +526,18 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Engineering LDV Checklist Register",
+   "link_count": 0,
+   "link_to": "Engineering LDV Checklist Register",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Dashboards",
-   "link_count": 7,
+   "link_count": 8,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -471,9 +611,19 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Daily Availability and Utilisation Dashboard",
+   "link_count": 0,
+   "link_to": "Daily Availability and Utilisation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-08 13:48:26.783886",
+ "modified": "2026-05-12 21:32:24.236521",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
