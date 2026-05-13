@@ -74,6 +74,9 @@ def get_data(filters):
 				"shift_breakdown_hours": 0,
 				"shift_available_hours": 0,
 				"shift_other_lost_hours": 0,
+				"avail_percentages": [],
+				"util_percentages": [],
+				"emp_avail_percentages": [],
 				"breakdown_reason": [],
 				"other_delay_reason": [],
 			}
@@ -85,6 +88,10 @@ def get_data(filters):
 		target["shift_breakdown_hours"] += flt(row.get("shift_breakdown_hours"))
 		target["shift_available_hours"] += flt(row.get("shift_available_hours"))
 		target["shift_other_lost_hours"] += flt(row.get("shift_other_lost_hours"))
+
+		target["avail_percentages"].append(flt(row.get("plant_shift_availability")))
+		target["util_percentages"].append(flt(row.get("plant_shift_utilisation")))
+		target["emp_avail_percentages"].append(flt(row.get("employee_availability")))
 
 		if row.get("breakdown_reason"):
 			target["breakdown_reason"].append(row.get("breakdown_reason"))
@@ -106,14 +113,23 @@ def get_data(filters):
 			"asset_name": row["asset_name"],
 			"work_hrs": summary.r1(work_hrs),
 			"mechanical_downtime": summary.r1(mechanical_downtime),
-			"avail_percent": summary.calc_availability(required_hrs, available_hrs),
-			"util_percent": summary.calc_utilisation(work_hrs, available_hrs),
-			"emp_avail_percent": summary.calc_employee_availability(required_hrs, other_lost_hrs),
+			"avail_percent": average_percent(row["avail_percentages"]),
+			"util_percent": average_percent(row["util_percentages"]),
+			"emp_avail_percent": average_percent(row["emp_avail_percentages"]),
 			"breakdown_reason": clean_join(row["breakdown_reason"]),
 			"other_delay_reason": clean_join(row["other_delay_reason"]),
 		})
-
 	return data
+
+
+def average_percent(values):
+	valid_values = [flt(value) for value in values if value is not None]
+
+	if not valid_values:
+		return 0
+
+	return summary.r1(sum(valid_values) / len(valid_values))
+
 
 
 
