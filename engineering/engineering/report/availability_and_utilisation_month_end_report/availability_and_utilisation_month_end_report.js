@@ -49,11 +49,11 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 			return `
 				<span style="
 					display: block;
-					padding: 6px 10px;
-					background: #0f172a;
-					color: #ffffff;
+					padding: 2px 4px;
+					color: #0f172a;
 					font-weight: 800;
-					border-radius: 6px;
+					font-size: 14px;
+					border-bottom: 2px solid #94a3b8;
 				">
 					${value || ""}
 				</span>
