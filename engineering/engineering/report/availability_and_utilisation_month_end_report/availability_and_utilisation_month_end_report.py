@@ -3,7 +3,9 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, formatdate
+from frappe.utils import flt
+
+from engineering.engineering.report.avail_and_util_summary import avail_and_util_summary as summary
 
 
 def execute(filters=None):
@@ -31,75 +33,103 @@ def get_columns():
 
 
 
+
+
 def get_data(filters):
-	conditions = ["shift_date between %(from_date)s and %(to_date)s"]
-	values = {
-		"from_date": filters.get("from_date"),
-		"to_date": filters.get("to_date"),
+	summary_filters = {
+		"start_date": filters.get("from_date"),
+		"end_date": filters.get("to_date"),
+		"location": filters.get("location"),
 	}
 
-	if filters.get("location"):
-		conditions.append("location = %(location)s")
-		values["location"] = filters.get("location")
+	summary_rows = summary.get_grouped_data(summary_filters)
+
+	machine_rows = [
+		row for row in summary_rows
+		if row.get("indent") == 2
+	]
 
 	if filters.get("asset_category"):
-		conditions.append("asset_category = %(asset_category)s")
-		values["asset_category"] = filters.get("asset_category")
+		machine_rows = [
+			row for row in machine_rows
+			if row.get("asset_category") == filters.get("asset_category")
+		]
 
-	records = frappe.db.sql(
-		f"""
-		select
-			asset_category,
-			asset_name,
-			location,
-			sum(shift_working_hours) as work_hrs,
-			sum(shift_breakdown_hours) as mechanical_downtime,
-			sum(shift_required_hours) as required_hrs,
-			sum(shift_available_hours) as available_hrs,
-			sum(shift_other_lost_hours) as other_lost_hrs
-		from `tabAvailability and Utilisation`
-		where {" and ".join(conditions)}
-		group by asset_category, asset_name, location
-		order by asset_category asc, asset_name asc
-		""",
-		values,
-		as_dict=True,
-	)
+	grouped = {}
+
+	for row in machine_rows:
+		key = (
+			row.get("asset_category"),
+			row.get("asset_name"),
+			row.get("location"),
+		)
+
+		if key not in grouped:
+			grouped[key] = {
+				"asset_category": row.get("asset_category"),
+				"asset_name": row.get("asset_name"),
+				"location": row.get("location"),
+				"shift_required_hours": 0,
+				"shift_working_hours": 0,
+				"shift_breakdown_hours": 0,
+				"shift_available_hours": 0,
+				"shift_other_lost_hours": 0,
+				"breakdown_reason": [],
+				"other_delay_reason": [],
+			}
+
+		target = grouped[key]
+
+		target["shift_required_hours"] += flt(row.get("shift_required_hours"))
+		target["shift_working_hours"] += flt(row.get("shift_working_hours"))
+		target["shift_breakdown_hours"] += flt(row.get("shift_breakdown_hours"))
+		target["shift_available_hours"] += flt(row.get("shift_available_hours"))
+		target["shift_other_lost_hours"] += flt(row.get("shift_other_lost_hours"))
+
+		if row.get("breakdown_reason"):
+			target["breakdown_reason"].append(row.get("breakdown_reason"))
+
+		if row.get("other_delay_reason"):
+			target["other_delay_reason"].append(row.get("other_delay_reason"))
 
 	data = []
 
-	for row in records:
-		required_hrs = flt(row.required_hrs)
-		available_hrs = flt(row.available_hrs)
-		work_hrs = flt(row.work_hrs)
-		mechanical_downtime = flt(row.mechanical_downtime)
-
-		avail_percent = 0
-		if required_hrs:
-			avail_percent = (available_hrs / required_hrs) * 100
-
-		util_percent = 0
-		if available_hrs:
-			util_percent = (work_hrs / available_hrs) * 100
-
-		emp_avail_percent = 0
-		if required_hrs:
-			emp_avail_percent = ((work_hrs + mechanical_downtime) / required_hrs) * 100
+	for row in grouped.values():
+		required_hrs = flt(row["shift_required_hours"])
+		available_hrs = flt(row["shift_available_hours"])
+		work_hrs = flt(row["shift_working_hours"])
+		mechanical_downtime = flt(row["shift_breakdown_hours"])
+		other_lost_hrs = flt(row["shift_other_lost_hours"])
 
 		data.append({
-			"asset_category": row.asset_category,
-			"asset_name": row.asset_name,
-			"work_hrs": work_hrs,
-			"mechanical_downtime": mechanical_downtime,
-			"avail_percent": min(flt(avail_percent, 1), 100),
-			"util_percent": min(flt(util_percent, 1), 100),
-			"emp_avail_percent": min(flt(emp_avail_percent, 1), 100),
-			"breakdown_reason": get_breakdown_reason(row, filters),
-			"other_delay_reason": get_other_delay_reason(row),
+			"asset_category": row["asset_category"],
+			"asset_name": row["asset_name"],
+			"work_hrs": summary.r1(work_hrs),
+			"mechanical_downtime": summary.r1(mechanical_downtime),
+			"avail_percent": summary.calc_availability(required_hrs, available_hrs),
+			"util_percent": summary.calc_utilisation(work_hrs, available_hrs),
+			"emp_avail_percent": summary.calc_employee_availability(required_hrs, other_lost_hrs),
+			"breakdown_reason": clean_join(row["breakdown_reason"]),
+			"other_delay_reason": clean_join(row["other_delay_reason"]),
 		})
 
 	return data
 
+
+
+def clean_join(values):
+	cleaned = []
+
+	for value in values:
+		if not value:
+			continue
+
+		for part in str(value).split(";"):
+			part = part.strip()
+			if part and part not in cleaned:
+				cleaned.append(part)
+
+	return "\n".join(cleaned)
 
 
 
