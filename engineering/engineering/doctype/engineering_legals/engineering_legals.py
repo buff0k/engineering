@@ -892,8 +892,15 @@ def run_engineering_legals_sharepoint_sync(docname: str):
             doc.reload()
 
         upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
-        move_engineering_legal_file_to_folder(doc)
         _mark_sharepoint_sync_success(docname)
+
+        try:
+            move_engineering_legal_file_to_folder(doc)
+        except Exception:
+            frappe.log_error(
+                title="Engineering Legals file move warning",
+                message=frappe.get_traceback(),
+            )
 
     except Exception:
         _mark_sharepoint_sync_failure(docname, frappe.get_traceback())

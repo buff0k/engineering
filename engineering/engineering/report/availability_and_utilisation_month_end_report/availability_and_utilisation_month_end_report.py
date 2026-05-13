@@ -102,41 +102,27 @@ def get_data(filters):
 
 	data = []
 
-	category_totals = {}
+	category_total_rows = [
+		row for row in summary_rows
+		if row.get("indent") == 0
+	]
 
-	for row in grouped.values():
-		category = row["asset_category"]
+	if filters.get("asset_category"):
+		category_total_rows = [
+			row for row in category_total_rows
+			if row.get("asset_category") == filters.get("asset_category")
+		]
 
-		if category not in category_totals:
-			category_totals[category] = {
-				"asset_category": category,
-				"required_hrs": 0,
-				"work_hrs": 0,
-				"mechanical_downtime": 0,
-				"avail_percentages": [],
-				"util_percentages": [],
-				"emp_avail_percentages": [],
-			}
-
-		category_totals[category]["required_hrs"] += flt(row["shift_required_hours"])
-		category_totals[category]["work_hrs"] += flt(row["shift_working_hours"])
-		category_totals[category]["mechanical_downtime"] += flt(row["shift_breakdown_hours"])
-		category_totals[category]["avail_percentages"].extend(row["avail_percentages"])
-		category_totals[category]["util_percentages"].extend(row["util_percentages"])
-		category_totals[category]["emp_avail_percentages"].extend(row["emp_avail_percentages"])
-
-	for category in sorted(category_totals):
-		row = category_totals[category]
-
+	for row in category_total_rows:
 		data.append({
-			"asset_category": f"{category} TOTAL",
+			"asset_category": row.get("asset_category"),
 			"asset_name": "",
-			"required_hrs": summary.r1(row["required_hrs"]),
-			"work_hrs": summary.r1(row["work_hrs"]),
-			"mechanical_downtime": summary.r1(row["mechanical_downtime"]),
-			"avail_percent": average_percent(row["avail_percentages"]),
-			"util_percent": average_percent(row["util_percentages"]),
-			"emp_avail_percent": average_percent(row["emp_avail_percentages"]),
+			"required_hrs": summary.r1(row.get("shift_required_hours")),
+			"work_hrs": summary.r1(row.get("shift_working_hours")),
+			"mechanical_downtime": summary.r1(row.get("shift_breakdown_hours")),
+			"avail_percent": summary.r1(row.get("plant_shift_availability")),
+			"util_percent": summary.r1(row.get("plant_shift_utilisation")),
+			"emp_avail_percent": summary.r1(row.get("employee_availability")),
 			"breakdown_reason": "",
 			"other_delay_reason": "",
 			"is_category_total": 1,

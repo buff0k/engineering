@@ -46,6 +46,10 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 		}
 
 		if (data.is_category_total) {
+			if (!value || String(value).trim() === "") {
+				return "";
+			}
+
 			return `
 				<span style="
 					display: block;
@@ -55,7 +59,7 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 					font-size: 14px;
 					border-bottom: 2px solid #94a3b8;
 				">
-					${value || ""}
+					${value}
 				</span>
 			`;
 		}
