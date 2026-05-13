@@ -18,7 +18,6 @@ def execute(filters=None):
 def get_columns():
 	return [
 		{"label": _("Asset Category"), "fieldname": "asset_category", "fieldtype": "Data", "width": 130},
-		{"label": _("Shift Date"), "fieldname": "shift_date", "fieldtype": "Data", "width": 110},
 		{"label": _("Asset Name"), "fieldname": "asset_name", "fieldtype": "Data", "width": 110},
 		{"label": _("Work Hrs"), "fieldname": "work_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
 		{"label": _("Mechanical Downtime"), "fieldname": "mechanical_downtime", "fieldtype": "Float", "precision": 1, "width": 160},
@@ -28,6 +27,8 @@ def get_columns():
 		{"label": _("Breakdown Reason"), "fieldname": "breakdown_reason", "fieldtype": "Small Text", "width": 300},
 		{"label": _("Other Delay Reason"), "fieldname": "other_delay_reason", "fieldtype": "Small Text", "width": 300},
 	]
+
+
 
 
 def get_data(filters):
@@ -48,20 +49,18 @@ def get_data(filters):
 	records = frappe.db.sql(
 		f"""
 		select
-			name,
 			asset_category,
-			shift_date,
 			asset_name,
 			location,
-			shift_working_hours,
-			shift_breakdown_hours,
-			shift_required_hours,
-			plant_shift_availability,
-			plant_shift_utilisation,
-			shift_other_lost_hours
+			sum(shift_working_hours) as work_hrs,
+			sum(shift_breakdown_hours) as mechanical_downtime,
+			sum(shift_required_hours) as required_hrs,
+			sum(shift_available_hours) as available_hrs,
+			sum(shift_other_lost_hours) as other_lost_hrs
 		from `tabAvailability and Utilisation`
 		where {" and ".join(conditions)}
-		order by asset_category asc, shift_date asc, asset_name asc
+		group by asset_category, asset_name, location
+		order by asset_category asc, asset_name asc
 		""",
 		values,
 		as_dict=True,
@@ -70,31 +69,42 @@ def get_data(filters):
 	data = []
 
 	for row in records:
-		required_hours = flt(row.shift_required_hours)
-		work_hrs = flt(row.shift_working_hours)
-		mechanical_downtime = flt(row.shift_breakdown_hours)
+		required_hrs = flt(row.required_hrs)
+		available_hrs = flt(row.available_hrs)
+		work_hrs = flt(row.work_hrs)
+		mechanical_downtime = flt(row.mechanical_downtime)
+
+		avail_percent = 0
+		if required_hrs:
+			avail_percent = (available_hrs / required_hrs) * 100
+
+		util_percent = 0
+		if available_hrs:
+			util_percent = (work_hrs / available_hrs) * 100
 
 		emp_avail_percent = 0
-		if required_hours:
-			emp_avail_percent = ((work_hrs + mechanical_downtime) / required_hours) * 100
+		if required_hrs:
+			emp_avail_percent = ((work_hrs + mechanical_downtime) / required_hrs) * 100
 
 		data.append({
 			"asset_category": row.asset_category,
-			"shift_date": formatdate(row.shift_date, "dd-MM-yyyy"),
 			"asset_name": row.asset_name,
 			"work_hrs": work_hrs,
 			"mechanical_downtime": mechanical_downtime,
-			"avail_percent": flt(row.plant_shift_availability, 1),
-			"util_percent": flt(row.plant_shift_utilisation, 1),
-			"emp_avail_percent": flt(emp_avail_percent, 1),
-			"breakdown_reason": get_breakdown_reason(row),
+			"avail_percent": min(flt(avail_percent, 1), 100),
+			"util_percent": min(flt(util_percent, 1), 100),
+			"emp_avail_percent": min(flt(emp_avail_percent, 1), 100),
+			"breakdown_reason": get_breakdown_reason(row, filters),
 			"other_delay_reason": get_other_delay_reason(row),
 		})
 
 	return data
 
 
-def get_breakdown_reason(row):
+
+
+
+def get_breakdown_reason(row, filters):
 	if not frappe.db.exists("DocType", "Breakdown History"):
 		return None
 
@@ -123,14 +133,15 @@ def get_breakdown_reason(row):
 		from `tabBreakdown History`
 		where asset_name = %(asset_name)s
 			and location = %(location)s
-			and date(update_date_time) = %(shift_date)s
+			and date(update_date_time) between %(from_date)s and %(to_date)s
 			and ifnull(`{reason_field}`, '') != ''
 		order by update_date_time asc
 		""",
 		{
 			"asset_name": row.asset_name,
 			"location": row.location,
-			"shift_date": row.shift_date,
+			"from_date": filters.get("from_date"),
+			"to_date": filters.get("to_date"),
 		},
 		as_dict=True,
 	)
@@ -138,10 +149,15 @@ def get_breakdown_reason(row):
 	return "; ".join([d.get(reason_field) for d in reasons if d.get(reason_field)])
 
 
+
+
+
+
+
 def get_other_delay_reason(row):
 	reasons = []
 
-	if flt(row.shift_other_lost_hours) > 0:
+	if flt(row.other_lost_hrs) > 0:
 		reasons.append("Other lost hours")
 
 	return "\n".join(reasons) if reasons else None

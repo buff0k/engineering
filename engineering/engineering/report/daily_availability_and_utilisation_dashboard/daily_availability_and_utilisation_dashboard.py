@@ -575,6 +575,10 @@ def build_summary_averages_from_source_rows(rows):
         if available:
             util_pct = (working / available) * 100.0
 
+        # Match Avail and Util summary: utilisation must not display above 100%.
+        if util_pct is not None and util_pct > 100.0:
+            util_pct = 100.0
+
         out[ui_label] = {
             "avail": avail_pct,
             "util": util_pct,
