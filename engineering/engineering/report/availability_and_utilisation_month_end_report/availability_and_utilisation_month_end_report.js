@@ -101,7 +101,7 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 			`;
 		}
 
-		if (column.fieldname === "work_hrs") {
+		if (column.fieldname === "work_hrs" || column.fieldname === "required_hrs") {
 			return `
 				<span style="
 					color: #0f172a;

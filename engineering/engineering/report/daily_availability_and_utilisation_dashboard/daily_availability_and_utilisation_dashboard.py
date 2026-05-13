@@ -506,33 +506,13 @@ def get_util(row):
 
 
 def build_summary_averages_from_source_rows(rows):
-    # Match Avail and Util summary totals.
-    # Do NOT average daily percentages.
-    # Availability = sum(shift_available_hours) / sum(shift_required_hours) * 100
-    # Utilisation  = sum(shift_working_hours) / sum(shift_available_hours) * 100
     out = {
         "ADT's": {"avail": None, "util": None},
         "Excavator's": {"avail": None, "util": None},
         "Dozer's": {"avail": None, "util": None},
     }
 
-    totals = {
-        "ADT's": {
-            "required": 0.0,
-            "available": 0.0,
-            "working": 0.0,
-        },
-        "Excavator's": {
-            "required": 0.0,
-            "available": 0.0,
-            "working": 0.0,
-        },
-        "Dozer's": {
-            "required": 0.0,
-            "available": 0.0,
-            "working": 0.0,
-        },
-    }
+    candidates = []
 
     for row in rows:
         if not isinstance(row, dict):
@@ -543,49 +523,52 @@ def build_summary_averages_from_source_rows(rows):
         if category not in CATEGORY_MAP:
             continue
 
-        # Use only parent/category summary rows.
-        # These are indent 1 and normally have no asset_name.
-        if get_indent(row) != 1:
+        machine = get_machine(row)
+        indent = get_indent(row)
+
+        # Summary rows are the parent/category rows.
+        # Child rows usually have a machine number or deeper indent.
+        if machine:
             continue
 
-        if get_machine(row):
-            continue
+        candidates.append(row)
 
+    for row in candidates:
+        category = get_category(row)
         ui_label = CATEGORY_MAP[category]
 
-        required = to_float(row.get("shift_required_hours")) or 0.0
-        available = to_float(row.get("shift_available_hours")) or 0.0
-        working = to_float(row.get("shift_working_hours")) or 0.0
-
-        totals[ui_label]["required"] += required
-        totals[ui_label]["available"] += available
-        totals[ui_label]["working"] += working
-
-    for ui_label, vals in totals.items():
-        required = vals["required"]
-        available = vals["available"]
-        working = vals["working"]
-
-        avail_pct = None
-        util_pct = None
-
-        if required:
-            avail_pct = (available / required) * 100.0
-
-        if available:
-            util_pct = (working / available) * 100.0
-
-        # Match Avail and Util summary: utilisation must not display above 100%.
-        if util_pct is not None and util_pct > 100.0:
-            util_pct = 100.0
+        av = get_avail(row)
+        ut = get_util(row)
 
         out[ui_label] = {
-            "avail": avail_pct,
-            "util": util_pct,
+            "avail": av,
+            "util": ut,
         }
 
-    return out
+    # Fallback: if parent rows were not detected, use the lowest indent row per category.
+    for db_category, ui_label in CATEGORY_MAP.items():
+        if out[ui_label]["avail"] is not None or out[ui_label]["util"] is not None:
+            continue
 
+        category_rows = [
+            row for row in rows
+            if isinstance(row, dict) and get_category(row) == db_category
+        ]
+
+        if not category_rows:
+            continue
+
+        min_indent = min(get_indent(row) for row in category_rows)
+        parent_rows = [row for row in category_rows if get_indent(row) == min_indent]
+
+        if parent_rows:
+            row = parent_rows[0]
+            out[ui_label] = {
+                "avail": get_avail(row),
+                "util": get_util(row),
+            }
+
+    return out
 
 
 def build_machine_series_from_source_rows(rows):
@@ -699,7 +682,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
 """)
 
     chart_html = build_chart_html(machine_series)
-    trend_html = build_trend_html(location, start_date, end_date)
+    trend_html = build_trend_html(machine_series)
 
     return f"""
 <style>{DASH_CSS}</style>
@@ -729,20 +712,11 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
 """
 
 
-def build_trend_html(location, start_date, end_date):
-    report_href = (
-        "/app/query-report/Avail%20and%20Util%20summary"
-        f"?start_date={frappe.utils.quote(str(start_date))}"
-        f"&end_date={frappe.utils.quote(str(end_date))}"
-        f"&location={frappe.utils.quote(str(location))}"
-    )
-
-    return f"""
+def build_trend_html(machine_series):
+    return """
 <div class="isd-side">
   <div class="isd-cards">
-    <a href="{report_href}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
-      <div class="isd-circle isd-circle-green">Open<br>Summary</div>
-    </a>
+    <div class="isd-circle isd-circle-green">Dashboard</div>
   </div>
 
   <div class="isd-legend">
@@ -751,7 +725,6 @@ def build_trend_html(location, start_date, end_date):
   </div>
 </div>
 """
-
 
 
 def build_chart_html(machine_series):

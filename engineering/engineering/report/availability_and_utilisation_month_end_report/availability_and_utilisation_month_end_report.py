@@ -21,6 +21,7 @@ def get_columns():
 	return [
 		{"label": _("Asset Category"), "fieldname": "asset_category", "fieldtype": "Data", "width": 130},
 		{"label": _("Asset Name"), "fieldname": "asset_name", "fieldtype": "Data", "width": 110},
+		{"label": _("Req Hrs"), "fieldname": "required_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
 		{"label": _("Work Hrs"), "fieldname": "work_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
 		{"label": _("Mechanical Downtime"), "fieldname": "mechanical_downtime", "fieldtype": "Float", "precision": 1, "width": 160},
 		{"label": _("Avail (%)"), "fieldname": "avail_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
@@ -111,6 +112,7 @@ def get_data(filters):
 		data.append({
 			"asset_category": row["asset_category"],
 			"asset_name": row["asset_name"],
+			"required_hrs": summary.r1(required_hrs),
 			"work_hrs": summary.r1(work_hrs),
 			"mechanical_downtime": summary.r1(mechanical_downtime),
 			"avail_percent": average_percent(row["avail_percentages"]),
