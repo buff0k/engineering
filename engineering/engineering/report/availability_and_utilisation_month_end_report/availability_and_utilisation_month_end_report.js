@@ -38,6 +38,31 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 			return value;
 		}
 
+
+
+
+		if (data.is_separator) {
+			return "";
+		}
+
+		if (data.is_category_total) {
+			return `
+				<span style="
+					display: block;
+					padding: 6px 10px;
+					background: #0f172a;
+					color: #ffffff;
+					font-weight: 800;
+					border-radius: 6px;
+				">
+					${value || ""}
+				</span>
+			`;
+		}
+
+
+
+
 		const percent_fields = [
 			"avail_percent",
 			"util_percent",
