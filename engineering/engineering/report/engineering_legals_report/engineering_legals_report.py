@@ -354,8 +354,23 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
 
     data = []
     for (_, sec, fleet), group_docs in grouped.items():
-        latest_doc = group_docs[0]
-        previous_doc = group_docs[1] if len(group_docs) > 1 else None
+        latest_doc = None
+
+        for doc in group_docs:
+            doc_expiry = doc.get("expiry_date")
+            if not doc_expiry:
+                continue
+
+            if not latest_doc:
+                latest_doc = doc
+                continue
+
+            latest_expiry = latest_doc.get("expiry_date")
+            if getdate(doc_expiry) > getdate(latest_expiry):
+                latest_doc = doc
+
+        if not latest_doc:
+            continue
 
         status = get_expiry_bucket(latest_doc.get("expiry_date"))
 
