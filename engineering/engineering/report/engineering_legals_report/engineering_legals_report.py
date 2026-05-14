@@ -357,6 +357,11 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
         latest_doc = group_docs[0]
         previous_doc = group_docs[1] if len(group_docs) > 1 else None
 
+        status = build_combined_status(latest_doc, previous_doc)
+
+        if "Recently done" in status:
+            continue
+
         expiry_bucket_value = get_expiry_bucket(latest_doc.get("expiry_date"))
         if not bucket_matches(expiry_bucket_value):
             continue
@@ -371,7 +376,7 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
             "start_date": latest_doc.get("start_date"),
             "expiry_date": expiry_date,
             "days_left": days_left,
-            "status": build_combined_status(latest_doc, previous_doc),
+            "status": status,
         })
 
     data.sort(key=lambda x: (
