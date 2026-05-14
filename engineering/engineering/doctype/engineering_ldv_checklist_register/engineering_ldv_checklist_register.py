@@ -10,7 +10,7 @@ class EngineeringLDVChecklistRegister(Document):
         self.set_site_month_year_name()
 
     def validate(self):
-        self.set_site_month_year_name()
+        self.prevent_header_changes_after_save()
 
     def set_site_month_year_name(self):
         site = _make_name_part(self.site)
@@ -21,6 +21,24 @@ class EngineeringLDVChecklistRegister(Document):
             frappe.throw("Site, Month and Year are required before saving.")
 
         self.name = f"{site}-{month}-{year}"
+
+
+
+    def prevent_header_changes_after_save(self):
+        if self.is_new():
+            return
+
+        old_doc = self.get_doc_before_save()
+        if not old_doc:
+            return
+
+        locked_fields = ["site", "month", "year"]
+
+        for fieldname in locked_fields:
+            if self.get(fieldname) != old_doc.get(fieldname):
+                frappe.throw(f"{frappe.unscrub(fieldname)} cannot be changed after saving.")
+
+
 
 
 ALLOWED_MACHINE_TYPES = [

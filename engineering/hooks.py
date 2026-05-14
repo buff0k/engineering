@@ -72,6 +72,7 @@ scheduler_events = {
         # Runs hourly, but function only executes at 06:00 and 18:00
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
+        "engineering.engineering.doctype.availability_and_utilisation_support_equipment.availability_and_utilisation_support_equipment.run_hourly_gate",
     ],
     "cron": {
         "0 6 * * *": [
@@ -89,7 +90,8 @@ scheduler_events = {
             "engineering.controllers.notifications.send_open_breakdowns_digest"
         ],
         "5 0 * * *": [
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
+            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "engineering.engineering.doctype.availability_and_utilisation_support_equipment.availability_and_utilisation_support_equipment.run_daily"
         ],
         # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)

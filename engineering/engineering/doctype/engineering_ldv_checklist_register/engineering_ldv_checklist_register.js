@@ -5,6 +5,17 @@ function get_child_table_fieldname(frm) {
     return table_field ? table_field.fieldname : null;
 }
 
+function lock_header_fields(frm) {
+    const should_lock = !frm.is_new();
+
+    ['site', 'month', 'year'].forEach(fieldname => {
+        frm.set_df_property(fieldname, 'read_only', should_lock ? 1 : 0);
+        frm.refresh_field(fieldname);
+    });
+}
+
+
+
 function lock_child_table(frm) {
     const child_table_fieldname = get_child_table_fieldname(frm);
     if (!child_table_fieldname) return;
@@ -1108,6 +1119,7 @@ function should_load_machine_rows(frm) {
 frappe.ui.form.on('Engineering LDV Checklist Register', {
     onload(frm) {
         update_register_live_title(frm);
+        lock_header_fields(frm);
         lock_child_table(frm);
         bind_checklist_checkbox_listener(frm);
 
@@ -1124,6 +1136,7 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
 
     refresh(frm) {
         update_register_live_title(frm);
+        lock_header_fields(frm);
         lock_child_table(frm);
         bind_checklist_checkbox_listener(frm);
         refresh_checklist_submission_ui(frm, false);
@@ -1151,6 +1164,7 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
 
     site(frm) {
         update_register_live_title(frm);
+        lock_header_fields(frm);
 
         frm.__row_state_cache = {};
         frm.set_value('machine_type_filter', 'LDV');
@@ -1163,11 +1177,13 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
 
     month(frm) {
         update_register_live_title(frm);
+        lock_header_fields(frm);
         refresh_checklist_submission_ui(frm, false);
     },
 
     year(frm) {
         update_register_live_title(frm);
+        lock_header_fields(frm);
         refresh_checklist_submission_ui(frm, false);
     },
 
@@ -1187,6 +1203,7 @@ frappe.ui.form.on('Engineering LDV Checklist Register', {
 
     onload_post_render(frm) {
         update_register_live_title(frm);
+        lock_header_fields(frm);
         bind_checklist_checkbox_listener(frm);
         refresh_checklist_submission_ui(frm, false);
     }
