@@ -80,11 +80,6 @@ def sign_off_mechanical_service_report(docname, manager_foreman_signature):
 
 
 
-
-
-
-
-
 @frappe.whitelist()
 def get_unsigned_mechanical_daily_worksheets():
     user = frappe.session.user
@@ -170,7 +165,6 @@ def get_unsigned_mechanical_service_reports():
         fields=[
             "name",
             "service_date",
-            "reference_number",
             "job_card_number",
             "site",
             "asset",
