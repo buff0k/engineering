@@ -5,18 +5,63 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_gqvf"
+  "incurred_by",
+  "vehicle_registration",
+  "section_break_iswt",
+  "date",
+  "odo_meter_out",
+  "odo_meter_in",
+  "litres",
+  "trip"
  ],
  "fields": [
   {
-   "fieldname": "section_break_gqvf",
+   "fieldname": "incurred_by",
+   "fieldtype": "Link",
+   "label": "Incurred By",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "vehicle_registration",
+   "fieldtype": "Data",
+   "label": "Vehicle Registration"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_iswt",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "odo_meter_out",
+   "fieldtype": "Int",
+   "label": "ODO Meter Out"
+  },
+  {
+   "fieldname": "odo_meter_in",
+   "fieldtype": "Int",
+   "label": "ODO Meter In"
+  },
+  {
+   "fieldname": "litres",
+   "fieldtype": "Int",
+   "label": "Litres"
+  },
+  {
+   "fieldname": "trip",
+   "fieldtype": "Small Text",
+   "label": "Trip"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-15 09:25:41.056780",
+ "modified": "2026-05-15 09:37:25.758780",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Travel Log Sheet",
@@ -31,6 +76,16 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
    "share": 1,
    "write": 1
   }
