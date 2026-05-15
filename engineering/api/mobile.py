@@ -2,6 +2,36 @@ import json
 import frappe
 
 
+
+
+@frappe.whitelist()
+def get_parts_requisition_mobile_items():
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    rows = frappe.db.sql("""
+        SELECT
+            item.name,
+            item.item_name,
+            item_default.expense_account AS default_expense_account,
+            item.modified
+        FROM `tabItem` item
+        INNER JOIN `tabItem Default` item_default
+            ON item_default.parent = item.name
+        WHERE
+            item.disabled = 0
+            AND IFNULL(item_default.expense_account, '') != ''
+        ORDER BY item.name
+    """, as_dict=True)
+
+    return rows
+
+
+
+
+
 def _get_allowed_locations(user):
     rows = frappe.get_all(
         "User Permission",

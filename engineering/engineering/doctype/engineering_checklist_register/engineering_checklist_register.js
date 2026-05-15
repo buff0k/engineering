@@ -431,9 +431,8 @@ function load_machine_rows(frm) {
     snapshot_current_row_state(frm);
 
     if (!frm.doc.site) {
-        frm.clear_table(child_table_fieldname);
         frm.refresh_field(child_table_fieldname);
-        frm.set_value('checklist_submission_average', '0.0%');
+        update_checklist_submission_average(frm);
         lock_child_table(frm);
         return Promise.resolve();
     }
@@ -458,23 +457,63 @@ function load_machine_rows(frm) {
             .filter(machine => machine.fleet_no || machine.machine_type || machine.item_name)
             .sort((a, b) => natural_desc_compare(a.fleet_no, b.fleet_no));
 
-        frm.clear_table(child_table_fieldname);
+        const existing_rows = frm.doc[child_table_fieldname] || [];
+        const existing_keys = new Set();
+
+        existing_rows.forEach(row => {
+            const key = get_row_cache_key(row);
+
+            if (key && key !== '||') {
+                existing_keys.add(key);
+            }
+        });
+
+        let added_count = 0;
+        let updated_count = 0;
 
         machines.forEach(machine => {
-            const row = frm.add_child(child_table_fieldname);
-            row.fleet_no = machine.fleet_no;
-            row.machine_type = machine.machine_type;
-            row.item_name = machine.item_name;
+            const machine_key = `${normalize_text(machine.fleet_no)}||${normalize_machine_type(machine.machine_type)}`;
 
-            apply_cached_row_state_to_row(frm, row);
+            if (!machine_key || machine_key === '||') {
+                return;
+            }
+
+            const existing_row = existing_rows.find(row => get_row_cache_key(row) === machine_key);
+
+            if (existing_row) {
+                if (!normalize_text(existing_row.item_name) && machine.item_name) {
+                    existing_row.item_name = machine.item_name;
+                    updated_count += 1;
+                }
+
+                apply_cached_row_state_to_row(frm, existing_row);
+                return;
+            }
+
+            if (!existing_keys.has(machine_key)) {
+                const row = frm.add_child(child_table_fieldname);
+                row.fleet_no = machine.fleet_no;
+                row.machine_type = machine.machine_type;
+                row.item_name = machine.item_name;
+
+                apply_cached_row_state_to_row(frm, row);
+
+                existing_keys.add(machine_key);
+                added_count += 1;
+            }
         });
 
         frm.refresh_field(child_table_fieldname);
         lock_child_table(frm);
 
         setTimeout(() => {
-            refresh_checklist_submission_ui(frm, false);
+            refresh_checklist_submission_ui(frm, true);
             apply_machine_type_row_visibility(frm);
+
+            frappe.show_alert({
+                message: __('Reload complete. Added {0} new machine(s). Existing captured rows were kept.', [added_count]),
+                indicator: 'green'
+            });
         }, 200);
     }).catch(err => {
         console.error('Failed to load machine rows:', err);
@@ -1127,6 +1166,179 @@ function should_load_machine_rows(frm) {
     return frm.is_new() || rows.length === 0;
 }
 
+function add_reload_machines_button(frm) {
+    if (!frm.doc.site) return;
+
+    if (frm.__reload_machines_menu_added) return;
+    frm.__reload_machines_menu_added = true;
+
+    frm.page.add_menu_item(__('Reload Machines from Submitted Assets'), function () {
+        snapshot_current_row_state(frm);
+
+        populate_machine_type_options(frm).then(() => {
+            return load_machine_rows(frm);
+        }).then(() => {
+            refresh_checklist_submission_ui(frm, true);
+            frappe.show_alert({
+                message: __('Machines reloaded from Submitted Assets. Please Save.'),
+                indicator: 'green'
+            });
+        });
+    });
+}
+
+
+
+function csv_escape(value) {
+    const text = value === null || value === undefined ? '' : String(value);
+    return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function download_csv_file(filename, rows) {
+    const csv_content = 'sep=,\r\n' + rows
+        .map(row => row.map(value => csv_escape(value)).join(','))
+        .join('\r\n');
+
+    const blob = new Blob(['\ufeff' + csv_content], {
+        type: 'text/csv;charset=utf-8;'
+    });
+
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+}
+
+function format_export_percentage(value) {
+    if (value === null || value === undefined || value === '') {
+        return '';
+    }
+
+    const text = normalize_text(value);
+
+    if (text.endsWith('%')) {
+        return text;
+    }
+
+    const number = parseFloat(text);
+
+    if (!Number.isFinite(number)) {
+        return text;
+    }
+
+    return number.toString() + '%';
+}
+
+function format_export_cell(fieldname, value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    const percentage_fields = [
+        'target',
+        'checklist_submission'
+    ];
+
+    if (percentage_fields.includes(fieldname)) {
+        return format_export_percentage(value);
+    }
+
+    return value;
+}
+
+function export_checklist_rows(frm) {
+    const child_table_fieldname = get_child_table_fieldname(frm);
+
+    if (!child_table_fieldname) {
+        frappe.msgprint(__('Could not find checklist rows table.'));
+        return;
+    }
+
+    const selected_machine_type = normalize_machine_type(frm.doc.machine_type_filter);
+    let rows = frm.doc[child_table_fieldname] || [];
+
+    if (selected_machine_type) {
+        rows = rows.filter(row => {
+            return normalize_machine_type(row.machine_type) === selected_machine_type;
+        });
+    }
+
+    if (!rows.length) {
+        frappe.msgprint(__('No rows available to export.'));
+        return;
+    }
+
+    const child_meta = frappe.get_meta(CHECKLIST_CHILD_DOCTYPE);
+    const export_fields = (child_meta.fields || [])
+        .filter(df => {
+            return df.fieldname &&
+                !df.hidden &&
+                !['Section Break', 'Column Break', 'HTML', 'Button'].includes(df.fieldtype);
+        })
+        .map(df => ({
+            fieldname: df.fieldname,
+            label: df.label || df.fieldname
+        }));
+
+    const csv_rows = [];
+
+    csv_rows.push([
+        'Register',
+        frm.doc.name || '',
+        'Site',
+        frm.doc.site || '',
+        'Month',
+        frm.doc.month || '',
+        'Year',
+        frm.doc.year || '',
+        'Machine Type Filter',
+        frm.doc.machine_type_filter || '',
+        'Checklist Submission Average',
+        format_export_percentage(frm.doc.checklist_submission_average || '')
+    ]);
+
+    csv_rows.push([]);
+
+    csv_rows.push(export_fields.map(df => df.label));
+
+    rows.forEach(row => {
+        csv_rows.push(export_fields.map(df => {
+            return format_export_cell(df.fieldname, row[df.fieldname]);
+        }));
+    });
+
+    const safe_name = normalize_text(frm.doc.name || 'Engineering Checklist Register')
+        .replace(/[^\w\-]+/g, '_');
+
+    const safe_filter = selected_machine_type
+        ? '_' + selected_machine_type.replace(/[^\w\-]+/g, '_')
+        : '';
+
+    download_csv_file(`${safe_name}${safe_filter}.csv`, csv_rows);
+
+    frappe.show_alert({
+        message: __('Checklist rows exported.'),
+        indicator: 'green'
+    });
+}
+
+function add_export_checklist_button(frm) {
+    if (frm.__export_checklist_menu_added) return;
+    frm.__export_checklist_menu_added = true;
+
+    frm.page.add_menu_item(__('Export Checklist Rows'), function () {
+        export_checklist_rows(frm);
+    });
+}
+
 frappe.ui.form.on('Engineering Checklist Register', {
     onload(frm) {
         update_register_live_title(frm);
@@ -1150,6 +1362,8 @@ frappe.ui.form.on('Engineering Checklist Register', {
         lock_header_fields(frm);
         lock_child_table(frm);
         bind_checklist_checkbox_listener(frm);
+        add_reload_machines_button(frm);
+        add_export_checklist_button(frm);
 
         refresh_checklist_submission_ui(frm, false);
 
