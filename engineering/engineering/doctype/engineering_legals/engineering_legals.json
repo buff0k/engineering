@@ -161,6 +161,8 @@
    "default": "0",
    "fieldname": "sharepoint_synced",
    "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Synced",
    "read_only": 1
   },
@@ -180,7 +182,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-05 10:45:35.100940",
+ "modified": "2026-05-18 13:37:49.266801",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering Legals",
