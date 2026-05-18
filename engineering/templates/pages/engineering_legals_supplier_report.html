@@ -1,0 +1,400 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<style>
+#supplier-legals-report {
+    max-width: 1200px;
+}
+
+#supplier-legals-report .report-title {
+    text-align: center;
+    font-weight: 900;
+    margin-bottom: 12px;
+}
+
+#supplier-legals-report .filter-card {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 18px;
+    background: #fff;
+}
+
+#supplier-legals-report .fleet-bubbles {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+#supplier-legals-report .fleet-bubble {
+    min-width: 140px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 2px solid #118DFF;
+    text-align: center;
+    color: #262A76;
+    font-weight: 900;
+    background: #fff;
+}
+
+#supplier-legals-report .fleet-bubble-count {
+    font-size: 22px;
+    line-height: 1;
+}
+
+#supplier-legals-report .legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 12px;
+}
+
+#supplier-legals-report .legend-dot {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,.12);
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+#supplier-legals-report .dot-overdue { background: #f6b3b3; }
+#supplier-legals-report .dot-d0-7 { background: #f6c59f; }
+#supplier-legals-report .dot-d8-14 { background: #f5e29a; }
+#supplier-legals-report .dot-d15-21 { background: #b8d6f6; }
+#supplier-legals-report .dot-d22-28 { background: #bfe5c6; }
+
+#supplier-legals-report .bucket-pill {
+    display: inline-block;
+    min-width: 34px;
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    padding: 0;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 900;
+    border: 1px solid rgba(0,0,0,0.10);
+}
+
+#supplier-legals-report .bucket-overdue {
+    background: #f6b3b3;
+    color: #6b1b1b;
+}
+
+#supplier-legals-report .bucket-d0_7 {
+    background: #f6c59f;
+    color: #6b3a00;
+}
+
+#supplier-legals-report .bucket-d8_14 {
+    background: #f5e29a;
+    color: #5c4a00;
+}
+
+#supplier-legals-report .bucket-d15_21 {
+    background: #b8d6f6;
+    color: #0b5394;
+}
+
+#supplier-legals-report .bucket-d22_28 {
+    background: #bfe5c6;
+    color: #1f5e2b;
+}
+
+#supplier-legals-report .section-row {
+    font-weight: 900;
+}
+
+#supplier-legals-report details {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 8px 0;
+    background: #fff;
+}
+
+#supplier-legals-report summary {
+    cursor: pointer;
+    font-weight: 900;
+}
+
+#supplier-legals-report .small-muted {
+    opacity: .65;
+    font-size: 12px;
+}
+</style>
+
+<div class="container my-4" id="supplier-legals-report">
+    <h2 class="report-title">Supplier Engineering Legals Report</h2>
+
+    <div class="mb-3 d-flex gap-2 flex-wrap">
+        <a class="btn btn-primary" href="/engineering_legals_sup">New Engineering Legal</a>
+        <a class="btn btn-default" href="/engineering_legals_list">My Drafts / Submitted</a>
+    </div>
+
+    <form method="get" class="filter-card">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label><strong>Site</strong></label>
+                <select class="form-control" name="site">
+                    <option value="">All</option>
+                    {% for site in site_options %}
+                    <option value="{{ site }}" {% if filters.site == site %}selected{% endif %}>{{ site }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label><strong>Section</strong></label>
+                <select class="form-control" name="section">
+                    <option value="">All</option>
+                    {% for section in section_options %}
+                    <option value="{{ section }}" {% if filters.section == section %}selected{% endif %}>{{ section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label><strong>Fleet Number</strong></label>
+                <select class="form-control" name="asset">
+                    <option value="">All</option>
+                    {% for asset in asset_options %}
+                    <option value="{{ asset.name }}" {% if filters.asset == asset.name %}selected{% endif %}>{{ asset.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label><strong>From Expiry Date</strong></label>
+                <input type="date" class="form-control" name="from_expiry_date" value="{{ filters.from_expiry_date }}">
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label><strong>To Expiry Date</strong></label>
+                <input type="date" class="form-control" name="to_expiry_date" value="{{ filters.to_expiry_date }}">
+            </div>
+
+            <div class="col-md-3 mb-3 d-flex align-items-end">
+                <button class="btn btn-primary mr-2" type="submit">Filter</button>
+                <a class="btn btn-default" href="/engineering_legals_supplier_report">Clear</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="report-title">Total Fleet</div>
+
+    {% if total_fleet %}
+    <div class="fleet-bubbles">
+        {% for row in total_fleet %}
+        <div class="fleet-bubble">
+            <div>{{ row.category }}</div>
+            <div class="fleet-bubble-count">{{ row.count }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">No supplier assets found.</div>
+    {% endif %}
+
+    <div class="report-title">SUMMARY</div>
+
+    <div class="legend">
+        <span><span class="legend-dot dot-overdue"></span><b>Overdue</b></span>
+        <span><span class="legend-dot dot-d0-7"></span><b>0–7 days</b></span>
+        <span><span class="legend-dot dot-d8-14"></span><b>8–14 days</b></span>
+        <span><span class="legend-dot dot-d15-21"></span><b>15–21 days</b></span>
+        <span><span class="legend-dot dot-d22-28"></span><b>22–28 days</b></span>
+    </div>
+
+    {% if summary_rows %}
+    <div class="table-responsive">
+        <table class="table table-bordered text-center">
+            <thead>
+                <tr>
+                    <th class="text-left">Section</th>
+                    <th>🔴 Overdue</th>
+                    <th>🟠 0–7</th>
+                    <th>🟡 8–14</th>
+                    <th>🟦 15–21</th>
+                    <th>🟩 22–28</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary_rows %}
+                <tr>
+                    <td class="text-left section-row">{{ row.section }}</td>
+                    <td><span class="bucket-pill bucket-overdue">{{ row.overdue }}</span></td>
+                    <td><span class="bucket-pill bucket-d0_7">{{ row.d0_7 }}</span></td>
+                    <td><span class="bucket-pill bucket-d8_14">{{ row.d8_14 }}</span></td>
+                    <td><span class="bucket-pill bucket-d15_21">{{ row.d15_21 }}</span></td>
+                    <td><span class="bucket-pill bucket-d22_28">{{ row.d22_28 }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <div class="report-title">Assets Due Detail</div>
+
+        {% for row in summary_rows %}
+        <details>
+            <summary>{{ row.section }} <span class="small-muted">({{ row.assets | length }} records)</span></summary>
+
+            <div class="table-responsive mt-3">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Fleet Number</th>
+                            <th>Site</th>
+                            <th>Start Date</th>
+                            <th>Expiry Date</th>
+                            <th>Days Left</th>
+                            <th>Status</th>
+                            <th>Document</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in row.assets %}
+                        <tr>
+                            <td>{{ asset.fleet_number }}</td>
+                            <td>{{ asset.site or "" }}</td>
+                            <td>{{ asset.start_date or "" }}</td>
+                            <td>{{ asset.expiry_date or "" }}</td>
+                            <td>{{ asset.days_left }}</td>
+                            <td>{{ asset.bucket_label }}</td>
+                            <td>
+                                {% if asset.attach_paper %}
+                                <a href="{{ asset.attach_paper }}" target="_blank" rel="noopener noreferrer">Open</a>
+                                {% else %}
+                                <span class="text-muted">No File</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">No expiring legal records found for your supplier assets.</div>
+    {% endif %}
+
+    <div class="mt-4">
+        <div class="report-title">My Drafts / Submitted From Portal</div>
+
+        {% if draft_rows %}
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Section</th>
+                        <th>Site</th>
+                        <th>Fleet Number</th>
+                        <th>Start Date</th>
+                        <th>Expiry Date</th>
+                        <th>Status</th>
+                        <th>Document</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in draft_rows %}
+                    <tr>
+                        <td>
+                            {% if not row.sent_to_erp %}
+                            <a href="/engineering_legals_sup?draft_name={{ row.name }}">{{ row.name }}</a>
+                            {% else %}
+                            {{ row.name }}
+                            {% endif %}
+                        </td>
+                        <td>{{ row.sections or "" }}</td>
+                        <td>{{ row.site or "" }}</td>
+                        <td>{{ row.fleet_number or "" }}</td>
+                        <td>{{ row.start_date or "" }}</td>
+                        <td>{{ row.expiry_date or "" }}</td>
+                        <td>{% if row.sent_to_erp %}Submitted{% else %}Draft{% endif %}</td>
+                        <td>
+                            {% if row.attach_paper %}
+                            <a href="{{ row.attach_paper }}" target="_blank" rel="noopener noreferrer">Open</a>
+                            {% else %}
+                            <span class="text-muted">No File</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">No portal drafts found.</div>
+        {% endif %}
+    </div>
+
+    <div class="mt-4">
+        <div class="report-title">Doc History</div>
+
+        {% if history_tree %}
+            {% for site in history_tree %}
+            <details>
+                <summary>{{ site.label }} <span class="small-muted">({{ site.count }})</span></summary>
+
+                {% for section in site.sections %}
+                <details>
+                    <summary>{{ section.label }} <span class="small-muted">({{ section.count }})</span></summary>
+
+                    {% for fleet in section.fleets %}
+                    <details>
+                        <summary>→ {{ fleet.label }} <span class="small-muted">({{ fleet.count }})</span></summary>
+
+                        <div class="table-responsive mt-3">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Record</th>
+                                        <th>Start Date</th>
+                                        <th>Expiry Date</th>
+                                        <th>Modified</th>
+                                        <th>Document</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in fleet.docs %}
+                                    <tr>
+                                        <td>{{ doc.name }}</td>
+                                        <td>{{ doc.start_date or "" }}</td>
+                                        <td>{{ doc.expiry_date or "" }}</td>
+                                        <td>{{ doc.modified or "" }}</td>
+                                        <td>
+                                            {% if doc.attach_paper %}
+                                            <a href="{{ doc.attach_paper }}" target="_blank" rel="noopener noreferrer">Open</a>
+                                            {% else %}
+                                            <span class="text-muted">No File</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    {% endfor %}
+                </details>
+                {% endfor %}
+            </details>
+            {% endfor %}
+        {% else %}
+        <div class="alert alert-info">No document history found.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

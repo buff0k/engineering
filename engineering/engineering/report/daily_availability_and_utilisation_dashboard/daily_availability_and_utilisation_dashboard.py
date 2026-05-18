@@ -294,19 +294,9 @@ DASH_CSS = """
   box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35), 0 6px 14px rgba(0,0,0,0.08);
 }
 
-.isd-circle-red {
-  border-color: rgba(217, 48, 37, 0.85);
-  background: rgba(217, 48, 37, 0.18);
-}
-
 .isd-circle-green {
   border-color: rgba(30, 142, 62, 0.85);
   background: rgba(30, 142, 62, 0.18);
-}
-
-.isd-circle-blue {
-  border-color: rgba(26, 115, 232, 0.85);
-  background: rgba(26, 115, 232, 0.18);
 }
 
 .isd-legend {
@@ -361,8 +351,8 @@ DASH_CSS = """
 def execute(filters=None):
     filters = filters or {}
 
-    start_date = frappe.utils.getdate(filters.get("start_date"))
-    end_date = frappe.utils.getdate(filters.get("end_date"))
+    start_date = frappe.utils.getdate(filters.get("start_date") or filters.get("from_date"))
+    end_date = frappe.utils.getdate(filters.get("end_date") or filters.get("to_date"))
     location = filters.get("location")
 
     if not start_date:
@@ -377,7 +367,7 @@ def execute(filters=None):
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_grouped_data(location, start_date, end_date)
+    source_rows = fetch_month_end_report_data(location, start_date, end_date)
 
     avgs = build_summary_averages_from_source_rows(source_rows)
     machine_series = build_machine_series_from_source_rows(source_rows)
@@ -387,18 +377,41 @@ def execute(filters=None):
     return [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}], [{"noop": ""}], html
 
 
-def fetch_grouped_data(location, start_date, end_date):
-    from is_production.production.report.avail_and_util_summary.avail_and_util_summary import (
-        get_grouped_data,
-    )
+def fetch_month_end_report_data(location, start_date, end_date):
+    import importlib
 
-    rows = get_grouped_data({
-        "start_date": start_date,
-        "end_date": end_date,
+    month_end_report = importlib.import_module("engineering.engineering.report.availability_and_utilisation_month_end_report.availability_and_utilisation_month_end_report")
+
+    result = month_end_report.get_data({
+        "from_date": start_date,
+        "to_date": end_date,
         "location": location,
     })
 
-    return rows or []
+    return normalise_report_rows(result)
+
+
+def normalise_report_rows(result):
+    if not result:
+        return []
+
+    if isinstance(result, dict):
+        for key in ("data", "result", "rows", "message"):
+            value = result.get(key)
+            if isinstance(value, list):
+                return value
+        return []
+
+    if isinstance(result, tuple):
+        for item in result:
+            if isinstance(item, list):
+                return item
+        return []
+
+    if isinstance(result, list):
+        return result
+
+    return []
 
 
 def to_float(value):
@@ -436,22 +449,18 @@ def get_category(row):
     if value in CATEGORY_MAP:
         return value
 
-    for val in row.values():
-        if val in CATEGORY_MAP:
-            return val
+    if isinstance(row, dict):
+        for val in row.values():
+            if val in CATEGORY_MAP:
+                return val
 
     return None
 
 
-def get_indent(row):
-    try:
-        return int(row.get("indent") or 0)
-    except Exception:
-        return 0
-
-
 def get_machine(row):
     machine = get_any(row, [
+        "asset_name",
+        "Asset Name",
         "asset",
         "Asset",
         "equipment",
@@ -464,8 +473,6 @@ def get_machine(row):
         "Plant No",
         "fleet_number",
         "Fleet Number",
-        "asset_name",
-        "Asset Name",
         "availability_and_utilisation",
         "Availability and Utilisation",
     ])
@@ -483,26 +490,66 @@ def get_machine(row):
 
 def get_avail(row):
     return to_float(get_any(row, [
-        "plant_shift_availability",
+        "avail_percent",
         "Avail (%)",
+        "availability_percent",
+        "availability_percentage",
+        "available_percentage",
+        "avail_percentage",
+        "plant_shift_availability",
         "Avail",
+        "Availability",
         "avail",
         "availability",
-        "Availability",
     ]))
 
 
 def get_util(row):
     return to_float(get_any(row, [
-        "plant_shift_utilisation",
+        "util_percent",
         "Util (%)",
+        "utilisation_percent",
+        "utilization_percent",
+        "utilisation_percentage",
+        "utilization_percentage",
+        "util_percentage",
+        "plant_shift_utilisation",
+        "plant_shift_utilization",
         "Util",
+        "Utilisation",
+        "Utilization",
         "util",
         "utilisation",
-        "Utilisation",
         "utilization",
-        "Utilization",
     ]))
+
+
+def is_separator_row(row):
+    if not isinstance(row, dict):
+        return True
+
+    if row.get("is_separator"):
+        return True
+
+    category = get_category(row)
+    machine = get_machine(row)
+    av = get_avail(row)
+    ut = get_util(row)
+
+    return not category and not machine and av is None and ut is None
+
+
+def is_category_total_row(row):
+    if not isinstance(row, dict):
+        return False
+
+    if row.get("is_category_total"):
+        return True
+
+    category = get_category(row)
+    machine = get_machine(row)
+
+    return bool(category) and not machine
 
 
 def build_summary_averages_from_source_rows(rows):
@@ -512,10 +559,11 @@ def build_summary_averages_from_source_rows(rows):
         "Dozer's": {"avail": None, "util": None},
     }
 
-    candidates = []
-
     for row in rows:
-        if not isinstance(row, dict):
+        if is_separator_row(row):
+            continue
+
+        if not is_category_total_row(row):
             continue
 
         category = get_category(row)
@@ -523,50 +571,32 @@ def build_summary_averages_from_source_rows(rows):
         if category not in CATEGORY_MAP:
             continue
 
-        machine = get_machine(row)
-        indent = get_indent(row)
-
-        # Summary rows are the parent/category rows.
-        # Child rows usually have a machine number or deeper indent.
-        if machine:
-            continue
-
-        candidates.append(row)
-
-    for row in candidates:
-        category = get_category(row)
         ui_label = CATEGORY_MAP[category]
 
-        av = get_avail(row)
-        ut = get_util(row)
-
         out[ui_label] = {
-            "avail": av,
-            "util": ut,
+            "avail": get_avail(row),
+            "util": get_util(row),
         }
 
-    # Fallback: if parent rows were not detected, use the lowest indent row per category.
     for db_category, ui_label in CATEGORY_MAP.items():
         if out[ui_label]["avail"] is not None or out[ui_label]["util"] is not None:
             continue
 
-        category_rows = [
+        machine_rows = [
             row for row in rows
-            if isinstance(row, dict) and get_category(row) == db_category
+            if isinstance(row, dict)
+            and not is_separator_row(row)
+            and not is_category_total_row(row)
+            and get_category(row) == db_category
         ]
 
-        if not category_rows:
-            continue
+        avail_values = [get_avail(row) for row in machine_rows if get_avail(row) is not None]
+        util_values = [get_util(row) for row in machine_rows if get_util(row) is not None]
 
-        min_indent = min(get_indent(row) for row in category_rows)
-        parent_rows = [row for row in category_rows if get_indent(row) == min_indent]
-
-        if parent_rows:
-            row = parent_rows[0]
-            out[ui_label] = {
-                "avail": get_avail(row),
-                "util": get_util(row),
-            }
+        out[ui_label] = {
+            "avail": (sum(avail_values) / len(avail_values)) if avail_values else None,
+            "util": (sum(util_values) / len(util_values)) if util_values else None,
+        }
 
     return out
 
@@ -579,7 +609,10 @@ def build_machine_series_from_source_rows(rows):
     }
 
     for row in rows:
-        if not isinstance(row, dict):
+        if is_separator_row(row):
+            continue
+
+        if is_category_total_row(row):
             continue
 
         category = get_category(row)
@@ -689,7 +722,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
 
 <div class="isd-hourly-dashboard">
   <div class="isd-note">
-    Showing: {site_safe} | {start_date} to {end_date}. Averages and graphs are calculated from the selected date range.
+    Showing: {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
   </div>
 
   <div class="isd-grid">
@@ -738,7 +771,6 @@ def build_trend_html(location, start_date, end_date):
   </div>
 </div>
 """
-
 
 
 def build_chart_html(machine_series):
