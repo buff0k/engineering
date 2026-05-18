@@ -6,19 +6,26 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "work_details_section",
-  "column_break_qwyu",
-  "work_details",
-  "total_work_time",
   "employee_section",
   "column_break_pqqe",
+  "date",
   "mechanic_company_no",
   "mechanic_name_surname",
-  "mechanic_signature",
   "details",
   "clock_in_time",
   "clock_out_time",
   "total_hours",
+  "sum_total",
+  "section_break_qydu",
+  "non_msr",
+  "total_non_msr_time",
+  "section_break_sqjd",
+  "fetch_msrs",
+  "work_details_section",
+  "column_break_qwyu",
+  "work_details",
+  "total_work_time",
+  "mechanic_signature",
   "supervisor_section",
   "supervisor_forman_company_no",
   "supervisor_forman_name_surname",
@@ -99,7 +106,8 @@
    "fieldname": "mechanic_company_no",
    "fieldtype": "Link",
    "label": "Mechanic Company No",
-   "options": "Employee"
+   "options": "Employee",
+   "reqd": 1
   },
   {
    "fetch_from": "mechanic_company_no.employee_name",
@@ -122,11 +130,50 @@
    "fieldname": "details",
    "fieldtype": "Column Break",
    "label": "Clock In & Out Details"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_sqjd",
+   "fieldtype": "Section Break",
+   "label": "Click the button to fech your work done!"
+  },
+  {
+   "fieldname": "fetch_msrs",
+   "fieldtype": "Button",
+   "label": "Fetch MSR's"
+  },
+  {
+   "description": "Fill in if applicable.",
+   "fieldname": "section_break_qydu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "non_msr",
+   "fieldtype": "Table",
+   "label": "Non MSR Description",
+   "options": "Non MSR Work"
+  },
+  {
+   "fieldname": "sum_total",
+   "fieldtype": "Float",
+   "label": "Total Non MSR and MSR Time",
+   "precision": "2"
+  },
+  {
+   "fieldname": "total_non_msr_time",
+   "fieldtype": "Float",
+   "label": "Total Non MSR Time",
+   "precision": "2"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-06 07:22:02.091892",
+ "modified": "2026-05-15 16:43:58.546658",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

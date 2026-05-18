@@ -13,8 +13,8 @@
   "job_card_number",
   "service_date",
   "attach",
-  "plant_manager_code",
-  "plant_man_name",
+  "plant_manager_forman_code",
+  "plant_man_forman_name",
   "artisan_employee_code",
   "artisan_fullname",
   "machine_information_column",
@@ -23,8 +23,6 @@
   "asset_category",
   "last_smr_preuse",
   "current_hours",
-  "plant_breakdown_number",
-  "total_time_unavailable",
   "breakdown_and_work_section",
   "time_tracking_column",
   "start_time",
@@ -37,10 +35,16 @@
   "spares_required_and_comments",
   "description_of_work_done",
   "amended_from",
+  "comment_section_section",
+  "artisan",
+  "column_break_pocy",
+  "plant_manager_forman1",
   "section_break_tuqg",
-  "mechanic",
+  "artisan1",
   "column_break_oqby",
-  "manager_foreman"
+  "plant_manager_forman",
+  "comment_history_section",
+  "comment_history"
  ],
  "fields": [
   {
@@ -131,20 +135,6 @@
    "label": "Asset Category"
   },
   {
-   "fieldname": "plant_manager_code",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Plant Manager Employee Code",
-   "options": "Employee",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "plant_manager_code.employee_name",
-   "fieldname": "plant_man_name",
-   "fieldtype": "Read Only",
-   "label": "Plant Manager Name"
-  },
-  {
    "fieldname": "service_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -191,21 +181,10 @@
    "reqd": 1
   },
   {
-   "fieldname": "plant_breakdown_number",
-   "fieldtype": "Link",
-   "label": "Plant Breakdown Number",
-   "options": "Plant Breakdown or Maintenance"
-  },
-  {
    "fieldname": "total_time",
    "fieldtype": "Duration",
    "label": "Total Time",
    "read_only": 1
-  },
-  {
-   "fieldname": "total_time_unavailable",
-   "fieldtype": "Duration",
-   "label": "Total Time Unavailable"
   },
   {
    "fieldname": "amended_from",
@@ -219,23 +198,14 @@
   },
   {
    "fieldname": "section_break_tuqg",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Signature Section"
   },
   {
    "fieldname": "job_card_number",
    "fieldtype": "Link",
    "label": "Job Card Number",
    "options": "Isambane Opencast Mining Job Card"
-  },
-  {
-   "fieldname": "mechanic",
-   "fieldtype": "Signature",
-   "label": "Mechanic"
-  },
-  {
-   "fieldname": "manager_foreman",
-   "fieldtype": "Signature",
-   "label": "Manager/Foreman"
   },
   {
    "fieldname": "is_this_a_new_job",
@@ -247,12 +217,65 @@
   {
    "fieldname": "column_break_oqby",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "comment_section_section",
+   "fieldtype": "Section Break",
+   "label": "Comment Section"
+  },
+  {
+   "fieldname": "column_break_pocy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "comment_history",
+   "fieldtype": "Table",
+   "label": "Comment History",
+   "options": "Mechanical Service Report Comment"
+  },
+  {
+   "fieldname": "comment_history_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "plant_manager_forman_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plant Manager/Forman Employee Code",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "plant_manager_forman_code.employee_name",
+   "fieldname": "plant_man_forman_name",
+   "fieldtype": "Read Only",
+   "label": "Plant Manager/Forman Name"
+  },
+  {
+   "fieldname": "plant_manager_forman",
+   "fieldtype": "Signature",
+   "label": "Plant Manager/Forman"
+  },
+  {
+   "fieldname": "artisan",
+   "fieldtype": "Text",
+   "label": "Artisan"
+  },
+  {
+   "fieldname": "plant_manager_forman1",
+   "fieldtype": "Text",
+   "label": "Plant Manager/Forman"
+  },
+  {
+   "fieldname": "artisan1",
+   "fieldtype": "Signature",
+   "label": "Artisan"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-06 10:39:03.609488",
+ "modified": "2026-05-18 08:25:13.676810",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

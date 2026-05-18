@@ -399,7 +399,6 @@ function load_machine_rows(frm) {
         });
 
         let added_count = 0;
-        let updated_count = 0;
 
         machines.forEach(machine => {
             const machine_key = `${normalize_text(machine.fleet_no)}||${normalize_machine_type(machine.machine_type)}`;
@@ -413,7 +412,6 @@ function load_machine_rows(frm) {
             if (existing_row) {
                 if (!normalize_text(existing_row.item_name) && machine.item_name) {
                     existing_row.item_name = machine.item_name;
-                    updated_count += 1;
                 }
 
                 apply_cached_row_state_to_row(frm, existing_row);

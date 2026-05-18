@@ -1,43 +1,30 @@
 frappe.ui.form.on("Mechanical Service Report", {
     refresh(frm) {
         // Set dynamic filter for Asset based on selected Site
-        frm.set_query("asset", function() {
-            if (frm.doc.site) {
-                return {
-                    filters: {
-                        location: frm.doc.site
-                    }
-                };
-            }
-        });
+        set_asset_filter(frm);
 
         toggle_fields_until_site_selected(frm);
         toggle_new_job_field(frm);
-
-        // Handle Service vs Breakdown visibility/requirements
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
+
+        // Make saved comment history read-only on the form side.
+        // Server-side Python still controls the real lock.
+        lock_comment_history_grid(frm);
     },
 
     onload(frm) {
-        // Ensure correct state when form loads
+        set_asset_filter(frm);
+
         toggle_fields_until_site_selected(frm);
         toggle_new_job_field(frm);
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
+        lock_comment_history_grid(frm);
     },
 
     site(frm) {
-        // Refresh the asset query when site changes
-        frm.set_query("asset", function() {
-            if (frm.doc.site) {
-                return {
-                    filters: {
-                        location: frm.doc.site
-                    }
-                };
-            }
-        });
+        set_asset_filter(frm);
 
         toggle_fields_until_site_selected(frm);
         toggle_new_job_field(frm);
@@ -50,44 +37,41 @@ frappe.ui.form.on("Mechanical Service Report", {
 
         if (frm.doc.site !== "Plot 22") {
             frm.set_value("is_this_a_new_job", "");
+            frm.set_value("job_card_number", "");
         }
     },
 
     service_breakdown(frm) {
-        // When Service / Breakdown is changed
         toggle_service_interval(frm);
     },
 
     validate(frm) {
-        // If it's a Service, service_interval must be filled
+        // If it is a Service, service_interval must be filled
         if (frm.doc.service_breakdown === "Service" && !frm.doc.service_interval) {
-            frappe.msgprint(__('Please select a Service Interval for a Service MSR.'));
+            frappe.msgprint(__("Please select a Service Interval for a Service MSR."));
             frappe.validated = false;
             return;
         }
 
-        // Make sure total_time is always correct before saving
-        
+        // Make sure total_time is correct before saving
+        calculate_total_time_live(frm);
+    },
 
+    after_save(frm) {
+        // Server-side Python moves typed comments into Comment History
+        // and clears the comment fields. Reload so the screen reflects that.
+        frm.reload_doc();
     },
 
     start_time(frm) {
         calculate_total_time_live(frm);
     },
 
-
-
-    plant_breakdown_number(frm) {
-        calculate_total_time_unavailable_live(frm);
-    },
-
     end_time(frm) {
         calculate_total_time_live(frm);
-        calculate_total_time_unavailable_live(frm);
     },
 
     asset(frm) {
-        // When Fleet Number is chosen, pull last Pre-Use engine hours
         if (!frm.doc.asset) {
             frm.set_value("last_smr_preuse", null);
             return;
@@ -103,17 +87,36 @@ frappe.ui.form.on("Mechanical Service Report", {
                     if (r.message) {
                         frm.set_value("last_smr_preuse", r.message);
                     } else {
-                        // No previous pre-use record found for this asset
                         frm.set_value("last_smr_preuse", null);
                     }
                 }
             }
         });
+    },
+
+    artisan_employee_code(frm) {
+        fetch_employee_name(frm, "artisan_employee_code", "artisan_fullname");
+    },
+
+    plant_manager_forman_code(frm) {
+        fetch_employee_name(frm, "plant_manager_forman_code", "plant_man_forman_name");
     }
 });
 
 
+function set_asset_filter(frm) {
+    frm.set_query("asset", function() {
+        if (frm.doc.site) {
+            return {
+                filters: {
+                    location: frm.doc.site
+                }
+            };
+        }
 
+        return {};
+    });
+}
 
 
 function toggle_fields_until_site_selected(frm) {
@@ -123,27 +126,45 @@ function toggle_fields_until_site_selected(frm) {
         "is_this_a_new_job",
         "service_date",
         "attach",
-        "plant_manager_code",
+        "plant_manager_forman_code",
+        "plant_man_forman_name",
         "artisan_employee_code",
+        "artisan_fullname",
         "asset",
+        "model",
+        "asset_category",
+        "last_smr_preuse",
         "current_hours",
-        "plant_breakdown_number",
         "start_time",
         "end_time",
+        "total_time",
         "service_breakdown",
         "service_interval",
         "description_of_breakdown",
         "spares_required_and_comments",
         "description_of_work_done",
         "job_card_number",
-        "mechanic",
-        "manager_foreman"
+        "artisan",
+        "plant_manager_forman1",
+        "artisan1",
+        "plant_manager_forman"
     ];
 
     fields_to_lock.forEach((fieldname) => {
-        frm.set_df_property(fieldname, "read_only", site_selected ? 0 : 1);
+        if (frm.fields_dict[fieldname]) {
+            frm.set_df_property(fieldname, "read_only", site_selected ? 0 : 1);
+        }
     });
+
+    // Keep these read-only because they are fetched/calculated fields
+    set_read_only_if_exists(frm, "plant_man_forman_name", 1);
+    set_read_only_if_exists(frm, "artisan_fullname", 1);
+    set_read_only_if_exists(frm, "model", 1);
+    set_read_only_if_exists(frm, "asset_category", 1);
+    set_read_only_if_exists(frm, "last_smr_preuse", 1);
+    set_read_only_if_exists(frm, "total_time", 1);
 }
+
 
 function toggle_new_job_field(frm) {
     const show_new_job = frm.doc.site === "Plot 22";
@@ -164,25 +185,17 @@ function toggle_new_job_field(frm) {
 }
 
 
-
-
-
-
-// Helper to control Service Interval field
 function toggle_service_interval(frm) {
     const is_service = frm.doc.service_breakdown === "Service";
 
-    // Show/hide the field
-    frm.toggle_display('service_interval', is_service);
+    frm.toggle_display("service_interval", is_service);
+    frm.toggle_reqd("service_interval", is_service);
 
-    // Make required / not required
-    frm.toggle_reqd('service_interval', is_service);
-
-    // Clear value when not a Service
     if (!is_service && frm.doc.service_interval) {
-        frm.set_value('service_interval', null);
+        frm.set_value("service_interval", null);
     }
 }
+
 
 function calculate_total_time_live(frm) {
     if (!frm.doc.start_time || !frm.doc.end_time) {
@@ -202,39 +215,45 @@ function calculate_total_time_live(frm) {
     frm.set_value("total_time", Math.floor(diff_seconds));
 }
 
-function calculate_total_time_unavailable_live(frm) {
-    if (!frm.doc.plant_breakdown_number || !frm.doc.end_time) {
-        frm.set_value("total_time_unavailable", 0);
+
+function fetch_employee_name(frm, employee_field, name_field) {
+    const employee = frm.doc[employee_field];
+
+    if (!employee) {
+        frm.set_value(name_field, "");
         return;
     }
 
-    frappe.call({
-        method: "frappe.client.get_value",
-        args: {
-            doctype: "Plant Breakdown or Maintenance",
-            name: frm.doc.plant_breakdown_number,
-            fieldname: "breakdown_start_datetime"
-        },
-        callback: function(r) {
-            const breakdown_start = r.message && r.message.breakdown_start_datetime;
-
-            if (!breakdown_start) {
-                frm.set_value("total_time_unavailable", 0);
-                return;
+    frappe.db.get_value("Employee", employee, "employee_name")
+        .then((r) => {
+            if (r && r.message && r.message.employee_name) {
+                frm.set_value(name_field, r.message.employee_name);
             }
-
-            const end = frappe.datetime.str_to_obj(frm.doc.end_time);
-            const start = frappe.datetime.str_to_obj(breakdown_start);
-
+        });
+}
 
 
-            let diff_seconds = (end - start) / 1000;
-            if (diff_seconds < 0) {
-                frappe.msgprint("Breakdown Start Date/Time is AFTER MSR End Time. Fix breakdown_start_datetime or MSR end_time.");
-                diff_seconds = 0;
-            }
+function lock_comment_history_grid(frm) {
+    if (!frm.fields_dict.comment_history) {
+        return;
+    }
 
-            frm.set_value("total_time_unavailable", Math.floor(diff_seconds));
-        }
-    });
+    const grid = frm.fields_dict.comment_history.grid;
+
+    grid.cannot_add_rows = true;
+    grid.cannot_delete_rows = true;
+
+    grid.update_docfield_property("comment_from", "read_only", 1);
+    grid.update_docfield_property("comment", "read_only", 1);
+    grid.update_docfield_property("commented_by", "read_only", 1);
+    grid.update_docfield_property("commented_on", "read_only", 1);
+
+    grid.refresh();
+}
+
+
+function set_read_only_if_exists(frm, fieldname, value) {
+    if (frm.fields_dict[fieldname]) {
+        frm.set_df_property(fieldname, "read_only", value);
+    }
 }

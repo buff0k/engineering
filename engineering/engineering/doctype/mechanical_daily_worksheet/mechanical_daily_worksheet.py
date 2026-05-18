@@ -10,15 +10,13 @@ from frappe.utils import getdate
 
 class MechanicalDailyWorksheet(Document):
     def autoname(self):
-        site = self.site or "NO-SITE"
-
         worksheet_date = getdate(self.date) if self.date else getdate()
         worksheet_date = worksheet_date.strftime("%Y-%m-%d")
 
         mechanic_name = self.mechanic_name_surname or "NO-MECHANIC"
         mechanic_name = mechanic_name.strip().upper()
 
-        base_name = f"{site}-{worksheet_date}-{mechanic_name}"
+        base_name = f"MDW-{worksheet_date}-{mechanic_name}"
 
         self.name = self.get_unique_name(base_name)
 
@@ -40,6 +38,8 @@ class MechanicalDailyWorksheet(Document):
         self.calculate_total_hours()
         self.calculate_child_hours()
         self.calculate_total_work_time()
+        self.calculate_total_non_msr_time()
+        self.calculate_sum_total()
 
     def calculate_total_hours(self):
         self.total_hours = self.get_hours_difference(
@@ -63,6 +63,23 @@ class MechanicalDailyWorksheet(Document):
 
 
 
+
+    def calculate_total_non_msr_time(self):
+        total = 0.0
+
+        for row in self.non_msr:
+            total += self.get_datetime_hours_difference(
+                row.start_time,
+                row.end_time
+            )
+
+        self.total_non_msr_time = round(total, 2)
+
+    def calculate_sum_total(self):
+        msr_total = self.total_work_time or 0
+        non_msr_total = self.total_non_msr_time or 0
+
+        self.sum_total = round(msr_total + non_msr_total, 2)
 
 
     def get_datetime_hours_difference(self, start_value, end_value):
@@ -130,3 +147,33 @@ class MechanicalDailyWorksheet(Document):
                     continue
 
         return None
+
+
+        return None
+
+
+@frappe.whitelist()
+def get_msrs_for_daily_worksheet(worksheet_date, mechanic_company_no):
+    if not worksheet_date or not mechanic_company_no:
+        return []
+
+    return frappe.db.sql("""
+        SELECT
+            name,
+            service_date,
+            site,
+            asset,
+            service_breakdown,
+            current_hours,
+            description_of_work_done,
+            start_time,
+            end_time
+        FROM `tabMechanical Service Report`
+        WHERE service_date = %s
+          AND artisan_employee_code = %s
+          AND start_time IS NOT NULL
+          AND end_time IS NOT NULL
+          AND start_time NOT LIKE '%%-00-00%%'
+          AND end_time NOT LIKE '%%-00-00%%'
+        ORDER BY start_time ASC
+    """, (worksheet_date, mechanic_company_no), as_dict=True)

@@ -1,12 +1,21 @@
 frappe.query_reports["Account Item Tree"] = {
     tree: true,
     name_field: "account_item",
-    initial_depth: 1,
+    initial_depth: 0,
     filters: [],
 
     formatter(value, row, column, data, default_formatter) {
         value = default_formatter(value, row, column, data);
         if (!data) return value;
+
+
+
+        if (data.row_type === "company" && column.fieldname === "account_item") {
+            return `<span style="font-weight: 900; background: #111827; color: white; padding: 4px 10px; border-radius: 6px;">${value}</span>`;
+        }
+
+
+
 
         if (data.row_type === "account" && column.fieldname === "account_item") {
             return `<span style="font-weight: 800; background: #e5e7eb; padding: 4px 8px; border-radius: 6px;">${value}</span>`;

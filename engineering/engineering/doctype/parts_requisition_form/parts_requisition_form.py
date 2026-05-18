@@ -59,33 +59,3 @@ def get_asset_machine_details(asset_name):
 
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def get_items_by_expense_account(doctype, txt, searchfield, start, page_len, filters):
-	default_expense_account = filters.get("default_expense_account")
-
-	if not default_expense_account:
-		return []
-
-	return frappe.db.sql("""
-		SELECT
-			item.name,
-			item.item_name
-		FROM `tabItem` item
-		INNER JOIN `tabItem Default` item_default
-			ON item_default.parent = item.name
-		WHERE
-			item.disabled = 0
-			AND item_default.expense_account = %(default_expense_account)s
-			AND (
-				item.name LIKE %(txt)s
-				OR item.item_name LIKE %(txt)s
-			)
-		ORDER BY item.name
-		LIMIT %(start)s, %(page_len)s
-	""", {
-		"default_expense_account": default_expense_account,
-		"txt": f"%{txt}%",
-		"start": start,
-		"page_len": page_len
-	})	

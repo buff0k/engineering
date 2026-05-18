@@ -1,9 +1,19 @@
 frappe.ui.form.on("Parts Requisition Item", {
-	default_expense_account(frm, cdt, cdn) {
+	item_group(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 
 		row.item_code = "";
 		frm.refresh_field("items");
+	},
+
+	item_code(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+
+		if (!row.item_group) {
+			row.item_code = "";
+			frm.refresh_field("items");
+			frappe.msgprint(__("Select Item Group before Item Code."));
+		}
 	}
 });
 
@@ -22,20 +32,44 @@ frappe.ui.form.on("Parts Requisition Form", {
 		set_account_filter(frm);
 	},
 
+	company(frm) {
+		frm.set_value("plant_no", "");
+		frm.set_value("asset_category", "");
+		frm.set_value("plant_make", "");
+		frm.set_value("model", "");
+		frm.set_value("vin_no", "");
+
+		(frm.doc.items || []).forEach(row => {
+			row.item_group = "";
+			row.item_code = "";
+		});
+
+		frm.refresh_field("items");
+	},
+
 	plant_no(frm) {
+		if (!frm.doc.company) {
+			frm.set_value("plant_no", "");
+			frappe.msgprint(__("Select Company before Plant No."));
+			return;
+		}
+
 		load_asset_details(frm);
+	},
+
+	asset_category(frm) {
+		(frm.doc.items || []).forEach(row => {
+			row.item_group = "";
+			row.item_code = "";
+		});
+
+		frm.refresh_field("items");
 	}
 });
 
 function set_account_filter(frm) {
-	frm.set_query("default_expense_account", "items", function(doc, cdt, cdn) {
-		return {};
-	});
-
-	frm.set_query("item_code", "items", function(doc, cdt, cdn) {
-		const row = locals[cdt][cdn];
-
-		if (!row.default_expense_account) {
+	frm.set_query("plant_no", function() {
+		if (!frm.doc.company) {
 			return {
 				filters: {
 					name: ["=", ""]
@@ -44,9 +78,43 @@ function set_account_filter(frm) {
 		}
 
 		return {
-			query: "engineering.engineering.doctype.parts_requisition_form.parts_requisition_form.get_items_by_expense_account",
 			filters: {
-				default_expense_account: row.default_expense_account
+				asset_owner_company: frm.doc.company
+			}
+		};
+	});
+
+	frm.set_query("item_group", "items", function(doc, cdt, cdn) {
+		if (!frm.doc.asset_category) {
+			return {
+				filters: {
+					name: ["=", ""]
+				}
+			};
+		}
+
+		return {
+			filters: {
+				name: frm.doc.asset_category
+			}
+		};
+	});
+
+	frm.set_query("item_code", "items", function(doc, cdt, cdn) {
+		const row = locals[cdt][cdn];
+
+		if (!frm.doc.asset_category || !row.item_group) {
+			return {
+				filters: {
+					name: ["=", ""]
+				}
+			};
+		}
+
+		return {
+			filters: {
+				item_group: row.item_group,
+				disabled: 0
 			}
 		};
 	});
