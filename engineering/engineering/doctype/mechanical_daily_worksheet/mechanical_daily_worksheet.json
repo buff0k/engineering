@@ -9,7 +9,7 @@
   "employee_section",
   "column_break_pqqe",
   "date",
-  "mechanic_company_no",
+  "mechanic_employee_no",
   "mechanic_name_surname",
   "details",
   "clock_in_time",
@@ -27,9 +27,9 @@
   "total_work_time",
   "mechanic_signature",
   "supervisor_section",
-  "supervisor_forman_company_no",
-  "supervisor_forman_name_surname",
-  "supervisor_forman_signature"
+  "forman_supervisor_employee_no",
+  "forman_supervisor_name_surname",
+  "forman_supervisor_signature"
  ],
  "fields": [
   {
@@ -82,35 +82,11 @@
    "label": "Approval"
   },
   {
-   "fieldname": "supervisor_forman_company_no",
-   "fieldtype": "Link",
-   "label": "Supervisor/Forman Company No",
-   "options": "Employee"
-  },
-  {
-   "fetch_from": "supervisor_forman_company_no.employee_name",
-   "fieldname": "supervisor_forman_name_surname",
-   "fieldtype": "Data",
-   "label": "Supervisor/Forman Name & Surname"
-  },
-  {
-   "fieldname": "supervisor_forman_signature",
-   "fieldtype": "Signature",
-   "label": "Supervisor/Forman Signature"
-  },
-  {
    "fieldname": "column_break_pqqe",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "mechanic_company_no",
-   "fieldtype": "Link",
-   "label": "Mechanic Company No",
-   "options": "Employee",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "mechanic_company_no.employee_name",
+   "fetch_from": "mechanic_employee_no.employee_name",
    "fieldname": "mechanic_name_surname",
    "fieldtype": "Data",
    "label": "Mechanic Name & Surname"
@@ -169,11 +145,36 @@
    "fieldtype": "Float",
    "label": "Total Non MSR Time",
    "precision": "2"
+  },
+  {
+   "fieldname": "mechanic_employee_no",
+   "fieldtype": "Link",
+   "label": "Mechanic Employee No",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "forman_supervisor_employee_no",
+   "fieldtype": "Link",
+   "label": "Forman/Supervisor Employee No",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "forman_supervisor_employee_no.employee_name",
+   "fieldname": "forman_supervisor_name_surname",
+   "fieldtype": "Data",
+   "label": "Forman/Supervisor Name & Surname",
+   "read_only": 1
+  },
+  {
+   "fieldname": "forman_supervisor_signature",
+   "fieldtype": "Signature",
+   "label": "Forman/Supervisor Signature"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-15 16:43:58.546658",
+ "modified": "2026-05-18 11:45:26.191160",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

@@ -1,6 +1,7 @@
 frappe.ui.form.on("Mechanical Service Report", {
     refresh(frm) {
         // Set dynamic filter for Asset based on selected Site
+        // Only submitted Assets for selected Site will show
         set_asset_filter(frm);
 
         toggle_fields_until_site_selected(frm);
@@ -109,12 +110,17 @@ function set_asset_filter(frm) {
         if (frm.doc.site) {
             return {
                 filters: {
-                    location: frm.doc.site
+                    location: frm.doc.site,
+                    docstatus: 1
                 }
             };
         }
 
-        return {};
+        return {
+            filters: {
+                docstatus: 1
+            }
+        };
     });
 }
 

@@ -1,10 +1,18 @@
 frappe.ui.form.on('Engineering Legals', {
   refresh(frm) {
+    apply_asset_filter(frm);
     apply_section_rules(frm);
     apply_hsec_rules(frm);
     set_expiry_date(frm);
     add_eng_legals_report_button(frm);
   },
+
+  site(frm) {
+    frm.set_value('fleet_number', null);
+    apply_asset_filter(frm);
+  },
+
+
 
   sections(frm) {
     frm.set_value('vehicle_type', null);
@@ -186,7 +194,16 @@ function set_expiry_date(frm) {
   frm.set_value('expiry_date', expiry);
 }
 
-
+function apply_asset_filter(frm) {
+  frm.set_query('fleet_number', () => {
+    return {
+      filters: {
+        docstatus: 1,
+        location: frm.doc.site || ''
+      }
+    };
+  });
+}
 
 function add_eng_legals_report_button(frm) {
   frm.remove_custom_button("Open Engineering Legals Report");

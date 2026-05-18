@@ -18,7 +18,6 @@ frappe.ui.form.on("Parts Requisition Item", {
 });
 
 
-
 frappe.ui.form.on("Parts Requisition Form", {
 	refresh(frm) {
 		set_account_filter(frm);
@@ -45,12 +44,31 @@ frappe.ui.form.on("Parts Requisition Form", {
 		});
 
 		frm.refresh_field("items");
+
+		set_account_filter(frm);
+	},
+
+	site(frm) {
+		frm.set_value("plant_no", "");
+		frm.set_value("asset_category", "");
+		frm.set_value("plant_make", "");
+		frm.set_value("model", "");
+		frm.set_value("vin_no", "");
+
+		(frm.doc.items || []).forEach(row => {
+			row.item_group = "";
+			row.item_code = "";
+		});
+
+		frm.refresh_field("items");
+
+		set_account_filter(frm);
 	},
 
 	plant_no(frm) {
-		if (!frm.doc.company) {
+		if (!frm.doc.company || !frm.doc.site) {
 			frm.set_value("plant_no", "");
-			frappe.msgprint(__("Select Company before Plant No."));
+			frappe.msgprint(__("Select Company and Site before Plant No."));
 			return;
 		}
 
@@ -67,9 +85,10 @@ frappe.ui.form.on("Parts Requisition Form", {
 	}
 });
 
+
 function set_account_filter(frm) {
 	frm.set_query("plant_no", function() {
-		if (!frm.doc.company) {
+		if (!frm.doc.company || !frm.doc.site) {
 			return {
 				filters: {
 					name: ["=", ""]
@@ -79,7 +98,9 @@ function set_account_filter(frm) {
 
 		return {
 			filters: {
-				asset_owner_company: frm.doc.company
+				asset_owner_company: frm.doc.company,
+				location: frm.doc.site,
+				docstatus: 1
 			}
 		};
 	});
@@ -120,6 +141,7 @@ function set_account_filter(frm) {
 	});
 }
 
+
 function split_item_code(item_code) {
 	if (!item_code) {
 		return {
@@ -147,10 +169,13 @@ function split_item_code(item_code) {
 	};
 }
 
+
 function load_asset_details(frm) {
 	if (!frm.doc.plant_no) {
+		frm.set_value("asset_category", "");
 		frm.set_value("plant_make", "");
 		frm.set_value("model", "");
+		frm.set_value("vin_no", "");
 		return;
 	}
 
@@ -169,6 +194,7 @@ function load_asset_details(frm) {
 				doc.custom_vin_no ||
 				"";
 
+			frm.set_value("asset_category", doc.asset_category || "");
 			frm.set_value("plant_make", split_values.plant_make);
 			frm.set_value("model", split_values.model);
 
@@ -178,8 +204,12 @@ function load_asset_details(frm) {
 		})
 		.catch(err => {
 			console.error("Failed to load Asset details", err);
+
+			frm.set_value("asset_category", "");
 			frm.set_value("plant_make", "");
 			frm.set_value("model", "");
+			frm.set_value("vin_no", "");
+
 			frappe.msgprint(__("Could not load Plant Make / Model from Asset."));
 		});
 }
