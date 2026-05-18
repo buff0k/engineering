@@ -58,4 +58,39 @@ def get_asset_machine_details(asset_name):
 
 
 
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_assets_by_site_code(doctype, txt, searchfield, start, page_len, filters):
+	company = filters.get("company")
+	site = filters.get("site")
 
+	if not company or not site:
+		return []
+
+	location = frappe.db.get_value("Site Code", site, "location")
+
+	if not location:
+		return []
+
+	return frappe.db.sql("""
+		SELECT
+			asset.name,
+			asset.asset_name
+		FROM `tabAsset` asset
+		WHERE
+			asset.docstatus = 1
+			AND asset.asset_owner_company = %(company)s
+			AND asset.location = %(location)s
+			AND (
+				asset.name LIKE %(txt)s
+				OR asset.asset_name LIKE %(txt)s
+			)
+		ORDER BY asset.name
+		LIMIT %(start)s, %(page_len)s
+	""", {
+		"company": company,
+		"location": location,
+		"txt": f"%{txt}%",
+		"start": start,
+		"page_len": page_len
+	})

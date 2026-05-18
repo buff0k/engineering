@@ -97,10 +97,10 @@ function set_account_filter(frm) {
 		}
 
 		return {
+			query: "engineering.engineering.doctype.parts_requisition_form.parts_requisition_form.get_assets_by_site_code",
 			filters: {
-				asset_owner_company: frm.doc.company,
-				location: frm.doc.site,
-				docstatus: 1
+				company: frm.doc.company,
+				site: frm.doc.site
 			}
 		};
 	});

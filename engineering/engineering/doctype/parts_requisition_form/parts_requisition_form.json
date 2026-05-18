@@ -70,8 +70,8 @@
    "fieldname": "site",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Site",
-   "options": "Location"
+   "label": "Site Code",
+   "options": "Site Code"
   },
   {
    "fieldname": "items_section",
@@ -163,7 +163,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-18 11:22:27.506229",
+ "modified": "2026-05-18 12:14:36.871732",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Parts Requisition Form",

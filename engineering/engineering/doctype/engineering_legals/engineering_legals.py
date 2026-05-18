@@ -356,6 +356,18 @@ def _graph_request(method: str, url: str, token: str, **kwargs):
     response = requests.request(method, url, headers=headers, timeout=60, **kwargs)
 
     if not response.ok:
+
+        # SharePoint item/folder already exists.
+        # Treat as non-fatal so uploads do not fail.
+        if response.status_code == 409:
+            try:
+                return response.json()
+            except Exception:
+                return {
+                    "status_code": 409,
+                    "text": response.text,
+                }
+
         frappe.throw(f"Graph request failed: {response.status_code} - {response.text}")
 
     if response.text:
