@@ -268,6 +268,7 @@ class AvailabilityandUtilisation(Document):
                 "TLB",
                 "Water Bowser",
                 "Diesel Bowsers",
+                "Drills",
             ],
         ],
                         "docstatus": 1,

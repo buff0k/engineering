@@ -5,15 +5,37 @@ CATEGORY_MAP = {
     "ADT": "ADT's",
     "Excavator": "Excavator's",
     "Dozer": "Dozer's",
+    "Grader": "Grader",
+    "Service Truck": "Service Truck",
+    "TLB": "TLB",
+    "Water Bowser": "Water Bowser",
+    "Diesel Bowsers": "Diesel Bowsers",
+    "Drills": "Drills",
 }
 
 UI_TITLES = {
     "ADT's": "ADTS",
     "Excavator's": "EXCAVATOR",
     "Dozer's": "DOZER",
+    "Grader": "GRADER",
+    "Service Truck": "SERVICE TRUCK",
+    "TLB": "TLB",
+    "Water Bowser": "WATER BOWSER",
+    "Diesel Bowsers": "DIESEL BOWSERS",
+    "Drills": "DRILLS",
 }
 
-UI_CATEGORIES = ["ADT's", "Excavator's", "Dozer's"]
+UI_CATEGORIES = [
+    "ADT's",
+    "Excavator's",
+    "Dozer's",
+    "Grader",
+    "Service Truck",
+    "TLB",
+    "Water Bowser",
+    "Diesel Bowsers",
+    "Drills",
+]
 
 SITE_HEADER_COLOURS = {
     "Klipfontein": "#EBF9FF",
@@ -67,7 +89,7 @@ DASH_CSS = """
 
 .isd-metrics {
   display: grid;
-  grid-template-columns: repeat(3, max-content);
+  grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
   gap: 18px;
   justify-content: start;
   align-items: start;
@@ -553,11 +575,7 @@ def is_category_total_row(row):
 
 
 def build_summary_averages_from_source_rows(rows):
-    out = {
-        "ADT's": {"avail": None, "util": None},
-        "Excavator's": {"avail": None, "util": None},
-        "Dozer's": {"avail": None, "util": None},
-    }
+    out = {ui_label: {"avail": None, "util": None} for ui_label in UI_CATEGORIES}
 
     for row in rows:
         if is_separator_row(row):
@@ -602,11 +620,7 @@ def build_summary_averages_from_source_rows(rows):
 
 
 def build_machine_series_from_source_rows(rows):
-    buckets = {
-        "ADT's": {},
-        "Excavator's": {},
-        "Dozer's": {},
-    }
+    buckets = {ui_label: {} for ui_label in UI_CATEGORIES}
 
     for row in rows:
         if is_separator_row(row):
@@ -849,10 +863,10 @@ def build_chart_html(machine_series):
 </div>
 """
 
+    sections = "".join(chart_section(ui_label) for ui_label in UI_CATEGORIES)
+
     return f"""
 <div class="isd-chart-stack">
-  {chart_section("ADT's")}
-  {chart_section("Excavator's")}
-  {chart_section("Dozer's")}
+  {sections}
 </div>
 """
