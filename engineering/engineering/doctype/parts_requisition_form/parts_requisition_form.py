@@ -94,3 +94,75 @@ def get_assets_by_site_code(doctype, txt, searchfield, start, page_len, filters)
 		"start": start,
 		"page_len": page_len
 	})
+
+
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_item_groups_by_asset_category(doctype, txt, searchfield, start, page_len, filters):
+	asset_category = filters.get("asset_category")
+
+	if not asset_category:
+		return []
+
+	filtered_asset_categories = [
+		"ADT",
+		"Dozer",
+		"Excavator",
+		"Rollback",
+		"Water pump",
+		"Grader",
+		"TLB",
+		"Water Bowser",
+		"Service Truck",
+		"Diesel Bowsers",
+		"LDV",
+		"Mobile Screen",
+		"Mobile Crusher",
+		"Loader",
+		"GHT",
+		"Vechiles",
+		"Compressors",
+		"Drills"
+	]
+
+	if asset_category in filtered_asset_categories:
+		return frappe.db.sql("""
+			SELECT
+				item_group.name,
+				item_group.item_group_name
+			FROM `tabItem Group` item_group
+			WHERE
+				item_group.name LIKE %(asset_category)s
+				AND (
+					item_group.name LIKE %(txt)s
+					OR item_group.item_group_name LIKE %(txt)s
+				)
+			ORDER BY item_group.name
+			LIMIT %(start)s, %(page_len)s
+		""", {
+			"asset_category": f"%{asset_category}%",
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len
+		})
+
+	return frappe.db.sql("""
+		SELECT
+			item_group.name,
+			item_group.item_group_name
+		FROM `tabItem Group` item_group
+		WHERE
+			item_group.name LIKE %(txt)s
+			OR item_group.item_group_name LIKE %(txt)s
+		ORDER BY item_group.name
+		LIMIT %(start)s, %(page_len)s
+	""", {
+		"txt": f"%{txt}%",
+		"start": start,
+		"page_len": page_len
+	})
+
+
+	

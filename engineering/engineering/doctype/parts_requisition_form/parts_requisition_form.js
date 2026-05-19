@@ -66,6 +66,10 @@ frappe.ui.form.on("Parts Requisition Form", {
 	},
 
 	plant_no(frm) {
+		if (!frm.doc.plant_no) {
+			return;
+		}
+
 		if (!frm.doc.company || !frm.doc.site) {
 			frm.set_value("plant_no", "");
 			frappe.msgprint(__("Select Company and Site before Plant No."));
@@ -115,8 +119,9 @@ function set_account_filter(frm) {
 		}
 
 		return {
+			query: "engineering.engineering.doctype.parts_requisition_form.parts_requisition_form.get_item_groups_by_asset_category",
 			filters: {
-				name: frm.doc.asset_category
+				asset_category: frm.doc.asset_category
 			}
 		};
 	});

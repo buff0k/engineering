@@ -60,8 +60,7 @@ def _get_user_suppliers():
         user
     )
 
-    if suppliers:
-        return suppliers
+    out = list(suppliers or [])
 
     contact_names = frappe.get_all(
         "Contact Email",
@@ -70,22 +69,21 @@ def _get_user_suppliers():
         limit_page_length=0,
     )
 
-    if not contact_names:
-        return []
+    if contact_names:
+        supplier_links = frappe.get_all(
+            "Dynamic Link",
+            filters={
+                "parenttype": "Contact",
+                "parent": ["in", contact_names],
+                "link_doctype": "Supplier",
+            },
+            pluck="link_name",
+            limit_page_length=0,
+        )
 
-    supplier_links = frappe.get_all(
-        "Dynamic Link",
-        filters={
-            "parenttype": "Contact",
-            "parent": ["in", contact_names],
-            "link_doctype": "Supplier",
-        },
-        pluck="link_name",
-        limit_page_length=0,
-    )
+        out.extend(supplier_links or [])
 
-    return supplier_links or []
-
+    return sorted(set(out))
 
 def _get_asset_site_field():
     meta = frappe.get_meta("Asset")
