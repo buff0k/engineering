@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{plant_no}-{site}",
+ "autoname": "format:{plant_no}-{site}-{######}",
  "creation": "2026-04-17 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -163,7 +163,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-18 12:14:36.871732",
+ "modified": "2026-05-19 13:40:26.629275",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Parts Requisition Form",

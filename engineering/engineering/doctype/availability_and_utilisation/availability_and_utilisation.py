@@ -256,7 +256,20 @@ class AvailabilityandUtilisation(Document):
                     "Asset",
                     filters={
                         "location": location,
-                        "asset_category": ["in", ["Dozer", "ADT", "Rigid", "Excavator"]],
+                        "asset_category": [
+            "in",
+            [
+                "Dozer",
+                "ADT",
+                "Rigid",
+                "Excavator",
+                "Grader",
+                "Service Truck",
+                "TLB",
+                "Water Bowser",
+                "Diesel Bowsers",
+            ],
+        ],
                         "docstatus": 1,
                     },
                     fields=["name", "asset_name", "item_name", "asset_category"],
