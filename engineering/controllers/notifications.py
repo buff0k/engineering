@@ -250,7 +250,9 @@ def _send_oem_booking_email(doc, action: str):
 
 
 def wearcheck_results_after_insert(doc, method=None):
-    _send_wearcheck_alert_email(doc)
+    # TEMP: Disable Wearcheck alert emails until data fetching is fixed.
+    # _send_wearcheck_alert_email(doc)
+    pass
 
 def _send_wearcheck_alert_email(doc):
     status = cint(getattr(doc, "status", None) or 0)

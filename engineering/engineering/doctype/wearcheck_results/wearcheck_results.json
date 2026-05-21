@@ -56,6 +56,15 @@
   "pq",
   "profileid",
   "samp_taker",
+  "error_records_not_synced_column",
+  "import_failed",
+  "import_error",
+  "import_error_details",
+  "raw_asset_value",
+  "raw_location_value",
+  "raw_company_value",
+  "last_import_attempt",
+  "import_status",
   "section_break_aptg",
   "checksum",
   "asset",
@@ -355,12 +364,71 @@
    "in_standard_filter": 1,
    "label": "Location",
    "options": "Location"
+  },
+  {
+   "fieldname": "error_records_not_synced_column",
+   "fieldtype": "Column Break",
+   "label": "Error Records Not Synced"
+  },
+  {
+   "default": "0",
+   "fieldname": "import_failed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Import Failed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_error",
+   "fieldtype": "Small Text",
+   "label": "Import Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_error_details",
+   "fieldtype": "Long Text",
+   "label": "Import Error Details",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_asset_value",
+   "fieldtype": "Data",
+   "label": "Raw Asset Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_location_value",
+   "fieldtype": "Data",
+   "label": "Raw Location Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_company_value",
+   "fieldtype": "Data",
+   "label": "Raw Company Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_import_attempt",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Last Import Attempt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Import Status",
+   "options": "Success\nFailed\nPending",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-06 09:29:51.479524",
+ "modified": "2026-05-21 09:37:58.775431",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "WearCheck Results",

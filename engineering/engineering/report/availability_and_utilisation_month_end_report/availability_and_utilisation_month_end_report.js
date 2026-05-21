@@ -27,7 +27,16 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 			fieldname: "asset_category",
 			label: __("Asset Category"),
 			fieldtype: "Select",
-			options: "\nADT\nDozer\nExcavator\nRigid"
+			options: `
+ADT
+Dozer
+Excavator
+Grader
+Service Truck
+TLB
+Water Bowser
+Diesel Bowsers
+Drills`
 		}
 	],
 

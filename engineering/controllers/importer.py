@@ -55,6 +55,12 @@ def _checksum(row: dict) -> str:
     raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
+def _safe_link(doctype: str, value):
+    value = (value or "").strip()
+    if not value:
+        return None
+    return value if frappe.db.exists(doctype, value) else None
+
 
 def _queue_critical_email(doc):
     subject, message = _build_critical_email(doc)
@@ -151,13 +157,22 @@ def sync_wearcheck_rows(rows):
         raw_site_s = raw_site.strip()
         raw_machine_s = raw_machine.strip()
 
+        mapped_company = mapping.get("Company", {}).get(_key(raw_customer)) or (raw_customer_s or None)
+        mapped_location = mapping.get("Location", {}).get(_key(raw_site)) or (raw_site_s or None)
+        mapped_asset = mapping.get("Asset", {}).get(_key(raw_machine)) or (raw_machine_s or None)
+
         doc.customer = raw_customer_s
         doc.site = raw_site_s
         doc.machine = raw_machine_s
 
-        doc.company = mapping.get("Company", {}).get(_key(raw_customer)) or (raw_customer_s or None)
-        doc.location = mapping.get("Location", {}).get(_key(raw_site)) or (raw_site_s or None)
-        doc.asset = mapping.get("Asset", {}).get(_key(raw_machine)) or (raw_machine_s or None)
+        doc.raw_company_value = mapped_company or ""
+        doc.raw_location_value = mapped_location or ""
+        doc.raw_asset_value = mapped_asset or ""
+        doc.last_import_attempt = now()
+
+        doc.company = _safe_link("Company", mapped_company)
+        doc.location = _safe_link("Location", mapped_location)
+        doc.asset = _safe_link("Asset", mapped_asset)
 
         doc.component = r.get("component") or ""
         doc.profileid = _to_int(r.get("profileid"))
@@ -190,13 +205,32 @@ def sync_wearcheck_rows(rows):
         doc.iso14 = _to_int(r.get("iso14"))
         doc.pq = _to_int(r.get("pq"))
 
+        link_errors = []
+        if mapped_company and not doc.company:
+            link_errors.append(f"Could not find Company: {mapped_company}")
+        if mapped_location and not doc.location:
+            link_errors.append(f"Could not find Location: {mapped_location}")
+        if mapped_asset and not doc.asset:
+            link_errors.append(f"Could not find Asset: {mapped_asset}")
+
+        if link_errors:
+            doc.import_failed = 1
+            doc.import_status = "Failed"
+            doc.import_error = " | ".join(link_errors)[:140]
+            doc.import_error_details = "\n".join(link_errors)
+        else:
+            doc.import_failed = 0
+            doc.import_status = "Success"
+            doc.import_error = ""
+            doc.import_error_details = ""
+
         doc.checksum = new_cs
 
         if exists:
-            doc.save(ignore_permissions=True, ignore_links=True)
+            doc.save(ignore_permissions=True)
             updated += 1
         else:
-            doc.insert(ignore_permissions=True, ignore_links=True)
+            doc.insert(ignore_permissions=True)
             created += 1
 
         n += 1

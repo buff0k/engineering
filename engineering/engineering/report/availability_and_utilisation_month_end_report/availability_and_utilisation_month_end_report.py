@@ -2,10 +2,107 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
 from frappe.utils import flt
 
+_ = frappe._
+
+MONTH_END_CATEGORIES = [
+    "ADT",
+    "Dozer",
+    "Excavator",
+    "Grader",
+    "Service Truck",
+    "TLB",
+    "Water Bowser",
+    "Diesel Bowsers",
+    "Drills",
+    "Loader",
+]
+
+
+
+CATEGORY_MAP = {
+    "ADT": "ADT",
+    "ADT's": "ADT",
+    "Dozer": "Dozer",
+    "Dozer's": "Dozer",
+    "Excavator": "Excavator",
+    "Excavator's": "Excavator",
+    "Grader": "Grader",
+    "Service Truck": "Service Truck",
+    "TLB": "TLB",
+    "Water Bowser": "Water Bowser",
+    "Diesel Bowsers": "Diesel Bowsers",
+    "Drills": "Drills",
+    "Loader": "Loader",
+}
+
+UI_CATEGORIES = [
+    "ADT",
+    "Dozer",
+    "Excavator",
+    "Grader",
+    "Service Truck",
+    "TLB",
+    "Water Bowser",
+    "Diesel Bowsers",
+    "Drills",
+    "Loader",
+]
+
 from is_production.production.report.avail_and_util_summary import avail_and_util_summary as summary
+
+def safe_msr_datetime(value, service_date=None):
+    if value in (None, ""):
+        return None
+
+    value_text = str(value).strip()
+    if not value_text:
+        return None
+
+    service_date_text = str(service_date).strip() if service_date else None
+
+    if (
+        "0000-00-00" in value_text
+        or "-00-" in value_text
+        or value_text.startswith("2008-00-00")
+    ):
+        if service_date_text and " " in value_text:
+            time_text = value_text.split()[-1].split(".")[0]
+            try:
+                return safe_msr_datetime(f"{service_date_text} {time_text}")
+            except Exception:
+                return None
+        return None
+
+    try:
+        return safe_msr_datetime(value)
+    except Exception:
+        if service_date_text and ":" in value_text:
+            time_text = value_text.split()[-1].split(".")[0]
+            try:
+                return safe_msr_datetime(f"{service_date_text} {time_text}")
+            except Exception:
+                return None
+        return None
+
+
+def safe_getdate(value):
+    if value in (None, ""):
+        return None
+
+    value_text = str(value).strip()
+    if not value_text:
+        return None
+
+    if "0000-00-00" in value_text or "-00-" in value_text or value_text.startswith("2008-00-00"):
+        return None
+
+    try:
+        return safe_getdate(value)
+    except Exception:
+        return None
+
 
 
 def execute(filters=None):
@@ -163,6 +260,48 @@ def get_data(filters):
 	return data
 
 
+def ensure_all_category_total_rows(data):
+    existing_categories = {
+        row.get("asset_category")
+        for row in data
+        if row.get("asset_category") and not row.get("asset_name")
+    }
+
+    insert_at = 0
+
+    for category in UI_CATEGORIES:
+        if category in existing_categories:
+            continue
+
+        data.insert(insert_at, {
+            "asset_category": category,
+            "asset_name": "",
+            "required_hrs": 0,
+            "work_hrs": 0,
+            "mechanical_downtime": 0,
+            "avail_percent": 0,
+            "util_percent": 0,
+            "emp_avail_percent": 0,
+            "breakdown_reason": "",
+            "other_delay_reason": "",
+            "is_category_total": 1,
+        })
+
+        insert_at += 1
+
+    data.sort(
+        key=lambda row: (
+            UI_CATEGORIES.index(row.get("asset_category"))
+            if row.get("asset_category") in UI_CATEGORIES
+            else 999,
+            0 if not row.get("asset_name") else 1,
+            row.get("asset_name") or "",
+        )
+    )
+
+    return data
+
+
 def average_percent(values):
 	valid_values = [flt(value) for value in values if value is not None]
 
@@ -248,3 +387,207 @@ def get_other_delay_reason(row):
 		reasons.append("Other lost hours")
 
 	return "\n".join(reasons) if reasons else None
+
+
+# BEGIN DIRECT AU MONTH END TOTALS
+
+MONTH_END_CATEGORIES = [
+    "ADT",
+    "Dozer",
+    "Excavator",
+    "Grader",
+    "Service Truck",
+    "TLB",
+    "Water Bowser",
+    "Diesel Bowsers",
+    "Drills",
+    "Loader",
+]
+
+
+def _month_end_get_filter_value(filters, *keys):
+    filters = frappe._dict(filters or {})
+    for key in keys:
+        value = filters.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _month_end_category_sort(category):
+    return MONTH_END_CATEGORIES.index(category) if category in MONTH_END_CATEGORIES else 999
+
+
+def _month_end_calc_row(asset_category, asset_name, required_hrs, work_hrs, mechanical_downtime):
+    required_hrs = flt(required_hrs)
+    work_hrs = flt(work_hrs)
+    mechanical_downtime = flt(mechanical_downtime)
+    available_hrs = required_hrs - mechanical_downtime
+
+    avail_percent = (available_hrs / required_hrs * 100) if required_hrs else 0
+    util_percent = (work_hrs / available_hrs * 100) if available_hrs else 0
+    emp_avail_percent = (mechanical_downtime / required_hrs * 100) if required_hrs else 0
+
+    return {
+        "asset_category": asset_category,
+        "asset_name": asset_name or "",
+        "required_hrs": round(required_hrs, 1),
+        "work_hrs": round(work_hrs, 1),
+        "mechanical_downtime": round(mechanical_downtime, 1),
+        "avail_percent": round(avail_percent, 1),
+        "util_percent": round(util_percent, 1),
+        "emp_avail_percent": round(emp_avail_percent, 1),
+        "breakdown_reason": "",
+        "other_delay_reason": "",
+        "is_category_total": 0 if asset_name else 1,
+    }
+
+
+def _asset_columns():
+    return {row.Field for row in frappe.db.sql("SHOW COLUMNS FROM `tabAsset`", as_dict=True)}
+
+
+def _asset_condition_and_values(categories, location):
+    columns = _asset_columns()
+    conditions = ["asset_category in %(categories)s"]
+    values = {"categories": tuple(categories)}
+
+    if "docstatus" in columns:
+        conditions.append("docstatus = 1")
+
+    location_field = None
+    for candidate in ["location", "current_location", "custodian_location"]:
+        if candidate in columns:
+            location_field = candidate
+            break
+
+    if location and location_field:
+        conditions.append(f"{location_field} = %(location)s")
+        values["location"] = location
+
+    return conditions, values
+
+
+def _get_submitted_assets(categories, location):
+    columns = _asset_columns()
+
+    if "asset_category" not in columns or "name" not in columns:
+        return []
+
+    conditions, values = _asset_condition_and_values(categories, location)
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            asset_category,
+            name AS asset_name
+        FROM `tabAsset`
+        WHERE {" AND ".join(conditions)}
+        ORDER BY asset_category, name
+        """,
+        values,
+        as_dict=True,
+    )
+
+    return rows or []
+
+
+def _month_end_direct_rows(filters):
+    filters = frappe._dict(filters or {})
+
+    from_date = _month_end_get_filter_value(filters, "from_date", "start_date")
+    to_date = _month_end_get_filter_value(filters, "to_date", "end_date")
+    location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+    selected_category = _month_end_get_filter_value(filters, "asset_category")
+
+    categories = [selected_category] if selected_category else list(MONTH_END_CATEGORIES)
+
+    asset_rows = _get_submitted_assets(categories, location)
+
+    machines_by_category = {category: set() for category in categories}
+    for row in asset_rows:
+        if row.asset_category in machines_by_category and row.asset_name:
+            machines_by_category[row.asset_category].add(row.asset_name)
+
+    au_conditions = ["1=1"]
+    au_values = {}
+
+    if from_date:
+        au_conditions.append("shift_date >= %(from_date)s")
+        au_values["from_date"] = from_date
+
+    if to_date:
+        au_conditions.append("shift_date <= %(to_date)s")
+        au_values["to_date"] = to_date
+
+    if location:
+        au_conditions.append("location = %(location)s")
+        au_values["location"] = location
+
+    au_conditions.append("asset_category in %(categories)s")
+    au_values["categories"] = tuple(categories)
+
+    au_machine_rows = frappe.db.sql(
+        f"""
+        SELECT
+            asset_category,
+            asset_name,
+            SUM(COALESCE(shift_required_hours, 0)) AS required_hrs,
+            SUM(COALESCE(shift_working_hours, 0)) AS work_hrs,
+            SUM(COALESCE(shift_breakdown_hours, 0)) AS mechanical_downtime
+        FROM `tabAvailability and Utilisation`
+        WHERE {" AND ".join(au_conditions)}
+          AND COALESCE(asset_name, '') != ''
+        GROUP BY asset_category, asset_name
+        """,
+        au_values,
+        as_dict=True,
+    )
+
+    au_by_key = {}
+    for row in au_machine_rows:
+        key = (row.asset_category, row.asset_name)
+        au_by_key[key] = row
+
+        if row.asset_category in machines_by_category and row.asset_name:
+            machines_by_category[row.asset_category].add(row.asset_name)
+
+    output = []
+
+    for category in categories:
+        machine_rows = []
+
+        for asset_name in sorted(machines_by_category.get(category) or []):
+            au_row = au_by_key.get((category, asset_name))
+
+            if au_row:
+                machine_rows.append(
+                    _month_end_calc_row(
+                        category,
+                        asset_name,
+                        au_row.get("required_hrs"),
+                        au_row.get("work_hrs"),
+                        au_row.get("mechanical_downtime"),
+                    )
+                )
+            else:
+                machine_rows.append(_month_end_calc_row(category, asset_name, 0, 0, 0))
+
+        if not machine_rows:
+            continue
+
+        total_required = sum(flt(row.get("required_hrs")) for row in machine_rows)
+        total_work = sum(flt(row.get("work_hrs")) for row in machine_rows)
+        total_down = sum(flt(row.get("mechanical_downtime")) for row in machine_rows)
+
+        output.append(_month_end_calc_row(category, "", total_required, total_work, total_down))
+        output.extend(machine_rows)
+
+    return output
+
+
+def get_data(filters):
+    return _month_end_direct_rows(filters)
+
+# END DIRECT AU MONTH END TOTALS
+

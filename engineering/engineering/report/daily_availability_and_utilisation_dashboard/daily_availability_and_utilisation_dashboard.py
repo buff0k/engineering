@@ -1,41 +1,54 @@
 import frappe
+from frappe.utils import flt
 
+from engineering.engineering.report.availability_and_utilisation_month_end_report import (
+    availability_and_utilisation_month_end_report as month_end,
+)
+
+
+_ = frappe._
 
 CATEGORY_MAP = {
-    "ADT": "ADT's",
-    "Excavator": "Excavator's",
-    "Dozer": "Dozer's",
+    "ADT": "ADT",
+    "ADT's": "ADT",
+    "Dozer": "Dozer",
+    "Dozer's": "Dozer",
+    "Excavator": "Excavator",
+    "Excavator's": "Excavator",
     "Grader": "Grader",
     "Service Truck": "Service Truck",
     "TLB": "TLB",
     "Water Bowser": "Water Bowser",
     "Diesel Bowsers": "Diesel Bowsers",
     "Drills": "Drills",
-}
-
-UI_TITLES = {
-    "ADT's": "ADTS",
-    "Excavator's": "EXCAVATOR",
-    "Dozer's": "DOZER",
-    "Grader": "GRADER",
-    "Service Truck": "SERVICE TRUCK",
-    "TLB": "TLB",
-    "Water Bowser": "WATER BOWSER",
-    "Diesel Bowsers": "DIESEL BOWSERS",
-    "Drills": "DRILLS",
+    "Loader": "Loader",
 }
 
 UI_CATEGORIES = [
-    "ADT's",
-    "Excavator's",
-    "Dozer's",
+    "ADT",
+    "Dozer",
+    "Excavator",
     "Grader",
     "Service Truck",
     "TLB",
     "Water Bowser",
     "Diesel Bowsers",
     "Drills",
+    "Loader",
 ]
+
+UI_TITLES = {
+    "ADT": "ADT",
+    "Dozer": "DOZER",
+    "Excavator": "EXCAVATOR",
+    "Grader": "GRADER",
+    "Service Truck": "SERVICE TRUCK",
+    "TLB": "TLB",
+    "Water Bowser": "WATER BOWSER",
+    "Diesel Bowsers": "DIESEL BOWSERS",
+    "Drills": "DRILLS",
+    "Loader": "LOADER",
+}
 
 SITE_HEADER_COLOURS = {
     "Klipfontein": "#EBF9FF",
@@ -46,336 +59,405 @@ SITE_HEADER_COLOURS = {
     "Bankfontein": "#E3E3E3",
 }
 
-
 DASH_CSS = """
+<style>
 .isd-hourly-dashboard {
-  padding: 8px 6px;
+    padding: 8px 6px 24px;
+    font-family: Arial, sans-serif;
+    color: #222;
 }
 
 .isd-note {
-  margin: 0 0 10px;
-  padding: 8px 10px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #fafafa;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.isd-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fafafa;
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .isd-site {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  overflow: hidden;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 .isd-site-title {
-  padding: 10px 12px 8px;
-  font-weight: 900;
-  font-size: 13px;
+    padding: 10px 12px 8px;
+    font-weight: 900;
+    font-size: 13px;
 }
 
 .isd-band {
-  padding: 10px 12px 12px;
-  background: var(--site-colour, #f7f7f7);
-  border-bottom: 1px solid #e8e8e8;
+    padding: 10px 12px 12px;
+    background: var(--site-colour);
+    border-top: 1px solid #e8e8e8;
+    border-bottom: 1px solid #e8e8e8;
 }
 
 .isd-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
-  gap: 18px;
-  justify-content: start;
-  align-items: start;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 8px;
 }
 
 .isd-metric {
-  display: grid;
-  gap: 6px;
-  justify-items: center;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 10px;
+    padding: 8px;
 }
 
 .isd-metric-title {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  opacity: 0.75;
-  line-height: 1;
-  text-align: center;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 7px;
 }
 
 .isd-pill-row {
-  display: grid;
-  grid-template-columns: max-content max-content;
-  gap: 8px;
-  align-items: center;
+    display: flex;
+    gap: 7px;
+    justify-content: center;
 }
 
 .isd-mbubble {
-  border-radius: 999px;
-  border: 3px solid rgba(0,0,0,0.14);
-  padding: 6px 10px;
-  display: grid;
-  gap: 2px;
-  min-width: 72px;
-  overflow: hidden;
-  color: #fff;
+    width: 70px;
+    min-height: 58px;
+    border-radius: 999px;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 7px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.10);
 }
 
 .isd-mbubble-green {
-  border-color: rgba(30, 142, 62, 0.95);
-  background: rgba(30, 142, 62, 0.95);
+    background: rgba(30, 142, 62, 0.96);
 }
 
 .isd-mbubble-yellow {
-  border-color: rgba(26, 115, 232, 0.98);
-  background: rgba(26, 115, 232, 0.98);
+    background: rgba(245, 166, 35, 0.96);
 }
 
 .isd-mbubble-red {
-  border-color: rgba(217, 48, 37, 0.96);
-  background: rgba(217, 48, 37, 0.96);
+    background: rgba(217, 48, 37, 0.96);
 }
 
 .isd-mbubble-label {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  line-height: 1;
-  white-space: nowrap;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .isd-mbubble-value {
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.05;
-  color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.05;
+    color: #fff;
 }
 
 .isd-contentrow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px;
-  gap: 10px;
-  align-items: start;
-  border-top: 1px solid #e8e8e8;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 10px;
+    align-items: start;
+    border-top: 1px solid #e8e8e8;
 }
 
 .isd-chart-stack {
-  display: grid;
-  gap: 16px;
-  padding: 10px;
-  overflow-x: auto;
-  overflow-y: visible;
+    display: grid;
+    gap: 16px;
+    padding: 10px;
+    overflow-x: auto;
+    overflow-y: visible;
 }
 
 .isd-chart-section {
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  background: #fff;
-  overflow-x: auto;
-  overflow-y: hidden;
+    border: 1px solid #2f2f2f;
+    border-radius: 0;
+    background: linear-gradient(135deg, #2b2b2b 0%, #555 48%, #2b2b2b 100%);
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 16px;
 }
 
 .isd-chart-section-title {
-  padding: 8px 10px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  background: #f7f7f7;
-  border-bottom: 1px solid #e5e5e5;
+    padding: 10px;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-align: center;
+    color: #f2f2f2;
+    background: transparent;
+    border-bottom: 0;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.65);
 }
 
 .isd-chart {
-  padding: 10px 10px 16px;
-  position: relative;
+    padding: 18px 18px 16px;
+    position: relative;
+    background: transparent;
 }
 
 .isd-yaxis {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  bottom: 58px;
-  width: 34px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #666;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  pointer-events: none;
+    position: absolute;
+    left: 16px;
+    top: 18px;
+    bottom: 56px;
+    width: 34px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
 }
 
 .isd-chart-grid {
-  display: grid;
-  align-items: end;
-  gap: 2px;
-  margin-left: 34px;
-  height: 140px;
-  position: relative;
-  border-bottom: 1px solid #ddd;
+    display: grid;
+    align-items: end;
+    gap: 4px;
+    margin-left: 42px;
+    height: 270px;
+    position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.65);
+    background:
+        linear-gradient(to top, rgba(255,255,255,0.13) 1px, transparent 1px);
+    background-size: 100% 27px;
 }
 
 .isd-bar {
-  width: 100%;
-  border-radius: 2px 2px 0 0;
-  min-height: 2px;
+    width: 100%;
+    border-radius: 0;
+    min-height: 2px;
 }
 
 .isd-bar.avail {
-  background: #f39c12;
+    background: #f4b000;
 }
 
 .isd-bar.util {
-  background: #6b6b6b;
+    background: #2f75b5;
 }
 
 .isd-bar.nodata {
-  opacity: 0.18;
+    opacity: 0.18;
 }
 
 .isd-avgline {
-  position: absolute;
-  left: 44px;
-  right: 10px;
-  height: 2px;
-  opacity: 0.55;
-  pointer-events: none;
+    position: absolute;
+    left: 60px;
+    right: 18px;
+    height: 4px;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 5;
 }
 
 .isd-avgline.isd-avg-85 {
-  background: #f39c12;
-  top: 31px;
+    background: #ff0000;
+    top: calc(18px + 270px * 0.15);
 }
 
 .isd-avgline.isd-avg-80 {
-  background: #6b6b6b;
-  top: 38px;
+    background: #92d050;
+    top: calc(18px + 270px * 0.20);
 }
 
 .isd-machinelabels {
-  display: grid;
-  gap: 2px;
-  margin-left: 34px;
-  margin-top: 4px;
-  font-size: 9px;
-  font-weight: 800;
-  color: #666;
+    display: grid;
+    gap: 4px;
+    margin-left: 42px;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
 }
 
 .isd-machinelab {
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transform: rotate(-35deg);
-  transform-origin: top center;
-  min-height: 42px;
-  padding-top: 4px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transform: none;
+    min-height: 16px;
+    padding-top: 0;
 }
 
 .isd-no-machine-data {
-  padding: 14px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #666;
+    padding: 18px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
 }
 
 .isd-side {
-  display: grid;
-  gap: 8px;
-  padding: 10px 10px 12px;
-  border-left: 1px solid #e8e8e8;
+    display: grid;
+    gap: 8px;
+    padding: 10px 10px 12px;
+    border-left: 1px solid #e8e8e8;
 }
 
 .isd-cards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
 }
 
 .isd-circle {
-  width: 74px;
-  height: 74px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-size: 10.5px;
-  font-weight: 900;
-  text-align: center;
-  line-height: 1.05;
-  padding: 10px 8px;
-  letter-spacing: 0.2px;
-  border: 2px solid rgba(0,0,0,0.22);
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35), 0 6px 14px rgba(0,0,0,0.08);
+    width: 74px;
+    height: 74px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 10.5px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.05;
+    padding: 10px 8px;
+    letter-spacing: 0.2px;
+    border: 2px solid rgba(0,0,0,0.22);
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35), 0 6px 14px rgba(0,0,0,0.08);
+}
+
+.isd-open-report {
+    text-decoration: none !important;
+    color: #000 !important;
+    cursor: pointer;
+}
+
+.isd-open-report:hover {
+    transform: scale(1.03);
 }
 
 .isd-circle-green {
-  border-color: rgba(30, 142, 62, 0.85);
-  background: rgba(30, 142, 62, 0.18);
+    border-color: rgba(30, 142, 62, 0.85);
+    background: rgba(30, 142, 62, 0.18);
 }
 
 .isd-legend {
-  display: grid;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  opacity: 0.75;
+    display: grid;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.75;
 }
 
 .isd-legitem {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .isd-legswatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
 }
 
 .isd-leg-avail {
-  background: #f39c12;
+    background: #f4b000;
 }
 
 .isd-leg-util {
-  background: #6b6b6b;
+    background: #2f75b5;
+}
+
+
+.isd-targets {
+    display: grid;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.isd-target-box {
+    width: 100%;
+    background: #ffffff;
+    border: 2px solid #222;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.isd-target-title {
+    background: #f1f1f1;
+    color: #000;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.15;
+    padding: 6px 4px;
+    border-bottom: 2px solid #222;
+}
+
+
+.isd-target-line {
+    width: 58px;
+    height: 5px;
+    margin: 10px auto;
+    border-radius: 2px;
+}
+
+.isd-target-line-red {
+    background: #ff0000;
+}
+
+.isd-target-line-green {
+    background: #92d050;
+}
+
+.isd-target-value {
+    color: #000;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 8px 4px;
+}
+
+.isd-open-report-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
 }
 
 @media (max-width: 900px) {
-  .isd-metrics {
-    grid-template-columns: 1fr;
-    justify-content: stretch;
-  }
+    .isd-contentrow {
+        grid-template-columns: 1fr;
+    }
 
-  .isd-contentrow {
-    grid-template-columns: 1fr;
-  }
-
-  .isd-side {
-    border-left: none;
-    border-top: 1px solid #e8e8e8;
-  }
+    .isd-side {
+        border-left: none;
+        border-top: 1px solid #e8e8e8;
+    }
 }
+</style>
 """
 
 
 def execute(filters=None):
-    filters = filters or {}
+    filters = frappe._dict(filters or {})
 
-    start_date = frappe.utils.getdate(filters.get("start_date") or filters.get("from_date"))
-    end_date = frappe.utils.getdate(filters.get("end_date") or filters.get("to_date"))
-    location = filters.get("location")
+    if filters.get("site") and not filters.get("location"):
+        filters["location"] = filters.get("site")
+
+    if filters.get("location") and not filters.get("site"):
+        filters["site"] = filters.get("location")
+
+    start_date = filters.get("start_date") or filters.get("from_date")
+    end_date = filters.get("end_date") or filters.get("to_date")
+    location = filters.get("location") or filters.get("site")
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -383,55 +465,34 @@ def execute(filters=None):
     if not end_date:
         frappe.throw("Please select End Date.")
 
-    if start_date > end_date:
-        frappe.throw("Start Date cannot be after End Date.")
-
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_month_end_report_data(location, start_date, end_date)
+    source_rows = fetch_grouped_data(location, start_date, end_date)
 
     avgs = build_summary_averages_from_source_rows(source_rows)
     machine_series = build_machine_series_from_source_rows(source_rows)
 
-    html = build_dashboard_html(location, start_date, end_date, avgs, machine_series)
+    dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series)
 
-    return [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}], [{"noop": ""}], html
+    columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
+    data = [{"noop": ""}]
 
-
-def fetch_month_end_report_data(location, start_date, end_date):
-    import importlib
-
-    month_end_report = importlib.import_module("engineering.engineering.report.availability_and_utilisation_month_end_report.availability_and_utilisation_month_end_report")
-
-    result = month_end_report.get_data({
-        "from_date": start_date,
-        "to_date": end_date,
-        "location": location,
-    })
-
-    return normalise_report_rows(result)
+    return columns, data, dashboard_html
 
 
-def normalise_report_rows(result):
-    if not result:
-        return []
+def fetch_grouped_data(location, start_date, end_date):
+    result = month_end.execute(
+        frappe._dict({
+            "from_date": start_date,
+            "to_date": end_date,
+            "location": location,
+            "include_excluded_asset_categories": 1,
+        })
+    )
 
-    if isinstance(result, dict):
-        for key in ("data", "result", "rows", "message"):
-            value = result.get(key)
-            if isinstance(value, list):
-                return value
-        return []
-
-    if isinstance(result, tuple):
-        for item in result:
-            if isinstance(item, list):
-                return item
-        return []
-
-    if isinstance(result, list):
-        return result
+    if isinstance(result, (list, tuple)) and len(result) > 1:
+        return result[1] or []
 
     return []
 
@@ -462,21 +523,19 @@ def get_category(row):
         "Asset Category",
         "category",
         "Category",
-        "equipment_category",
-        "Equipment Category",
-        "plant_category",
-        "Plant Category",
     ])
 
     if value in CATEGORY_MAP:
-        return value
+        return CATEGORY_MAP[value]
 
-    if isinstance(row, dict):
-        for val in row.values():
-            if val in CATEGORY_MAP:
-                return val
+    return value
 
-    return None
+
+def get_indent(row):
+    try:
+        return int(row.get("indent") or 0)
+    except Exception:
+        return 0
 
 
 def get_machine(row):
@@ -485,18 +544,10 @@ def get_machine(row):
         "Asset Name",
         "asset",
         "Asset",
-        "equipment",
-        "Equipment",
         "machine",
         "Machine",
-        "machine_no",
-        "Machine No",
         "plant_no",
         "Plant No",
-        "fleet_number",
-        "Fleet Number",
-        "availability_and_utilisation",
-        "Availability and Utilisation",
     ])
 
     if not machine:
@@ -512,136 +563,90 @@ def get_machine(row):
 
 def get_avail(row):
     return to_float(get_any(row, [
-        "avail_percent",
-        "Avail (%)",
-        "availability_percent",
-        "availability_percentage",
-        "available_percentage",
-        "avail_percentage",
         "plant_shift_availability",
+        "avail_percent",
         "Avail",
-        "Availability",
-        "avail",
         "availability",
+        "Availability",
     ]))
 
 
 def get_util(row):
     return to_float(get_any(row, [
-        "util_percent",
-        "Util (%)",
-        "utilisation_percent",
-        "utilization_percent",
-        "utilisation_percentage",
-        "utilization_percentage",
-        "util_percentage",
         "plant_shift_utilisation",
-        "plant_shift_utilization",
+        "util_percent",
         "Util",
-        "Utilisation",
-        "Utilization",
-        "util",
         "utilisation",
-        "utilization",
+        "Utilisation",
     ]))
 
 
-def is_separator_row(row):
-    if not isinstance(row, dict):
-        return True
-
-    if row.get("is_separator"):
-        return True
-
-    category = get_category(row)
-    machine = get_machine(row)
-    av = get_avail(row)
-    ut = get_util(row)
-
-    return not category and not machine and av is None and ut is None
-
-
-def is_category_total_row(row):
-    if not isinstance(row, dict):
-        return False
-
-    if row.get("is_category_total"):
-        return True
-
-    category = get_category(row)
-    machine = get_machine(row)
-
-    return bool(category) and not machine
-
-
 def build_summary_averages_from_source_rows(rows):
-    out = {ui_label: {"avail": None, "util": None} for ui_label in UI_CATEGORIES}
+    out = {category: {"avail": None, "util": None} for category in UI_CATEGORIES}
 
     for row in rows:
-        if is_separator_row(row):
-            continue
-
-        if not is_category_total_row(row):
+        if not isinstance(row, dict):
             continue
 
         category = get_category(row)
 
-        if category not in CATEGORY_MAP:
+        if category not in out:
             continue
 
-        ui_label = CATEGORY_MAP[category]
+        machine = get_machine(row)
 
-        out[ui_label] = {
+        if machine:
+            continue
+
+        out[category] = {
             "avail": get_avail(row),
             "util": get_util(row),
         }
 
-    for db_category, ui_label in CATEGORY_MAP.items():
-        if out[ui_label]["avail"] is not None or out[ui_label]["util"] is not None:
+    for category in UI_CATEGORIES:
+        if out[category]["avail"] is not None or out[category]["util"] is not None:
             continue
 
-        machine_rows = [
+        category_rows = [
             row for row in rows
-            if isinstance(row, dict)
-            and not is_separator_row(row)
-            and not is_category_total_row(row)
-            and get_category(row) == db_category
+            if isinstance(row, dict) and get_category(row) == category
         ]
 
-        avail_values = [get_avail(row) for row in machine_rows if get_avail(row) is not None]
-        util_values = [get_util(row) for row in machine_rows if get_util(row) is not None]
+        if not category_rows:
+            continue
 
-        out[ui_label] = {
-            "avail": (sum(avail_values) / len(avail_values)) if avail_values else None,
-            "util": (sum(util_values) / len(util_values)) if util_values else None,
-        }
+        min_indent = min(get_indent(row) for row in category_rows)
+        parent_rows = [row for row in category_rows if get_indent(row) == min_indent]
+
+        if parent_rows:
+            row = parent_rows[0]
+            out[category] = {
+                "avail": get_avail(row),
+                "util": get_util(row),
+            }
 
     return out
 
 
 def build_machine_series_from_source_rows(rows):
-    buckets = {ui_label: {} for ui_label in UI_CATEGORIES}
+    buckets = {category: {} for category in UI_CATEGORIES}
 
     for row in rows:
-        if is_separator_row(row):
-            continue
-
-        if is_category_total_row(row):
+        if not isinstance(row, dict):
             continue
 
         category = get_category(row)
 
-        if category not in CATEGORY_MAP:
+        if category not in buckets:
             continue
 
-        ui_label = CATEGORY_MAP[category]
         machine = get_machine(row)
 
         if not machine:
             continue
 
-        if machine not in buckets[ui_label]:
-            buckets[ui_label][machine] = {
+        if machine not in buckets[category]:
+            buckets[category][machine] = {
                 "avail_values": [],
                 "util_values": [],
             }
@@ -650,21 +655,21 @@ def build_machine_series_from_source_rows(rows):
         ut = get_util(row)
 
         if av is not None:
-            buckets[ui_label][machine]["avail_values"].append(av)
+            buckets[category][machine]["avail_values"].append(av)
 
         if ut is not None:
-            buckets[ui_label][machine]["util_values"].append(ut)
+            buckets[category][machine]["util_values"].append(ut)
 
     output = {}
 
-    for ui_label in UI_CATEGORIES:
-        output[ui_label] = []
+    for category in UI_CATEGORIES:
+        output[category] = []
 
-        for machine, vals in sorted(buckets[ui_label].items()):
+        for machine, vals in sorted(buckets[category].items()):
             av_values = vals["avail_values"]
             ut_values = vals["util_values"]
 
-            output[ui_label].append({
+            output[category].append({
                 "machine": machine,
                 "avail": (sum(av_values) / len(av_values)) if av_values else None,
                 "util": (sum(ut_values) / len(ut_values)) if ut_values else None,
@@ -699,32 +704,36 @@ def fmt_percent(value):
     return f"{float(value):.1f}%"
 
 
+def esc(value):
+    return frappe.utils.escape_html(str(value or ""))
+
+
 def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
-    site_safe = frappe.utils.escape_html(location)
+    site_safe = esc(location)
     header_colour = SITE_HEADER_COLOURS.get(location, "#f7f7f7")
 
     metric_cards = []
 
-    for ui_label in UI_CATEGORIES:
-        values = avgs.get(ui_label) or {}
+    for category in UI_CATEGORIES:
+        values = avgs.get(category) or {}
         av = values.get("avail")
         ut = values.get("util")
 
         metric_cards.append(f"""
 <div class="isd-metric">
-  <div class="isd-metric-title">{frappe.utils.escape_html(ui_label)} Avg</div>
+    <div class="isd-metric-title">{esc(category)} Avg</div>
 
-  <div class="isd-pill-row">
-    <div class="isd-mbubble {bubble_colour("avail", av)}">
-      <div class="isd-mbubble-label">Availability</div>
-      <div class="isd-mbubble-value">{fmt_percent(av)}</div>
-    </div>
+    <div class="isd-pill-row">
+        <div class="isd-mbubble {bubble_colour("avail", av)}">
+            <div class="isd-mbubble-label">Availability</div>
+            <div class="isd-mbubble-value">{fmt_percent(av)}</div>
+        </div>
 
-    <div class="isd-mbubble {bubble_colour("util", ut)}">
-      <div class="isd-mbubble-label">Utilisation</div>
-      <div class="isd-mbubble-value">{fmt_percent(ut)}</div>
+        <div class="isd-mbubble {bubble_colour("util", ut)}">
+            <div class="isd-mbubble-label">Utilisation</div>
+            <div class="isd-mbubble-value">{fmt_percent(ut)}</div>
+        </div>
     </div>
-  </div>
 </div>
 """)
 
@@ -732,60 +741,69 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series):
     trend_html = build_trend_html(location, start_date, end_date)
 
     return f"""
-<style>{DASH_CSS}</style>
+{DASH_CSS}
 
 <div class="isd-hourly-dashboard">
-  <div class="isd-note">
-    Showing: {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
-  </div>
-
-  <div class="isd-grid">
-    <div class="isd-site">
-      <div class="isd-site-title">{site_safe} | {start_date} to {end_date}</div>
-
-      <div class="isd-band" style="--site-colour:{header_colour}">
-        <div class="isd-metrics">
-          {''.join(metric_cards)}
-        </div>
-      </div>
-
-      <div class="isd-contentrow">
-        {chart_html}
-        {trend_html}
-      </div>
+    <div class="isd-note">
+        Showing: {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
     </div>
-  </div>
+
+    <div class="isd-site">
+        <div class="isd-site-title">{site_safe} | {start_date} to {end_date}</div>
+
+        <div class="isd-band" style="--site-colour:{header_colour}">
+            <div class="isd-metrics">
+                {''.join(metric_cards)}
+            </div>
+        </div>
+
+        <div class="isd-contentrow">
+            {chart_html}
+            {trend_html}
+        </div>
+    </div>
 </div>
 """
 
 
 def build_trend_html(location, start_date, end_date):
-    report_href = (
+    report_url = (
         "/app/query-report/Availability%20and%20Utilisation%20Month%20End%20Report"
-        f"?from_date={frappe.utils.quote(str(start_date))}"
-        f"&to_date={frappe.utils.quote(str(end_date))}"
-        f"&location={frappe.utils.quote(str(location))}"
+        f"?from_date={frappe.utils.escape_html(str(start_date or ''))}"
+        f"&to_date={frappe.utils.escape_html(str(end_date or ''))}"
+        f"&location={frappe.utils.escape_html(str(location or ''))}"
     )
 
     return f"""
 <div class="isd-side">
-  <div class="isd-cards">
-    <a
-      href="{report_href}"
-      class="isd-circle isd-circle-green"
-      style="text-decoration:none;color:inherit;cursor:pointer;"
-    >
-      Open<br>Report
-    </a>
-  </div>
+    <div class="isd-open-report-wrap">
+        <a class="isd-circle isd-circle-green isd-open-report"
+           href="{report_url}"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Open Availability and Utilisation Month End Report">
+            Open<br>Report
+        </a>
+    </div>
 
-  <div class="isd-legend">
-    <span class="isd-legitem"><i class="isd-legswatch isd-leg-avail"></i>Availability</span>
-    <span class="isd-legitem"><i class="isd-legswatch isd-leg-util"></i>Utilisation</span>
-  </div>
+    <div class="isd-targets">
+        <div class="isd-target-box">
+            <div class="isd-target-title">Availability<br>Target</div>
+            <div class="isd-target-line isd-target-line-red"></div>
+        </div>
+
+        <div class="isd-target-box">
+            <div class="isd-target-title">Utilization<br>Target</div>
+            <div class="isd-target-line isd-target-line-green"></div>
+        </div>
+    </div>
+
+    <div class="isd-legend">
+        <span class="isd-legitem"><i class="isd-legswatch isd-leg-avail"></i>Availability</span>
+        <span class="isd-legitem"><i class="isd-legswatch isd-leg-util"></i>Utilisation</span>
+    </div>
 </div>
 """
-
 
 def build_chart_html(machine_series):
     def height(value):
@@ -793,30 +811,30 @@ def build_chart_html(machine_series):
             return 2
 
         value = max(0.0, min(100.0, float(value)))
-        return max(2, int(round(value * 1.35)))
+        return max(2, int(round(value * 2.7)))
 
-    def chart_section(ui_label):
-        title = UI_TITLES[ui_label]
-        items = machine_series.get(ui_label) or []
+    def chart_section(category):
+        title = UI_TITLES.get(category, category)
+        items = machine_series.get(category) or []
 
         if not items:
             return f"""
 <div class="isd-chart-section">
-  <div class="isd-chart-section-title">{title}</div>
-  <div class="isd-no-machine-data">No machines found for {title} in the selected date range.</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION</div>
+    <div class="isd-no-machine-data">No machines found for {esc(title)} in the selected date range.</div>
 </div>
 """
 
         count = max(len(items), 1)
-        grid_template = f"repeat({count * 2}, minmax(14px, 1fr))"
-        label_template = f"repeat({count}, minmax(44px, 2fr))"
-        min_width = max(620, count * 72)
+        grid_template = f"repeat({count * 2}, minmax(18px, 1fr))"
+        label_template = f"repeat({count}, minmax(54px, 2fr))"
+        min_width = max(820, count * 70)
 
         bars = []
         labels = []
 
         for item in items:
-            machine = frappe.utils.escape_html(item.get("machine") or "")
+            machine = esc(item.get("machine") or "")
             av = item.get("avail")
             ut = item.get("util")
 
@@ -837,36 +855,40 @@ def build_chart_html(machine_series):
 
         return f"""
 <div class="isd-chart-section">
-  <div class="isd-chart-section-title">{title}</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION</div>
 
-  <div class="isd-chart" style="min-width:{min_width}px;">
-    <div class="isd-yaxis">
-      <div>100%</div>
-      <div>80%</div>
-      <div>60%</div>
-      <div>40%</div>
-      <div>20%</div>
-      <div>0%</div>
+    <div class="isd-chart" style="min-width:{min_width}px;">
+        <div class="isd-yaxis">
+            <div>100%</div>
+            <div>90%</div>
+            <div>80%</div>
+            <div>70%</div>
+            <div>60%</div>
+            <div>50%</div>
+            <div>40%</div>
+            <div>30%</div>
+            <div>20%</div>
+            <div>10%</div>
+            <div>0%</div>
+        </div>
+
+        <div class="isd-avgline isd-avg-85"></div>
+        <div class="isd-avgline isd-avg-80"></div>
+
+        <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
+            {''.join(bars)}
+        </div>
+
+        <div class="isd-machinelabels" style="grid-template-columns:{label_template};">
+            {''.join(labels)}
+        </div>
     </div>
-
-    <div class="isd-avgline isd-avg-85"></div>
-    <div class="isd-avgline isd-avg-80"></div>
-
-    <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
-      {''.join(bars)}
-    </div>
-
-    <div class="isd-machinelabels" style="grid-template-columns:{label_template};">
-      {''.join(labels)}
-    </div>
-  </div>
 </div>
 """
-
-    sections = "".join(chart_section(ui_label) for ui_label in UI_CATEGORIES)
 
     return f"""
 <div class="isd-chart-stack">
-  {sections}
+    {''.join(chart_section(category) for category in UI_CATEGORIES)}
 </div>
 """
+
