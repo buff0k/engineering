@@ -418,15 +418,27 @@ def _month_end_category_sort(category):
     return MONTH_END_CATEGORIES.index(category) if category in MONTH_END_CATEGORIES else 999
 
 
+def _month_end_percent(value):
+    value = flt(value)
+
+    if value < 0:
+        return 0
+
+    if value > 100:
+        return 100
+
+    return round(value, 1)
+
+
 def _month_end_calc_row(asset_category, asset_name, required_hrs, work_hrs, mechanical_downtime):
     required_hrs = flt(required_hrs)
     work_hrs = flt(work_hrs)
     mechanical_downtime = flt(mechanical_downtime)
     available_hrs = required_hrs - mechanical_downtime
 
-    avail_percent = (available_hrs / required_hrs * 100) if required_hrs else 0
-    util_percent = (work_hrs / available_hrs * 100) if available_hrs else 0
-    emp_avail_percent = (mechanical_downtime / required_hrs * 100) if required_hrs else 0
+    avail_percent = _month_end_percent((available_hrs / required_hrs * 100) if required_hrs else 0)
+    util_percent = _month_end_percent((work_hrs / available_hrs * 100) if available_hrs else 0)
+    emp_avail_percent = _month_end_percent((mechanical_downtime / required_hrs * 100) if required_hrs else 0)
 
     return {
         "asset_category": asset_category,
@@ -434,9 +446,9 @@ def _month_end_calc_row(asset_category, asset_name, required_hrs, work_hrs, mech
         "required_hrs": round(required_hrs, 1),
         "work_hrs": round(work_hrs, 1),
         "mechanical_downtime": round(mechanical_downtime, 1),
-        "avail_percent": round(avail_percent, 1),
-        "util_percent": round(util_percent, 1),
-        "emp_avail_percent": round(emp_avail_percent, 1),
+        "avail_percent": _month_end_percent(avail_percent),
+        "util_percent": _month_end_percent(util_percent),
+        "emp_avail_percent": _month_end_percent(emp_avail_percent),
         "breakdown_reason": "",
         "other_delay_reason": "",
         "is_category_total": 0 if asset_name else 1,

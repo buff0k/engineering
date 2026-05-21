@@ -442,6 +442,133 @@ DASH_CSS = """
         border-top: 1px solid #e8e8e8;
     }
 }
+
+
+
+/* Main dashboard graph alignment to match preview */
+.isd-chart-section {
+    width: 100% !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    margin: 0 0 10px 0 !important;
+    border: 1px solid #222 !important;
+    background: linear-gradient(135deg, #2b2b2b 0%, #555 48%, #2b2b2b 100%) !important;
+}
+
+.isd-chart-section-title {
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    text-align: center !important;
+    padding: 12px 8px 8px 8px !important;
+    letter-spacing: 0.5px !important;
+    text-shadow: 1px 1px 2px #000000 !important;
+}
+
+.isd-chart {
+    width: max-content !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    padding: 14px 14px 24px 14px !important;
+    background: transparent !important;
+}
+
+.isd-yaxis {
+    left: 14px !important;
+    top: 14px !important;
+    bottom: 32px !important;
+    width: 62px !important;
+    height: 260px !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    text-align: right !important;
+    color: #ffffff !important;
+    text-shadow: 1px 1px 3px #000000 !important;
+    justify-content: space-between !important;
+}
+
+.isd-yaxis div {
+    height: auto !important;
+    line-height: 1 !important;
+}
+
+.isd-yaxis div:first-child {
+    transform: translateY(-1px) !important;
+}
+
+.isd-yaxis div:last-child {
+    transform: translateY(5px) !important;
+}
+
+.isd-chart-grid {
+    margin-left: 84px !important;
+    height: 260px !important;
+    gap: 8px !important;
+    border-bottom: 3px solid rgba(255,255,255,0.95) !important;
+    align-items: end !important;
+    padding-bottom: 0 !important;
+    background:
+        linear-gradient(to top, rgba(255,255,255,0.13) 1px, transparent 1px) !important;
+    background-size: 100% 26px !important;
+}
+
+.isd-bar {
+    border-radius: 0 !important;
+    min-height: 2px !important;
+    margin-bottom: 0 !important;
+    align-self: end !important;
+}
+
+.isd-bar.avail {
+    background: #f4b000 !important;
+}
+
+.isd-bar.util {
+    background: #2f75b5 !important;
+}
+
+.isd-machinelabels {
+    margin-left: 84px !important;
+    margin-top: 9px !important;
+    min-height: 38px !important;
+    align-items: start !important;
+    gap: 8px !important;
+}
+
+.isd-machinelab {
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    line-height: 1.1 !important;
+    min-height: 28px !important;
+    padding-top: 6px !important;
+    color: #ffffff !important;
+    text-shadow: 1px 1px 3px #000000 !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    transform: none !important;
+}
+
+.isd-avgline {
+    left: 98px !important;
+    right: 14px !important;
+    height: 4px !important;
+    z-index: 5 !important;
+}
+
+.isd-avgline.isd-avg-85 {
+    background: #ff0000 !important;
+    top: calc(14px + 260px * 0.15) !important;
+}
+
+.isd-avgline.isd-avg-80 {
+    background: #92d050 !important;
+    top: calc(14px + 260px * 0.20) !important;
+}
+
 </style>
 """
 
@@ -891,4 +1018,311 @@ def build_chart_html(machine_series):
     {''.join(chart_section(category) for category in UI_CATEGORIES)}
 </div>
 """
+
+
+
+@frappe.whitelist()
+def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, site=None):
+    location = location or site
+
+    if not start_date:
+        frappe.throw("Please select Start Date.")
+
+    if not end_date:
+        frappe.throw("Please select End Date.")
+
+    if not location:
+        frappe.throw("Please select Site.")
+
+    source_rows = fetch_grouped_data(location, start_date, end_date)
+    avgs = build_summary_averages_from_source_rows(source_rows)
+    machine_series = build_machine_series_from_source_rows(source_rows)
+
+    dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series)
+
+    html = f"""
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {{
+            size: A4 landscape;
+            margin: 6mm;
+        }}
+
+        body {{
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+
+        * {{
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+
+        .isd-contentrow {{
+            display: block !important;
+        }}
+
+        .isd-side {{
+            display: none !important;
+        }}
+
+        .isd-chart-stack {{
+            display: block !important;
+            overflow: visible !important;
+            padding: 0 !important;
+        }}
+
+        .isd-chart-section {{
+            page-break-inside: avoid;
+            break-inside: avoid;
+            overflow: visible !important;
+            margin-bottom: 18px !important;
+        }}
+
+        .isd-chart {{
+            overflow: visible !important;
+        }}
+    </style>
+</head>
+<body>
+    {dashboard_html}
+</body>
+</html>
+"""
+
+    pdf = frappe.utils.pdf.get_pdf(html)
+
+    filename = f"Daily Availability and Utilisation Dashboard - {location} - {start_date} to {end_date}.pdf"
+
+    frappe.local.response.filename = filename
+    frappe.local.response.filecontent = pdf
+    frappe.local.response.type = "download"
+
+
+
+def build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_series):
+    sections = []
+
+    for category in UI_CATEGORIES:
+        items = machine_series.get(category) or []
+
+        if not items:
+            continue
+
+        rows = []
+        for item in items:
+            machine = esc(item.get("machine") or "")
+            avail = max(0, min(100, flt(item.get("avail"))))
+            util = max(0, min(100, flt(item.get("util"))))
+
+            rows.append(f"""
+<tr>
+    <td class="machine-label">{machine}</td>
+    <td>
+        <div class="bar-wrap">
+            <div class="target-line avail-target"></div>
+            <div class="target-line util-target"></div>
+            <div class="bar availability" style="width:{avail}%;">{avail:.1f}%</div>
+            <div class="bar utilisation" style="width:{util}%;">{util:.1f}%</div>
+        </div>
+    </td>
+</tr>
+""")
+
+        sections.append(f"""
+<div class="pdf-section">
+    <h2>{esc(category)} AVAILABILITY &amp; UTILISATION</h2>
+    <table class="pdf-chart">
+        <tbody>
+            {''.join(rows)}
+        </tbody>
+    </table>
+</div>
+""")
+
+    return f"""
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@page {{
+    size: A4 landscape;
+    margin: 7mm;
+}}
+
+body {{
+    font-family: Arial, sans-serif;
+    color: #111;
+    margin: 0;
+    padding: 0;
+}}
+
+.header {{
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}}
+
+.summary {{
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}}
+
+.summary td {{
+    border: 1px solid #333;
+    padding: 4px 6px;
+    font-size: 11px;
+    font-weight: bold;
+}}
+
+.legend-line {{
+    display: inline-block;
+    width: 42px;
+    height: 4px;
+    vertical-align: middle;
+    margin-left: 6px;
+}}
+
+.red {{
+    background: #ff0000;
+}}
+
+.green {{
+    background: #92d050;
+}}
+
+.pdf-section {{
+    page-break-inside: avoid;
+    margin-bottom: 14px;
+    border: 1px solid #222;
+    padding: 8px;
+}}
+
+h2 {{
+    text-align: center;
+    font-size: 18px;
+    margin: 0 0 8px 0;
+}}
+
+.pdf-chart {{
+    width: 100%;
+    border-collapse: collapse;
+}}
+
+.pdf-chart td {{
+    padding: 3px 4px;
+    vertical-align: middle;
+}}
+
+.machine-label {{
+    width: 90px;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}}
+
+.bar-wrap {{
+    position: relative;
+    height: 34px;
+    border-left: 1px solid #333;
+    border-bottom: 1px solid #bbb;
+    background: #eeeeee;
+}}
+
+.target-line {{
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 5;
+}}
+
+.avail-target {{
+    top: 5px;
+    background: #ff0000;
+}}
+
+.util-target {{
+    top: 9px;
+    background: #92d050;
+}}
+
+.bar {{
+    position: relative;
+    height: 13px;
+    line-height: 13px;
+    font-size: 9px;
+    font-weight: bold;
+    color: #000;
+    padding-left: 4px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}}
+
+.availability {{
+    background: #f4b000;
+    margin-top: 3px;
+}}
+
+.utilisation {{
+    background: #2f75b5;
+    color: #fff;
+    margin-top: 2px;
+}}
+</style>
+</head>
+<body>
+    <div class="header">
+        Daily Availability and Utilisation Dashboard | {esc(location)} | {esc(start_date)} to {esc(end_date)}
+    </div>
+
+    <table class="summary">
+        <tr>
+            <td>Availability Target <span class="legend-line red"></span></td>
+            <td>85%</td>
+            <td>Utilization Target <span class="legend-line green"></span></td>
+            <td>80%</td>
+        </tr>
+    </table>
+
+    {''.join(sections)}
+</body>
+</html>
+"""
+
+
+@frappe.whitelist()
+def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=None, site=None):
+    location = location or site
+
+    if not start_date:
+        frappe.throw("Please select Start Date.")
+
+    if not end_date:
+        frappe.throw("Please select End Date.")
+
+    if not location:
+        frappe.throw("Please select Site.")
+
+    source_rows = fetch_grouped_data(location, start_date, end_date)
+    avgs = build_summary_averages_from_source_rows(source_rows)
+    machine_series = build_machine_series_from_source_rows(source_rows)
+
+    html = build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_series)
+
+    pdf = frappe.utils.pdf.get_pdf(html)
+
+    filename = f"Daily Availability and Utilisation Dashboard - {location} - {start_date} to {end_date}.pdf"
+
+    frappe.local.response.filename = filename
+    frappe.local.response.filecontent = pdf
+    frappe.local.response.type = "download"
 

@@ -416,45 +416,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Machine Planning",
-   "link_count": 3,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Service Schedule",
-   "link_count": 0,
-   "link_to": "Service Schedule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "OEM Booking",
-   "link_count": 0,
-   "link_to": "OEM Booking",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Oil Sample (Capture)",
-   "link_count": 0,
-   "link_to": "Isambane sample input",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Machine Information Capturing",
    "link_count": 8,
    "link_type": "DocType",
@@ -590,9 +551,58 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Machine Planning",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Schedule",
+   "link_count": 0,
+   "link_to": "Service Schedule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "OEM Booking",
+   "link_count": 0,
+   "link_to": "OEM Booking",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Oil Sample (Capture)",
+   "link_count": 0,
+   "link_to": "Isambane sample input",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Oil Sample Results",
+   "link_count": 0,
+   "link_to": "WearCheck Results",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-21 07:23:40.085652",
+ "modified": "2026-05-21 09:49:05.639488",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
