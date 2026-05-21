@@ -75,6 +75,9 @@ scheduler_events = {
         "engineering.engineering.doctype.availability_and_utilisation_support_equipment.availability_and_utilisation_support_equipment.run_hourly_gate",
     ],
     "cron": {
+        "*/30 * * * *": [
+            "engineering.controllers.importer.fetch_and_sync"
+        ],
         "0 6 * * *": [
             "engineering.api.deviation_email.send_open_deviation_emails"
         ],
