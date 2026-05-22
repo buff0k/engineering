@@ -98,7 +98,7 @@ def sign_off_mechanical_service_report(docname, manager_foreman_signature):
         frappe.throw("Only Engineering Manager may sign off MSR records", frappe.PermissionError)
 
     doc = frappe.get_doc("Mechanical Service Report", docname)
-    doc.manager_foreman = manager_foreman_signature
+    doc.plant_manager_forman = manager_foreman_signature
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -200,8 +200,8 @@ def get_unsigned_mechanical_service_reports():
             "asset",
             "model",
             "asset_category",
-            "plant_manager_code",
-            "plant_man_name",
+            "plant_manager_forman_code",
+            "plant_man_forman_name",
             "artisan_employee_code",
             "artisan_fullname",
             "start_time",
@@ -213,8 +213,8 @@ def get_unsigned_mechanical_service_reports():
             "description_of_breakdown",
             "description_of_work_done",
             "spares_required_and_comments",
-            "mechanic",
-            "manager_foreman",
+            "artisan1",
+            "plant_manager_forman",
             "modified",
         ],
         order_by="modified desc",
