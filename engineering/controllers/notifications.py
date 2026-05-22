@@ -10,9 +10,9 @@ OEM_BOOKING_RECIPIENTS = ["juan@isambane.co.za", "renier@isambane.co.za"]
 # Plant Breakdown / Maintenance digest recipients per site/location
 # NOTE: "msani@isambane.co.za" must always be included for all sites
 OPEN_BREAKDOWN_SITE_RECIPIENTS = {
-    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za"],
+    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za", "koppie.control@isambane.co.za"],
     "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za"],
-    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "juan@isambane.co.za", "msani@isambane.co.za"],
+    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "juan@isambane.co.za", "msani@isambane.co.za", "uitcontrol@isambane.co.za"],
     "Gwab": ["bongani@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za"],
     "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za"],
     "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za"],
@@ -46,9 +46,9 @@ WEARCHECK_SEVERITY_MAP = {
 
 
 def send_open_breakdowns_digest_hourly_gate():
-    """Run digest only at 06:00 and 18:00 server time."""
+    """Run digest only at 06:00 server time."""
     dt = now_datetime()  # server TZ
-    if not (dt.minute == 0 and dt.hour in (6, 18)):
+    if not (dt.minute == 0 and dt.hour == 6):
         return
 
     # Once-per-slot guard (prevents duplicates if scheduler retries)
@@ -250,9 +250,7 @@ def _send_oem_booking_email(doc, action: str):
 
 
 def wearcheck_results_after_insert(doc, method=None):
-    # TEMP: Disable Wearcheck alert emails until data fetching is fixed.
-    # _send_wearcheck_alert_email(doc)
-    pass
+    _send_wearcheck_alert_email(doc)
 
 def _send_wearcheck_alert_email(doc):
     status = cint(getattr(doc, "status", None) or 0)

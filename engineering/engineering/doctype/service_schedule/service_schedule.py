@@ -407,7 +407,7 @@ def batch_get_service_reports(asset_list, month_start, month_end):
             "service_breakdown": "Service",
             "service_date": ("<=", month_end),
         },
-        fields=["name", "asset", "service_date", "current_hours", "service_interval", "reference_number"],
+        fields=["name", "asset", "service_date", "current_hours", "service_interval"],
         order_by="asset asc, service_date asc",
     )
 
@@ -604,8 +604,8 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             seed_service_date = as_date(chosen.get("service_date")) if chosen else None
             seed_hours = cint(chosen.get("current_hours")) if chosen else 0
             seed_interval = (chosen.get("service_interval") or "") if chosen else ""
-            seed_ref = (chosen.get("reference_number") or "") if chosen else ""
             seed_name = (chosen.get("name") or "") if chosen else ""
+            seed_ref = seed_name
 
             # Only stamp MSR fields on the exact MSR day row (must be within the month)
             is_msr_day = bool(seed_service_date and getdate(seed_service_date) == getdate(d))
