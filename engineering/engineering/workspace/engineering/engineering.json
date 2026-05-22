@@ -416,56 +416,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Machine Information Report",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Repaired Logsheet Report",
-   "link_count": 0,
-   "link_to": "MSR Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Deviation Report",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Pre Use Deviation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Licence Expiration Report",
-   "link_count": 0,
-   "link_to": "Licence Expiration",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Pre-Use Report",
-   "link_count": 0,
-   "link_to": "Pre-Use Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Machine Planning",
    "link_count": 4,
    "link_type": "DocType",
@@ -590,9 +540,69 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Machine Information Report",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Repaired Logsheet Report",
+   "link_count": 0,
+   "link_to": "MSR Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre Use Deviation Dashboard",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Pre Use Deviation",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Licence Expiration Report",
+   "link_count": 0,
+   "link_to": "Licence Expiration",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Pre-Use Report",
+   "link_count": 0,
+   "link_to": "Pre-Use Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Oil Sample Report",
+   "link_count": 0,
+   "link_to": "Oil Sample",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-22 05:34:50.399432",
+ "modified": "2026-05-22 08:41:51.844206",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

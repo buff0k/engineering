@@ -122,11 +122,31 @@ def get_chart(data):
     for row in data:
         counts[row.condition] = counts.get(row.condition, 0) + 1
 
+    status_order = [
+        ("Normal", "#22c55e"),
+        ("Monitor", "#3b82f6"),
+        ("Requires Attention", "#f59e0b"),
+        ("Urgent", "#f97316"),
+        ("Critical", "#dc2626"),
+        ("Import Failed", "#64748b"),
+    ]
+
+    labels = []
+    values = []
+    colors = []
+
+    for status, color in status_order:
+        if counts.get(status):
+            labels.append(status)
+            values.append(counts[status])
+            colors.append(color)
+
     return {
         "type": "donut",
         "height": 260,
+        "colors": colors,
         "data": {
-            "labels": list(counts.keys()),
-            "datasets": [{"name": "Samples", "values": list(counts.values())}],
+            "labels": labels,
+            "datasets": [{"name": "Samples", "values": values}],
         },
     }
