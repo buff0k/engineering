@@ -306,7 +306,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "A & U Summary",
    "link_count": 0,
    "link_to": "Avail and Util summary",
@@ -317,7 +317,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "A & U Detailed per Shift Report",
    "link_count": 0,
    "link_to": "Avail and Util report",
@@ -562,7 +562,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Pre Use Deviation Dashboard",
    "link_count": 0,
    "link_to": "Pre Use Deviation Dashboard",
@@ -602,7 +602,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-05-22 08:41:51.844206",
+ "modified": "2026-05-25 12:28:41.931073",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

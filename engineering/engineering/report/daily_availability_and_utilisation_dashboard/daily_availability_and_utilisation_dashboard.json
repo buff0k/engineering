@@ -27,6 +27,16 @@
    "mandatory": 1,
    "options": "Location",
    "wildcard_filter": 0
+  },
+  {
+   "default": "Daily Summary",
+   "fieldname": "graph_view",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Graph View",
+   "mandatory": 0,
+   "options": "Daily Summary\nAverage Per Machine\nMonthly Summary",
+   "wildcard_filter": 0
   }
  ],
  "is_standard": "Yes",
