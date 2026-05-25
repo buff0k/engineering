@@ -18,17 +18,6 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
             fieldtype: "Link",
             options: "Location",
             reqd: 1
-        },
-        {
-            fieldname: "graph_view",
-            label: __("Graph View"),
-            fieldtype: "Select",
-            options: [
-                "Daily Summary",
-                "Monthly Summary"
-            ],
-            default: "Per Machine",
-            hidden: 1
         }
     ],
 
@@ -67,23 +56,6 @@ function add_graph_buttons(report) {
     }
 
     report.__graph_buttons_added = true;
-
-    const graph_view_field = report.page.add_field({
-        label: __("Graph View"),
-        fieldname: "graph_view_top",
-        fieldtype: "Select",
-        options: [
-            "Daily Summary",
-            "Monthly Summary"
-        ],
-        default: report.get_filter_value("graph_view") || "Per Machine",
-        change: function () {
-            const selected_view = graph_view_field.get_value() || "Per Machine";
-
-            report.set_filter_value("graph_view", selected_view);
-            report.refresh();
-        }
-    });
 
     report.page.add_inner_button(__("Download PDF"), function () {
         download_dashboard_as_exact_pdf(report);

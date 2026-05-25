@@ -24,10 +24,10 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
             label: __("Graph View"),
             fieldtype: "Select",
             options: [
-                "Daily Summary",
-                "Monthly Summary"
+                "Machine Detail",
+                "ADT/EXC/DOZER Summary"
             ],
-            default: "Per Machine",
+            default: "Machine Detail",
             hidden: 1
         }
     ],
@@ -73,12 +73,12 @@ function add_graph_buttons(report) {
         fieldname: "graph_view_top",
         fieldtype: "Select",
         options: [
-            "Daily Summary",
-            "Monthly Summary"
+            "Machine Detail",
+            "ADT/EXC/DOZER Summary"
         ],
-        default: report.get_filter_value("graph_view") || "Per Machine",
+        default: report.get_filter_value("graph_view") || "Machine Detail",
         change: function () {
-            const selected_view = graph_view_field.get_value() || "Per Machine";
+            const selected_view = graph_view_field.get_value() || "Machine Detail";
 
             report.set_filter_value("graph_view", selected_view);
             report.refresh();

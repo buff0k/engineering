@@ -1,7 +1,34 @@
+
+function set_asset_name_query(frm) {
+    frm.set_query("asset_name", function () {
+        return {
+            query: "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.get_submitted_assets_by_location",
+            filters: {
+                location: frm.doc.location || ""
+            }
+        };
+    });
+}
+
 // Copyright (c) 2025, Isambane Mining (Pty) Ltd
 // For license information, please see license.txt
 
 frappe.ui.form.on("Plant Breakdown or Maintenance", {
+  setup(frm) {
+    set_asset_name_query(frm);
+  },
+
+  onload(frm) {
+    set_asset_name_query(frm);
+  },
+
+  location(frm) {
+    set_asset_name_query(frm);
+    frm.set_value("asset_name", "");
+    frm.set_value("item_name", "");
+    frm.set_value("asset_category", "");
+  },
+
   breakdown_start_datetime(frm) {
     frm.trigger("set_breakdown_start_key");
     frm.trigger("calculate_hours");
@@ -94,6 +121,7 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
 
 
   refresh(frm) {
+    set_asset_name_query(frm);
     // Make breakdown_hours read-only
     frm.set_df_property("breakdown_hours", "read_only", 1);
 
