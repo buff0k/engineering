@@ -1397,3 +1397,193 @@ function open_graph_print_preview(report) {
 
     print_window.document.close();
 }
+
+
+// FREEZE REAL CHART Y AXIS PATCH
+(function () {
+    function inject_css() {
+        if (document.getElementById("freeze-real-chart-y-axis-css")) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = "freeze-real-chart-y-axis-css";
+        style.innerHTML = `
+            .chart-y-freeze-ready {
+                position: relative !important;
+            }
+
+            .chart-y-freeze-ready::before {
+                content: "" !important;
+                position: sticky !important;
+                left: 0 !important;
+                display: block !important;
+                float: left !important;
+                width: 92px !important;
+                height: 100% !important;
+                min-height: 360px !important;
+                margin-right: -92px !important;
+                background: linear-gradient(to right, #3f3f3f 0%, #3f3f3f 78%, rgba(63,63,63,0) 100%) !important;
+                z-index: 25 !important;
+                pointer-events: none !important;
+            }
+
+            .chart-y-freeze-axis {
+                position: sticky !important;
+                left: 0 !important;
+                z-index: 30 !important;
+                width: 92px !important;
+                min-width: 92px !important;
+                height: 250px !important;
+                margin-bottom: -250px !important;
+                pointer-events: none !important;
+                color: #ffffff !important;
+                font-family: Arial, sans-serif !important;
+                font-size: 18px !important;
+                font-weight: 900 !important;
+                text-shadow: 2px 2px 2px #000 !important;
+            }
+
+            .chart-y-freeze-axis .chart-y-freeze-label {
+                position: absolute !important;
+                left: 18px !important;
+                transform: translateY(-50%) !important;
+                white-space: nowrap !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function looks_like_chart_container(el) {
+        const text = String(el.innerText || el.textContent || "");
+
+        if (
+            text.indexOf("ADT AVAILABILITY") === -1 &&
+            text.indexOf("FULL DAY AVERAGE") === -1
+        ) {
+            return false;
+        }
+
+        const rect = el.getBoundingClientRect();
+
+        if (rect.width < 600 || rect.height < 300) {
+            return false;
+        }
+
+        if (el.scrollWidth <= el.clientWidth + 50) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function find_chart_container() {
+        const candidates = Array.from(document.querySelectorAll("div"));
+
+        const matches = candidates.filter(looks_like_chart_container);
+
+        if (!matches.length) {
+            return null;
+        }
+
+        matches.sort(function (a, b) {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+
+            const a_score = (a.scrollWidth - a.clientWidth) + ar.width;
+            const b_score = (b.scrollWidth - b.clientWidth) + br.width;
+
+            return b_score - a_score;
+        });
+
+        return matches[0];
+    }
+
+    function add_axis(chart) {
+        if (!chart || chart.querySelector(":scope > .chart-y-freeze-axis")) {
+            return;
+        }
+
+        inject_css();
+
+        chart.classList.add("chart-y-freeze-ready");
+
+        const axis = document.createElement("div");
+        axis.className = "chart-y-freeze-axis";
+
+        const labels = [
+            ["100%", 22],
+            ["90%", 45],
+            ["80%", 68],
+            ["70%", 91],
+            ["60%", 114],
+            ["50%", 137],
+            ["40%", 160],
+            ["30%", 183],
+            ["20%", 206],
+            ["10%", 229],
+            ["0%", 252]
+        ];
+
+        labels.forEach(function (item) {
+            const label = document.createElement("div");
+            label.className = "chart-y-freeze-label";
+            label.textContent = item[0];
+            label.style.top = item[1] + "px";
+            axis.appendChild(label);
+        });
+
+        const title = Array.from(chart.querySelectorAll("div, span"))
+            .find(function (el) {
+                return String(el.innerText || el.textContent || "").indexOf("ADT AVAILABILITY") !== -1;
+            });
+
+        if (title && title.parentNode) {
+            title.parentNode.insertBefore(axis, title.nextSibling);
+        } else {
+            chart.insertBefore(axis, chart.firstChild);
+        }
+    }
+
+    function remove_bad_overlay() {
+        document.querySelectorAll(".freeze-y-axis-overlay-v2, .freeze-y-axis-percentage-label").forEach(function (el) {
+            el.remove();
+        });
+    }
+
+    function run() {
+        remove_bad_overlay();
+
+        const candidates = Array.from(document.querySelectorAll("div"));
+        const charts = candidates.filter(looks_like_chart_container);
+
+        charts.forEach(function (chart) {
+            add_axis(chart);
+        });
+    }
+
+    function schedule() {
+        setTimeout(run, 300);
+        setTimeout(run, 900);
+        setTimeout(run, 1800);
+    }
+
+    document.addEventListener("DOMContentLoaded", schedule);
+    window.addEventListener("load", schedule);
+
+    if (window.frappe && frappe.router) {
+        frappe.router.on("change", schedule);
+    }
+
+    const observer = new MutationObserver(schedule);
+
+    if (document.body) {
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    schedule();
+})();
+
