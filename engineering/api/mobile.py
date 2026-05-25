@@ -4,6 +4,83 @@ import frappe
 
 
 
+
+@frappe.whitelist()
+def get_parts_requisition_item_groups(asset_category=None):
+    if not asset_category:
+        return []
+
+    return frappe.call(
+        "engineering.engineering.doctype.parts_requisition_form.parts_requisition_form.get_item_groups_by_asset_category",
+        doctype="Item Group",
+        txt="",
+        searchfield="name",
+        start=0,
+        page_len=100,
+        filters={"asset_category": asset_category},
+    )
+
+
+@frappe.whitelist()
+def get_parts_requisition_items_by_group(item_group=None):
+    if not item_group:
+        return []
+
+    return frappe.get_all(
+        "Item",
+        filters={
+            "item_group": item_group,
+            "disabled": 0,
+        },
+        fields=[
+            "name",
+            "item_name",
+            "item_group",
+            "modified",
+        ],
+        order_by="name",
+        limit_page_length=500,
+    )
+
+
+@frappe.whitelist()
+def get_parts_requisition_asset_details(asset_name=None):
+    if not asset_name:
+        return {
+            "asset_category": "",
+            "plant_make": "",
+            "model": "",
+            "vin_no": "",
+        }
+
+    asset = frappe.get_doc("Asset", asset_name)
+    item_code = asset.item_code or ""
+    parts = item_code.strip().split()
+
+    if len(parts) <= 1:
+        plant_make = item_code
+        model = item_code
+    else:
+        plant_make = parts[-1]
+        model = " ".join(parts[:-1])
+
+    return {
+        "asset_category": asset.asset_category or "",
+        "plant_make": plant_make or "",
+        "model": model or "",
+        "vin_no": (
+            getattr(asset, "vin_no", None)
+            or getattr(asset, "serial_no", None)
+            or getattr(asset, "chassis_no", None)
+            or getattr(asset, "custom_vin_no", None)
+            or ""
+        ),
+    }
+
+
+
+
+
 @frappe.whitelist()
 def get_parts_requisition_mobile_items():
     user = frappe.session.user
@@ -122,7 +199,7 @@ def get_unsigned_mechanical_daily_worksheets():
         frappe.throw("Only Engineering Manager may view unsigned Daily Worksheet records", frappe.PermissionError)
 
     filters = [
-        ["supervisor_forman_signature", "in", ["", None]],
+        ["forman_supervisor_signature", "in", ["", None]],
     ]
 
     return frappe.get_all(
@@ -134,9 +211,12 @@ def get_unsigned_mechanical_daily_worksheets():
             "clock_out_time",
             "total_hours",
             "total_work_time",
-            "mechanic_company_no",
+            "date",
+            "mechanic_employee_no",
             "mechanic_name_surname",
             "mechanic_signature",
+            "forman_supervisor_employee_no",
+            "forman_supervisor_name_surname",
         ],
         order_by="creation desc",
         limit_page_length=200,
@@ -144,7 +224,7 @@ def get_unsigned_mechanical_daily_worksheets():
 
 
 @frappe.whitelist()
-def sign_off_mechanical_daily_worksheet(docname, supervisor_forman_signature):
+def sign_off_mechanical_daily_worksheet(docname, forman_supervisor_signature=None, supervisor_forman_signature=None):
     user = frappe.session.user
 
     if not user or user == "Guest":
@@ -155,7 +235,7 @@ def sign_off_mechanical_daily_worksheet(docname, supervisor_forman_signature):
         frappe.throw("Only Engineering Manager may sign off Daily Worksheets", frappe.PermissionError)
 
     doc = frappe.get_doc("Mechanical Daily Worksheet", docname)
-    doc.supervisor_forman_signature = supervisor_forman_signature
+    doc.forman_supervisor_signature = forman_supervisor_signature or supervisor_forman_signature
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -183,7 +263,7 @@ def get_unsigned_mechanical_service_reports():
     allowed_locations = _get_allowed_locations(user)
 
     filters = [
-        ["manager_foreman", "=", ""],
+        ["plant_manager_forman", "=", ""],
     ]
 
     if allowed_locations:
