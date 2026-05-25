@@ -174,13 +174,17 @@ def sign_off_mechanical_service_report(docname, manager_foreman_signature):
     if not _has_any_role(roles, ["Engineering Manager"]):
         frappe.throw("Only Engineering Manager may sign off MSR records", frappe.PermissionError)
 
-    doc = frappe.get_doc("Mechanical Service Report", docname)
-    doc.plant_manager_forman = manager_foreman_signature
-    doc.save(ignore_permissions=True)
+    frappe.db.set_value(
+        "Mechanical Service Report",
+        docname,
+        "plant_manager_forman",
+        manager_foreman_signature,
+        update_modified=True,
+    )
     frappe.db.commit()
 
     return {
-        "name": doc.name,
+        "name": docname,
     }
 
 
