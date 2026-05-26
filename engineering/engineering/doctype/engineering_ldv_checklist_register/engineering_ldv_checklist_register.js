@@ -639,6 +639,20 @@ function inject_checklist_submission_styles() {
             z-index: 952 !important;
         }
 
+        .engineering-checklist-grid-styled .checklist-frozen-right {
+            position: sticky !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-submission {
+            z-index: 820 !important;
+            background: #ffffff !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-submission {
+            z-index: 980 !important;
+            background: #f5f5f5 !important;
+        }
+
         .engineering-checklist-grid-styled .checklist-hidden-day-column {
             display: none !important;
         }
@@ -855,15 +869,18 @@ function get_row_index_cell(grid_row) {
 function reset_frozen_columns(grid) {
     grid.wrapper.find(
         '.checklist-frozen-cell, .checklist-frozen-header, .checklist-frozen-divider, ' +
-        '.checklist-frozen-idx, .checklist-frozen-fleet, .checklist-frozen-machine'
+        '.checklist-frozen-idx, .checklist-frozen-fleet, .checklist-frozen-machine, ' +
+        '.checklist-frozen-right, .checklist-frozen-submission'
     ).each(function () {
         $(this)
             .removeClass(
                 'checklist-frozen-cell checklist-frozen-header checklist-frozen-divider ' +
-                'checklist-frozen-idx checklist-frozen-fleet checklist-frozen-machine'
+                'checklist-frozen-idx checklist-frozen-fleet checklist-frozen-machine ' +
+                'checklist-frozen-right checklist-frozen-submission'
             )
             .css({
                 left: '',
+                right: '',
                 minWidth: '',
                 maxWidth: '',
                 width: '',
@@ -889,6 +906,7 @@ function apply_sticky($cell, left, width, isHeader, extraClass, isLastFrozen) {
         .addClass(extraClass || '')
         .css({
             left: `${left}px`,
+            right: '',
             minWidth: `${width}px`,
             maxWidth: `${width}px`,
             width: `${width}px`,
@@ -898,6 +916,24 @@ function apply_sticky($cell, left, width, isHeader, extraClass, isLastFrozen) {
     if (isLastFrozen) {
         $cell.addClass('checklist-frozen-divider');
     }
+}
+
+function apply_sticky_right($cell, right, width, isHeader, extraClass) {
+    if (!$cell || !$cell.length) return;
+
+    $cell
+        .addClass(isHeader ? 'checklist-frozen-header' : 'checklist-frozen-cell')
+        .addClass('checklist-frozen-right')
+        .addClass(extraClass || '')
+        .css({
+            left: '',
+            right: `${right}px`,
+            minWidth: `${width}px`,
+            maxWidth: `${width}px`,
+            width: `${width}px`,
+            background: isHeader ? '#f5f5f5' : '#ffffff',
+            boxShadow: '-2px 0 0 #d1d8dd'
+        });
 }
 
 function freeze_left_columns(frm) {
@@ -913,6 +949,10 @@ function freeze_left_columns(frm) {
     const $idxHeader = get_row_index_header_cell(grid);
     const $fleetHeader = get_header_cell(grid, 'fleet_no');
     const $machineHeader = get_header_cell(grid, 'machine_type');
+    const checklist_submission_fieldname = get_checklist_submission_fieldname();
+    const $submissionHeader = checklist_submission_fieldname
+        ? get_header_cell(grid, checklist_submission_fieldname)
+        : $();
 
     const columns = [];
 
@@ -945,8 +985,6 @@ function freeze_left_columns(frm) {
         });
     }
 
-    if (!columns.length) return;
-
     let left = 0;
 
     columns.forEach((column, index) => {
@@ -978,6 +1016,30 @@ function freeze_left_columns(frm) {
 
         left += column.width;
     });
+
+    if ($submissionHeader.length) {
+        const submissionWidth = get_effective_width($submissionHeader, 150);
+
+        apply_sticky_right(
+            $submissionHeader,
+            0,
+            submissionWidth,
+            true,
+            'checklist-frozen-submission'
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $submissionCell = get_grid_cell_wrapper(grid_row, checklist_submission_fieldname);
+
+            apply_sticky_right(
+                $submissionCell,
+                0,
+                submissionWidth,
+                false,
+                'checklist-frozen-submission'
+            );
+        });
+    }
 }
 
 function style_row_checkbox_cells(frm) {
@@ -1443,3 +1505,590 @@ frappe.ui.form.on(CHECKLIST_CHILD_DOCTYPE, {
         refresh_checklist_submission_ui(frm, false);
     }
 });
+
+
+/* ===== TARGET AND CHECKLIST SUBMISSION FREEZE OVERRIDE START ===== */
+
+function ensure_target_submission_freeze_style() {
+    const old_style = document.getElementById('target-submission-freeze-style-block');
+    if (old_style) {
+        old_style.remove();
+    }
+
+    const style = document.createElement('style');
+    style.id = 'target-submission-freeze-style-block';
+    style.innerHTML = `
+        .engineering-checklist-grid-styled .form-grid {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            max-height: 72vh !important;
+        }
+
+        .engineering-checklist-grid-styled .grid-body {
+            overflow: visible !important;
+            position: relative !important;
+        }
+
+        .engineering-checklist-grid-styled .grid-heading-row {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 900 !important;
+            background: #f5f5f5 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header {
+            top: 0 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-right {
+            position: sticky !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-target {
+            z-index: 890 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-submission {
+            z-index: 891 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-target {
+            z-index: 990 !important;
+            background: #f5f5f5 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-submission {
+            z-index: 991 !important;
+            background: #f5f5f5 !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function reset_frozen_columns(grid) {
+    grid.wrapper.find(
+        '.checklist-frozen-cell, .checklist-frozen-header, .checklist-frozen-divider, ' +
+        '.checklist-frozen-idx, .checklist-frozen-fleet, .checklist-frozen-machine, ' +
+        '.checklist-frozen-right, .checklist-frozen-target, .checklist-frozen-submission'
+    ).each(function () {
+        $(this)
+            .removeClass(
+                'checklist-frozen-cell checklist-frozen-header checklist-frozen-divider ' +
+                'checklist-frozen-idx checklist-frozen-fleet checklist-frozen-machine ' +
+                'checklist-frozen-right checklist-frozen-target checklist-frozen-submission'
+            )
+            .css({
+                left: '',
+                right: '',
+                minWidth: '',
+                maxWidth: '',
+                width: '',
+                background: '',
+                zIndex: '',
+                boxShadow: ''
+            });
+    });
+}
+
+function apply_sticky($cell, left, width, isHeader, extraClass, isLastFrozen) {
+    if (!$cell || !$cell.length) return;
+
+    $cell
+        .addClass(isHeader ? 'checklist-frozen-header' : 'checklist-frozen-cell')
+        .addClass(extraClass || '')
+        .css({
+            left: `${left}px`,
+            right: '',
+            minWidth: `${width}px`,
+            maxWidth: `${width}px`,
+            width: `${width}px`,
+            background: isHeader ? '#f5f5f5' : '#ffffff'
+        });
+
+    if (isLastFrozen) {
+        $cell.addClass('checklist-frozen-divider');
+    }
+}
+
+function apply_sticky_right($cell, right, width, isHeader, extraClass, addDivider) {
+    if (!$cell || !$cell.length) return;
+
+    $cell
+        .addClass(isHeader ? 'checklist-frozen-header' : 'checklist-frozen-cell')
+        .addClass('checklist-frozen-right')
+        .addClass(extraClass || '')
+        .css({
+            left: '',
+            right: `${right}px`,
+            minWidth: `${width}px`,
+            maxWidth: `${width}px`,
+            width: `${width}px`,
+            boxShadow: addDivider ? '-2px 0 0 #d1d8dd' : ''
+        });
+
+    if (isHeader) {
+        $cell.css('background', '#f5f5f5');
+    }
+}
+
+function freeze_left_columns(frm) {
+    ensure_target_submission_freeze_style();
+
+    const child_table_fieldname = get_child_table_fieldname(frm);
+    if (!child_table_fieldname) return;
+
+    const grid = frm.fields_dict[child_table_fieldname]?.grid;
+    if (!grid) return;
+
+    grid.wrapper.addClass('engineering-checklist-grid-styled');
+    reset_frozen_columns(grid);
+
+    const $idxHeader = get_row_index_header_cell(grid);
+    const $fleetHeader = get_header_cell(grid, 'fleet_no');
+    const $machineHeader = get_header_cell(grid, 'machine_type');
+
+    const checklist_submission_fieldname = get_checklist_submission_fieldname();
+    const $targetHeader = get_header_cell(grid, 'target');
+    const $submissionHeader = checklist_submission_fieldname
+        ? get_header_cell(grid, checklist_submission_fieldname)
+        : $();
+
+    const columns = [];
+
+    if ($idxHeader.length) {
+        columns.push({
+            type: 'idx',
+            className: 'checklist-frozen-idx',
+            width: get_effective_width($idxHeader, 44),
+            header: $idxHeader
+        });
+    }
+
+    if ($fleetHeader.length) {
+        columns.push({
+            type: 'field',
+            fieldname: 'fleet_no',
+            className: 'checklist-frozen-fleet',
+            width: get_effective_width($fleetHeader, 150),
+            header: $fleetHeader
+        });
+    }
+
+    if ($machineHeader.length) {
+        columns.push({
+            type: 'field',
+            fieldname: 'machine_type',
+            className: 'checklist-frozen-machine',
+            width: get_effective_width($machineHeader, 170),
+            header: $machineHeader
+        });
+    }
+
+    let left = 0;
+
+    columns.forEach((column, index) => {
+        const isLastFrozen = index === columns.length - 1;
+
+        apply_sticky(
+            column.header,
+            left,
+            column.width,
+            true,
+            column.className,
+            isLastFrozen
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $cell = column.type === 'idx'
+                ? get_row_index_cell(grid_row)
+                : get_grid_cell_wrapper(grid_row, column.fieldname);
+
+            apply_sticky(
+                $cell,
+                left,
+                column.width,
+                false,
+                column.className,
+                isLastFrozen
+            );
+        });
+
+        left += column.width;
+    });
+
+    const submissionWidth = $submissionHeader.length
+        ? get_effective_width($submissionHeader, 150)
+        : 150;
+
+    const targetWidth = $targetHeader.length
+        ? get_effective_width($targetHeader, 80)
+        : 80;
+
+    if ($submissionHeader.length) {
+        apply_sticky_right(
+            $submissionHeader,
+            0,
+            submissionWidth,
+            true,
+            'checklist-frozen-submission',
+            false
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $submissionCell = get_grid_cell_wrapper(grid_row, checklist_submission_fieldname);
+
+            apply_sticky_right(
+                $submissionCell,
+                0,
+                submissionWidth,
+                false,
+                'checklist-frozen-submission',
+                false
+            );
+        });
+    }
+
+    if ($targetHeader.length) {
+        apply_sticky_right(
+            $targetHeader,
+            submissionWidth,
+            targetWidth,
+            true,
+            'checklist-frozen-target',
+            true
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $targetCell = get_grid_cell_wrapper(grid_row, 'target');
+
+            apply_sticky_right(
+                $targetCell,
+                submissionWidth,
+                targetWidth,
+                false,
+                'checklist-frozen-target',
+                true
+            );
+        });
+    }
+}
+
+/* ===== TARGET AND CHECKLIST SUBMISSION FREEZE OVERRIDE END ===== */
+
+
+/* ===== ALL IMPORTANT COLUMNS VISIBLE OVERRIDE START ===== */
+
+function ensure_all_visible_freeze_style() {
+    const old_style = document.getElementById('all-visible-freeze-style-block');
+    if (old_style) {
+        old_style.remove();
+    }
+
+    const style = document.createElement('style');
+    style.id = 'all-visible-freeze-style-block';
+    style.innerHTML = `
+        .engineering-checklist-grid-styled .form-grid {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            max-height: 72vh !important;
+        }
+
+        .engineering-checklist-grid-styled .grid-body,
+        .engineering-checklist-grid-styled .rows,
+        .engineering-checklist-grid-styled .grid-row,
+        .engineering-checklist-grid-styled .data-row,
+        .engineering-checklist-grid-styled .grid-static-col,
+        .engineering-checklist-grid-styled .row {
+            overflow: visible !important;
+        }
+
+        .engineering-checklist-grid-styled .grid-heading-row {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 900 !important;
+            background: #f5f5f5 !important;
+            overflow: visible !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header {
+            top: 0 !important;
+            background: #f5f5f5 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-cell,
+        .engineering-checklist-grid-styled .checklist-frozen-header {
+            position: sticky !important;
+            white-space: nowrap !important;
+            background-clip: padding-box !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-right {
+            position: sticky !important;
+            background: #ffffff !important;
+            box-shadow: -2px 0 0 #d1d8dd !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-right {
+            background: #f5f5f5 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-item-name {
+            z-index: 880 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-target {
+            z-index: 890 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-submission {
+            z-index: 891 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-item-name {
+            z-index: 988 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-target {
+            z-index: 990 !important;
+        }
+
+        .engineering-checklist-grid-styled .checklist-frozen-header.checklist-frozen-submission {
+            z-index: 991 !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function reset_frozen_columns(grid) {
+    grid.wrapper.find(
+        '.checklist-frozen-cell, .checklist-frozen-header, .checklist-frozen-divider, ' +
+        '.checklist-frozen-idx, .checklist-frozen-fleet, .checklist-frozen-machine, ' +
+        '.checklist-frozen-right, .checklist-frozen-item-name, .checklist-frozen-target, .checklist-frozen-submission'
+    ).each(function () {
+        $(this)
+            .removeClass(
+                'checklist-frozen-cell checklist-frozen-header checklist-frozen-divider ' +
+                'checklist-frozen-idx checklist-frozen-fleet checklist-frozen-machine ' +
+                'checklist-frozen-right checklist-frozen-item-name checklist-frozen-target checklist-frozen-submission'
+            )
+            .css({
+                left: '',
+                right: '',
+                minWidth: '',
+                maxWidth: '',
+                width: '',
+                background: '',
+                zIndex: '',
+                boxShadow: '',
+                position: ''
+            });
+    });
+}
+
+function apply_sticky($cell, left, width, isHeader, extraClass, isLastFrozen) {
+    if (!$cell || !$cell.length) return;
+
+    $cell
+        .addClass(isHeader ? 'checklist-frozen-header' : 'checklist-frozen-cell')
+        .addClass(extraClass || '')
+        .css({
+            left: `${left}px`,
+            right: '',
+            minWidth: `${width}px`,
+            maxWidth: `${width}px`,
+            width: `${width}px`,
+            background: isHeader ? '#f5f5f5' : '#ffffff'
+        });
+
+    if (isLastFrozen) {
+        $cell.addClass('checklist-frozen-divider');
+    }
+}
+
+function apply_sticky_right($cell, right, width, isHeader, extraClass) {
+    if (!$cell || !$cell.length) return;
+
+    $cell
+        .addClass(isHeader ? 'checklist-frozen-header' : 'checklist-frozen-cell')
+        .addClass('checklist-frozen-right')
+        .addClass(extraClass || '')
+        .css({
+            left: '',
+            right: `${right}px`,
+            minWidth: `${width}px`,
+            maxWidth: `${width}px`,
+            width: `${width}px`,
+            background: isHeader ? '#f5f5f5' : '#ffffff'
+        });
+}
+
+function freeze_left_columns(frm) {
+    ensure_all_visible_freeze_style();
+
+    const child_table_fieldname = get_child_table_fieldname(frm);
+    if (!child_table_fieldname) return;
+
+    const grid = frm.fields_dict[child_table_fieldname]?.grid;
+    if (!grid) return;
+
+    grid.wrapper.addClass('engineering-checklist-grid-styled');
+    reset_frozen_columns(grid);
+
+    const $idxHeader = get_row_index_header_cell(grid);
+    const $fleetHeader = get_header_cell(grid, 'fleet_no');
+    const $machineHeader = get_header_cell(grid, 'machine_type');
+
+    const $itemHeader = get_header_cell(grid, 'item_name');
+    const $targetHeader = get_header_cell(grid, 'target');
+
+    const checklist_submission_fieldname = get_checklist_submission_fieldname();
+    const $submissionHeader = checklist_submission_fieldname
+        ? get_header_cell(grid, checklist_submission_fieldname)
+        : $();
+
+    const leftColumns = [];
+
+    if ($idxHeader.length) {
+        leftColumns.push({
+            type: 'idx',
+            className: 'checklist-frozen-idx',
+            width: get_effective_width($idxHeader, 44),
+            header: $idxHeader
+        });
+    }
+
+    if ($fleetHeader.length) {
+        leftColumns.push({
+            type: 'field',
+            fieldname: 'fleet_no',
+            className: 'checklist-frozen-fleet',
+            width: get_effective_width($fleetHeader, 120),
+            header: $fleetHeader
+        });
+    }
+
+    if ($machineHeader.length) {
+        leftColumns.push({
+            type: 'field',
+            fieldname: 'machine_type',
+            className: 'checklist-frozen-machine',
+            width: get_effective_width($machineHeader, 150),
+            header: $machineHeader
+        });
+    }
+
+    let left = 0;
+
+    leftColumns.forEach((column, index) => {
+        const isLastFrozen = index === leftColumns.length - 1;
+
+        apply_sticky(
+            column.header,
+            left,
+            column.width,
+            true,
+            column.className,
+            isLastFrozen
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $cell = column.type === 'idx'
+                ? get_row_index_cell(grid_row)
+                : get_grid_cell_wrapper(grid_row, column.fieldname);
+
+            apply_sticky(
+                $cell,
+                left,
+                column.width,
+                false,
+                column.className,
+                isLastFrozen
+            );
+        });
+
+        left += column.width;
+    });
+
+    const submissionWidth = $submissionHeader.length
+        ? get_effective_width($submissionHeader, 130)
+        : 130;
+
+    const targetWidth = $targetHeader.length
+        ? get_effective_width($targetHeader, 70)
+        : 70;
+
+    const itemWidth = $itemHeader.length
+        ? get_effective_width($itemHeader, 150)
+        : 150;
+
+    if ($submissionHeader.length) {
+        apply_sticky_right(
+            $submissionHeader,
+            0,
+            submissionWidth,
+            true,
+            'checklist-frozen-submission'
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $submissionCell = get_grid_cell_wrapper(grid_row, checklist_submission_fieldname);
+
+            apply_sticky_right(
+                $submissionCell,
+                0,
+                submissionWidth,
+                false,
+                'checklist-frozen-submission'
+            );
+        });
+    }
+
+    if ($targetHeader.length) {
+        apply_sticky_right(
+            $targetHeader,
+            submissionWidth,
+            targetWidth,
+            true,
+            'checklist-frozen-target'
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $targetCell = get_grid_cell_wrapper(grid_row, 'target');
+
+            apply_sticky_right(
+                $targetCell,
+                submissionWidth,
+                targetWidth,
+                false,
+                'checklist-frozen-target'
+            );
+        });
+    }
+
+    if ($itemHeader.length) {
+        apply_sticky_right(
+            $itemHeader,
+            submissionWidth + targetWidth,
+            itemWidth,
+            true,
+            'checklist-frozen-item-name'
+        );
+
+        (grid.grid_rows || []).forEach(grid_row => {
+            const $itemCell = get_grid_cell_wrapper(grid_row, 'item_name');
+
+            apply_sticky_right(
+                $itemCell,
+                submissionWidth + targetWidth,
+                itemWidth,
+                false,
+                'checklist-frozen-item-name'
+            );
+        });
+    }
+}
+
+/* ===== ALL IMPORTANT COLUMNS VISIBLE OVERRIDE END ===== */
+
