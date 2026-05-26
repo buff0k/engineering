@@ -523,11 +523,15 @@ function inject_checklist_submission_styles() {
             overflow-y: auto !important;
             position: relative !important;
             max-height: 72vh !important;
+
+
         }
 
         .engineering-checklist-grid-styled .grid-body {
             overflow: visible !important;
             position: relative !important;
+
+
         }
 
         .engineering-checklist-grid-styled .grid-heading-row {
@@ -535,6 +539,8 @@ function inject_checklist_submission_styles() {
             top: 0 !important;
             z-index: 900 !important;
             background: #f5f5f5 !important;
+
+
         }
 
         .engineering-checklist-grid-styled .grid-heading-row,
@@ -588,10 +594,9 @@ function inject_checklist_submission_styles() {
 
         .engineering-checklist-grid-styled .checklist-frozen-cell,
         .engineering-checklist-grid-styled .checklist-frozen-header {
-            position: sticky !important;
-            white-space: nowrap !important;
-            overflow: visible !important;
-            background-clip: padding-box !important;
+            top: 0 !important;
+            background: #f5f5f5 !important;
+
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-cell {

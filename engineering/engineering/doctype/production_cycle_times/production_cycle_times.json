@@ -27,6 +27,7 @@
    "reqd": 1
   },
   {
+   "fetch_from": "measurer_name.employee_name",
    "fieldname": "measurer_full_name",
    "fieldtype": "Read Only",
    "label": "Measurer Full Name"
@@ -91,7 +92,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 05:20:06.278952",
+ "modified": "2026-05-26 08:52:26.414547",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Production Cycle Times",

@@ -627,19 +627,27 @@ function inject_checklist_submission_styles() {
 
         .engineering-checklist-grid-styled .form-grid {
             overflow-x: auto !important;
-            overflow-y: hidden !important;
+            overflow-y: auto !important;
             position: relative !important;
+            max-height: 72vh !important;
+
+
         }
 
         .engineering-checklist-grid-styled .grid-body {
-            overflow-x: visible !important;
-            overflow-y: visible !important;
+            overflow: visible !important;
             position: relative !important;
+
+
         }
 
         .engineering-checklist-grid-styled .grid-heading-row {
-            position: relative !important;
-            z-index: 50 !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 900 !important;
+            background: #f5f5f5 !important;
+
+
         }
 
         .engineering-checklist-grid-styled [data-fieldname],
@@ -649,10 +657,9 @@ function inject_checklist_submission_styles() {
 
         .engineering-checklist-grid-styled .checklist-frozen-cell,
         .engineering-checklist-grid-styled .checklist-frozen-header {
-            position: sticky !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            background-clip: padding-box !important;
+            top: 0 !important;
+            background: #f5f5f5 !important;
+
         }
 
         .engineering-checklist-grid-styled .checklist-frozen-cell {

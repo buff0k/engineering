@@ -20,16 +20,15 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
             reqd: 1
         },
         {
-            fieldname: "graph_view",
-            label: __("Graph View"),
+            fieldname: "summary_type",
+            label: __("Summary Type"),
             fieldtype: "Select",
-            options: [
-                "Daily Summary",
-                "Average Per Machine",
-                "Monthly Summary"
-            ],
+            options: "Daily Summary\nAverage Per Machine\nMonthly Summary",
             default: "Daily Summary",
-            hidden: 1
+            reqd: 1,
+            on_change: function() {
+                frappe.query_report.refresh();
+            }
         }
     ],
 
@@ -47,18 +46,21 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
 
         inject_dashboard_table_hider();
         add_graph_buttons(report);
+        freeze_percentage_axis_on_scroll(report);
     },
 
     refresh(report) {
         inject_dashboard_table_hider();
         hide_report_table(report);
         add_graph_buttons(report);
+        freeze_percentage_axis_on_scroll(report);
     },
 
     after_datatable_render(report) {
         inject_dashboard_table_hider();
         hide_report_table(report);
         add_graph_buttons(report);
+        freeze_percentage_axis_on_scroll(report);
     }
 };
 
@@ -68,24 +70,6 @@ function add_graph_buttons(report) {
     }
 
     report.__graph_buttons_added = true;
-
-    const graph_view_field = report.page.add_field({
-        label: __("Graph View"),
-        fieldname: "graph_view_top",
-        fieldtype: "Select",
-        options: [
-            "Daily Summary",
-            "Average Per Machine",
-            "Monthly Summary"
-        ],
-        default: report.get_filter_value("graph_view") || "Daily Summary",
-        change: function () {
-            const selected_view = graph_view_field.get_value() || "Daily Summary";
-
-            report.set_filter_value("graph_view", selected_view);
-            report.refresh();
-        }
-    });
 
     report.page.add_inner_button(__("Download PDF"), function () {
         download_dashboard_as_exact_pdf(report);
@@ -231,10 +215,11 @@ async function download_dashboard_as_exact_pdf(report) {
         const start_date = report.get_filter_value("start_date") || "";
         const end_date = report.get_filter_value("end_date") || "";
         const location = report.get_filter_value("location") || "";
+        const summary_type = report.get_filter_value("summary_type") || "Daily Summary";
 
         const dashboard_el = $(dashboard);
 
-        const title_text = `Daily Availability and Utilisation Dashboard | ${location} | ${start_date} to ${end_date}`;
+        const title_text = `Daily Availability and Utilisation Dashboard | ${summary_type} | ${location} | ${start_date} to ${end_date}`;
 
         const sections = dashboard_el.find(".isd-chart-section").toArray().filter((section) => {
             return $(section).find(".isd-bar").length > 0;
@@ -926,6 +911,77 @@ function open_graph_print_preview(report) {
 }
 
 
+
+/* Preview Graphs freeze heading and percentage axis */
+.isd-chart-section {
+    position: relative !important;
+}
+
+.isd-chart-section-title {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    background: linear-gradient(135deg, #2b2b2b 0%, #555 48%, #2b2b2b 100%) !important;
+}
+
+.isd-yaxis {
+    position: absolute !important;
+    left: 14px !important;
+    top: 14px !important;
+    bottom: auto !important;
+    width: 62px !important;
+    height: 260px !important;
+    z-index: 45 !important;
+    background: linear-gradient(135deg, #2b2b2b 0%, #444 55%, #2b2b2b 100%) !important;
+    padding-right: 10px !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important;
+    will-change: transform !important;
+}
+
+.isd-chart {
+    position: relative !important;
+    padding-top: 14px !important;
+}
+
+.isd-chart-grid {
+    margin-left: 92px !important;
+    height: 260px !important;
+    margin-top: 0 !important;
+}
+
+.isd-machinelabels {
+    margin-left: 92px !important;
+}
+
+.isd-avgline {
+    left: 106px !important;
+    z-index: 8 !important;
+}
+
+.isd-avgline.isd-avg-85 {
+    top: calc(14px + 260px * 0.15) !important;
+}
+
+.isd-avgline.isd-avg-80 {
+    top: calc(14px + 260px * 0.20) !important;
+}
+
+@media print {
+    .isd-chart-section-title {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+    }
+
+    .isd-yaxis {
+        transform: none !important;
+        background: transparent !important;
+    }
+}
+
+
         @media print {
 
             /* Align printed/PDF Y axis labels exactly to the graph baseline */
@@ -1391,6 +1447,34 @@ function open_graph_print_preview(report) {
     </div>
 
     ${html}
+
+<script>
+function freezePreviewAxes() {
+    document.querySelectorAll(".isd-chart-section").forEach(function(section) {
+        var axis = section.querySelector(".isd-yaxis");
+        if (!axis) return;
+
+        function moveAxis() {
+            axis.style.transform = "translateX(" + section.scrollLeft + "px)";
+        }
+
+        if (!section.__isdPreviewAxisFreezeBound) {
+            section.addEventListener("scroll", moveAxis, { passive: true });
+            section.__isdPreviewAxisFreezeBound = true;
+        }
+
+        moveAxis();
+    });
+}
+
+window.addEventListener("load", function() {
+    freezePreviewAxes();
+    setTimeout(freezePreviewAxes, 200);
+    setTimeout(freezePreviewAxes, 600);
+    setTimeout(freezePreviewAxes, 1200);
+});
+</script>
+
 </body>
 </html>
     `);
@@ -1399,191 +1483,37 @@ function open_graph_print_preview(report) {
 }
 
 
-// FREEZE REAL CHART Y AXIS PATCH
-(function () {
-    function inject_css() {
-        if (document.getElementById("freeze-real-chart-y-axis-css")) {
+function freeze_percentage_axis_on_scroll(report) {
+    const apply_freeze = () => {
+        if (!report || !report.page || !report.page.wrapper) {
             return;
         }
 
-        const style = document.createElement("style");
-        style.id = "freeze-real-chart-y-axis-css";
-        style.innerHTML = `
-            .chart-y-freeze-ready {
-                position: relative !important;
+        const wrapper = report.page.wrapper;
+
+        wrapper.find(".isd-chart-section").each(function () {
+            const section = this;
+            const axis = $(section).find(".isd-yaxis").first();
+
+            if (!axis.length) {
+                return;
             }
 
-            .chart-y-freeze-ready::before {
-                content: "" !important;
-                position: sticky !important;
-                left: 0 !important;
-                display: block !important;
-                float: left !important;
-                width: 92px !important;
-                height: 100% !important;
-                min-height: 360px !important;
-                margin-right: -92px !important;
-                background: linear-gradient(to right, #3f3f3f 0%, #3f3f3f 78%, rgba(63,63,63,0) 100%) !important;
-                z-index: 25 !important;
-                pointer-events: none !important;
+            const move_axis = () => {
+                axis.css("transform", "translateX(" + section.scrollLeft + "px)");
+            };
+
+            if (!section.__isd_axis_freeze_bound) {
+                section.addEventListener("scroll", move_axis, { passive: true });
+                section.__isd_axis_freeze_bound = true;
             }
 
-            .chart-y-freeze-axis {
-                position: sticky !important;
-                left: 0 !important;
-                z-index: 30 !important;
-                width: 92px !important;
-                min-width: 92px !important;
-                height: 250px !important;
-                margin-bottom: -250px !important;
-                pointer-events: none !important;
-                color: #ffffff !important;
-                font-family: Arial, sans-serif !important;
-                font-size: 18px !important;
-                font-weight: 900 !important;
-                text-shadow: 2px 2px 2px #000 !important;
-            }
-
-            .chart-y-freeze-axis .chart-y-freeze-label {
-                position: absolute !important;
-                left: 18px !important;
-                transform: translateY(-50%) !important;
-                white-space: nowrap !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    function looks_like_chart_container(el) {
-        const text = String(el.innerText || el.textContent || "");
-
-        if (
-            text.indexOf("ADT AVAILABILITY") === -1 &&
-            text.indexOf("FULL DAY AVERAGE") === -1
-        ) {
-            return false;
-        }
-
-        const rect = el.getBoundingClientRect();
-
-        if (rect.width < 600 || rect.height < 300) {
-            return false;
-        }
-
-        if (el.scrollWidth <= el.clientWidth + 50) {
-            return false;
-        }
-
-        return true;
-    }
-
-    function find_chart_container() {
-        const candidates = Array.from(document.querySelectorAll("div"));
-
-        const matches = candidates.filter(looks_like_chart_container);
-
-        if (!matches.length) {
-            return null;
-        }
-
-        matches.sort(function (a, b) {
-            const ar = a.getBoundingClientRect();
-            const br = b.getBoundingClientRect();
-
-            const a_score = (a.scrollWidth - a.clientWidth) + ar.width;
-            const b_score = (b.scrollWidth - b.clientWidth) + br.width;
-
-            return b_score - a_score;
+            move_axis();
         });
+    };
 
-        return matches[0];
-    }
-
-    function add_axis(chart) {
-        if (!chart || chart.querySelector(":scope > .chart-y-freeze-axis")) {
-            return;
-        }
-
-        inject_css();
-
-        chart.classList.add("chart-y-freeze-ready");
-
-        const axis = document.createElement("div");
-        axis.className = "chart-y-freeze-axis";
-
-        const labels = [
-            ["100%", 22],
-            ["90%", 45],
-            ["80%", 68],
-            ["70%", 91],
-            ["60%", 114],
-            ["50%", 137],
-            ["40%", 160],
-            ["30%", 183],
-            ["20%", 206],
-            ["10%", 229],
-            ["0%", 252]
-        ];
-
-        labels.forEach(function (item) {
-            const label = document.createElement("div");
-            label.className = "chart-y-freeze-label";
-            label.textContent = item[0];
-            label.style.top = item[1] + "px";
-            axis.appendChild(label);
-        });
-
-        const title = Array.from(chart.querySelectorAll("div, span"))
-            .find(function (el) {
-                return String(el.innerText || el.textContent || "").indexOf("ADT AVAILABILITY") !== -1;
-            });
-
-        if (title && title.parentNode) {
-            title.parentNode.insertBefore(axis, title.nextSibling);
-        } else {
-            chart.insertBefore(axis, chart.firstChild);
-        }
-    }
-
-    function remove_bad_overlay() {
-        document.querySelectorAll(".freeze-y-axis-overlay-v2, .freeze-y-axis-percentage-label").forEach(function (el) {
-            el.remove();
-        });
-    }
-
-    function run() {
-        remove_bad_overlay();
-
-        const candidates = Array.from(document.querySelectorAll("div"));
-        const charts = candidates.filter(looks_like_chart_container);
-
-        charts.forEach(function (chart) {
-            add_axis(chart);
-        });
-    }
-
-    function schedule() {
-        setTimeout(run, 300);
-        setTimeout(run, 900);
-        setTimeout(run, 1800);
-    }
-
-    document.addEventListener("DOMContentLoaded", schedule);
-    window.addEventListener("load", schedule);
-
-    if (window.frappe && frappe.router) {
-        frappe.router.on("change", schedule);
-    }
-
-    const observer = new MutationObserver(schedule);
-
-    if (document.body) {
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    schedule();
-})();
-
+    setTimeout(apply_freeze, 0);
+    setTimeout(apply_freeze, 200);
+    setTimeout(apply_freeze, 600);
+    setTimeout(apply_freeze, 1200);
+}

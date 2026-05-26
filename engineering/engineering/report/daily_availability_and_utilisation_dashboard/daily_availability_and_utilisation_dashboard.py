@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import flt
+from frappe.utils import flt, getdate, add_days, date_diff
 
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
     availability_and_utilisation_month_end_report as month_end,
@@ -293,47 +293,6 @@ DASH_CSS = """
     padding-top: 0;
 }
 
-.isd-daylabels {
-    display: grid;
-    gap: 8px;
-    margin-left: 84px;
-    margin-top: 8px;
-    min-height: 24px;
-    align-items: start;
-}
-
-.isd-daylab {
-    font-size: 14px;
-    font-weight: 900;
-    line-height: 1.1;
-    min-height: 22px;
-    text-align: center;
-    color: #ffffff;
-    text-shadow: 1px 1px 3px #000000;
-}
-
-.isd-group-labels {
-    display: grid;
-    gap: 0;
-    margin-left: 84px;
-    margin-top: 6px;
-    padding-bottom: 4px;
-}
-
-.isd-group-lab {
-    font-size: 16px;
-    font-weight: 900;
-    line-height: 1.1;
-    text-align: center;
-    color: #ffffff;
-    text-shadow: 1px 1px 3px #000000;
-    border-right: 2px solid rgba(255,255,255,0.25);
-}
-
-.isd-group-lab:last-child {
-    border-right: 0;
-}
-
 .isd-no-machine-data {
     padding: 18px;
     font-size: 12px;
@@ -610,6 +569,95 @@ DASH_CSS = """
     top: calc(14px + 260px * 0.20) !important;
 }
 
+
+.isd-summary-group-label {
+    text-align: center;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 900;
+    text-shadow: 1px 1px 3px #000000;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.28);
+}
+
+.isd-summary-day-label {
+    text-align: center;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 900;
+    text-shadow: 1px 1px 3px #000000;
+    padding-top: 6px;
+    white-space: nowrap;
+}
+
+.isd-monthly-chart-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 0 !important;
+}
+
+.isd-monthly-labels {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 0 !important;
+}
+
+
+
+
+
+
+
+/* Percentage axis freeze support - JS controls horizontal position */
+.isd-chart-section {
+    position: relative !important;
+}
+
+.isd-chart-section-title {
+    position: static !important;
+}
+
+.isd-chart {
+    position: relative !important;
+    padding-top: 14px !important;
+}
+
+.isd-yaxis {
+    position: absolute !important;
+    left: 14px !important;
+    top: 14px !important;
+    bottom: auto !important;
+    width: 62px !important;
+    height: 260px !important;
+    z-index: 35 !important;
+    background: linear-gradient(135deg, #2b2b2b 0%, #444 55%, #2b2b2b 100%) !important;
+    padding-right: 10px !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important;
+    will-change: transform !important;
+}
+
+.isd-chart-grid {
+    margin-left: 92px !important;
+    height: 260px !important;
+    margin-top: 0 !important;
+}
+
+.isd-machinelabels {
+    margin-left: 92px !important;
+}
+
+.isd-avgline {
+    left: 106px !important;
+    z-index: 8 !important;
+}
+
+.isd-avgline.isd-avg-85 {
+    top: calc(14px + 260px * 0.15) !important;
+}
+
+.isd-avgline.isd-avg-80 {
+    top: calc(14px + 260px * 0.20) !important;
+}
+
 </style>
 """
 
@@ -623,6 +671,7 @@ def execute(filters=None):
     if filters.get("location") and not filters.get("site"):
         filters["site"] = filters.get("location")
 
+    summary_type = filters.get("summary_type") or "Daily Summary"
     start_date = filters.get("start_date") or filters.get("from_date")
     end_date = filters.get("end_date") or filters.get("to_date")
     location = filters.get("location") or filters.get("site")
@@ -637,11 +686,9 @@ def execute(filters=None):
         frappe.throw("Please select Site.")
 
     source_rows = fetch_grouped_data(location, start_date, end_date)
+
     avgs = build_summary_averages_from_source_rows(source_rows)
     machine_series = build_machine_series_from_source_rows(source_rows)
-    daily_summary_series = build_daily_summary_series_by_day(location, start_date, end_date)
-    monthly_series = build_monthly_summary_series_from_source_rows(source_rows)
-    graph_view = filters.get("graph_view") or "Daily Summary"
 
     dashboard_html = build_dashboard_html(
         location,
@@ -649,11 +696,9 @@ def execute(filters=None):
         end_date,
         avgs,
         machine_series,
-        graph_view=graph_view,
-        daily_summary_series=daily_summary_series,
-        monthly_series=monthly_series,
+        source_rows,
+        summary_type
     )
-
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
     data = [{"noop": ""}]
@@ -858,197 +903,6 @@ def build_machine_series_from_source_rows(rows):
     return output
 
 
-
-
-
-
-
-
-def date_range_days(start_date, end_date):
-    start_obj = frappe.utils.getdate(start_date)
-    end_obj = frappe.utils.getdate(end_date)
-
-    if end_obj < start_obj:
-        start_obj, end_obj = end_obj, start_obj
-
-    days = []
-    current = start_obj
-
-    while current <= end_obj:
-        days.append(current)
-        current = frappe.utils.add_days(current, 1)
-
-    return days
-
-
-def format_day_label(date_obj, start_date=None, end_date=None):
-    if not date_obj:
-        return ""
-
-    try:
-        start_obj = frappe.utils.getdate(start_date) if start_date else None
-        end_obj = frappe.utils.getdate(end_date) if end_date else None
-
-        if start_obj and end_obj and start_obj.strftime("%Y-%m") == end_obj.strftime("%Y-%m"):
-            return str(date_obj.day)
-
-        return date_obj.strftime("%d %b")
-    except Exception:
-        return str(date_obj)
-
-
-def build_daily_summary_series_by_day(location, start_date, end_date):
-    output = {category: [] for category in UI_CATEGORIES}
-
-    for day in date_range_days(start_date, end_date):
-        day_string = day.isoformat()
-        day_rows = fetch_grouped_data(location, day_string, day_string)
-        day_avgs = build_summary_averages_from_source_rows(day_rows)
-
-        for category in UI_CATEGORIES:
-            values = day_avgs.get(category) or {}
-
-            output[category].append({
-                "label": format_day_label(day, start_date, end_date),
-                "avail": values.get("avail") if values.get("avail") is not None else 0.0,
-                "util": values.get("util") if values.get("util") is not None else 0.0,
-            })
-
-    return output
-
-
-def build_daily_summary_series_from_source_rows(rows, start_date=None, end_date=None):
-    # Kept for compatibility, but Daily Summary now uses build_daily_summary_series_by_day().
-    output = {category: [] for category in UI_CATEGORIES}
-
-    for category in UI_CATEGORIES:
-        for day in date_range_days(start_date, end_date):
-            output[category].append({
-                "label": format_day_label(day, start_date, end_date),
-                "avail": 0.0,
-                "util": 0.0,
-            })
-
-    return output
-
-
-def build_daily_summary_chart_html(daily_summary_series):
-    def height(value):
-        value = 0.0 if value is None else float(value)
-        value = max(0.0, min(100.0, value))
-
-        if value <= 0:
-            return 0
-
-        return max(2, int(round(value * 2.6)))
-
-    categories = [
-        category for category in UI_CATEGORIES
-        if (daily_summary_series or {}).get(category)
-    ]
-
-    if not categories:
-        return """
-<div class="isd-chart-stack">
-    <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
-        <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
-    </div>
-</div>
-"""
-
-    bars = []
-    day_labels = []
-    group_sizes = []
-
-    for category in categories:
-        title = UI_TITLES.get(category, category)
-        points = (daily_summary_series or {}).get(category) or []
-
-        if not points:
-            continue
-
-        group_sizes.append((title, len(points)))
-
-        for point in points:
-            label = esc(point.get("label") or "")
-            avail = point.get("avail")
-            util = point.get("util")
-
-            bars.append(
-                f"<div class='isd-bar avail' title='{esc(title)} | {label} Availability: {fmt_percent(avail)}' style='height:{height(avail)}px'></div>"
-            )
-
-            bars.append(
-                f"<div class='isd-bar util' title='{esc(title)} | {label} Utilisation: {fmt_percent(util)}' style='height:{height(util)}px'></div>"
-            )
-
-            day_labels.append(
-                f"<div class='isd-daylab' title='{label}'>{label}</div>"
-            )
-
-    total_points = len(day_labels)
-
-    if not total_points:
-        return """
-<div class="isd-chart-stack">
-    <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
-        <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
-    </div>
-</div>
-"""
-
-    grid_template = f"repeat({total_points * 2}, minmax(14px, 1fr))"
-    day_label_template = f"repeat({total_points}, minmax(42px, 1fr))"
-
-    group_label_template = " ".join(
-        f"minmax({max(96, count * 42)}px, {max(1, count)}fr)"
-        for _title, count in group_sizes
-    )
-
-    min_width = max(1400, total_points * 46 + 140)
-
-    return f"""
-<div class="isd-chart-stack">
-    <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
-
-        <div class="isd-chart" style="min-width:{min_width}px;">
-            <div class="isd-yaxis">
-                <div>100%</div>
-                <div>90%</div>
-                <div>80%</div>
-                <div>70%</div>
-                <div>60%</div>
-                <div>50%</div>
-                <div>40%</div>
-                <div>30%</div>
-                <div>20%</div>
-                <div>10%</div>
-                <div>0%</div>
-            </div>
-
-            <div class="isd-avgline isd-avg-85"></div>
-            <div class="isd-avgline isd-avg-80"></div>
-
-            <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
-                {''.join(bars)}
-            </div>
-
-            <div class="isd-daylabels" style="grid-template-columns:{day_label_template};">
-                {''.join(day_labels)}
-            </div>
-
-            <div class="isd-group-labels" style="grid-template-columns:{group_label_template};">
-                {''.join(f"<div class='isd-group-lab'>{esc(title)}</div>" for title, _count in group_sizes)}
-            </div>
-        </div>
-    </div>
-</div>
-"""
-
-
 def bubble_colour(metric, value):
     if value is None:
         return "isd-mbubble-red"
@@ -1079,8 +933,9 @@ def esc(value):
     return frappe.utils.escape_html(str(value or ""))
 
 
-def build_dashboard_html(location, start_date, end_date, avgs, machine_series, graph_view="Daily Summary", daily_summary_series=None, monthly_series=None):
+def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Daily Summary"):
     site_safe = esc(location)
+    summary_type_safe = esc(summary_type or "Daily Summary")
     header_colour = SITE_HEADER_COLOURS.get(location, "#f7f7f7")
 
     metric_cards = []
@@ -1107,15 +962,16 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, g
     </div>
 </div>
 """)
-    if graph_view == "Daily Summary":
-        chart_html = build_daily_summary_chart_html(daily_summary_series)
-    elif graph_view == "Average Per Machine":
-        chart_html = build_chart_html(machine_series)
-    elif graph_view == "Monthly Summary":
-        chart_html = build_monthly_summary_option_a_chart_html(avgs)
-    else:
-        chart_html = build_daily_summary_chart_html(daily_summary_series)
 
+    chart_html = build_selected_summary_chart_html(
+        summary_type,
+        location,
+        source_rows or [],
+        avgs,
+        machine_series,
+        start_date,
+        end_date
+    )
     trend_html = build_trend_html(location, start_date, end_date)
 
     return f"""
@@ -1123,11 +979,11 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, g
 
 <div class="isd-hourly-dashboard">
     <div class="isd-note">
-        Showing: {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
+        Showing: {summary_type_safe} | {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
     </div>
 
     <div class="isd-site">
-        <div class="isd-site-title">{site_safe} | {start_date} to {end_date}</div>
+        <div class="isd-site-title">{summary_type_safe} | {site_safe} | {start_date} to {end_date}</div>
 
         <div class="isd-band" style="--site-colour:{header_colour}">
             <div class="isd-metrics">
@@ -1138,6 +994,227 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, g
         <div class="isd-contentrow">
             {chart_html}
             {trend_html}
+        </div>
+    </div>
+</div>
+"""
+
+
+
+
+def get_row_date(row):
+    value = get_any(row, [
+        "date",
+        "Date",
+        "posting_date",
+        "Posting Date",
+        "transaction_date",
+        "Transaction Date",
+        "shift_date",
+        "Shift Date",
+        "work_date",
+        "Work Date",
+        "from_date",
+        "From Date",
+    ])
+
+    if not value:
+        return ""
+
+    return str(value)[:10]
+
+
+def avg_or_none(values):
+    values = [float(v) for v in values if v is not None]
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def daily_height(value):
+    if value is None:
+        return 2
+
+    value = max(0.0, min(100.0, float(value)))
+    return max(2, int(round(value * 2.6)))
+
+
+def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date):
+    summary_type = summary_type or "Daily Summary"
+
+    if summary_type == "Daily Summary":
+        return build_daily_summary_chart_html(location, start_date, end_date)
+
+    if summary_type == "Monthly Summary":
+        return build_monthly_summary_chart_html(avgs)
+
+    return build_chart_html(machine_series)
+
+
+def build_daily_summary_chart_html(location, start_date, end_date):
+    all_dates = []
+
+    try:
+        start = getdate(start_date)
+        end = getdate(end_date)
+        total_days = date_diff(end, start) + 1
+
+        for i in range(max(total_days, 0)):
+            all_dates.append(str(add_days(start, i)))
+    except Exception:
+        all_dates = []
+
+    if not all_dates:
+        return """
+<div class="isd-chart-stack">
+    <div class="isd-chart-section">
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
+        <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
+    </div>
+</div>
+"""
+
+    daily_category_values = {}
+
+    for date_value in all_dates:
+        day_rows = fetch_grouped_data(location, date_value, date_value)
+        day_avgs = build_summary_averages_from_source_rows(day_rows)
+
+        for category in UI_CATEGORIES:
+            values = day_avgs.get(category) or {}
+
+            daily_category_values[(category, date_value)] = {
+                "avail": values.get("avail") if values.get("avail") is not None else 0.0,
+                "util": values.get("util") if values.get("util") is not None else 0.0,
+            }
+
+    bars = []
+    day_labels = []
+    group_labels = []
+    total_day_count = 0
+
+    for category in UI_CATEGORIES:
+        for date_value in all_dates:
+            day = str(date_value)[8:10]
+            values = daily_category_values.get((category, date_value)) or {}
+
+            av = values.get("avail")
+            ut = values.get("util")
+
+            if av is None:
+                av = 0.0
+
+            if ut is None:
+                ut = 0.0
+
+            bars.append(
+                f"<div class='isd-bar avail' title='{esc(category)} {day} Availability: {fmt_percent(av)}' style='height:{daily_height(av)}px'></div>"
+            )
+
+            bars.append(
+                f"<div class='isd-bar util' title='{esc(category)} {day} Utilisation: {fmt_percent(ut)}' style='height:{daily_height(ut)}px'></div>"
+            )
+
+            day_labels.append(f"<div class='isd-machinelab'>{esc(day)}</div>")
+
+        group_labels.append(
+            f"<div class='isd-summary-group-label' style='grid-column: span {len(all_dates)};'>{esc(UI_TITLES.get(category, category))}</div>"
+        )
+
+        total_day_count += len(all_dates)
+
+    grid_template = f"repeat({total_day_count * 2}, minmax(18px, 1fr))"
+    day_template = f"repeat({total_day_count}, minmax(44px, 1fr))"
+    min_width = max(1200, total_day_count * 58)
+
+    return f"""
+<div class="isd-chart-stack">
+    <div class="isd-chart-section">
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
+
+        <div class="isd-chart" style="min-width:{min_width}px;">
+            <div class="isd-yaxis">
+                <div>100%</div>
+                <div>90%</div>
+                <div>80%</div>
+                <div>70%</div>
+                <div>60%</div>
+                <div>50%</div>
+                <div>40%</div>
+                <div>30%</div>
+                <div>20%</div>
+                <div>10%</div>
+                <div>0%</div>
+            </div>
+
+            <div class="isd-avgline isd-avg-85"></div>
+            <div class="isd-avgline isd-avg-80"></div>
+
+            <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
+                {''.join(bars)}
+            </div>
+
+            <div class="isd-machinelabels" style="grid-template-columns:{day_template};">
+                {''.join(day_labels)}
+                {''.join(group_labels)}
+            </div>
+        </div>
+    </div>
+</div>
+"""
+
+
+def build_monthly_summary_chart_html(avgs):
+    top_categories = ["ADT", "Excavator", "Dozer"]
+    bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
+
+    return f"""
+<div class="isd-chart-stack">
+    {build_monthly_summary_section("MONTHLY SUMMARY - ADT / EXCAVATOR / DOZER", top_categories, avgs)}
+    {build_monthly_summary_section("MONTHLY SUMMARY - SUPPORT EQUIPMENT & DRILLS", bottom_categories, avgs)}
+</div>
+"""
+
+
+def build_monthly_summary_section(title, categories, avgs):
+    bars = []
+    labels = []
+
+    for category in categories:
+        values = avgs.get(category) or {}
+        av = values.get("avail")
+        ut = values.get("util")
+
+        av_class = "isd-bar avail" + (" nodata" if av is None else "")
+        ut_class = "isd-bar util" + (" nodata" if ut is None else "")
+
+        bars.append(f"<div class='{av_class}' title='{esc(category)} Availability: {fmt_percent(av)}' style='height:{daily_height(av)}px'></div>")
+        bars.append(f"<div class='{ut_class}' title='{esc(category)} Utilisation: {fmt_percent(ut)}' style='height:{daily_height(ut)}px'></div>")
+
+        labels.append(f"<div class='isd-machinelab'>{esc(UI_TITLES.get(category, category))}</div>")
+
+    grid_template = f"repeat({len(categories) * 2}, minmax(90px, 1fr))"
+    label_template = f"repeat({len(categories)}, minmax(180px, 1fr))"
+
+    return f"""
+<div class="isd-chart-section">
+    <div class="isd-chart-section-title">{esc(title)}</div>
+
+    <div class="isd-chart" style="min-width:100%;">
+        <div class="isd-yaxis">
+            <div>100%</div><div>90%</div><div>80%</div><div>70%</div><div>60%</div>
+            <div>50%</div><div>40%</div><div>30%</div><div>20%</div><div>10%</div><div>0%</div>
+        </div>
+
+        <div class="isd-avgline isd-avg-85"></div>
+        <div class="isd-avgline isd-avg-80"></div>
+
+        <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
+            {''.join(bars)}
+        </div>
+
+        <div class="isd-machinelabels" style="grid-template-columns:{label_template};">
+            {''.join(labels)}
         </div>
     </div>
 </div>
@@ -1182,436 +1259,6 @@ def build_trend_html(location, start_date, end_date):
     </div>
 </div>
 """
-
-
-def build_category_summary_chart_html(avgs):
-    def height(value):
-        if value is None:
-            return 2
-
-        value = max(0.0, min(100.0, float(value)))
-        return max(2, int(round(value * 2.7)))
-
-    summary_categories = [
-        "ADT",
-        "Excavator",
-        "Dozer",
-    ]
-
-    bars = []
-    labels = []
-
-    for category in summary_categories:
-        title = UI_TITLES.get(category, category)
-        values = avgs.get(category) or {}
-
-        av = values.get("avail")
-        ut = values.get("util")
-
-        av_class = "isd-bar avail" + (" nodata" if av is None else "")
-        ut_class = "isd-bar util" + (" nodata" if ut is None else "")
-
-        bars.append(
-            f"<div class='{av_class}' title='{esc(title)} Availability: {fmt_percent(av)}' style='height:{height(av)}px'></div>"
-        )
-
-        bars.append(
-            f"<div class='{ut_class}' title='{esc(title)} Utilisation: {fmt_percent(ut)}' style='height:{height(ut)}px'></div>"
-        )
-
-        labels.append(
-            f"<div class='isd-machinelab' title='{esc(title)}'>{esc(title)}</div>"
-        )
-
-    return f"""
-<div class="isd-chart-stack">
-    <div class="isd-chart-section">
-        <div class="isd-chart-section-title">ADT / EXCAVATOR / DOZER FULL DAY SUMMARY</div>
-
-        <div class="isd-chart" style="min-width:820px;">
-            <div class="isd-yaxis">
-                <div>100%</div>
-                <div>90%</div>
-                <div>80%</div>
-                <div>70%</div>
-                <div>60%</div>
-                <div>50%</div>
-                <div>40%</div>
-                <div>30%</div>
-                <div>20%</div>
-                <div>10%</div>
-                <div>0%</div>
-            </div>
-
-            <div class="isd-avgline isd-avg-85"></div>
-            <div class="isd-avgline isd-avg-80"></div>
-
-            <div class="isd-chart-grid" style="grid-template-columns:repeat(6, minmax(70px, 1fr));">
-                {''.join(bars)}
-            </div>
-
-            <div class="isd-machinelabels" style="grid-template-columns:repeat(3, minmax(140px, 1fr));">
-                {''.join(labels)}
-            </div>
-        </div>
-    </div>
-</div>
-"""
-
-
-
-
-def _gv_to_float(value):
-    try:
-        if value in (None, ""):
-            return None
-        return float(value)
-    except Exception:
-        return None
-
-
-def _gv_get(row, *keys):
-    for key in keys:
-        if isinstance(row, dict):
-            if key in row:
-                return row.get(key)
-        else:
-            if hasattr(row, key):
-                return getattr(row, key)
-            try:
-                return row[key]
-            except Exception:
-                pass
-    return None
-
-
-def _gv_normalize_category(category):
-    if not category:
-        return None
-
-    category = str(category).strip()
-    lookup = {c.lower(): c for c in UI_CATEGORIES}
-    return lookup.get(category.lower(), category if category in UI_CATEGORIES else None)
-
-
-def build_monthly_summary_series_from_source_rows(source_rows):
-    monthly_map = {}
-
-    for row in source_rows or []:
-        category = _gv_normalize_category(
-            _gv_get(
-                row,
-                "category",
-                "machine_category",
-                "equipment_category",
-                "asset_category",
-                "fleet_category",
-            )
-        )
-
-        if not category:
-            continue
-
-        date_value = _gv_get(
-            row,
-            "date",
-            "work_date",
-            "shift_date",
-            "report_date",
-            "posting_date",
-        )
-
-        if not date_value:
-            continue
-
-        try:
-            month_key = frappe.utils.getdate(date_value).strftime("%Y-%m")
-        except Exception:
-            continue
-
-        avail = _gv_to_float(
-            _gv_get(
-                row,
-                "availability",
-                "avail",
-                "availability_percent",
-                "availability_pct",
-            )
-        )
-
-        util = _gv_to_float(
-            _gv_get(
-                row,
-                "utilisation",
-                "utilization",
-                "util",
-                "utilisation_percent",
-                "utilization_percent",
-                "utilisation_pct",
-                "utilization_pct",
-            )
-        )
-
-        category_bucket = monthly_map.setdefault(category, {})
-        month_bucket = category_bucket.setdefault(
-            month_key,
-            {
-                "avail_total": 0.0,
-                "avail_count": 0,
-                "util_total": 0.0,
-                "util_count": 0,
-            },
-        )
-
-        if avail is not None:
-            month_bucket["avail_total"] += avail
-            month_bucket["avail_count"] += 1
-
-        if util is not None:
-            month_bucket["util_total"] += util
-            month_bucket["util_count"] += 1
-
-    out = {}
-
-    for category in UI_CATEGORIES:
-        points = []
-        for month_key in sorted((monthly_map.get(category) or {}).keys()):
-            bucket = monthly_map[category][month_key]
-
-            avail = None
-            util = None
-
-            if bucket["avail_count"]:
-                avail = bucket["avail_total"] / bucket["avail_count"]
-
-            if bucket["util_count"]:
-                util = bucket["util_total"] / bucket["util_count"]
-
-            points.append(
-                {
-                    "label": month_key,
-                    "avail": avail,
-                    "util": util,
-                }
-            )
-
-        out[category] = points
-
-    return out
-
-
-def build_monthly_summary_chart_html(monthly_series):
-    def height(value):
-        if value is None:
-            return 2
-
-        value = max(0.0, min(100.0, float(value)))
-        return max(2, int(round(value * 2.7)))
-
-    sections = []
-
-    for category in UI_CATEGORIES:
-        title = UI_TITLES.get(category, category)
-        points = (monthly_series or {}).get(category) or []
-
-        if not points:
-            points = [{"label": "No Data", "avail": None, "util": None}]
-
-        bars = []
-        labels = []
-
-        for point in points:
-            label = esc(point.get("label") or "")
-            avail = point.get("avail")
-            util = point.get("util")
-
-            av_class = "isd-bar avail" + (" nodata" if avail is None else "")
-            ut_class = "isd-bar util" + (" nodata" if util is None else "")
-
-            bars.append(
-                f"<div class='{av_class}' title='{esc(title)} Availability: {fmt_percent(avail)}' style='height:{height(avail)}px'></div>"
-            )
-            bars.append(
-                f"<div class='{ut_class}' title='{esc(title)} Utilisation: {fmt_percent(util)}' style='height:{height(util)}px'></div>"
-            )
-
-            labels.append(
-                f"<div class='isd-daylab' title='{label}'>{label}</div>"
-            )
-
-        grid_template = f"repeat({len(points) * 2}, minmax(38px, 1fr))"
-        label_template = f"repeat({len(points)}, minmax(76px, 1fr))"
-
-        sections.append(
-            f"""
-<div class="isd-chart-section">
-    <div class="isd-chart">
-        <div class="isd-yaxis">
-            <div>100%</div>
-            <div>80%</div>
-            <div>60%</div>
-            <div>40%</div>
-            <div>20%</div>
-            <div>0%</div>
-        </div>
-
-        <div class="isd-avgline isd-avg-85"></div>
-        <div class="isd-avgline isd-avg-80"></div>
-
-        <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
-            {''.join(bars)}
-        </div>
-
-        <div class="isd-xlabels" style="grid-template-columns:{label_template};">
-            {''.join(labels)}
-        </div>
-    </div>
-
-    <div class="isd-machinelab">{esc(title)}</div>
-</div>
-"""
-        )
-
-    return f"""
-<div class="isd-chart-stack">
-    {''.join(sections)}
-</div>
-"""
-
-
-
-
-
-
-
-def build_monthly_summary_option_a_chart_html(avgs):
-    def height(value):
-        if value is None:
-            return 0
-
-        value = max(0.0, min(100.0, float(value)))
-
-        if value <= 0:
-            return 0
-
-        return max(2, int(round(value * 2.6)))
-
-    def build_group_section(section_title, categories):
-        bars = []
-        labels = []
-
-        for category in categories:
-            values = avgs.get(category) or {}
-            av = values.get("avail")
-            ut = values.get("util")
-
-            label_text = UI_TITLES.get(category, category)
-
-            bars.append(
-                f"<div class='isd-bar avail' title='{esc(label_text)} Availability: {fmt_percent(av)}' style='height:{height(av)}px'></div>"
-            )
-
-            bars.append(
-                f"<div class='isd-bar util' title='{esc(label_text)} Utilisation: {fmt_percent(ut)}' style='height:{height(ut)}px'></div>"
-            )
-
-            labels.append(
-                f"<div class='isd-machinelab' title='{esc(label_text)}'>{esc(label_text)}</div>"
-            )
-
-        count = max(len(categories), 1)
-        grid_template = f"repeat({count * 2}, minmax(36px, 1fr))"
-        label_template = f"repeat({count}, minmax(130px, 1fr))"
-        min_width = max(950, count * 170)
-
-        return f"""
-<div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(section_title)}</div>
-
-    <div class="isd-chart" style="min-width:{min_width}px;">
-        <div class="isd-yaxis">
-            <div>100%</div>
-            <div>90%</div>
-            <div>80%</div>
-            <div>70%</div>
-            <div>60%</div>
-            <div>50%</div>
-            <div>40%</div>
-            <div>30%</div>
-            <div>20%</div>
-            <div>10%</div>
-            <div>0%</div>
-        </div>
-
-        <div class="isd-avgline isd-avg-85"></div>
-        <div class="isd-avgline isd-avg-80"></div>
-
-        <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
-            {''.join(bars)}
-        </div>
-
-        <div class="isd-machinelabels" style="grid-template-columns:{label_template};">
-            {''.join(labels)}
-        </div>
-    </div>
-</div>
-"""
-
-    main_categories = [
-        "ADT",
-        "Excavator",
-        "Dozer",
-    ]
-
-    other_categories = [
-        category for category in UI_CATEGORIES
-        if category not in main_categories
-    ]
-
-    return f"""
-<div class="isd-chart-stack">
-    {build_group_section("MONTHLY SUMMARY - ADT / EXCAVATOR / DOZER", main_categories)}
-    {build_group_section("MONTHLY SUMMARY - SUPPORT EQUIPMENT & DRILLS", other_categories)}
-</div>
-"""
-
-
-def build_simple_monthly_summary_chart_html(machine_series, start_date, end_date):
-    monthly_series = {}
-
-    month_label = frappe.utils.getdate(start_date).strftime("%Y-%m")
-
-    if start_date and end_date:
-        start_month = frappe.utils.getdate(start_date).strftime("%Y-%m")
-        end_month = frappe.utils.getdate(end_date).strftime("%Y-%m")
-
-        if start_month == end_month:
-            month_label = start_month
-        else:
-            month_label = f"{start_month} to {end_month}"
-
-    for category in UI_CATEGORIES:
-        items = machine_series.get(category) or []
-        avail_values = []
-        util_values = []
-
-        for item in items:
-            av = item.get("avail")
-            ut = item.get("util")
-
-            if av is not None:
-                avail_values.append(float(av))
-
-            if ut is not None:
-                util_values.append(float(ut))
-
-        monthly_series[category] = [{
-            "machine": month_label,
-            "avail": (sum(avail_values) / len(avail_values)) if avail_values else None,
-            "util": (sum(util_values) / len(util_values)) if util_values else None,
-        }]
-
-    return build_chart_html(monthly_series)
 
 def build_chart_html(machine_series):
     def height(value):
@@ -1718,18 +1365,8 @@ def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, 
     source_rows = fetch_grouped_data(location, start_date, end_date)
     avgs = build_summary_averages_from_source_rows(source_rows)
     machine_series = build_machine_series_from_source_rows(source_rows)
-    daily_summary_series = build_daily_summary_series_by_day(location, start_date, end_date)
-    graph_view = "Daily Summary"
 
-    dashboard_html = build_dashboard_html(
-        location,
-        start_date,
-        end_date,
-        avgs,
-        machine_series,
-        graph_view,
-        daily_summary_series=daily_summary_series
-    )
+    dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows, summary_type)
 
     html = f"""
 <!doctype html>

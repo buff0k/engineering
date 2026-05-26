@@ -29,12 +29,10 @@
    "wildcard_filter": 0
   },
   {
-   "default": "Daily Summary",
-   "fieldname": "graph_view",
+   "fieldname": "summary_type",
    "fieldtype": "Select",
-   "hidden": 1,
-   "label": "Graph View",
-   "mandatory": 0,
+   "label": "Summary Type",
+   "mandatory": 1,
    "options": "Daily Summary\nAverage Per Machine\nMonthly Summary",
    "wildcard_filter": 0
   }

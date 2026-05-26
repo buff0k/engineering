@@ -7,17 +7,42 @@ import frappe
 
 @frappe.whitelist()
 def get_parts_requisition_item_groups(asset_category=None):
-    if not asset_category:
-        return []
+    matched_categories = {
+        "ADT",
+        "Dozer",
+        "Excavator",
+        "Rollback",
+        "Water pump",
+        "Grader",
+        "TLB",
+        "Water Bowser",
+        "Service Truck",
+        "Diesel Bowsers",
+        "LDV",
+        "Mobile Screen",
+        "Mobile Crusher",
+        "Loader",
+        "GHT",
+        "Vechiles",
+        "Compressors",
+        "Drills",
+    }
 
-    return frappe.call(
-        "engineering.engineering.doctype.parts_requisition_form.parts_requisition_form.get_item_groups_by_asset_category",
-        doctype="Item Group",
-        txt="",
-        searchfield="name",
-        start=0,
-        page_len=100,
-        filters={"asset_category": asset_category},
+    if asset_category and asset_category in matched_categories:
+        return frappe.get_all(
+            "Item Group",
+            filters=[["name", "like", f"%{asset_category}%"]],
+            fields=["name", "item_group_name"],
+            order_by="name",
+            limit_page_length=100,
+        )
+
+    return frappe.get_all(
+        "Item Group",
+        filters={"disabled": 0},
+        fields=["name", "item_group_name"],
+        order_by="name",
+        limit_page_length=100,
     )
 
 
@@ -92,14 +117,12 @@ def get_parts_requisition_mobile_items():
         SELECT
             item.name,
             item.item_name,
-            item_default.expense_account AS default_expense_account,
+            item.item_group AS default_expense_account,
             item.modified
         FROM `tabItem` item
-        INNER JOIN `tabItem Default` item_default
-            ON item_default.parent = item.name
         WHERE
             item.disabled = 0
-            AND IFNULL(item_default.expense_account, '') != ''
+            AND IFNULL(item.item_group, '') != ''
         ORDER BY item.name
     """, as_dict=True)
 
