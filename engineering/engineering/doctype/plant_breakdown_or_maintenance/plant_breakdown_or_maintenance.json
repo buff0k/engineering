@@ -153,7 +153,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 14:24:21.811900",
+ "modified": "2026-05-27 07:04:45.066905",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
@@ -173,7 +173,6 @@
    "write": 1
   },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -181,8 +180,7 @@
    "report": 1,
    "role": "Production Manager",
    "select": 1,
-   "share": 1,
-   "write": 1
+   "share": 1
   },
   {
    "create": 1,
@@ -197,7 +195,6 @@
    "write": 1
   },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -205,20 +202,17 @@
    "report": 1,
    "role": "Engineering Manager",
    "select": 1,
-   "share": 1,
-   "write": 1
+   "share": 1
   },
   {
-   "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Engineering User",
-   "share": 1,
-   "write": 1
+   "select": 1,
+   "share": 1
   }
  ],
  "row_format": "Dynamic",
