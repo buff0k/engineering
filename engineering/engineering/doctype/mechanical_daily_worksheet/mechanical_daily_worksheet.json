@@ -174,7 +174,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-18 11:45:26.191160",
+ "modified": "2026-05-27 14:35:49.792512",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",
@@ -226,6 +226,7 @@
    "read": 1,
    "report": 1,
    "role": "Mechanic",
+   "select": 1,
    "share": 1,
    "write": 1
   }
