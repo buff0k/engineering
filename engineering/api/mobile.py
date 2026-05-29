@@ -166,7 +166,7 @@ def get_user_context():
     if frappe.has_permission("Component Replacement Report", "create", user=user):
         allowed_pages.append("component_replacement_report")
 
-    if _has_any_role(roles, ["Engineering Manager"]):
+    if _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
         allowed_pages.append("msr_signoff")
 
     if frappe.has_permission("Production Cycle Times", "create", user=user):
@@ -194,8 +194,8 @@ def sign_off_mechanical_service_report(docname, manager_foreman_signature):
         frappe.throw("Not logged in")
 
     roles = frappe.get_roles(user)
-    if not _has_any_role(roles, ["Engineering Manager"]):
-        frappe.throw("Only Engineering Manager may sign off MSR records", frappe.PermissionError)
+    if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
+        frappe.throw("Only Engineering Manager or Engineering Plant Manager may sign off MSR records", frappe.PermissionError)
 
     frappe.db.set_value(
         "Mechanical Service Report",
@@ -211,7 +211,84 @@ def sign_off_mechanical_service_report(docname, manager_foreman_signature):
     }
 
 
+@frappe.whitelist()
+def get_unsigned_parts_requisition_forms():
+    user = frappe.session.user
 
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    roles = frappe.get_roles(user)
+    if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
+        frappe.throw("Only Engineering Manager or Engineering Plant Manager may view unsigned PR records", frappe.PermissionError)
+
+    allowed_locations = _get_allowed_locations(user)
+
+    filters = [
+        ["mechanic_signature", "!=", ""],
+        ["forman_supervisor_sign", "=", ""],
+    ]
+
+    if allowed_locations:
+        filters.append(["site", "in", allowed_locations])
+
+    return frappe.get_all(
+        "Parts Requisition",
+        filters=filters,
+        fields=[
+            "name",
+            "date111",
+            "requested_by_employee_number",
+            "mechanic_name_and_surname",
+            "plant_no",
+            "plant_make",
+            "model",
+            "vin_no",
+            "smr",
+            "site",
+            "forman_supervisor_employee_number",
+            "formansupervisor_name_and_surname",
+            "date",
+            "mechanic_signature",
+            "forman_supervisor_sign",
+            "modified",
+        ],
+        order_by="modified desc",
+        limit_page_length=200,
+    )
+
+
+@frappe.whitelist()
+def sign_off_parts_requisition_form(docname, supervisor_forman_signature, sign_date=None):
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    roles = frappe.get_roles(user)
+    if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
+        frappe.throw("Only Engineering Manager or Engineering Plant Manager may sign off PR records", frappe.PermissionError)
+
+    allowed_locations = _get_allowed_locations(user)
+    doc_site = frappe.db.get_value("Parts Requisition", docname, "site")
+
+    if allowed_locations and doc_site not in allowed_locations:
+        frappe.throw("You may only sign off PR records for your allowed site.", frappe.PermissionError)
+
+    frappe.db.set_value(
+        "Parts Requisition",
+        docname,
+        {
+            "forman_supervisor_sign": supervisor_forman_signature,
+            "date": sign_date,
+        },
+        update_modified=True,
+    )
+    frappe.db.commit()
+
+    return {
+        "name": docname,
+    }
 
 
 @frappe.whitelist()
@@ -222,12 +299,17 @@ def get_unsigned_mechanical_daily_worksheets():
         frappe.throw("Not logged in")
 
     roles = frappe.get_roles(user)
-    if not _has_any_role(roles, ["Engineering Manager"]):
-        frappe.throw("Only Engineering Manager may view unsigned Daily Worksheet records", frappe.PermissionError)
+    if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
+        frappe.throw("Only Engineering Manager or Engineering Plant Manager may view unsigned Daily Worksheet records", frappe.PermissionError)
+
+    allowed_locations = _get_allowed_locations(user)
 
     filters = [
         ["forman_supervisor_signature", "in", ["", None]],
     ]
+
+    if allowed_locations:
+        filters.append(["site", "in", allowed_locations])
 
     return frappe.get_all(
         "Mechanical Daily Worksheet",
@@ -258,8 +340,8 @@ def sign_off_mechanical_daily_worksheet(docname, forman_supervisor_signature=Non
         frappe.throw("Not logged in")
 
     roles = frappe.get_roles(user)
-    if not _has_any_role(roles, ["Engineering Manager"]):
-        frappe.throw("Only Engineering Manager may sign off Daily Worksheets", frappe.PermissionError)
+    if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
+        frappe.throw("Only Engineering Manager or Engineering Plant Manager may sign off Daily Worksheets", frappe.PermissionError)
 
     doc = frappe.get_doc("Mechanical Daily Worksheet", docname)
     doc.forman_supervisor_signature = forman_supervisor_signature or supervisor_forman_signature
@@ -284,8 +366,8 @@ def get_unsigned_mechanical_service_reports():
         frappe.throw("Not logged in")
 
     roles = frappe.get_roles(user)
-    if not _has_any_role(roles, ["Engineering Manager"]):
-        frappe.throw("Only Engineering Manager may view unsigned MSR records", frappe.PermissionError)
+    if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
+        frappe.throw("Only Engineering Manager or Engineering Plant Manager may view unsigned MSR records", frappe.PermissionError)
 
     allowed_locations = _get_allowed_locations(user)
 
