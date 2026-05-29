@@ -54,10 +54,13 @@ class MechanicalDailyWorksheet(Document):
         total = 0.0
 
         for row in self.work_details:
-            total += self.get_datetime_hours_difference(
+            row_total = self.get_datetime_hours_difference(
                 row.start_time_msr,
                 row.end_time_msr
             )
+
+            row.total_time_entry = round(row_total, 2)
+            total += row_total
 
         self.total_work_time = round(total, 2)
 
@@ -68,18 +71,23 @@ class MechanicalDailyWorksheet(Document):
         total = 0.0
 
         for row in self.non_msr:
-            total += self.get_datetime_hours_difference(
+            row_total = self.get_datetime_hours_difference(
                 row.start_time,
                 row.end_time
             )
+
+            row.total_per_entry = round(row_total, 2)
+            total += row_total
 
         self.total_non_msr_time = round(total, 2)
 
     def calculate_sum_total(self):
         msr_total = self.total_work_time or 0
         non_msr_total = self.total_non_msr_time or 0
+        total_hours = self.total_hours or 0
 
         self.sum_total = round(msr_total + non_msr_total, 2)
+        self.total_unallocated = round(total_hours - self.sum_total, 2)
 
 
     def get_datetime_hours_difference(self, start_value, end_value):

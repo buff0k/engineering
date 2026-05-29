@@ -16,6 +16,7 @@
   "clock_out_time",
   "total_hours",
   "sum_total",
+  "total_unallocated",
   "section_break_qydu",
   "non_msr",
   "total_non_msr_time",
@@ -170,11 +171,18 @@
    "fieldname": "forman_supervisor_signature",
    "fieldtype": "Signature",
    "label": "Forman/Supervisor Signature"
+  },
+  {
+   "fieldname": "total_unallocated",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Clocked In Hours - Hours allocated",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-27 14:35:49.792512",
+ "modified": "2026-05-29 14:40:04.289165",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

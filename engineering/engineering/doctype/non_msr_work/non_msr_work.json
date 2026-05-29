@@ -10,6 +10,7 @@
   "site",
   "start_time",
   "end_time",
+  "total_per_entry",
   "reason",
   "note"
  ],
@@ -49,13 +50,20 @@
    "fieldname": "non",
    "fieldtype": "Section Break",
    "label": "Non MSR Work"
+  },
+  {
+   "fieldname": "total_per_entry",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total Time Per Entry",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-15 16:23:35.415028",
+ "modified": "2026-05-29 14:04:59.492930",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Non MSR Work",

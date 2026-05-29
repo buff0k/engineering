@@ -102,10 +102,13 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
         let total_work_time = 0;
 
         (frm.doc.work_details || []).forEach(row => {
-            total_work_time += calculate_datetime_hours(
+            let row_total = calculate_datetime_hours(
                 row.start_time_msr,
                 row.end_time_msr
             );
+
+            frappe.model.set_value(row.doctype, row.name, "total_time_entry", flt(row_total, 2));
+            total_work_time += row_total;
         });
 
         frm.set_value("total_work_time", flt(total_work_time, 2));
@@ -116,10 +119,13 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
         let total_non_msr_time = 0;
 
         (frm.doc.non_msr || []).forEach(row => {
-            total_non_msr_time += calculate_datetime_hours(
+            let row_total = calculate_datetime_hours(
                 row.start_time,
                 row.end_time
             );
+
+            frappe.model.set_value(row.doctype, row.name, "total_per_entry", flt(row_total, 2));
+            total_non_msr_time += row_total;
         });
 
         frm.set_value("total_non_msr_time", flt(total_non_msr_time, 2));
@@ -129,8 +135,12 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
     calculate_sum_total(frm) {
         let total_work_time = flt(frm.doc.total_work_time || 0);
         let total_non_msr_time = flt(frm.doc.total_non_msr_time || 0);
+        let total_hours = flt(frm.doc.total_hours || 0);
 
-        frm.set_value("sum_total", flt(total_work_time + total_non_msr_time, 2));
+        let sum_total = flt(total_work_time + total_non_msr_time, 2);
+
+        frm.set_value("sum_total", sum_total);
+        frm.set_value("total_unallocated", flt(total_hours - sum_total, 2));
     }
 });
 

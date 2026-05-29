@@ -13,6 +13,7 @@
   "machine_fleet_no",
   "start_time_msr",
   "end_time_msr",
+  "total_time_entry",
   "fault_work_type",
   "km_hours",
   "description_of_work_carried_out"
@@ -89,12 +90,19 @@
    "label": "Site",
    "options": "Location",
    "read_only": 1
+  },
+  {
+   "fieldname": "total_time_entry",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total Time For Entry",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-06 07:19:40.969715",
+ "modified": "2026-05-29 14:03:54.166992",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet Detail",
