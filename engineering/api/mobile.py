@@ -202,6 +202,36 @@ def _has_any_role(user_roles, allowed_roles):
     return bool(user_role_set.intersection(allowed_role_set))
 
 
+
+@frappe.whitelist()
+def get_mobile_employee_lookup(modified_after=None):
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    if not frappe.has_permission("Employee", "select", user=user):
+        frappe.throw("You may not select Employee records", frappe.PermissionError)
+
+    filters = {}
+    if modified_after:
+        filters["modified"] = [">", modified_after]
+
+    return frappe.get_all(
+        "Employee",
+        filters=filters,
+        fields=[
+            "name",
+            "employee_name",
+            "modified",
+        ],
+        order_by="name asc",
+        limit_page_length=5000,
+        ignore_permissions=True,
+    )
+
+
+
 @frappe.whitelist()
 def sign_off_mechanical_service_report(docname, manager_foreman_signature):
     user = frappe.session.user

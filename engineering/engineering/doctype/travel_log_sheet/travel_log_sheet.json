@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{date}-{incurred_by}-{######}",
  "creation": "2026-05-15 09:21:02.211399",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -18,18 +19,25 @@
   {
    "fieldname": "incurred_by",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Incurred By",
-   "options": "Employee"
+   "options": "Employee",
+   "reqd": 1
   },
   {
    "fieldname": "vehicle_registration",
    "fieldtype": "Data",
-   "label": "Vehicle Registration"
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Vehicle Registration",
+   "reqd": 1
   },
   {
    "fieldname": "date",
    "fieldtype": "Date",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Date",
    "reqd": 1
   },
@@ -40,12 +48,14 @@
   {
    "fieldname": "odo_meter_out",
    "fieldtype": "Int",
-   "label": "ODO Meter Out"
+   "label": "ODO Meter Out",
+   "reqd": 1
   },
   {
    "fieldname": "odo_meter_in",
    "fieldtype": "Int",
-   "label": "ODO Meter In"
+   "label": "ODO Meter In",
+   "reqd": 1
   },
   {
    "fieldname": "litres",
@@ -55,16 +65,18 @@
   {
    "fieldname": "trip",
    "fieldtype": "Small Text",
-   "label": "Trip"
+   "label": "Trip",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-15 09:37:25.758780",
+ "modified": "2026-05-29 09:08:59.272377",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Travel Log Sheet",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
