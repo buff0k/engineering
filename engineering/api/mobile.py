@@ -308,8 +308,27 @@ def get_unsigned_mechanical_daily_worksheets():
         ["forman_supervisor_signature", "in", ["", None]],
     ]
 
+    names = []
+
     if allowed_locations:
-        filters.append(["site", "in", allowed_locations])
+        work_detail_parents = frappe.get_all(
+            "Mechanical Daily Worksheet Detail",
+            filters={"site": ["in", allowed_locations]},
+            pluck="parent",
+        )
+
+        non_msr_parents = frappe.get_all(
+            "Non MSR Work",
+            filters={"site": ["in", allowed_locations]},
+            pluck="parent",
+        )
+
+        names = list(set(work_detail_parents + non_msr_parents))
+
+        if not names:
+            return []
+
+        filters.append(["name", "in", names])
 
     return frappe.get_all(
         "Mechanical Daily Worksheet",
@@ -326,6 +345,7 @@ def get_unsigned_mechanical_daily_worksheets():
             "mechanic_signature",
             "forman_supervisor_employee_no",
             "forman_supervisor_name_surname",
+            "modified",            
         ],
         order_by="creation desc",
         limit_page_length=200,
