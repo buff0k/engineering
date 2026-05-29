@@ -149,6 +149,22 @@ def _get_allowed_locations(user):
     ]
 
 
+
+def _get_allowed_site_codes(user):
+    allowed_locations = _get_allowed_locations(user)
+
+    if not allowed_locations:
+        return []
+
+    return frappe.get_all(
+        "Site Code",
+        filters={"location": ["in", allowed_locations]},
+        pluck="name",
+    )
+
+
+
+
 @frappe.whitelist()
 def get_user_context():
     user = frappe.session.user
@@ -222,15 +238,15 @@ def get_unsigned_parts_requisition_forms():
     if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
         frappe.throw("Only Engineering Manager or Engineering Plant Manager may view unsigned PR records", frappe.PermissionError)
 
-    allowed_locations = _get_allowed_locations(user)
+    allowed_site_codes = _get_allowed_site_codes(user)
 
     filters = [
         ["mechanic_signature", "!=", ""],
         ["forman_supervisor_sign", "=", ""],
     ]
 
-    if allowed_locations:
-        filters.append(["site", "in", allowed_locations])
+    if allowed_site_codes:
+        filters.append(["site", "in", allowed_site_codes])
 
     return frappe.get_all(
         "Parts Requisition",
@@ -269,10 +285,10 @@ def sign_off_parts_requisition_form(docname, supervisor_forman_signature, sign_d
     if not _has_any_role(roles, ["Engineering Manager", "Engineering Plant Manager"]):
         frappe.throw("Only Engineering Manager or Engineering Plant Manager may sign off PR records", frappe.PermissionError)
 
-    allowed_locations = _get_allowed_locations(user)
+    allowed_site_codes = _get_allowed_site_codes(user)
     doc_site = frappe.db.get_value("Parts Requisition", docname, "site")
 
-    if allowed_locations and doc_site not in allowed_locations:
+    if allowed_site_codes and doc_site not in allowed_site_codes:
         frappe.throw("You may only sign off PR records for your allowed site.", frappe.PermissionError)
 
     frappe.db.set_value(
