@@ -660,62 +660,172 @@ DASH_CSS = """
 
 
 
-/* COMPACT GRAPH SIZE - SAME SIZE FOR DAILY / WEEKLY / MONTHLY */
+
+
+/* FINAL GRAPH BASELINE FIX - ALL BARS START FROM 0 LINE AND DO NOT OVERLAP 100% */
+
+/* Keep graph compact and stop content from escaping */
 .isd-chart-section {
-    height: 285px !important;
-    min-height: 285px !important;
-    max-height: 285px !important;
     overflow: hidden !important;
 }
 
-.isd-chart-section-title {
-    height: 36px !important;
-    min-height: 36px !important;
-    max-height: 36px !important;
-    font-size: 21px !important;
+/* Chart must reserve space below the white 0% line for labels */
+.isd-chart {
+    position: relative !important;
+    box-sizing: border-box !important;
+    padding: 10px 14px 46px 14px !important;
+    overflow: hidden !important;
+}
+
+/* Plot area: 100% is top, 0% is bottom white baseline */
+.isd-chart-grid {
+    position: relative !important;
+    height: 220px !important;
+    min-height: 220px !important;
+    max-height: 220px !important;
+    align-items: flex-end !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    border-bottom: 3px solid rgba(255,255,255,0.95) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+/* Each bar slot fills the plot area only */
+.isd-chart-grid > div {
+    height: 100% !important;
+    max-height: 100% !important;
     display: flex !important;
-    align-items: center !important;
+    align-items: flex-end !important;
     justify-content: center !important;
     box-sizing: border-box !important;
-}
-
-.isd-chart {
-    height: 249px !important;
-    min-height: 249px !important;
-    max-height: 249px !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-    box-sizing: border-box !important;
-}
-
-.isd-chart-grid {
-    height: 190px !important;
-    min-height: 190px !important;
-    max-height: 190px !important;
-}
-
-.isd-yaxis {
-    height: 190px !important;
-    font-size: 15px !important;
-}
-
-.isd-machinelabels {
-    min-height: 28px !important;
-    max-height: 28px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
     overflow: hidden !important;
-    margin-top: 5px !important;
+}
+
+/* Bars grow upward from 0% and are capped at 100% */
+.isd-bar,
+.isd-bar.avail,
+.isd-bar.util {
+    align-self: flex-end !important;
+    margin-top: auto !important;
+    margin-bottom: 0 !important;
+    bottom: 0 !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    min-height: 2px !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+}
+
+/* Machine labels are below graph baseline */
+.isd-machinelabels {
+    position: relative !important;
+    margin-top: 8px !important;
+    min-height: 30px !important;
+    max-height: 34px !important;
+    overflow: hidden !important;
+    align-items: flex-start !important;
 }
 
 .isd-machinelab {
-    font-size: 12px !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    line-height: 1.1 !important;
+    padding-top: 4px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    transform: none !important;
 }
 
+/* Y-axis aligns to same graph height */
+.isd-yaxis {
+    height: 220px !important;
+    min-height: 220px !important;
+    max-height: 220px !important;
+    top: 10px !important;
+    bottom: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
+
+/* 0% aligns to white baseline */
+.isd-yaxis div:last-child {
+    transform: translateY(5px) !important;
+}
+
+/* Target lines use same 220px graph height */
 .isd-avgline.isd-avg-85 {
-    top: calc(8px + 190px * 0.15) !important;
+    top: calc(10px + 220px * 0.15) !important;
 }
 
 .isd-avgline.isd-avg-80 {
-    top: calc(8px + 190px * 0.20) !important;
+    top: calc(10px + 220px * 0.20) !important;
+}
+
+/* Same behaviour in print/preview */
+@media print {
+    .isd-chart {
+        padding: 10px 14px 46px 14px !important;
+        overflow: hidden !important;
+    }
+
+    .isd-chart-grid {
+        height: 220px !important;
+        min-height: 220px !important;
+        max-height: 220px !important;
+        align-items: flex-end !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        border-bottom: 3px solid rgba(255,255,255,0.95) !important;
+        overflow: hidden !important;
+    }
+
+    .isd-chart-grid > div {
+        height: 100% !important;
+        max-height: 100% !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+    }
+
+    .isd-bar,
+    .isd-bar.avail,
+    .isd-bar.util {
+        align-self: flex-end !important;
+        margin-bottom: 0 !important;
+        bottom: 0 !important;
+        transform: none !important;
+        max-height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .isd-yaxis {
+        height: 220px !important;
+        min-height: 220px !important;
+        max-height: 220px !important;
+        top: 10px !important;
+        bottom: auto !important;
+    }
+
+    .isd-machinelabels {
+        margin-top: 8px !important;
+        min-height: 30px !important;
+    }
+
+    .isd-avgline.isd-avg-85 {
+        top: calc(10px + 220px * 0.15) !important;
+    }
+
+    .isd-avgline.isd-avg-80 {
+        top: calc(10px + 220px * 0.20) !important;
+    }
 }
 
 </style>
