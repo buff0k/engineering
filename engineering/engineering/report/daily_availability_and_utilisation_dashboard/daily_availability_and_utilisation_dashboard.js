@@ -78,14 +78,6 @@ function add_graph_buttons(report) {
     report.page.add_inner_button(__("Preview Graphs"), function () {
         open_graph_print_preview(report);
     });
-
-    report.page.add_inner_button("Open Avail Util", function () {
-        open_avail_util_report(report);
-    });
-
-    report.page.add_inner_button("Open Avail Util 2", function () {
-        open_avail_util_report(report);
-    });
 }
 
 function inject_dashboard_table_hider() {
@@ -1526,6 +1518,3 @@ function freeze_percentage_axis_on_scroll(report) {
     setTimeout(apply_freeze, 1200);
 }
 
-function open_avail_util_report(report) {
-    window.open("/desk/query-report/Avail%20and%20Util%20report", "_blank");
-}

@@ -49,8 +49,7 @@
    "fieldname": "clock_out_time",
    "fieldtype": "Time",
    "in_list_view": 1,
-   "label": "Clock Out Time",
-   "reqd": 1
+   "label": "Clock Out Time"
   },
   {
    "fieldname": "total_hours",
@@ -182,7 +181,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-29 14:40:04.289165",
+ "modified": "2026-06-01 15:48:47.844614",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

@@ -658,6 +658,66 @@ DASH_CSS = """
     top: calc(14px + 260px * 0.20) !important;
 }
 
+
+
+/* COMPACT GRAPH SIZE - SAME SIZE FOR DAILY / WEEKLY / MONTHLY */
+.isd-chart-section {
+    height: 285px !important;
+    min-height: 285px !important;
+    max-height: 285px !important;
+    overflow: hidden !important;
+}
+
+.isd-chart-section-title {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    font-size: 21px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+}
+
+.isd-chart {
+    height: 249px !important;
+    min-height: 249px !important;
+    max-height: 249px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    box-sizing: border-box !important;
+}
+
+.isd-chart-grid {
+    height: 190px !important;
+    min-height: 190px !important;
+    max-height: 190px !important;
+}
+
+.isd-yaxis {
+    height: 190px !important;
+    font-size: 15px !important;
+}
+
+.isd-machinelabels {
+    min-height: 28px !important;
+    max-height: 28px !important;
+    overflow: hidden !important;
+    margin-top: 5px !important;
+}
+
+.isd-machinelab {
+    font-size: 12px !important;
+}
+
+.isd-avgline.isd-avg-85 {
+    top: calc(8px + 190px * 0.15) !important;
+}
+
+.isd-avgline.isd-avg-80 {
+    top: calc(8px + 190px * 0.20) !important;
+}
+
 </style>
 """
 
