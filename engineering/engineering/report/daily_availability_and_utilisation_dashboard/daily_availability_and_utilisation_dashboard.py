@@ -662,47 +662,33 @@ DASH_CSS = """
 
 
 
-/* FINAL GRAPH BASELINE FIX - ALL BARS START FROM 0 LINE AND DO NOT OVERLAP 100% */
 
-/* Keep graph compact and stop content from escaping */
+/* SAFE GRAPH BASELINE, 100 PERCENT CAP, AND HORIZONTAL SCROLL */
+
+/* Allow the graph panel to scroll left/right for more dates or machines */
 .isd-chart-section {
-    overflow: hidden !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
 }
 
-/* Chart must reserve space below the white 0% line for labels */
+/* Leave space below the 0% baseline for labels */
 .isd-chart {
     position: relative !important;
     box-sizing: border-box !important;
-    padding: 10px 14px 46px 14px !important;
-    overflow: hidden !important;
+    padding-bottom: 42px !important;
+    overflow: visible !important;
 }
 
-/* Plot area: 100% is top, 0% is bottom white baseline */
+/* Plot area. Bars use their real heights, not forced 100%. */
 .isd-chart-grid {
-    position: relative !important;
     height: 220px !important;
     min-height: 220px !important;
     max-height: 220px !important;
     align-items: flex-end !important;
-    padding-top: 0 !important;
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
     border-bottom: 3px solid rgba(255,255,255,0.95) !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
-}
-
-/* Each bar slot fills the plot area only */
-.isd-chart-grid > div {
-    height: 100% !important;
-    max-height: 100% !important;
-    display: flex !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
     overflow: hidden !important;
 }
 
@@ -711,21 +697,16 @@ DASH_CSS = """
 .isd-bar.avail,
 .isd-bar.util {
     align-self: flex-end !important;
-    margin-top: auto !important;
     margin-bottom: 0 !important;
-    bottom: 0 !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-    min-height: 2px !important;
     max-height: 100% !important;
-    overflow: hidden !important;
+    box-sizing: border-box !important;
+    transform: none !important;
 }
 
-/* Machine labels are below graph baseline */
+/* Labels stay below baseline and move with horizontal scroll */
 .isd-machinelabels {
-    position: relative !important;
     margin-top: 8px !important;
-    min-height: 30px !important;
+    min-height: 28px !important;
     max-height: 34px !important;
     overflow: hidden !important;
     align-items: flex-start !important;
@@ -742,24 +723,22 @@ DASH_CSS = """
     transform: none !important;
 }
 
-/* Y-axis aligns to same graph height */
+/* Y-axis aligns to the same plot height */
 .isd-yaxis {
     height: 220px !important;
     min-height: 220px !important;
     max-height: 220px !important;
-    top: 10px !important;
-    bottom: auto !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
 }
 
-/* 0% aligns to white baseline */
+/* 0% aligns to baseline */
 .isd-yaxis div:last-child {
     transform: translateY(5px) !important;
 }
 
-/* Target lines use same 220px graph height */
+/* Target lines use same plot height */
 .isd-avgline.isd-avg-85 {
     top: calc(10px + 220px * 0.15) !important;
 }
@@ -768,11 +747,29 @@ DASH_CSS = """
     top: calc(10px + 220px * 0.20) !important;
 }
 
-/* Same behaviour in print/preview */
+/* Keep horizontal scrolling available in normal view */
+.isd-chart-section::-webkit-scrollbar {
+    height: 10px !important;
+}
+
+.isd-chart-section::-webkit-scrollbar-thumb {
+    background: #999 !important;
+    border-radius: 8px !important;
+}
+
+.isd-chart-section::-webkit-scrollbar-track {
+    background: #333 !important;
+}
+
+/* In print/PDF, keep overflow visible enough for capture */
 @media print {
+    .isd-chart-section {
+        overflow-x: visible !important;
+        overflow-y: hidden !important;
+    }
+
     .isd-chart {
-        padding: 10px 14px 46px 14px !important;
-        overflow: hidden !important;
+        overflow: visible !important;
     }
 
     .isd-chart-grid {
@@ -780,18 +777,6 @@ DASH_CSS = """
         min-height: 220px !important;
         max-height: 220px !important;
         align-items: flex-end !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        border-bottom: 3px solid rgba(255,255,255,0.95) !important;
-        overflow: hidden !important;
-    }
-
-    .isd-chart-grid > div {
-        height: 100% !important;
-        max-height: 100% !important;
-        display: flex !important;
-        align-items: flex-end !important;
-        justify-content: center !important;
         overflow: hidden !important;
     }
 
@@ -799,24 +784,15 @@ DASH_CSS = """
     .isd-bar.avail,
     .isd-bar.util {
         align-self: flex-end !important;
-        margin-bottom: 0 !important;
-        bottom: 0 !important;
-        transform: none !important;
         max-height: 100% !important;
-        overflow: hidden !important;
+        margin-bottom: 0 !important;
+        transform: none !important;
     }
 
     .isd-yaxis {
         height: 220px !important;
         min-height: 220px !important;
         max-height: 220px !important;
-        top: 10px !important;
-        bottom: auto !important;
-    }
-
-    .isd-machinelabels {
-        margin-top: 8px !important;
-        min-height: 30px !important;
     }
 
     .isd-avgline.isd-avg-85 {
