@@ -173,15 +173,16 @@
   },
   {
    "fieldname": "total_unallocated",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Clocked In Hours - Hours allocated",
+   "precision": "2",
    "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-01 15:48:47.844614",
+ "modified": "2026-06-01 16:38:06.736135",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

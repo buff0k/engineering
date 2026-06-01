@@ -663,23 +663,24 @@ DASH_CSS = """
 
 
 
-/* SAFE GRAPH BASELINE, 100 PERCENT CAP, AND HORIZONTAL SCROLL */
 
-/* Allow the graph panel to scroll left/right for more dates or machines */
+/* DAILY AXIS FIX - SHOW SELECTED DATE AND CATEGORY */
+
+/* Graph panel must allow scrolling to other dates/machines */
 .isd-chart-section {
     overflow-x: auto !important;
     overflow-y: hidden !important;
 }
 
-/* Leave space below the 0% baseline for labels */
+/* Keep chart compact, but leave enough bottom space for 2-line axis labels */
 .isd-chart {
     position: relative !important;
     box-sizing: border-box !important;
-    padding-bottom: 42px !important;
+    padding-bottom: 72px !important;
     overflow: visible !important;
 }
 
-/* Plot area. Bars use their real heights, not forced 100%. */
+/* Plot area: bars start from 0% white baseline */
 .isd-chart-grid {
     height: 220px !important;
     min-height: 220px !important;
@@ -692,7 +693,7 @@ DASH_CSS = """
     overflow: hidden !important;
 }
 
-/* Bars grow upward from 0% and are capped at 100% */
+/* Bars use real percentages and cannot exceed 100% */
 .isd-bar,
 .isd-bar.avail,
 .isd-bar.util {
@@ -703,27 +704,39 @@ DASH_CSS = """
     transform: none !important;
 }
 
-/* Labels stay below baseline and move with horizontal scroll */
+/* Axis labels must show both lines: selected date/day and category */
 .isd-machinelabels {
     margin-top: 8px !important;
-    min-height: 28px !important;
-    max-height: 34px !important;
-    overflow: hidden !important;
+    min-height: 58px !important;
+    max-height: none !important;
+    overflow: visible !important;
     align-items: flex-start !important;
 }
 
+/* Allow category name to display below the date */
 .isd-machinelab {
     font-size: 11px !important;
     font-weight: 900 !important;
-    line-height: 1.1 !important;
+    line-height: 1.15 !important;
     padding-top: 4px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
+    white-space: normal !important;
+    overflow: visible !important;
     text-overflow: clip !important;
     transform: none !important;
+    text-align: center !important;
+    min-height: 48px !important;
 }
 
-/* Y-axis aligns to the same plot height */
+/* If labels contain spans/divs, show them as separate lines */
+.isd-machinelab span,
+.isd-machinelab div {
+    display: block !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-align: center !important;
+}
+
+/* Y-axis aligns with plot height */
 .isd-yaxis {
     height: 220px !important;
     min-height: 220px !important;
@@ -733,7 +746,7 @@ DASH_CSS = """
     justify-content: space-between !important;
 }
 
-/* 0% aligns to baseline */
+/* 0% aligns with white baseline */
 .isd-yaxis div:last-child {
     transform: translateY(5px) !important;
 }
@@ -747,7 +760,7 @@ DASH_CSS = """
     top: calc(10px + 220px * 0.20) !important;
 }
 
-/* Keep horizontal scrolling available in normal view */
+/* Scrollbar visible for other dates */
 .isd-chart-section::-webkit-scrollbar {
     height: 10px !important;
 }
@@ -761,7 +774,6 @@ DASH_CSS = """
     background: #333 !important;
 }
 
-/* In print/PDF, keep overflow visible enough for capture */
 @media print {
     .isd-chart-section {
         overflow-x: visible !important;
@@ -769,6 +781,7 @@ DASH_CSS = """
     }
 
     .isd-chart {
+        padding-bottom: 72px !important;
         overflow: visible !important;
     }
 
@@ -787,6 +800,18 @@ DASH_CSS = """
         max-height: 100% !important;
         margin-bottom: 0 !important;
         transform: none !important;
+    }
+
+    .isd-machinelabels {
+        min-height: 58px !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .isd-machinelab {
+        white-space: normal !important;
+        overflow: visible !important;
+        min-height: 48px !important;
     }
 
     .isd-yaxis {
