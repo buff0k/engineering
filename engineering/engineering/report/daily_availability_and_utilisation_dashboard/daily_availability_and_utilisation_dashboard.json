@@ -33,7 +33,7 @@
    "fieldtype": "Select",
    "label": "Summary Type",
    "mandatory": 1,
-   "options": "Daily Summary\nAverage Per Machine\nMonthly Summary",
+   "options": "Daily Summary\nAverage Per Machine\nWeekly Summary\nMonthly Summary",
    "wildcard_filter": 0
   }
  ],

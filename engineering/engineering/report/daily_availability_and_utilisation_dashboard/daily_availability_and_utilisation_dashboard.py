@@ -1045,6 +1045,9 @@ def build_selected_summary_chart_html(summary_type, location, source_rows, avgs,
     if summary_type == "Daily Summary":
         return build_daily_summary_chart_html(location, start_date, end_date)
 
+    if summary_type == "Weekly Summary":
+        return build_weekly_summary_chart_html(avgs)
+
     if summary_type == "Monthly Summary":
         return build_monthly_summary_chart_html(avgs)
 
@@ -1160,6 +1163,19 @@ def build_daily_summary_chart_html(location, start_date, end_date):
             </div>
         </div>
     </div>
+</div>
+"""
+
+
+
+def build_weekly_summary_chart_html(avgs):
+    top_categories = ["ADT", "Excavator", "Dozer"]
+    bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
+
+    return f"""
+<div class="isd-chart-stack">
+    {build_monthly_summary_section("WEEKLY SUMMARY - ADT / EXCAVATOR / DOZER", top_categories, avgs)}
+    {build_monthly_summary_section("WEEKLY SUMMARY - SUPPORT EQUIPMENT & DRILLS", bottom_categories, avgs)}
 </div>
 """
 

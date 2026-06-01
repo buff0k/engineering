@@ -23,7 +23,7 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
             fieldname: "summary_type",
             label: __("Summary Type"),
             fieldtype: "Select",
-            options: "Daily Summary\nAverage Per Machine\nMonthly Summary",
+            options: "Daily Summary\nAverage Per Machine\nWeekly Summary\nMonthly Summary",
             default: "Daily Summary",
             reqd: 1,
             on_change: function() {
