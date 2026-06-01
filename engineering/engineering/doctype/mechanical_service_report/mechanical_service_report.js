@@ -215,6 +215,12 @@ function calculate_total_time_live(frm) {
     let diff_seconds = (end - start) / 1000;
 
     if (diff_seconds < 0) {
+        frappe.msgprint(__("MSR End Time is BEFORE MSR Start Time. Please fix Start Time and End Time."));
+        diff_seconds = 0;
+    }
+
+    if (diff_seconds > 24 * 60 * 60) {
+        frappe.msgprint(__("MSR Total Time cannot be more than 24 hours. Please fix Start Time and End Time."));
         diff_seconds = 0;
     }
 

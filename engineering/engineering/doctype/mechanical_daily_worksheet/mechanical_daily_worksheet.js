@@ -2,6 +2,7 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
     refresh(frm) {
         frm.trigger("calculate_all_times");
         style_fetch_msrs_button(frm);
+        style_total_unallocated_field(frm);
     },
 
     validate(frm) {
@@ -141,6 +142,8 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
 
         frm.set_value("sum_total", sum_total);
         frm.set_value("total_unallocated", flt(total_hours - sum_total, 2));
+
+        style_total_unallocated_field(frm);
     }
 });
 
@@ -319,6 +322,35 @@ function style_fetch_msrs_button(frm) {
             "color": "#111827",
             "font-weight": "700",
             "box-shadow": "0 0 0 3px rgba(245, 158, 11, 0.25)"
+        });
+    }, 300);
+}
+
+
+function style_total_unallocated_field(frm) {
+    setTimeout(() => {
+        const field = frm.fields_dict.total_unallocated;
+
+        if (!field || !field.$wrapper) {
+            return;
+        }
+
+        const input = field.$wrapper.find("input, .control-value");
+
+        if (!input || !input.length) {
+            return;
+        }
+
+        let total_hours = flt(frm.doc.total_hours || 0);
+        let sum_total = flt(frm.doc.sum_total || 0);
+
+        let is_equal = Math.abs(total_hours - sum_total) < 0.01;
+
+        input.css({
+            "background-color": is_equal ? "#dcfce7" : "#fee2e2",
+            "color": is_equal ? "#166534" : "#991b1b",
+            "font-weight": "700",
+            "border": is_equal ? "1px solid #16a34a" : "1px solid #dc2626"
         });
     }, 300);
 }

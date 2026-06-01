@@ -82,10 +82,6 @@ function add_graph_buttons(report) {
     report.page.add_inner_button("Open Avail Util", function () {
         open_avail_util_report(report);
     });
-
-    report.page.add_inner_button("Open Avail Util 2", function () {
-        open_avail_util_report(report);
-    });
 }
 
 function inject_dashboard_table_hider() {

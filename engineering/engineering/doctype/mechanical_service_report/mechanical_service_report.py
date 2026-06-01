@@ -26,8 +26,10 @@ class MechanicalServiceReport(Document):
         diff_seconds = (end_dt - start_dt).total_seconds()
 
         if diff_seconds < 0:
-            frappe.msgprint("MSR End Time is BEFORE MSR Start Time. Please fix Start Time and End Time.")
-            diff_seconds = 0
+            frappe.throw("MSR End Time is BEFORE MSR Start Time. Please fix Start Time and End Time.")
+
+        if diff_seconds > 24 * 60 * 60:
+            frappe.throw("MSR Total Time cannot be more than 24 hours. Please fix Start Time and End Time.")
 
         # Duration field expects seconds
         self.total_time = int(diff_seconds)

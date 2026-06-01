@@ -1247,36 +1247,19 @@ def build_trend_html(location, start_date, end_date):
 
     return f"""
 <div class="isd-side">
+    <div class="isd-open-report-wrap">
+        <a class="isd-circle isd-circle-green isd-open-report"
+           href="{report_url}"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Open Availability and Utilisation Month End Report">
+            Open<br>Report
+        </a>
+    </div>
 
     <div class="isd-targets">
         <div class="isd-target-box">
-
-
-            <div id="open-avail-util-only-button"
-                 onclick="window.open('/desk/query-report/Avail%20and%20Util%20report', '_blank')"
-                 style="
-                    width: 120px;
-                    min-height: 34px;
-                    border: 2px solid #0d6efd;
-                    border-radius: 6px;
-                    background: #dbeafe;
-                    color: #000000;
-                    font-size: 12px;
-                    font-weight: 800;
-                    line-height: 1.05;
-                    text-align: center;
-                    margin: 0 auto 8px auto;
-                    padding: 7px 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.20);
-                 ">
-                Open Avail Util
-            </div>
-
-<div class="isd-target-title">Availability<br>Target</div>
+            <div class="isd-target-title">Availability<br>Target</div>
             <div class="isd-target-line isd-target-line-red"></div>
         </div>
 
