@@ -30,6 +30,8 @@
   "total_time",
   "service_breakdown",
   "service_interval",
+  "outsourced",
+  "outsourced_supplier",
   "breakdown_and_work_column",
   "description_of_breakdown",
   "spares_required_and_comments",
@@ -145,7 +147,7 @@
    "fieldname": "service_breakdown",
    "fieldtype": "Select",
    "label": "Was this a scheduled service or breakdown?",
-   "options": "Service\nBreakdown\nPlanned Maintenance\nInspection",
+   "options": "Service\nBreakdown\nPlanned Maintenance\nInspection\nUnplanned Maintenance",
    "reqd": 1
   },
   {
@@ -270,12 +272,25 @@
    "fieldname": "artisan1",
    "fieldtype": "Signature",
    "label": "Artisan"
+  },
+  {
+   "fieldname": "outsourced",
+   "fieldtype": "Select",
+   "label": "Is this outsourced mechanical work?",
+   "options": "\nNo\nYes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "outsourced_supplier",
+   "fieldtype": "Link",
+   "label": "Who is the outsourced supplier?",
+   "options": "Supplier"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-18 08:25:13.676810",
+ "modified": "2026-06-02 07:34:10.938732",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

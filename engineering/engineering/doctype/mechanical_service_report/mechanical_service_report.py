@@ -14,6 +14,14 @@ class MechanicalServiceReport(Document):
 
         # Make sure total_time is always correct on save
         self.set_total_hours()
+        self.validate_outsourced_supplier()
+
+    def validate_outsourced_supplier(self):
+        if self.outsourced == "Yes" and not self.outsourced_supplier:
+            frappe.throw("Outsourced Supplier is required when Outsourced is Yes.")
+
+        if self.outsourced != "Yes":
+            self.outsourced_supplier = None
 
     def set_total_hours(self):
         if not self.start_time or not self.end_time:
@@ -28,8 +36,7 @@ class MechanicalServiceReport(Document):
         if diff_seconds < 0:
             frappe.throw("MSR End Time is BEFORE MSR Start Time. Please fix Start Time and End Time.")
 
-        if diff_seconds > 24 * 60 * 60:
-            frappe.throw("MSR Total Time cannot be more than 24 hours. Please fix Start Time and End Time.")
+
 
         # Duration field expects seconds
         self.total_time = int(diff_seconds)

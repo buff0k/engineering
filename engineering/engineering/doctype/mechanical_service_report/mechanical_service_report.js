@@ -8,6 +8,7 @@ frappe.ui.form.on("Mechanical Service Report", {
         toggle_new_job_field(frm);
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
+        toggle_outsourced_supplier(frm);
 
         // Make saved comment history read-only on the form side.
         // Server-side Python still controls the real lock.
@@ -22,6 +23,7 @@ frappe.ui.form.on("Mechanical Service Report", {
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
         lock_comment_history_grid(frm);
+        toggle_outsourced_supplier(frm);        
     },
 
     site(frm) {
@@ -44,6 +46,9 @@ frappe.ui.form.on("Mechanical Service Report", {
 
     service_breakdown(frm) {
         toggle_service_interval(frm);
+    },
+    outsourced(frm) {
+        toggle_outsourced_supplier(frm);
     },
 
     validate(frm) {
@@ -146,6 +151,8 @@ function toggle_fields_until_site_selected(frm) {
         "total_time",
         "service_breakdown",
         "service_interval",
+        "outsourced",
+        "outsourced_supplier",
         "description_of_breakdown",
         "spares_required_and_comments",
         "description_of_work_done",
@@ -202,6 +209,16 @@ function toggle_service_interval(frm) {
     }
 }
 
+function toggle_outsourced_supplier(frm) {
+    const is_outsourced = frm.doc.outsourced === "Yes";
+
+    frm.toggle_display("outsourced_supplier", is_outsourced);
+    frm.toggle_reqd("outsourced_supplier", is_outsourced);
+
+    if (!is_outsourced && frm.doc.outsourced_supplier) {
+        frm.set_value("outsourced_supplier", null);
+    }
+}
 
 function calculate_total_time_live(frm) {
     if (!frm.doc.start_time || !frm.doc.end_time) {
@@ -219,10 +236,6 @@ function calculate_total_time_live(frm) {
         diff_seconds = 0;
     }
 
-    if (diff_seconds > 24 * 60 * 60) {
-        frappe.msgprint(__("MSR Total Time cannot be more than 24 hours. Please fix Start Time and End Time."));
-        diff_seconds = 0;
-    }
 
     frm.set_value("total_time", Math.floor(diff_seconds));
 }
