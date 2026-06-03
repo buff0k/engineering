@@ -75,7 +75,7 @@ scheduler_events = {
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
     ],
     "cron": {
-        "*/30 * * * *": [
+        "*/5 * * * *": [
             "engineering.controllers.importer.fetch_and_sync"
         ],
         "0 6 * * *": [
@@ -125,6 +125,7 @@ doc_events = {
     },
     "WearCheck Results": {
         "after_insert": "engineering.controllers.notifications.wearcheck_results_after_insert",
+        "on_update": "engineering.controllers.notifications.wearcheck_results_on_update",
     },
     "Component Replacement Report": {
         "on_update": "engineering.controllers.isambane_sample_input.component_replacement_report_on_update"
