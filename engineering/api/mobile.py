@@ -230,7 +230,29 @@ def get_mobile_employee_lookup(modified_after=None):
         ignore_permissions=True,
     )
 
+@frappe.whitelist()
+def get_mobile_supplier_lookup(modified_after=None):
+    user = frappe.session.user
 
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    filters = {}
+    if modified_after:
+        filters["modified"] = [">", modified_after]
+
+    return frappe.get_all(
+        "Supplier",
+        filters=filters,
+        fields=[
+            "name",
+            "supplier_name",
+            "modified",
+        ],
+        order_by="name asc",
+        limit_page_length=5000,
+        ignore_permissions=True,
+    )
 
 @frappe.whitelist()
 def sign_off_mechanical_service_report(docname, manager_foreman_signature):
