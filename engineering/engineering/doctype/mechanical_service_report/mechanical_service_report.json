@@ -28,6 +28,7 @@
   "start_time",
   "end_time",
   "total_time",
+  "status",
   "service_breakdown",
   "service_interval",
   "outsourced",
@@ -87,8 +88,7 @@
   {
    "fieldname": "end_time",
    "fieldtype": "Datetime",
-   "label": "End Time",
-   "reqd": 1
+   "label": "End Time"
   },
   {
    "fieldname": "breakdown_and_work_section",
@@ -126,6 +126,8 @@
   {
    "fieldname": "asset",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Fleet Number",
    "options": "Asset",
    "reqd": 1
@@ -285,12 +287,21 @@
    "fieldtype": "Link",
    "label": "Who is the outsourced supplier?",
    "options": "Supplier"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Open\nClosed",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-02 07:34:10.938732",
+ "modified": "2026-06-03 09:16:23.208560",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",

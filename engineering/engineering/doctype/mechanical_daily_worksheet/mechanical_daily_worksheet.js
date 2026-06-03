@@ -3,6 +3,7 @@ frappe.ui.form.on("Mechanical Daily Worksheet", {
         frm.trigger("calculate_all_times");
         style_fetch_msrs_button(frm);
         style_total_unallocated_field(frm);
+        set_mdw_status_display(frm);        
     },
 
     validate(frm) {
@@ -239,6 +240,19 @@ frappe.ui.form.on("Non MSR Work", {
         frm.trigger("calculate_total_non_msr_time");
     }
 });
+
+
+function set_mdw_status_display(frm) {
+    const status = frm.doc.clock_out_time ? "Closed" : "Open";
+
+    frm.set_value("status", status);
+
+    if (status === "Open") {
+        frm.dashboard.set_headline_alert("MDW Status: Open", "orange");
+    } else {
+        frm.dashboard.set_headline_alert("MDW Status: Closed", "green");
+    }
+}
 
 function calculate_datetime_hours(start_datetime, end_datetime) {
     if (!start_datetime || !end_datetime) {

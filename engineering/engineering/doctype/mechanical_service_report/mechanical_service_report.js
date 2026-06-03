@@ -8,6 +8,7 @@ frappe.ui.form.on("Mechanical Service Report", {
         toggle_new_job_field(frm);
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
+        set_msr_status_display(frm);        
         toggle_outsourced_supplier(frm);
 
         // Make saved comment history read-only on the form side.
@@ -22,6 +23,7 @@ frappe.ui.form.on("Mechanical Service Report", {
         toggle_new_job_field(frm);
         toggle_service_interval(frm);
         calculate_total_time_live(frm);
+        set_msr_status_display(frm);        
         lock_comment_history_grid(frm);
         toggle_outsourced_supplier(frm);        
     },
@@ -75,6 +77,7 @@ frappe.ui.form.on("Mechanical Service Report", {
 
     end_time(frm) {
         calculate_total_time_live(frm);
+        set_msr_status_display(frm);
     },
 
     asset(frm) {
@@ -149,6 +152,7 @@ function toggle_fields_until_site_selected(frm) {
         "start_time",
         "end_time",
         "total_time",
+        "status",        
         "service_breakdown",
         "service_interval",
         "outsourced",
@@ -176,6 +180,7 @@ function toggle_fields_until_site_selected(frm) {
     set_read_only_if_exists(frm, "asset_category", 1);
     set_read_only_if_exists(frm, "last_smr_preuse", 1);
     set_read_only_if_exists(frm, "total_time", 1);
+    set_read_only_if_exists(frm, "status", 1);    
 }
 
 
@@ -240,6 +245,17 @@ function calculate_total_time_live(frm) {
     frm.set_value("total_time", Math.floor(diff_seconds));
 }
 
+function set_msr_status_display(frm) {
+    const status = frm.doc.end_time ? "Closed" : "Open";
+
+    frm.set_value("status", status);
+
+    if (status === "Open") {
+        frm.dashboard.set_headline_alert("MSR Status: Open", "orange");
+    } else {
+        frm.dashboard.set_headline_alert("MSR Status: Closed", "green");
+    }
+}
 
 function fetch_employee_name(frm, employee_field, name_field) {
     const employee = frm.doc[employee_field];

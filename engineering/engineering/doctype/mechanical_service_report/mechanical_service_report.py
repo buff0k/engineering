@@ -14,7 +14,15 @@ class MechanicalServiceReport(Document):
 
         # Make sure total_time is always correct on save
         self.set_total_hours()
+        self.set_msr_status()        
         self.validate_outsourced_supplier()
+
+    def set_msr_status(self):
+        if self.end_time:
+            self.status = "Closed"
+        else:
+            self.status = "Open"
+
 
     def validate_outsourced_supplier(self):
         if self.outsourced == "Yes" and not self.outsourced_supplier:

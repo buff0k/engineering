@@ -11,6 +11,7 @@
   "date",
   "mechanic_employee_no",
   "mechanic_name_surname",
+  "status",
   "details",
   "clock_in_time",
   "clock_out_time",
@@ -178,11 +179,20 @@
    "label": "Clocked In Hours - Hours allocated",
    "precision": "2",
    "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Open\nClosed",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-01 16:38:06.736135",
+ "modified": "2026-06-03 10:21:52.608648",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Daily Worksheet",

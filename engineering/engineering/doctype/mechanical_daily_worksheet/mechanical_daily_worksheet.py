@@ -35,11 +35,18 @@ class MechanicalDailyWorksheet(Document):
             counter += 1
 
     def validate(self):
+        self.set_mdw_status()
         self.calculate_total_hours()
         self.calculate_child_hours()
         self.calculate_total_work_time()
         self.calculate_total_non_msr_time()
         self.calculate_sum_total()
+
+    def set_mdw_status(self):
+        if self.clock_out_time:
+            self.status = "Closed"
+        else:
+            self.status = "Open"
 
     def calculate_total_hours(self):
         self.total_hours = self.get_hours_difference(
@@ -179,6 +186,7 @@ def get_msrs_for_daily_worksheet(worksheet_date, mechanic_company_no):
         FROM `tabMechanical Service Report`
         WHERE service_date = %s
           AND artisan_employee_code = %s
+          AND IFNULL(outsourced, 'No') != 'Yes'
           AND start_time IS NOT NULL
           AND end_time IS NOT NULL
           AND start_time NOT LIKE '%%-00-00%%'
