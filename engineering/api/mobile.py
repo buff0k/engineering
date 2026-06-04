@@ -188,6 +188,9 @@ def get_user_context():
     if frappe.has_permission("Production Cycle Times", "create", user=user):
         allowed_pages.append("production_cycle_times")
 
+    if _has_any_role(roles, ["Parts Driver"]):
+        allowed_pages = ["travel_log_sheet"]
+
     return {
         "user": user,
         "roles": roles,
@@ -201,7 +204,101 @@ def _has_any_role(user_roles, allowed_roles):
     allowed_role_set = set(allowed_roles or [])
     return bool(user_role_set.intersection(allowed_role_set))
 
+def _require_parts_driver(user):
+    roles = frappe.get_roles(user)
 
+    if not _has_any_role(roles, ["Parts Driver", "System Manager"]):
+        frappe.throw("Only Parts Driver may use Travel Log Sheet", frappe.PermissionError)
+
+
+@frappe.whitelist()
+def get_last_travel_log_odo(vehicle_registration=None):
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    _require_parts_driver(user)
+
+    if not vehicle_registration:
+        return {
+            "odo_meter_out": None,
+        }
+
+    rows = frappe.get_all(
+        "Travel Log Sheet",
+        filters={
+            "vehicle_registration": vehicle_registration,
+        },
+        fields=[
+            "name",
+            "odo_meter_in",
+            "date",
+            "creation",
+        ],
+        order_by="date desc, creation desc",
+        limit_page_length=1,
+    )
+
+    if not rows:
+        return {
+            "odo_meter_out": None,
+        }
+
+    return {
+        "odo_meter_out": rows[0].odo_meter_in,
+        "previous_travel_log": rows[0].name,
+    }
+
+
+@frappe.whitelist()
+def create_travel_log_sheet(data):
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    _require_parts_driver(user)
+
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    required_fields = [
+        "incurred_by",
+        "vehicle_registration",
+        "date",
+        "odo_meter_out",
+        "odo_meter_in",
+        "trip",
+    ]
+
+    for field in required_fields:
+        if data.get(field) in [None, ""]:
+            frappe.throw(f"{field} is required")
+
+    odo_meter_out = int(data.get("odo_meter_out") or 0)
+    odo_meter_in = int(data.get("odo_meter_in") or 0)
+
+    if odo_meter_in < odo_meter_out:
+        frappe.throw("ODO Meter In cannot be less than ODO Meter Out")
+
+    doc = frappe.get_doc({
+        "doctype": "Travel Log Sheet",
+        "incurred_by": data.get("incurred_by"),
+        "vehicle_registration": data.get("vehicle_registration"),
+        "date": data.get("date"),
+        "odo_meter_out": odo_meter_out,
+        "odo_meter_in": odo_meter_in,
+        "litres": int(data.get("litres") or 0),
+        "trip": data.get("trip"),
+    })
+
+    doc.insert(ignore_permissions=False)
+    frappe.db.commit()
+
+    return {
+        "name": doc.name,
+    }
 
 @frappe.whitelist()
 def get_mobile_employee_lookup(modified_after=None):

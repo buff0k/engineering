@@ -37,8 +37,8 @@ add_to_apps_screen = [
 ]
 
 fixtures = [
-    {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User", "Mechanic", "Engineering Foreman", "Engineering Plant Manager"]]]},
-    {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User", "Mechanic", "Engineering Foreman", "Engineering Plant Manager"]]]},
+    {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver"]]]},
+    {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver"]]]},
     {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
     {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "RDT", "Excavator"]]]},
     {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]}
