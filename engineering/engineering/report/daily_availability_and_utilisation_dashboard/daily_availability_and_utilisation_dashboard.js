@@ -29,6 +29,17 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
             on_change: function() {
                 frappe.query_report.refresh();
             }
+        },
+        {
+            fieldname: "machine_scope",
+            label: __("Machine Filter"),
+            fieldtype: "Select",
+            options: "Production Machines\nSwing/Spare Machines\nInclude Swing/Spare",
+            default: "Include Swing/Spare",
+            reqd: 1,
+            on_change: function() {
+                frappe.query_report.refresh();
+            }
         }
     ],
 
@@ -47,6 +58,7 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
         inject_dashboard_table_hider();
         add_graph_buttons(report);
         freeze_percentage_axis_on_scroll(report);
+        run_swing_spare_axis_colour_timer();
     },
 
     refresh(report) {
@@ -54,6 +66,7 @@ frappe.query_reports["Daily Availability and Utilisation Dashboard"] = {
         hide_report_table(report);
         add_graph_buttons(report);
         freeze_percentage_axis_on_scroll(report);
+        run_swing_spare_axis_colour_timer();
     },
 
     after_datatable_render(report) {
@@ -1517,4 +1530,69 @@ function freeze_percentage_axis_on_scroll(report) {
     setTimeout(apply_freeze, 600);
     setTimeout(apply_freeze, 1200);
 }
+
+
+// Force X-axis machine numbers purple when Swing/Spare Machines is selected.
+function colour_swing_spare_machine_axis_labels() {
+    if (!frappe.query_report) {
+        return;
+    }
+
+    if (frappe.query_report.report_name !== "Daily Availability and Utilisation Dashboard") {
+        return;
+    }
+
+    let machine_filter = "";
+
+    try {
+        machine_filter = frappe.query_report.get_filter_value("machine_scope") || "";
+    } catch (e) {
+        machine_filter = "";
+    }
+
+    const labels = document.querySelectorAll(
+        ".isd-hourly-dashboard .isd-machinelab, .isd-chart-stack .isd-machinelab"
+    );
+
+    labels.forEach(function(label) {
+        if (machine_filter === "Swing/Spare Machines") {
+            label.style.setProperty("color", "#d291ff", "important");
+            label.style.setProperty("font-weight", "900", "important");
+            label.style.setProperty("text-shadow", "1px 1px 3px #000000", "important");
+
+            label.querySelectorAll("span, div, a").forEach(function(child) {
+                child.style.setProperty("color", "#d291ff", "important");
+                child.style.setProperty("font-weight", "900", "important");
+                child.style.setProperty("text-shadow", "1px 1px 3px #000000", "important");
+            });
+        }
+    });
+}
+
+function run_swing_spare_axis_colour_timer() {
+    colour_swing_spare_machine_axis_labels();
+
+    setTimeout(colour_swing_spare_machine_axis_labels, 100);
+    setTimeout(colour_swing_spare_machine_axis_labels, 300);
+    setTimeout(colour_swing_spare_machine_axis_labels, 700);
+    setTimeout(colour_swing_spare_machine_axis_labels, 1200);
+    setTimeout(colour_swing_spare_machine_axis_labels, 2000);
+    setTimeout(colour_swing_spare_machine_axis_labels, 3500);
+}
+
+$(document).on("page-change", function() {
+    run_swing_spare_axis_colour_timer();
+});
+
+$(document).on("change", ".query-report select, .query-report input", function() {
+    run_swing_spare_axis_colour_timer();
+});
+
+$(document).on("click", ".query-report button, .query-report .btn, .query-report .select2-choice, .query-report .awesomplete", function() {
+    run_swing_spare_axis_colour_timer();
+});
+
+setInterval(function() {
+    colour_swing_spare_machine_axis_labels();
+}, 1500);
 

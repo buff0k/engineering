@@ -1,4 +1,5 @@
 import frappe
+from urllib.parse import quote
 from frappe.utils import flt, getdate, add_days, date_diff
 
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
@@ -58,6 +59,10 @@ SITE_HEADER_COLOURS = {
     "Uitgevallen": "#FFD37F",
     "Bankfontein": "#E3E3E3",
 }
+
+
+CURRENT_SPARE_SWING_ASSET_MAP = {}
+CURRENT_MACHINE_SCOPE = "Include Swing/Spare"
 
 DASH_CSS = """
 <style>
@@ -727,6 +732,11 @@ DASH_CSS = """
     min-height: 48px !important;
 }
 
+.isd-machinelab-swing {
+    color: #d291ff !important;
+    text-shadow: 1px 1px 3px #000000 !important;
+}
+
 /* If labels contain spans/divs, show them as separate lines */
 .isd-machinelab span,
 .isd-machinelab div {
@@ -829,9 +839,196 @@ DASH_CSS = """
     }
 }
 
+
+/* DAILY DASHBOARD SWING SPARE PURPLE AXIS */
+.isd-machinelab-swing,
+.isd-machinelab-swing span,
+.isd-machinelab-swing div {
+    color: #d291ff !important;
+    font-weight: 900 !important;
+    text-shadow: 1px 1px 3px #000000 !important;
+}
+
 </style>
 """
 
+
+
+def get_spare_swing_asset_map(filters):
+    filters = filters or {}
+
+    start_date = filters.get("start_date") or filters.get("from_date")
+    end_date = filters.get("end_date") or filters.get("to_date")
+    location = filters.get("location") or filters.get("site")
+
+    if not start_date or not end_date:
+        return {}
+
+    args = {
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+
+    conditions = [
+        "mpp.docstatus < 2",
+        "mpp.prod_month_start_date <= %(end_date)s",
+        "mpp.prod_month_end_date >= %(start_date)s",
+    ]
+
+    if location:
+        conditions.append("mpp.location = %(location)s")
+        args["location"] = location
+
+    condition_sql = " AND ".join(conditions)
+    spare_map = {}
+
+    def add_reason(asset_name, reason):
+        if not asset_name:
+            return
+
+        asset_name = str(asset_name).strip()
+
+        if not asset_name:
+            return
+
+        spare_map.setdefault(asset_name, set()).add(reason)
+
+    try:
+        truck_rows = frappe.db.sql(f"""
+            SELECT DISTINCT etl.truck AS asset_name
+            FROM `tabMonthly Production Planning` mpp
+            INNER JOIN `tabExcavator Truck Link` etl
+                ON etl.parent = mpp.name
+               AND etl.parenttype = 'Monthly Production Planning'
+            WHERE {condition_sql}
+              AND IFNULL(etl.truck, '') != ''
+              AND IFNULL(etl.excavator, '') = ''
+        """, args, as_dict=True)
+
+        for row in truck_rows:
+            add_reason(row.get("asset_name"), "Spare/Swing unit Truck")
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Daily Dashboard Spare/Swing Trucks")
+        frappe.clear_messages()
+
+    try:
+        excavator_rows = frappe.db.sql(f"""
+            SELECT DISTINCT etl.excavator AS asset_name
+            FROM `tabMonthly Production Planning` mpp
+            INNER JOIN `tabExcavator Truck Link` etl
+                ON etl.parent = mpp.name
+               AND etl.parenttype = 'Monthly Production Planning'
+            WHERE {condition_sql}
+              AND IFNULL(etl.excavator, '') != ''
+              AND IFNULL(etl.truck, '') = ''
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM `tabExcavator Truck Link` assigned_etl
+                  WHERE assigned_etl.parent = etl.parent
+                    AND assigned_etl.parenttype = etl.parenttype
+                    AND assigned_etl.excavator = etl.excavator
+                    AND IFNULL(assigned_etl.truck, '') != ''
+              )
+        """, args, as_dict=True)
+
+        for row in excavator_rows:
+            add_reason(row.get("asset_name"), "Spare/Swing unit Excavator")
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Daily Dashboard Spare/Swing Excavators")
+        frappe.clear_messages()
+
+    try:
+        dozer_meta = frappe.get_meta("Dozers Planned")
+
+        dozer_asset_field = None
+
+        for fieldname in ("asset_name", "dozer", "asset"):
+            if dozer_meta.has_field(fieldname):
+                dozer_asset_field = fieldname
+                break
+
+        dozer_type_field = "dozing_type" if dozer_meta.has_field("dozing_type") else None
+
+        if dozer_asset_field and dozer_type_field:
+            dozer_rows = frappe.db.sql(f"""
+                SELECT DISTINCT dp.`{dozer_asset_field}` AS asset_name
+                FROM `tabMonthly Production Planning` mpp
+                INNER JOIN `tabDozers Planned` dp
+                    ON dp.parent = mpp.name
+                   AND dp.parenttype = 'Monthly Production Planning'
+                WHERE {condition_sql}
+                  AND IFNULL(dp.`{dozer_asset_field}`, '') != ''
+                  AND IFNULL(dp.`{dozer_type_field}`, '') = ''
+            """, args, as_dict=True)
+
+            for row in dozer_rows:
+                add_reason(row.get("asset_name"), "Spare/Swing unit Dozer")
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Daily Dashboard Spare/Swing Dozers")
+        frappe.clear_messages()
+
+    return {
+        asset_name: ", ".join(sorted(reasons))
+        for asset_name, reasons in spare_map.items()
+    }
+
+
+def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asset_map):
+    filters = filters or {}
+    machine_scope = filters.get("machine_scope") or "Include Swing/Spare"
+
+    if machine_scope == "Include Swing/Spare":
+        return rows
+
+    filtered_rows = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        machine = get_machine(row)
+
+        if not machine:
+            continue
+
+        is_spare = bool(machine in (spare_swing_asset_map or {}))
+
+        if machine_scope == "Production Machines" and not is_spare:
+            filtered_rows.append(row)
+
+        elif machine_scope == "Swing/Spare Machines" and is_spare:
+            filtered_rows.append(row)
+
+    return filtered_rows
+
+
+def build_summary_averages_from_machine_series(machine_series):
+    out = {category: {"avail": None, "util": None} for category in UI_CATEGORIES}
+
+    for category in UI_CATEGORIES:
+        machines = machine_series.get(category) or []
+
+        avail_values = [
+            float(row.get("avail"))
+            for row in machines
+            if isinstance(row, dict) and row.get("avail") is not None
+        ]
+
+        util_values = [
+            float(row.get("util"))
+            for row in machines
+            if isinstance(row, dict) and row.get("util") is not None
+        ]
+
+        out[category] = {
+            "avail": (sum(avail_values) / len(avail_values)) if avail_values else None,
+            "util": (sum(util_values) / len(util_values)) if util_values else None,
+        }
+
+    return out
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
@@ -858,8 +1055,17 @@ def execute(filters=None):
 
     source_rows = fetch_grouped_data(location, start_date, end_date)
 
-    avgs = build_summary_averages_from_source_rows(source_rows)
+    spare_swing_asset_map = get_spare_swing_asset_map(filters)
+    source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, filters, spare_swing_asset_map)
+
     machine_series = build_machine_series_from_source_rows(source_rows)
+    avgs = build_summary_averages_from_machine_series(machine_series)
+
+    global CURRENT_SPARE_SWING_ASSET_MAP
+    global CURRENT_MACHINE_SCOPE
+
+    CURRENT_SPARE_SWING_ASSET_MAP = spare_swing_asset_map or {}
+    CURRENT_MACHINE_SCOPE = filters.get("machine_scope") or "Include Swing/Spare"
 
     dashboard_html = build_dashboard_html(
         location,
@@ -1409,11 +1615,14 @@ def build_monthly_summary_section(title, categories, avgs):
 
 
 def build_trend_html(location, start_date, end_date):
-    report_url = (
-        "/app/query-report/Availability%20and%20Utilisation%20Month%20End%20Report"
-        f"?from_date={frappe.utils.escape_html(str(start_date or ''))}"
-        f"&to_date={frappe.utils.escape_html(str(end_date or ''))}"
-        f"&location={frappe.utils.escape_html(str(location or ''))}"
+    machine_scope = CURRENT_MACHINE_SCOPE or "Include Swing/Spare"
+
+    avail_util_url = (
+        "/app/query-report/Avail%20and%20Util%20report"
+        f"?start_date={quote(str(start_date or ''))}"
+        f"&end_date={quote(str(end_date or ''))}"
+        f"&location={quote(str(location or ''))}"
+        f"&machine_scope={quote(str(machine_scope or 'Include Swing/Spare'))}"
     )
 
     return f"""
@@ -1424,7 +1633,7 @@ def build_trend_html(location, start_date, end_date):
 
 
             <div id="open-avail-util-only-button"
-                 onclick="window.open('/desk/query-report/Avail%20and%20Util%20report', '_blank')"
+                 onclick="window.open('{avail_util_url}', '_blank')"
                  style="
                     width: 120px;
                     min-height: 34px;
@@ -1464,7 +1673,11 @@ def build_trend_html(location, start_date, end_date):
 </div>
 """
 
+
 def build_chart_html(machine_series):
+    spare_swing_asset_map = CURRENT_SPARE_SWING_ASSET_MAP or {}
+    machine_scope = CURRENT_MACHINE_SCOPE or "Include Swing/Spare"
+
     def height(value):
         if value is None:
             return 2
@@ -1493,12 +1706,27 @@ def build_chart_html(machine_series):
         labels = []
 
         for item in items:
-            machine = esc(item.get("machine") or "")
+            machine_raw = str(item.get("machine") or "").strip()
+            machine = esc(machine_raw)
             av = item.get("avail")
             ut = item.get("util")
 
+            # If user selects Swing/Spare Machines, all shown machines are swing/spare.
+            # If user selects Include Swing/Spare, only machines found in Monthly Planning spare map are purple.
+            is_spare_swing = (
+                machine_scope == "Swing/Spare Machines"
+                or bool(machine_raw and machine_raw in spare_swing_asset_map)
+            )
+
             av_class = "isd-bar avail" + (" nodata" if av is None else "")
             ut_class = "isd-bar util" + (" nodata" if ut is None else "")
+
+            label_style = ""
+            label_class = "isd-machinelab"
+
+            if is_spare_swing:
+                label_class = "isd-machinelab isd-machinelab-swing"
+                label_style = "color:#d291ff !important;font-weight:900 !important;text-shadow:1px 1px 3px #000000 !important;"
 
             bars.append(
                 f"<div class='{av_class}' title='{machine} Availability: {fmt_percent(av)}' style='height:{height(av)}px'></div>"
@@ -1509,7 +1737,7 @@ def build_chart_html(machine_series):
             )
 
             labels.append(
-                f"<div class='isd-machinelab' title='{machine}'>{machine}</div>"
+                f"<div class='{label_class}' title='{machine}' style='{label_style}'><span style='{label_style}'>{machine}</span></div>"
             )
 
         return f"""
@@ -1550,7 +1778,6 @@ def build_chart_html(machine_series):
     {''.join(chart_section(category) for category in UI_CATEGORIES)}
 </div>
 """
-
 
 
 @frappe.whitelist()

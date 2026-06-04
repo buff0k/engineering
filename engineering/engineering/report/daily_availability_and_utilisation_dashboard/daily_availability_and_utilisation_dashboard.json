@@ -35,6 +35,14 @@
    "mandatory": 1,
    "options": "Daily Summary\nAverage Per Machine\nWeekly Summary\nMonthly Summary",
    "wildcard_filter": 0
+  },
+  {
+   "fieldname": "machine_scope",
+   "fieldtype": "Select",
+   "label": "Machine Filter",
+   "mandatory": 1,
+   "options": "Production Machines\nSwing/Spare Machines\nInclude Swing/Spare",
+   "wildcard_filter": 0
   }
  ],
  "is_standard": "Yes",

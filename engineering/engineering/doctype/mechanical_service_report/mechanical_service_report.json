@@ -148,7 +148,7 @@
   {
    "fieldname": "service_breakdown",
    "fieldtype": "Select",
-   "label": "Was this a scheduled service or breakdown?",
+   "label": "What work was done?",
    "options": "Service\nBreakdown\nPlanned Maintenance\nInspection\nUnplanned Maintenance",
    "reqd": 1
   },
@@ -301,7 +301,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-03 09:16:23.208560",
+ "modified": "2026-06-03 12:51:04.087553",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Service Report",
