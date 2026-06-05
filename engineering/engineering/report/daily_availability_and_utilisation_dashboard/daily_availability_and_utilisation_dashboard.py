@@ -1479,7 +1479,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
         return """
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare").upper()}</div>
         <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
     </div>
 </div>
@@ -1541,7 +1541,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
     return f"""
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare").upper()}</div>
 
         <div class="isd-chart" style="min-width:{min_width}px;">
             <div class="isd-yaxis">
