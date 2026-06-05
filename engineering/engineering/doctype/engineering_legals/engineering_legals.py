@@ -1,4 +1,5 @@
 import os
+import time
 import mimetypes
 from typing import Optional
 from urllib.parse import quote
@@ -261,41 +262,69 @@ def move_engineering_legal_file_to_folder(doc: Document):
             raise
 
 
+def _safe_sharepoint_status_update(docname: str, values: dict):
+    for attempt in range(3):
+        try:
+            frappe.db.sql(
+                """
+                UPDATE `tabEngineering Legals`
+                SET
+                    sharepoint_synced = %s,
+                    sharepoint_synced_at = %s,
+                    sharepoint_sync_error = %s
+                WHERE name = %s
+                """,
+                (
+                    values.get("sharepoint_synced"),
+                    values.get("sharepoint_synced_at"),
+                    values.get("sharepoint_sync_error"),
+                    docname,
+                ),
+            )
+            frappe.db.commit()
+            return
+        except Exception:
+            frappe.db.rollback()
+            if attempt < 2:
+                time.sleep(0.5)
+                continue
+
+            frappe.log_error(
+                title="Engineering Legals SharePoint status update failed",
+                message=frappe.get_traceback(),
+            )
+
+
 def _clear_sharepoint_sync_status(docname: str):
-    frappe.db.set_value(
-        "Engineering Legals",
+    _safe_sharepoint_status_update(
         docname,
         {
             "sharepoint_synced": 0,
             "sharepoint_synced_at": None,
             "sharepoint_sync_error": None,
         },
-        update_modified=False,
     )
 
 
 def _mark_sharepoint_sync_success(docname: str):
-    frappe.db.set_value(
-        "Engineering Legals",
+    _safe_sharepoint_status_update(
         docname,
         {
             "sharepoint_synced": 1,
             "sharepoint_synced_at": now(),
             "sharepoint_sync_error": None,
         },
-        update_modified=False,
     )
 
 
 def _mark_sharepoint_sync_failure(docname: str, error_message: str):
-    frappe.db.set_value(
-        "Engineering Legals",
+    _safe_sharepoint_status_update(
         docname,
         {
             "sharepoint_synced": 0,
+            "sharepoint_synced_at": None,
             "sharepoint_sync_error": (error_message or "")[:1400],
         },
-        update_modified=False,
     )
 
 

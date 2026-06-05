@@ -1005,6 +1005,10 @@ def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asse
     return filtered_rows
 
 
+def build_summary_averages_from_source_rows(source_rows):
+    """
+
+
 def build_summary_averages_from_machine_series(machine_series):
     out = {category: {"avail": None, "util": None} for category in UI_CATEGORIES}
 
@@ -1098,17 +1102,20 @@ def fetch_grouped_data(location, start_date, end_date, machine_scope=None):
         })
     )
 
-    if isinstance(result, (list, tuple)) and len(result) > 1:
-        return result[1] or []
+    columns = []
+    rows = []
 
-    return []
+    if isinstance(result, (list, tuple)):
+        if len(result) > 0:
+            columns = result[0] or []
 
+        if len(result) > 1:
+            rows = result[1] or []
 
+    else:
+        rows = result or []
 
-    if isinstance(result, (list, tuple)) and len(result) > 1:
-        return result[1] or []
-
-    return []
+    return rows
 
 
 def to_float(value):
@@ -1334,23 +1341,23 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         av = values.get("avail")
         ut = values.get("util")
 
-        metric_cards.append(f"""
+        metric_cards.append(f'''
 <div class="isd-metric">
     <div class="isd-metric-title">{esc(category)} Avg</div>
 
     <div class="isd-pill-row">
-        <div class="isd-mbubble {bubble_colour("avail", av)}">
+        <div class="isd-mbubble {bubble_colour('avail', av)}">
             <div class="isd-mbubble-label">Availability</div>
             <div class="isd-mbubble-value">{fmt_percent(av)}</div>
         </div>
 
-        <div class="isd-mbubble {bubble_colour("util", ut)}">
+        <div class="isd-mbubble {bubble_colour('util', ut)}">
             <div class="isd-mbubble-label">Utilisation</div>
             <div class="isd-mbubble-value">{fmt_percent(ut)}</div>
         </div>
     </div>
 </div>
-""")
+''')
 
     chart_html = build_selected_summary_chart_html(
         summary_type,
@@ -1363,7 +1370,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
     )
     trend_html = build_trend_html(location, start_date, end_date)
 
-    return f"""
+    return f'''
 {DASH_CSS}
 
 <div class="isd-hourly-dashboard">
@@ -1386,7 +1393,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         </div>
     </div>
 </div>
-"""
+'''
 
 
 
@@ -1488,14 +1495,14 @@ def build_daily_summary_chart_html(location, start_date, end_date):
         all_dates = []
 
     if not all_dates:
-        return """
+        return f'''
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
         <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare").upper()}</div>
         <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
     </div>
 </div>
-"""
+'''
 
     daily_category_values = {}
 
@@ -1550,7 +1557,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
     day_template = f"repeat({total_day_count}, minmax(44px, 1fr))"
     min_width = max(1200, total_day_count * 58)
 
-    return f"""
+    return f'''
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
         <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare").upper()}</div>
@@ -1584,7 +1591,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
         </div>
     </div>
 </div>
-"""
+'''
 
 
 
@@ -1597,12 +1604,12 @@ def build_weekly_summary_chart_html(avgs):
     top_title = f"Weekly Summary- ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
     bottom_title = f"Weekly Summary- SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
 
-    return f"""
+    return f'''
 <div class="isd-chart-stack">
     {build_monthly_summary_section(top_title, top_categories, avgs)}
     {build_monthly_summary_section(bottom_title, bottom_categories, avgs)}
 </div>
-"""
+'''
 
 def build_monthly_summary_chart_html(avgs):
     top_categories = ["ADT", "Excavator", "Dozer"]
@@ -1613,12 +1620,12 @@ def build_monthly_summary_chart_html(avgs):
     top_title = f"Monthly Summary - ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
     bottom_title = f"Monthly Summary - SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
 
-    return f"""
+    return f'''
 <div class="isd-chart-stack">
     {build_monthly_summary_section(top_title, top_categories, avgs)}
     {build_monthly_summary_section(bottom_title, bottom_categories, avgs)}
 </div>
-"""
+'''
 
 def build_monthly_summary_section(title, categories, avgs):
     bars = []
@@ -1640,7 +1647,7 @@ def build_monthly_summary_section(title, categories, avgs):
     grid_template = f"repeat({len(categories) * 2}, minmax(90px, 1fr))"
     label_template = f"repeat({len(categories)}, minmax(180px, 1fr))"
 
-    return f"""
+    return f'''
 <div class="isd-chart-section">
     <div class="isd-chart-section-title">{esc(title)}</div>
 
@@ -1662,7 +1669,7 @@ def build_monthly_summary_section(title, categories, avgs):
         </div>
     </div>
 </div>
-"""
+'''
 
 
 def build_trend_html(location, start_date, end_date):
@@ -1676,36 +1683,14 @@ def build_trend_html(location, start_date, end_date):
         f"&machine_scope={quote(str(machine_scope or 'Include Swing/Spare'))}"
     )
 
-    return f"""
+    return f'''
 <div class="isd-side">
 
     <div class="isd-targets">
         <div class="isd-target-box">
 
 
-            <div id="open-avail-util-only-button"
-                 onclick="window.open('{avail_util_url}', '_blank')"
-                 style="
-                    width: 120px;
-                    min-height: 34px;
-                    border: 2px solid #0d6efd;
-                    border-radius: 6px;
-                    background: #dbeafe;
-                    color: #000000;
-                    font-size: 12px;
-                    font-weight: 800;
-                    line-height: 1.05;
-                    text-align: center;
-                    margin: 0 auto 8px auto;
-                    padding: 7px 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.20);
-                 ">
-                Open Avail Util
-            </div>
+            <div id="open-avail-util-only-button" onclick="window.open('{avail_util_url}', '_blank')" style="width:120px;min-height:34px;border:2px solid #0d6efd;border-radius:6px;background:#dbeafe;color:#000000;font-size:12px;font-weight:800;line-height:1.05;text-align:center;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:4px;box-sizing:border-box;">Open Avail Util</div>
 
 <div class="isd-target-title">Availability<br>Target</div>
             <div class="isd-target-line isd-target-line-red"></div>
@@ -1722,7 +1707,7 @@ def build_trend_html(location, start_date, end_date):
         <span class="isd-legitem"><i class="isd-legswatch isd-leg-util"></i>Utilisation</span>
     </div>
 </div>
-"""
+'''
 
 
 def build_chart_html(machine_series):
@@ -1741,12 +1726,12 @@ def build_chart_html(machine_series):
         items = machine_series.get(category) or []
 
         if not items:
-            return f"""
+            return f'''
 <div class="isd-chart-section">
     <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
     <div class="isd-no-machine-data">No machines found for {esc(title)} in the selected date range.</div>
 </div>
-"""
+'''
 
         count = max(len(items), 1)
         grid_template = f"repeat({count * 2}, minmax(18px, 1fr))"
@@ -1791,7 +1776,7 @@ def build_chart_html(machine_series):
                 f"<div class='{label_class}' title='{machine}' style='{label_style}'><span style='{label_style}'>{machine}</span></div>"
             )
 
-        return f"""
+        return f'''
 <div class="isd-chart-section">
     <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
 
@@ -1822,13 +1807,13 @@ def build_chart_html(machine_series):
         </div>
     </div>
 </div>
-"""
+'''
 
-    return f"""
+    return f'''
 <div class="isd-chart-stack">
     {''.join(chart_section(category) for category in UI_CATEGORIES)}
 </div>
-"""
+'''
 
 
 @frappe.whitelist()
@@ -1850,7 +1835,7 @@ def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, 
 
     dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows, summary_type)
 
-    html = f"""
+    html = f'''
 <!doctype html>
 <html>
 <head>
@@ -1904,7 +1889,7 @@ def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, 
     {dashboard_html}
 </body>
 </html>
-"""
+'''
 
     pdf = frappe.utils.pdf.get_pdf(html)
 
@@ -1931,7 +1916,7 @@ def build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_serie
             avail = max(0, min(100, flt(item.get("avail"))))
             util = max(0, min(100, flt(item.get("util"))))
 
-            rows.append(f"""
+            rows.append(f'''
 <tr>
     <td class="machine-label">{machine}</td>
     <td>
@@ -1943,9 +1928,9 @@ def build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_serie
         </div>
     </td>
 </tr>
-""")
+''')
 
-        sections.append(f"""
+        sections.append(f'''
 <div class="pdf-section">
     <h2>{esc(category)} AVAILABILITY &amp; UTILISATION</h2>
     <table class="pdf-chart">
@@ -1954,7 +1939,7 @@ def build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_serie
         </tbody>
     </table>
 </div>
-""")
+''')
 
     return f"""
 <!doctype html>
