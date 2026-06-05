@@ -1006,7 +1006,7 @@ def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asse
 
 
 def build_summary_averages_from_source_rows(source_rows):
-    """
+    return build_summary_averages_from_machine_series(build_machine_series_from_source_rows(source_rows))
 
 
 def build_summary_averages_from_machine_series(machine_series):
@@ -1941,7 +1941,7 @@ def build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_serie
 </div>
 ''')
 
-    return f"""
+    return f'''
 <!doctype html>
 <html>
 <head>
@@ -2091,7 +2091,7 @@ h2 {{
     {''.join(sections)}
 </body>
 </html>
-"""
+'''
 
 
 @frappe.whitelist()
