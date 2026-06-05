@@ -1044,6 +1044,7 @@ def execute(filters=None):
     start_date = filters.get("start_date") or filters.get("from_date")
     end_date = filters.get("end_date") or filters.get("to_date")
     location = filters.get("location") or filters.get("site")
+    machine_scope = filters.get("machine_scope") or "Include Swing/Spare"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -1054,18 +1055,18 @@ def execute(filters=None):
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_grouped_data(location, start_date, end_date)
+    source_rows = fetch_grouped_data(location, start_date, end_date, machine_scope)
 
     spare_swing_asset_map = get_spare_swing_asset_map(filters)
     source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, filters, spare_swing_asset_map)
 
     machine_series = build_machine_series_from_source_rows(source_rows)
-    avgs = build_summary_averages_from_machine_series(machine_series)
+    avgs = build_summary_averages_from_source_rows(source_rows)
 
     global CURRENT_SPARE_SWING_ASSET_MAP
 
     CURRENT_SPARE_SWING_ASSET_MAP = spare_swing_asset_map or {}
-    CURRENT_MACHINE_SCOPE = filters.get("machine_scope") or "Include Swing/Spare"
+    CURRENT_MACHINE_SCOPE = machine_scope
 
     dashboard_html = build_dashboard_html(
         location,
@@ -1083,15 +1084,26 @@ def execute(filters=None):
     return columns, data, dashboard_html
 
 
-def fetch_grouped_data(location, start_date, end_date):
+def fetch_grouped_data(location, start_date, end_date, machine_scope=None):
     result = month_end.execute(
         frappe._dict({
             "from_date": start_date,
             "to_date": end_date,
+            "start_date": start_date,
+            "end_date": end_date,
             "location": location,
+            "site": location,
+            "machine_scope": machine_scope or "Include Swing/Spare",
             "include_excluded_asset_categories": 1,
         })
     )
+
+    if isinstance(result, (list, tuple)) and len(result) > 1:
+        return result[1] or []
+
+    return []
+
+
 
     if isinstance(result, (list, tuple)) and len(result) > 1:
         return result[1] or []
