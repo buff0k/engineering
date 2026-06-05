@@ -8,6 +8,7 @@
  "field_order": [
   "incurred_by",
   "vehicle_registration",
+  "fleet_number",
   "section_break_iswt",
   "date",
   "odo_meter_out",
@@ -67,12 +68,20 @@
    "fieldtype": "Small Text",
    "label": "Trip",
    "reqd": 1
+  },
+  {
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Fleet Number",
+   "options": "Asset"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-04 08:14:49.600940",
+ "modified": "2026-06-05 13:57:47.411030",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Travel Log Sheet",

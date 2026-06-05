@@ -1005,8 +1005,231 @@ def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asse
     return filtered_rows
 
 
+
 def build_summary_averages_from_source_rows(source_rows):
-    return build_summary_averages_from_machine_series(build_machine_series_from_source_rows(source_rows))
+    def clean_number(value):
+        if value in (None, ""):
+            return None
+
+        if isinstance(value, str):
+            value = value.replace("%", "").replace(",", "").strip()
+
+        try:
+            return float(value)
+        except Exception:
+            return None
+
+    def norm(value):
+        return (
+            str(value or "")
+            .strip()
+            .lower()
+            .replace(" ", "")
+            .replace("_", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("%", "")
+            .replace("/", "")
+            .replace("&", "and")
+        )
+
+    category_lookup = {}
+
+    for category in UI_CATEGORIES:
+        category_lookup[norm(category)] = category
+        category_lookup[norm(UI_TITLES.get(category, category))] = category
+
+    def get_value(row, wanted_names):
+        if not isinstance(row, dict):
+            return None
+
+        for name in wanted_names:
+            if name in row:
+                return row.get(name)
+
+        wanted = {norm(name) for name in wanted_names}
+
+        for key, value in row.items():
+            if norm(key) in wanted:
+                return value
+
+        return None
+
+    def row_category(row):
+        value = get_value(row, [
+            "asset_category",
+            "Asset Category",
+            "category",
+            "Category",
+            "equipment_category",
+            "Equipment Category",
+        ])
+
+        if norm(value) in category_lookup:
+            return category_lookup[norm(value)]
+
+        try:
+            category = get_category(row)
+            if category in UI_CATEGORIES:
+                return category
+        except Exception:
+            pass
+
+        for value in row.values():
+            if norm(value) in category_lookup:
+                return category_lookup[norm(value)]
+
+        return None
+
+    def row_indent(row):
+        for key in ["indent", "_indent", "tree_indent"]:
+            if isinstance(row, dict) and key in row:
+                try:
+                    return int(row.get(key) or 0)
+                except Exception:
+                    return 0
+
+        return None
+
+    def has_machine_name(row, category):
+        value = get_value(row, [
+            "asset_name",
+            "Asset Name",
+            "machine",
+            "Machine",
+            "equipment",
+            "Equipment",
+            "plant_no",
+            "Plant No",
+            "plant_number",
+            "Plant Number",
+        ])
+
+        if value in (None, ""):
+            return False
+
+        value = str(value).strip()
+
+        if not value:
+            return False
+
+        if norm(value) == norm(category):
+            return False
+
+        return True
+
+    def percent_value(row, metric):
+        if metric == "avail":
+            names = [
+                "Avail (%)",
+                "Availability (%)",
+                "Avail %",
+                "Availability %",
+                "avail",
+                "availability",
+                "avail_percent",
+                "availability_percent",
+                "avail_percentage",
+                "availability_percentage",
+                "avail_%",
+                "availability_%",
+            ]
+
+            allowed = {
+                "avail",
+                "availability",
+                "availpercent",
+                "availabilitypercent",
+                "availpercentage",
+                "availabilitypercentage",
+            }
+
+        else:
+            names = [
+                "Util (%)",
+                "Utilisation (%)",
+                "Utilization (%)",
+                "Util %",
+                "Utilisation %",
+                "Utilization %",
+                "util",
+                "utilisation",
+                "utilization",
+                "util_percent",
+                "utilisation_percent",
+                "utilization_percent",
+                "util_percentage",
+                "utilisation_percentage",
+                "utilization_percentage",
+                "util_%",
+                "utilisation_%",
+                "utilization_%",
+            ]
+
+            allowed = {
+                "util",
+                "utilisation",
+                "utilization",
+                "utilpercent",
+                "utilisationpercent",
+                "utilizationpercent",
+                "utilpercentage",
+                "utilisationpercentage",
+                "utilizationpercentage",
+            }
+
+        for name in names:
+            if isinstance(row, dict) and name in row:
+                number = clean_number(row.get(name))
+
+                if number is not None:
+                    return number
+
+        if isinstance(row, dict):
+            for key, value in row.items():
+                key_norm = norm(key)
+
+                if "emp" in key_norm or "employee" in key_norm:
+                    continue
+
+                if key_norm in allowed:
+                    number = clean_number(value)
+
+                    if number is not None:
+                        return number
+
+        return None
+
+    avgs = {category: {"avail": 0.0, "util": 0.0} for category in UI_CATEGORIES}
+
+    for row in source_rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        category = row_category(row)
+
+        if category not in avgs:
+            continue
+
+        indent = row_indent(row)
+
+        if indent is not None and indent != 0:
+            continue
+
+        if has_machine_name(row, category):
+            continue
+
+        av = percent_value(row, "avail")
+        ut = percent_value(row, "util")
+
+        if av is not None:
+            avgs[category]["avail"] = av
+
+        if ut is not None:
+            avgs[category]["util"] = ut
+
+    return avgs
 
 
 def build_summary_averages_from_machine_series(machine_series):
@@ -1329,15 +1552,163 @@ def esc(value):
     return frappe.utils.escape_html(str(value or ""))
 
 
+
+
+
+
+
+
+
+def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_date, machine_scope):
+    """
+    ADT, Dozer, Excavator cards for all summary types.
+    Reads Production > Avail and Util report top rows only.
+    """
+    out = {
+        "ADT": {"avail": 0.0, "util": 0.0},
+        "Dozer": {"avail": 0.0, "util": 0.0},
+        "Excavator": {"avail": 0.0, "util": 0.0},
+    }
+
+    def clean_number(value):
+        if value in (None, ""):
+            return None
+        if isinstance(value, str):
+            value = value.replace("%", "").replace(",", "").strip()
+        try:
+            return float(value)
+        except Exception:
+            return None
+
+    def norm(value):
+        return (
+            str(value or "")
+            .strip()
+            .lower()
+            .replace(" ", "")
+            .replace("_", "")
+            .replace("-", "")
+            .replace("'", "")
+        )
+
+    category_map = {
+        "adt": "ADT",
+        "adts": "ADT",
+        "dozer": "Dozer",
+        "dozers": "Dozer",
+        "excavator": "Excavator",
+        "excavators": "Excavator",
+    }
+
+    try:
+        from frappe.desk.query_report import run
+
+        report_data = run(
+            "Avail and Util report",
+            filters={
+                "start_date": start_date,
+                "end_date": end_date,
+                "from_date": start_date,
+                "to_date": end_date,
+                "location": location,
+                "site": location,
+                "machine_scope": machine_scope or "Production Machines",
+            },
+            ignore_prepared_report=True,
+        )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Dashboard ADT Dozer Excavator Cards Error")
+        return out
+
+    rows = []
+
+    if isinstance(report_data, dict):
+        rows = report_data.get("result") or report_data.get("data") or []
+    elif isinstance(report_data, (list, tuple)) and len(report_data) > 1:
+        rows = report_data[1] or []
+    elif isinstance(report_data, list):
+        rows = report_data
+
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        try:
+            indent = int(row.get("indent") or 0)
+        except Exception:
+            indent = 0
+
+        if indent != 0:
+            continue
+
+        raw_category = (
+            row.get("asset_category")
+            or row.get("Asset Category")
+            or row.get("category")
+            or row.get("Category")
+            or ""
+        )
+
+        category = category_map.get(norm(raw_category))
+
+        if category not in out:
+            continue
+
+        avail = clean_number(
+            row.get("plant_shift_availability")
+            if row.get("plant_shift_availability") not in (None, "")
+            else row.get("Avail (%)")
+        )
+
+        util = clean_number(
+            row.get("plant_shift_utilisation")
+            if row.get("plant_shift_utilisation") not in (None, "")
+            else row.get("Util (%)")
+        )
+
+        if avail is not None:
+            out[category]["avail"] = avail
+
+        if util is not None:
+            out[category]["util"] = util
+
+    return out
+
+
+
 def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Daily Summary"):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Daily Summary")
     header_colour = SITE_HEADER_COLOURS.get(location, "#f7f7f7")
+    adt_dozer_excavator_cards_all_summary_types = get_adt_dozer_excavator_cards_all_summary_types(
+        location,
+        start_date,
+        end_date,
+        CURRENT_MACHINE_SCOPE or "Production Machines"
+    )
+
+    # IMPORTANT:
+    # Build the graph from the same ADT / Dozer / Excavator values as the cards.
+    # This must happen BEFORE chart_html is created.
+    avgs = dict(avgs or {})
+
+    for _cat in ("ADT", "Dozer", "Excavator"):
+        _forced_vals = adt_dozer_excavator_cards_all_summary_types.get(_cat)
+
+        if _forced_vals:
+            _current_vals = dict(avgs.get(_cat) or {})
+            _current_vals["avail"] = _forced_vals.get("avail", _current_vals.get("avail"))
+            _current_vals["util"] = _forced_vals.get("util", _current_vals.get("util"))
+            avgs[_cat] = _current_vals
 
     metric_cards = []
 
     for category in UI_CATEGORIES:
         values = avgs.get(category) or {}
+
+        if category in ("ADT", "Dozer", "Excavator"):
+            values = adt_dozer_excavator_cards_all_summary_types.get(category) or values
+
         av = values.get("avail")
         ut = values.get("util")
 
