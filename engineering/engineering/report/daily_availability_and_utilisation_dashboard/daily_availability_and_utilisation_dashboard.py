@@ -1031,6 +1031,7 @@ def build_summary_averages_from_machine_series(machine_series):
     return out
 
 def execute(filters=None):
+    global CURRENT_MACHINE_SCOPE
     filters = frappe._dict(filters or {})
 
     if filters.get("site") and not filters.get("location"):
@@ -1062,7 +1063,6 @@ def execute(filters=None):
     avgs = build_summary_averages_from_machine_series(machine_series)
 
     global CURRENT_SPARE_SWING_ASSET_MAP
-    global CURRENT_MACHINE_SCOPE
 
     CURRENT_SPARE_SWING_ASSET_MAP = spare_swing_asset_map or {}
     CURRENT_MACHINE_SCOPE = filters.get("machine_scope") or "Include Swing/Spare"
@@ -1412,9 +1412,40 @@ def daily_height(value):
     if value is None:
         return 2
 
-    value = max(0.0, min(100.0, float(value)))
-    return max(2, int(round(value * 2.6)))
+    try:
+        value = float(value)
+    except Exception:
+        return 2
 
+    value = max(0.0, min(100.0, value))
+
+    if value <= 0:
+        return 2
+
+    # Align bars with Y-axis percentage scale.
+    # Chart plot height is 220px:
+    # 100% = 220px
+    # 75%  = 165px
+    # 62.5% = 138px
+    return max(2, int(round((value / 100.0) * 220)))
+
+
+
+def dashboard_bar_height(value):
+    if value is None:
+        return 2
+
+    try:
+        value = float(value)
+    except Exception:
+        return 2
+
+    value = max(0.0, min(100.0, value))
+
+    if value <= 0:
+        return 2
+
+    return max(2, int(round((value / 100.0) * 220)))
 
 def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date):
     summary_type = summary_type or "Daily Summary"
@@ -1448,7 +1479,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
         return """
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
         <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
     </div>
 </div>
@@ -1510,7 +1541,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
     return f"""
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
 
         <div class="isd-chart" style="min-width:{min_width}px;">
             <div class="isd-yaxis">
@@ -1549,25 +1580,33 @@ def build_weekly_summary_chart_html(avgs):
     top_categories = ["ADT", "Excavator", "Dozer"]
     bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
 
+    machine_scope_safe = esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")
+
+    top_title = f"Weekly Summary- ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
+    bottom_title = f"Weekly Summary- SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
+
     return f"""
 <div class="isd-chart-stack">
-    {build_monthly_summary_section("WEEKLY SUMMARY - ADT / EXCAVATOR / DOZER", top_categories, avgs)}
-    {build_monthly_summary_section("WEEKLY SUMMARY - SUPPORT EQUIPMENT & DRILLS", bottom_categories, avgs)}
+    {build_monthly_summary_section(top_title, top_categories, avgs)}
+    {build_monthly_summary_section(bottom_title, bottom_categories, avgs)}
 </div>
 """
-
 
 def build_monthly_summary_chart_html(avgs):
     top_categories = ["ADT", "Excavator", "Dozer"]
     bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
 
+    machine_scope_safe = esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")
+
+    top_title = f"Monthly Summary - ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
+    bottom_title = f"Monthly Summary - SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
+
     return f"""
 <div class="isd-chart-stack">
-    {build_monthly_summary_section("MONTHLY SUMMARY - ADT / EXCAVATOR / DOZER", top_categories, avgs)}
-    {build_monthly_summary_section("MONTHLY SUMMARY - SUPPORT EQUIPMENT & DRILLS", bottom_categories, avgs)}
+    {build_monthly_summary_section(top_title, top_categories, avgs)}
+    {build_monthly_summary_section(bottom_title, bottom_categories, avgs)}
 </div>
 """
-
 
 def build_monthly_summary_section(title, categories, avgs):
     bars = []
@@ -1692,7 +1731,7 @@ def build_chart_html(machine_series):
         if not items:
             return f"""
 <div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
     <div class="isd-no-machine-data">No machines found for {esc(title)} in the selected date range.</div>
 </div>
 """
@@ -1742,7 +1781,7 @@ def build_chart_html(machine_series):
 
         return f"""
 <div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
 
     <div class="isd-chart" style="min-width:{min_width}px;">
         <div class="isd-yaxis">
