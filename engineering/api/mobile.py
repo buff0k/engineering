@@ -313,7 +313,18 @@ def get_mobile_employee_lookup(modified_after=None):
     if not user or user == "Guest":
         frappe.throw("Not logged in")
 
-    if not frappe.has_permission("Employee", "select", user=user):
+    roles = frappe.get_roles(user)
+    if not _has_any_role(
+        roles,
+        [
+            "Parts Driver",
+            "Mechanic",
+            "Engineering User",
+            "Engineering Manager",
+            "Engineering Plant Manager",
+            "System Manager",
+        ],
+    ):
         frappe.throw("You may not select Employee records", frappe.PermissionError)
 
     filters = {}
