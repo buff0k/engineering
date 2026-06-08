@@ -212,7 +212,7 @@ def _require_parts_driver(user):
 
 
 @frappe.whitelist()
-def get_last_travel_log_odo(vehicle_registration=None):
+def get_last_travel_log_odo(fleet_number=None, vehicle_registration=None):
     user = frappe.session.user
 
     if not user or user == "Guest":
@@ -220,16 +220,21 @@ def get_last_travel_log_odo(vehicle_registration=None):
 
     _require_parts_driver(user)
 
-    if not vehicle_registration:
+    if not fleet_number and not vehicle_registration:
         return {
             "odo_meter_out": None,
         }
 
+    filters = {}
+
+    if fleet_number:
+        filters["fleet_number"] = fleet_number
+    else:
+        filters["vehicle_registration"] = vehicle_registration
+
     rows = frappe.get_all(
         "Travel Log Sheet",
-        filters={
-            "vehicle_registration": vehicle_registration,
-        },
+        filters=filters,
         fields=[
             "name",
             "odo_meter_in",
@@ -265,7 +270,7 @@ def create_travel_log_sheet(data):
 
     required_fields = [
         "incurred_by",
-        "vehicle_registration",
+        "fleet_number",
         "date",
         "odo_meter_out",
         "odo_meter_in",
@@ -285,6 +290,7 @@ def create_travel_log_sheet(data):
     doc = frappe.get_doc({
         "doctype": "Travel Log Sheet",
         "incurred_by": data.get("incurred_by"),
+        "fleet_number": data.get("fleet_number"),
         "vehicle_registration": data.get("vehicle_registration"),
         "date": data.get("date"),
         "odo_meter_out": odo_meter_out,

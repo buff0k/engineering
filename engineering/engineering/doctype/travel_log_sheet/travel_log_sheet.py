@@ -21,7 +21,7 @@ class TravelLogSheet(Document):
             frappe.throw("ODO Meter In cannot be less than ODO Meter Out")
 
     def set_previous_odo_meter_out(self):
-        if not self.vehicle_registration:
+        if not self.fleet_number:
             return
 
         if self.odo_meter_out not in [None, "", 0]:
@@ -30,7 +30,7 @@ class TravelLogSheet(Document):
         previous_odo = frappe.db.get_value(
             "Travel Log Sheet",
             {
-                "vehicle_registration": self.vehicle_registration,
+                "fleet_number": self.fleet_number,
                 "name": ["!=", self.name],
             },
             "odo_meter_in",

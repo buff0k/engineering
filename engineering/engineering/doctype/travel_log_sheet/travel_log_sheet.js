@@ -1,13 +1,13 @@
 frappe.ui.form.on("Travel Log Sheet", {
-    vehicle_registration(frm) {
-        if (!frm.doc.vehicle_registration) {
+    fleet_number(frm) {
+        if (!frm.doc.fleet_number) {
             return;
         }
 
         frappe.call({
             method: "engineering.api.mobile.get_last_travel_log_odo",
             args: {
-                vehicle_registration: frm.doc.vehicle_registration,
+                fleet_number: frm.doc.fleet_number,
             },
             callback(r) {
                 if (r.message && r.message.odo_meter_out !== null) {

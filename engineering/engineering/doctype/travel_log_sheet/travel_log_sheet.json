@@ -7,8 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "incurred_by",
-  "vehicle_registration",
   "fleet_number",
+  "vehicle_registration",
   "section_break_iswt",
   "date",
   "odo_meter_out",
@@ -31,8 +31,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Vehicle Registration",
-   "reqd": 1
+   "label": "Vehicle Registration"
   },
   {
    "fieldname": "date",
@@ -75,13 +74,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Fleet Number",
-   "options": "Asset"
+   "options": "Asset",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-05 13:57:47.411030",
+ "modified": "2026-06-08 13:28:46.968260",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Travel Log Sheet",
@@ -131,6 +131,18 @@
    "read": 1,
    "report": 1,
    "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Area Manager",
    "share": 1,
    "write": 1
   }
