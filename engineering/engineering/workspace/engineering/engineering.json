@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"pWRHR0bw7J\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Production Dashboard\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"pWRHR0bw7J\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Production Dashboard\",\"col\":6}},{\"id\":\"lKxVpGPEZa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Availability & Utilisation Dashboard\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
  "creation": "2024-12-11 11:58:53.866876",
  "custom_blocks": [],
  "docstatus": 0,
@@ -278,67 +278,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Availability and Utilisation Reports",
-   "link_count": 5,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Daily Report",
-   "link_count": 0,
-   "link_to": "Daily Availability and Utilisation Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Month End Report",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Month End Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Summary",
-   "link_count": 0,
-   "link_to": "Avail and Util summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Availability and Utilisation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Detailed per Shift Report",
-   "link_count": 0,
-   "link_to": "Avail and Util report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Availability and Utilisation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown and Standby Machine Report",
-   "link_count": 0,
-   "link_to": "Availability and utilization Asset timeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Legals",
    "link_count": 1,
    "link_type": "DocType",
@@ -609,9 +548,58 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Availability and Utilisation Reports",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "A & U Month End Report",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation Month End Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "A & U Summary",
+   "link_count": 0,
+   "link_to": "Avail and Util summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "A & U Detailed per Shift Report",
+   "link_count": 0,
+   "link_to": "Avail and Util report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Breakdown and Standby Machine Report",
+   "link_count": 0,
+   "link_to": "Availability and utilization Asset timeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-06-01 08:27:10.734897",
+ "modified": "2026-06-09 15:25:41.265950",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
@@ -648,6 +636,13 @@
    "link_to": "Production Efficiency",
    "stats_filter": "[]",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Daily Availability & Utilisation Dashboard",
+   "link_to": "daily-availability-dashboard",
+   "type": "Page"
   },
   {
    "color": "Grey",

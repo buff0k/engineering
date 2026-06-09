@@ -61,8 +61,6 @@ SITE_HEADER_COLOURS = {
 }
 
 
-CURRENT_SPARE_SWING_ASSET_MAP = {}
-CURRENT_MACHINE_SCOPE = "Include Swing/Spare"
 
 DASH_CSS = """
 <style>
@@ -1006,232 +1004,6 @@ def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asse
 
 
 
-def build_summary_averages_from_source_rows(source_rows):
-    def clean_number(value):
-        if value in (None, ""):
-            return None
-
-        if isinstance(value, str):
-            value = value.replace("%", "").replace(",", "").strip()
-
-        try:
-            return float(value)
-        except Exception:
-            return None
-
-    def norm(value):
-        return (
-            str(value or "")
-            .strip()
-            .lower()
-            .replace(" ", "")
-            .replace("_", "")
-            .replace("-", "")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("%", "")
-            .replace("/", "")
-            .replace("&", "and")
-        )
-
-    category_lookup = {}
-
-    for category in UI_CATEGORIES:
-        category_lookup[norm(category)] = category
-        category_lookup[norm(UI_TITLES.get(category, category))] = category
-
-    def get_value(row, wanted_names):
-        if not isinstance(row, dict):
-            return None
-
-        for name in wanted_names:
-            if name in row:
-                return row.get(name)
-
-        wanted = {norm(name) for name in wanted_names}
-
-        for key, value in row.items():
-            if norm(key) in wanted:
-                return value
-
-        return None
-
-    def row_category(row):
-        value = get_value(row, [
-            "asset_category",
-            "Asset Category",
-            "category",
-            "Category",
-            "equipment_category",
-            "Equipment Category",
-        ])
-
-        if norm(value) in category_lookup:
-            return category_lookup[norm(value)]
-
-        try:
-            category = get_category(row)
-            if category in UI_CATEGORIES:
-                return category
-        except Exception:
-            pass
-
-        for value in row.values():
-            if norm(value) in category_lookup:
-                return category_lookup[norm(value)]
-
-        return None
-
-    def row_indent(row):
-        for key in ["indent", "_indent", "tree_indent"]:
-            if isinstance(row, dict) and key in row:
-                try:
-                    return int(row.get(key) or 0)
-                except Exception:
-                    return 0
-
-        return None
-
-    def has_machine_name(row, category):
-        value = get_value(row, [
-            "asset_name",
-            "Asset Name",
-            "machine",
-            "Machine",
-            "equipment",
-            "Equipment",
-            "plant_no",
-            "Plant No",
-            "plant_number",
-            "Plant Number",
-        ])
-
-        if value in (None, ""):
-            return False
-
-        value = str(value).strip()
-
-        if not value:
-            return False
-
-        if norm(value) == norm(category):
-            return False
-
-        return True
-
-    def percent_value(row, metric):
-        if metric == "avail":
-            names = [
-                "Avail (%)",
-                "Availability (%)",
-                "Avail %",
-                "Availability %",
-                "avail",
-                "availability",
-                "avail_percent",
-                "availability_percent",
-                "avail_percentage",
-                "availability_percentage",
-                "avail_%",
-                "availability_%",
-            ]
-
-            allowed = {
-                "avail",
-                "availability",
-                "availpercent",
-                "availabilitypercent",
-                "availpercentage",
-                "availabilitypercentage",
-            }
-
-        else:
-            names = [
-                "Util (%)",
-                "Utilisation (%)",
-                "Utilization (%)",
-                "Util %",
-                "Utilisation %",
-                "Utilization %",
-                "util",
-                "utilisation",
-                "utilization",
-                "util_percent",
-                "utilisation_percent",
-                "utilization_percent",
-                "util_percentage",
-                "utilisation_percentage",
-                "utilization_percentage",
-                "util_%",
-                "utilisation_%",
-                "utilization_%",
-            ]
-
-            allowed = {
-                "util",
-                "utilisation",
-                "utilization",
-                "utilpercent",
-                "utilisationpercent",
-                "utilizationpercent",
-                "utilpercentage",
-                "utilisationpercentage",
-                "utilizationpercentage",
-            }
-
-        for name in names:
-            if isinstance(row, dict) and name in row:
-                number = clean_number(row.get(name))
-
-                if number is not None:
-                    return number
-
-        if isinstance(row, dict):
-            for key, value in row.items():
-                key_norm = norm(key)
-
-                if "emp" in key_norm or "employee" in key_norm:
-                    continue
-
-                if key_norm in allowed:
-                    number = clean_number(value)
-
-                    if number is not None:
-                        return number
-
-        return None
-
-    avgs = {category: {"avail": 0.0, "util": 0.0} for category in UI_CATEGORIES}
-
-    for row in source_rows or []:
-        if not isinstance(row, dict):
-            continue
-
-        category = row_category(row)
-
-        if category not in avgs:
-            continue
-
-        indent = row_indent(row)
-
-        if indent is not None and indent != 0:
-            continue
-
-        if has_machine_name(row, category):
-            continue
-
-        av = percent_value(row, "avail")
-        ut = percent_value(row, "util")
-
-        if av is not None:
-            avgs[category]["avail"] = av
-
-        if ut is not None:
-            avgs[category]["util"] = ut
-
-    return avgs
-
-
 def build_summary_averages_from_machine_series(machine_series):
     out = {category: {"avail": None, "util": None} for category in UI_CATEGORIES}
 
@@ -1258,7 +1030,6 @@ def build_summary_averages_from_machine_series(machine_series):
     return out
 
 def execute(filters=None):
-    global CURRENT_MACHINE_SCOPE
     filters = frappe._dict(filters or {})
 
     if filters.get("site") and not filters.get("location"):
@@ -1290,10 +1061,6 @@ def execute(filters=None):
     machine_series = build_machine_series_from_source_rows(source_rows)
     avgs = build_summary_averages_from_source_rows(source_rows)
 
-    global CURRENT_SPARE_SWING_ASSET_MAP
-
-    CURRENT_SPARE_SWING_ASSET_MAP = spare_swing_asset_map or {}
-    CURRENT_MACHINE_SCOPE = machine_scope
 
     dashboard_html = build_dashboard_html(
         location,
@@ -1302,7 +1069,9 @@ def execute(filters=None):
         avgs,
         machine_series,
         source_rows,
-        summary_type
+        summary_type,
+        machine_scope,
+        spare_swing_asset_map
     )
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
@@ -1676,7 +1445,7 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 
 
 
-def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Daily Summary"):
+def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Daily Summary", machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Daily Summary")
     header_colour = SITE_HEADER_COLOURS.get(location, "#f7f7f7")
@@ -1684,7 +1453,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         location,
         start_date,
         end_date,
-        CURRENT_MACHINE_SCOPE or "Production Machines"
+        machine_scope or "Production Machines"
     )
 
     # IMPORTANT:
@@ -1737,9 +1506,11 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         avgs,
         machine_series,
         start_date,
-        end_date
+        end_date,
+        machine_scope,
+        spare_swing_asset_map
     )
-    trend_html = build_trend_html(location, start_date, end_date)
+    trend_html = build_trend_html(location, start_date, end_date, machine_scope)
 
     return f'''
 {DASH_CSS}
@@ -1837,22 +1608,22 @@ def dashboard_bar_height(value):
 
     return max(2, int(round((value / 100.0) * 220)))
 
-def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date):
+def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date, machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
     summary_type = summary_type or "Daily Summary"
 
     if summary_type == "Daily Summary":
-        return build_daily_summary_chart_html(location, start_date, end_date)
+        return build_daily_summary_chart_html(location, start_date, end_date, machine_scope)
 
     if summary_type == "Weekly Summary":
-        return build_weekly_summary_chart_html(avgs)
+        return build_weekly_summary_chart_html(avgs, machine_scope)
 
     if summary_type == "Monthly Summary":
-        return build_monthly_summary_chart_html(avgs)
+        return build_monthly_summary_chart_html(avgs, machine_scope)
 
-    return build_chart_html(machine_series)
+    return build_chart_html(machine_series, machine_scope, spare_swing_asset_map)
 
 
-def build_daily_summary_chart_html(location, start_date, end_date):
+def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Include Swing/Spare"):
     all_dates = []
 
     try:
@@ -1869,7 +1640,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
         return f'''
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare").upper()}</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare").upper()}</div>
         <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
     </div>
 </div>
@@ -1878,7 +1649,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
     daily_category_values = {}
 
     for date_value in all_dates:
-        day_rows = fetch_grouped_data(location, date_value, date_value)
+        day_rows = fetch_grouped_data(location, date_value, date_value, machine_scope)
         day_avgs = build_summary_averages_from_source_rows(day_rows)
 
         for category in UI_CATEGORIES:
@@ -1931,7 +1702,7 @@ def build_daily_summary_chart_html(location, start_date, end_date):
     return f'''
 <div class="isd-chart-stack">
     <div class="isd-chart-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare").upper()}</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare").upper()}</div>
 
         <div class="isd-chart" style="min-width:{min_width}px;">
             <div class="isd-yaxis">
@@ -1966,11 +1737,11 @@ def build_daily_summary_chart_html(location, start_date, end_date):
 
 
 
-def build_weekly_summary_chart_html(avgs):
+def build_weekly_summary_chart_html(avgs, machine_scope="Include Swing/Spare"):
     top_categories = ["ADT", "Excavator", "Dozer"]
     bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
 
-    machine_scope_safe = esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")
+    machine_scope_safe = esc(machine_scope or "Include Swing/Spare")
 
     top_title = f"Weekly Summary- ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
     bottom_title = f"Weekly Summary- SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
@@ -1982,11 +1753,11 @@ def build_weekly_summary_chart_html(avgs):
 </div>
 '''
 
-def build_monthly_summary_chart_html(avgs):
+def build_monthly_summary_chart_html(avgs, machine_scope="Include Swing/Spare"):
     top_categories = ["ADT", "Excavator", "Dozer"]
     bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
 
-    machine_scope_safe = esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")
+    machine_scope_safe = esc(machine_scope or "Include Swing/Spare")
 
     top_title = f"Monthly Summary - ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
     bottom_title = f"Monthly Summary - SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
@@ -2043,8 +1814,7 @@ def build_monthly_summary_section(title, categories, avgs):
 '''
 
 
-def build_trend_html(location, start_date, end_date):
-    machine_scope = CURRENT_MACHINE_SCOPE or "Include Swing/Spare"
+def build_trend_html(location, start_date, end_date, machine_scope="Include Swing/Spare"):
 
     avail_util_url = (
         "/app/query-report/Avail%20and%20Util%20report"
@@ -2081,9 +1851,9 @@ def build_trend_html(location, start_date, end_date):
 '''
 
 
-def build_chart_html(machine_series):
-    spare_swing_asset_map = CURRENT_SPARE_SWING_ASSET_MAP or {}
-    machine_scope = CURRENT_MACHINE_SCOPE or "Include Swing/Spare"
+def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
+    spare_swing_asset_map = spare_swing_asset_map or {}
+    machine_scope = machine_scope or "Include Swing/Spare"
 
     def height(value):
         if value is None:
@@ -2099,7 +1869,7 @@ def build_chart_html(machine_series):
         if not items:
             return f'''
 <div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare")}</div>
     <div class="isd-no-machine-data">No machines found for {esc(title)} in the selected date range.</div>
 </div>
 '''
@@ -2149,7 +1919,7 @@ def build_chart_html(machine_series):
 
         return f'''
 <div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}{esc(CURRENT_MACHINE_SCOPE or "Include Swing/Spare")}</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare")}</div>
 
     <div class="isd-chart" style="min-width:{min_width}px;">
         <div class="isd-yaxis">
@@ -2188,8 +1958,10 @@ def build_chart_html(machine_series):
 
 
 @frappe.whitelist()
-def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, site=None):
+def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
     location = location or site
+    summary_type = summary_type or "Daily Summary"
+    machine_scope = machine_scope or "Include Swing/Spare"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -2200,11 +1972,13 @@ def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, 
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_grouped_data(location, start_date, end_date)
+    source_rows = fetch_grouped_data(location, start_date, end_date, machine_scope)
+    spare_swing_asset_map = get_spare_swing_asset_map(frappe._dict({"start_date": start_date, "end_date": end_date, "location": location, "site": location, "machine_scope": machine_scope}))
+    source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, frappe._dict({"machine_scope": machine_scope}), spare_swing_asset_map)
     avgs = build_summary_averages_from_source_rows(source_rows)
     machine_series = build_machine_series_from_source_rows(source_rows)
 
-    dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows, summary_type)
+    dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows, summary_type, machine_scope, spare_swing_asset_map)
 
     html = f'''
 <!doctype html>
@@ -2466,8 +2240,9 @@ h2 {{
 
 
 @frappe.whitelist()
-def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=None, site=None):
+def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=None, site=None, machine_scope=None):
     location = location or site
+    machine_scope = machine_scope or "Include Swing/Spare"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -2478,7 +2253,9 @@ def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=Non
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_grouped_data(location, start_date, end_date)
+    source_rows = fetch_grouped_data(location, start_date, end_date, machine_scope)
+    spare_swing_asset_map = get_spare_swing_asset_map(frappe._dict({"start_date": start_date, "end_date": end_date, "location": location, "site": location, "machine_scope": machine_scope}))
+    source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, frappe._dict({"machine_scope": machine_scope}), spare_swing_asset_map)
     avgs = build_summary_averages_from_source_rows(source_rows)
     machine_series = build_machine_series_from_source_rows(source_rows)
 
@@ -2492,3 +2269,146 @@ def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=Non
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "download"
 
+@frappe.whitelist()
+def get_daily_availability_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+    location = location or site
+    summary_type = summary_type or "Daily Summary"
+    machine_scope = machine_scope or "Include Swing/Spare"
+
+    if not start_date:
+        frappe.throw("Please select Start Date.")
+
+    if not end_date:
+        frappe.throw("Please select End Date.")
+
+    if not location:
+        frappe.throw("Please select Site.")
+
+    columns, data, dashboard_html = execute(
+        frappe._dict({
+            "start_date": start_date,
+            "end_date": end_date,
+            "from_date": start_date,
+            "to_date": end_date,
+            "location": location,
+            "site": location,
+            "summary_type": summary_type,
+            "machine_scope": machine_scope,
+        })
+    )
+
+    return dashboard_html
+
+
+
+@frappe.whitelist()
+def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+    location = location or site
+    summary_type = summary_type or "Daily Summary"
+    machine_scope = machine_scope or "Include Swing/Spare"
+
+    if not start_date:
+        frappe.throw("Please select Start Date.")
+
+    if not end_date:
+        frappe.throw("Please select End Date.")
+
+    if not location:
+        frappe.throw("Please select Site.")
+
+    result = execute(
+        frappe._dict({
+            "start_date": start_date,
+            "end_date": end_date,
+            "from_date": start_date,
+            "to_date": end_date,
+            "location": location,
+            "site": location,
+            "summary_type": summary_type,
+            "machine_scope": machine_scope,
+        })
+    )
+
+    if isinstance(result, (list, tuple)) and len(result) >= 3:
+        return result[2]
+
+    frappe.throw("Dashboard HTML was not returned by the page.")
+
+
+@frappe.whitelist()
+def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+    from frappe.utils.pdf import get_pdf
+    from frappe.utils import now_datetime
+
+    location = location or site
+    summary_type = summary_type or "Daily Summary"
+    machine_scope = machine_scope or "Include Swing/Spare"
+
+    html = get_dashboard_html(
+        start_date=start_date,
+        end_date=end_date,
+        location=location,
+        site=site,
+        summary_type=summary_type,
+        machine_scope=machine_scope,
+    )
+
+    full_html = f"""
+    <!doctype html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                size: A4 landscape;
+                margin: 6mm;
+            }}
+
+            body {{
+                margin: 0;
+                padding: 0;
+                background: #ffffff;
+                font-family: Arial, sans-serif;
+            }}
+
+            .layout-main-section,
+            .page-container,
+            .container {{
+                width: 100% !important;
+                max-width: none !important;
+            }}
+        </style>
+    </head>
+    <body>
+        {html}
+    </body>
+    </html>
+    """
+
+    pdf = get_pdf(
+        full_html,
+        options={
+            "orientation": "Landscape",
+            "page-size": "A4",
+            "margin-top": "6mm",
+            "margin-right": "6mm",
+            "margin-bottom": "6mm",
+            "margin-left": "6mm",
+            "encoding": "UTF-8",
+            "disable-smart-shrinking": None,
+            "print-media-type": None,
+        },
+    )
+
+    safe_location = str(location or "site").replace(" ", "_")
+    safe_summary = str(summary_type or "summary").replace(" ", "_")
+    safe_scope = str(machine_scope or "scope").replace(" ", "_").replace("/", "_")
+    safe_start = str(start_date or "")
+    safe_end = str(end_date or "")
+    timestamp = now_datetime().strftime("%Y%m%d_%H%M%S")
+
+    filename = f"Daily_Availability_Dashboard_{safe_summary}_{safe_scope}_{safe_location}_{safe_start}_to_{safe_end}_{timestamp}.pdf"
+
+    frappe.local.response.filename = filename
+    frappe.local.response.filecontent = pdf
+    frappe.local.response.type = "download"

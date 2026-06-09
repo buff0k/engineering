@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{date}-{incurred_by}-{######}",
+ "autoname": "format:{date}-{incurred_by}-{fleet_number}-{######}",
  "creation": "2026-05-15 09:21:02.211399",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -81,7 +81,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-08 13:28:46.968260",
+ "modified": "2026-06-08 15:09:22.407428",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Travel Log Sheet",
