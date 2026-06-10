@@ -1,6 +1,9 @@
 # Copyright (c) 2026, Isambane Mining (Pty) Ltd
 # For license information, please see license.txt
 
+import csv
+import io
+
 import frappe
 from frappe import _
 from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
@@ -343,9 +346,10 @@ def get_data(filters):
 
 
 @frappe.whitelist()
-def save_downtime_signoff(report_date, shift, signature):
+def save_downtime_signoff(report_date, site, asset_category, shift, signature):
     report_date = getdate(report_date)
-    shift = shift or "All Shifts"
+    signoff_shift = shift or ""
+    report_shift = shift or "All Shifts"
     user = frappe.session.user
     roles = frappe.get_roles(user)
     full_name = frappe.db.get_value("User", user, "full_name") or user
@@ -362,33 +366,36 @@ def save_downtime_signoff(report_date, shift, signature):
     if not is_production_user and not is_engineering_user:
         frappe.throw(_("Only Production Supervisor, Production Foreman, Engineering Supervisor, or Engineering Foreman can sign this report."))
 
-    parent = get_or_create_signoff_parent(report_date, shift)
-    row = get_or_create_signoff_row(parent, report_date, shift)
+    parent = get_or_create_signoff_parent(report_date, signoff_shift)
+    row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
     if is_production_user:
         row.data_date_p = report_date
         row.date_time_p = now_datetime()
-        row.shift_p = shift
+        row.shift_p = signoff_shift
         row.production_user = full_name
         row.production_signature = signature
 
     if is_engineering_user:
         row.data_date_e = report_date
         row.date_time_e = now_datetime()
-        row.shift_e = shift
+        row.shift_e = signoff_shift
         row.engineering_user = full_name
         row.engineering_signature = signature
 
     parent.status = get_signoff_status(row)
     parent.save(ignore_permissions=True)
 
-    new_name = make_signoff_name(row, report_date, shift)
+    new_name = make_signoff_name(row, report_date, report_shift)
 
     if parent.name != new_name:
         if frappe.db.exists("Mechanical Downtime sign-off", new_name):
             frappe.throw(_("A sign-off already exists with this name: {0}").format(new_name))
 
         frappe.rename_doc("Mechanical Downtime sign-off", parent.name, new_name, force=True)
+        parent = frappe.get_doc("Mechanical Downtime sign-off", new_name)
+
+    attach_signed_report_csv(parent, report_date, site, asset_category, signoff_shift)
 
     return _("Downtime sign-off saved. Status: {0}").format(parent.status)
 
@@ -470,3 +477,44 @@ def clean_docname(value):
     value = " ".join(value.split())
 
     return value
+
+
+def attach_signed_report_csv(parent, report_date, site, asset_category, shift):
+    filters = frappe._dict({
+        "report_date": report_date,
+        "site": site,
+        "asset_category": asset_category,
+        "shift": shift,
+    })
+
+    columns = get_columns()
+    data = get_data(filters)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([column.get("label") for column in columns])
+
+    for row in data:
+        writer.writerow([
+            row.get(column.get("fieldname"))
+            for column in columns
+        ])
+
+    file_name = "Down Time {0} {1}.csv".format(
+        report_date,
+        shift or "All Shifts",
+    )
+
+    file_doc = frappe.get_doc({
+        "doctype": "File",
+        "file_name": file_name,
+        "attached_to_doctype": "Mechanical Downtime sign-off",
+        "attached_to_name": parent.name,
+        "is_private": 1,
+        "content": output.getvalue(),
+    })
+
+    file_doc.insert(ignore_permissions=True)
+
+    parent.db_set("signed_report_csv", file_doc.file_url, update_modified=False)

@@ -82,7 +82,9 @@ function add_signoff_button(report) {
                     method: "engineering.engineering.report.down_time.down_time.save_downtime_signoff",
                     args: {
                         report_date: report_date,
-                        shift: frappe.query_report.get_filter_value("shift") || "All Shifts",
+                        site: frappe.query_report.get_filter_value("site") || "",
+                        asset_category: frappe.query_report.get_filter_value("asset_category") || "",
+                        shift: frappe.query_report.get_filter_value("shift") || "",
                         signature: values.signature
                     },
                     freeze: true,

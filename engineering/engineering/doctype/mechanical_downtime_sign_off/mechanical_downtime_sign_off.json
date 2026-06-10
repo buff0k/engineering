@@ -6,7 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "signoff_information",
-  "status"
+  "status",
+  "signed_report_csv"
  ],
  "fields": [
   {
@@ -23,12 +24,18 @@
    "label": "Status",
    "options": "Open\nClosed",
    "reqd": 1
+  },
+  {
+   "fieldname": "signed_report_csv",
+   "fieldtype": "Attach",
+   "label": "Signed Report",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-10 13:14:25.180648",
+ "modified": "2026-06-10 14:50:50.789033",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Downtime sign-off",
