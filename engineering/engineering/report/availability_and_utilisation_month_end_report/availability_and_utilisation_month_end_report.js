@@ -268,13 +268,41 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 			line: "#dbeafe",
 		};
 
+	const format_total_time = function(start_datetime, resolved_datetime) {
+		if (!start_datetime || !resolved_datetime) {
+			return "Open";
+		}
+
+		const start = moment(start_datetime);
+		const resolved = moment(resolved_datetime);
+
+		if (!start.isValid() || !resolved.isValid() || resolved.isBefore(start)) {
+			return "-";
+		}
+
+		const total_minutes = resolved.diff(start, "minutes");
+		const hours = Math.floor(total_minutes / 60);
+		const minutes = total_minutes % 60;
+
+		if (hours && minutes) {
+			return `${hours}h ${minutes}m`;
+		}
+
+		if (hours) {
+			return `${hours}h`;
+		}
+
+		return `${minutes}m`;
+	};
+
 	const has_times = details.some(detail => detail.start_datetime || detail.resolved_datetime);
 
 	const header = has_times
 		? `
 			<tr style="background:${colours.head_bg};color:${colours.text};">
-				<th style="padding:8px 10px;text-align:left;width:170px;">Start</th>
-				<th style="padding:8px 10px;text-align:left;width:170px;">Resolved</th>
+				<th style="padding:8px 10px;text-align:left;width:160px;">Start</th>
+				<th style="padding:8px 10px;text-align:left;width:160px;">Resolved</th>
+				<th style="padding:8px 10px;text-align:left;width:110px;">Total Time</th>
 				<th style="padding:8px 10px;text-align:left;">Reason</th>
 			</tr>
 		`
@@ -289,6 +317,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 		const date_value = frappe.utils.escape_html(detail.date || "");
 		const start_value = frappe.utils.escape_html(detail.start_datetime || "");
 		const resolved_value = frappe.utils.escape_html(detail.resolved_datetime || "");
+		const total_time_value = frappe.utils.escape_html(format_total_time(detail.start_datetime, detail.resolved_datetime));
 		const reason_value = frappe.utils.escape_html(detail.reason || "");
 
 		if (has_times) {
@@ -299,6 +328,9 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 					</td>
 					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;">
 						${resolved_value || "Open"}
+					</td>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;">
+						${total_time_value}
 					</td>
 					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};">
 						${reason_value}
@@ -335,7 +367,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 					${header}
 				</thead>
 				<tbody>
-					${rows || `<tr><td colspan="2" style="padding:10px;">No reasons found.</td></tr>`}
+					${rows || `<tr><td colspan="4" style="padding:10px;">No reasons found.</td></tr>`}
 				</tbody>
 			</table>
 		</div>
