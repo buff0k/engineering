@@ -1,11 +1,10 @@
 # Copyright (c) 2026, Isambane Mining (Pty) Ltd
 # For license information, please see license.txt
 
-import csv
-import io
-
 import frappe
 from frappe import _
+from frappe.utils.xlsxutils import make_xlsx
+from frappe.utils.file_manager import save_file
 from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
 from datetime import timedelta
 
@@ -383,10 +382,11 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature):
         row.engineering_user = full_name
         row.engineering_signature = signature
 
+    parent.site = site
     parent.status = get_signoff_status(row)
     parent.save(ignore_permissions=True)
 
-    new_name = make_signoff_name(row, report_date, report_shift)
+    new_name = make_signoff_name(row, report_date, report_shift, site)
 
     if parent.name != new_name:
         if frappe.db.exists("Mechanical Downtime sign-off", new_name):
@@ -395,7 +395,7 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature):
         frappe.rename_doc("Mechanical Downtime sign-off", parent.name, new_name, force=True)
         parent = frappe.get_doc("Mechanical Downtime sign-off", new_name)
 
-    attach_signed_report_csv(parent, report_date, site, asset_category, signoff_shift)
+    attach_signed_report_excel(parent, report_date, site, asset_category, signoff_shift)
 
     return _("Downtime sign-off saved. Status: {0}").format(parent.status)
 
@@ -454,13 +454,16 @@ def get_signoff_status(row):
     return "Open"
 
 
-def make_signoff_name(row, report_date, shift):
+def make_signoff_name(row, report_date, shift, site):
     production_user = row.production_user or "Pending Production"
     engineering_user = row.engineering_user or "Pending Engineering"
     data_date = row.data_date_p or row.data_date_e or report_date
     shift = row.shift_p or row.shift_e or shift or "All Shifts"
 
-    return clean_docname("{0}-{1}-{2}-{3}".format(
+    site = site or "All Sites"
+
+    return clean_docname("{0}-{1}-{2}-{3}-{4}".format(
+        site,
         production_user,
         engineering_user,
         data_date,
@@ -479,7 +482,7 @@ def clean_docname(value):
     return value
 
 
-def attach_signed_report_csv(parent, report_date, site, asset_category, shift):
+def attach_signed_report_excel(parent, report_date, site, asset_category, shift):
     filters = frappe._dict({
         "report_date": report_date,
         "site": site,
@@ -490,31 +493,28 @@ def attach_signed_report_csv(parent, report_date, site, asset_category, shift):
     columns = get_columns()
     data = get_data(filters)
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    writer.writerow([column.get("label") for column in columns])
+    rows = []
+    rows.append([column.get("label") for column in columns])
 
     for row in data:
-        writer.writerow([
+        rows.append([
             row.get(column.get("fieldname"))
             for column in columns
         ])
 
-    file_name = "Down Time {0} {1}.csv".format(
+    file_name = "Down Time {0} {1}.xlsx".format(
         report_date,
         shift or "All Shifts",
     )
 
-    file_doc = frappe.get_doc({
-        "doctype": "File",
-        "file_name": file_name,
-        "attached_to_doctype": "Mechanical Downtime sign-off",
-        "attached_to_name": parent.name,
-        "is_private": 1,
-        "content": output.getvalue(),
-    })
+    xlsx_file = make_xlsx(rows, "Down Time")
 
-    file_doc.insert(ignore_permissions=True)
+    file_doc = save_file(
+        file_name,
+        xlsx_file.getvalue(),
+        "Mechanical Downtime sign-off",
+        parent.name,
+        is_private=1,
+    )
 
-    parent.db_set("signed_report_csv", file_doc.file_url, update_modified=False)
+    parent.db_set("signed_report_excel", file_doc.file_url, update_modified=False)

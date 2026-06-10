@@ -6,8 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "signoff_information",
+  "site",
   "status",
-  "signed_report_csv"
+  "signed_report_excel"
  ],
  "fields": [
   {
@@ -26,7 +27,13 @@
    "reqd": 1
   },
   {
-   "fieldname": "signed_report_csv",
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "signed_report_excel",
    "fieldtype": "Attach",
    "label": "Signed Report",
    "read_only": 1
@@ -35,7 +42,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-10 14:50:50.789033",
+ "modified": "2026-06-10 15:07:18.871171",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Downtime sign-off",
