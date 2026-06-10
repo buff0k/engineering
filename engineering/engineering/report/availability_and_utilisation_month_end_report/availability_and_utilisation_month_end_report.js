@@ -105,7 +105,7 @@ Drills`
 						border-radius:999px;
 						padding:3px 12px;
 					"
-					onclick="window.show_au_month_end_reason_dialog('${key}', '${title}', '${frappe.utils.escape_html(data.asset_name || '')}')">
+					onclick="window.show_au_month_end_reason_dialog('${key}', '${title}', '${frappe.utils.escape_html(data.asset_name || '')}', '${data.is_spare_swing_unit ? "purple" : "blue"}')">
 					View
 				</button>
 			`;
@@ -249,8 +249,24 @@ Drills`
 	}
 };
 
-window.show_au_month_end_reason_dialog = function(key, title, asset_name) {
+window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme) {
 	const details = (window.au_month_end_reason_details || {})[key] || [];
+
+	const colours = theme === "purple"
+		? {
+			border: "#7b2cbf",
+			header_bg: "#e6d6ff",
+			head_bg: "#f3e8ff",
+			text: "#4b0082",
+			line: "#eadcff",
+		}
+		: {
+			border: "#2563eb",
+			header_bg: "#dbeafe",
+			head_bg: "#eff6ff",
+			text: "#1d4ed8",
+			line: "#dbeafe",
+		};
 
 	const rows = details.map(detail => {
 		const date_value = frappe.utils.escape_html(detail.date || "");
@@ -258,10 +274,10 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name) {
 
 		return `
 			<tr>
-				<td style="padding:8px 10px;border-bottom:1px solid #eadcff;font-weight:700;white-space:nowrap;">
+				<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;">
 					${date_value || "-"}
 				</td>
-				<td style="padding:8px 10px;border-bottom:1px solid #eadcff;">
+				<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};">
 					${reason_value}
 				</td>
 			</tr>
@@ -274,14 +290,14 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name) {
 	});
 
 	dialog.$body.html(`
-		<div style="border:1px solid #7b2cbf;border-radius:10px;overflow:hidden;">
-			<div style="background:#e6d6ff;color:#4b0082;font-weight:900;padding:10px 12px;">
+		<div style="border:1px solid ${colours.border};border-radius:10px;overflow:hidden;">
+			<div style="background:${colours.header_bg};color:${colours.text};font-weight:900;padding:10px 12px;">
 				${frappe.utils.escape_html(title)} for ${frappe.utils.escape_html(asset_name || "Machine")}
 			</div>
 
 			<table style="width:100%;border-collapse:collapse;">
 				<thead>
-					<tr style="background:#f3e8ff;color:#4b0082;">
+					<tr style="background:${colours.head_bg};color:${colours.text};">
 						<th style="padding:8px 10px;text-align:left;width:130px;">Date</th>
 						<th style="padding:8px 10px;text-align:left;">Reason</th>
 					</tr>
