@@ -119,12 +119,30 @@ Drills`
 			let bg = "#fee2e2";
 			let color = "#991b1b";
 
-			if (raw_value >= 90) {
-				bg = "#dcfce7";
-				color = "#166534";
-			} else if (raw_value >= 75) {
-				bg = "#fef9c3";
-				color = "#854d0e";
+			if (column.fieldname === "avail_percent") {
+				if (raw_value >= 85) {
+					bg = "#dcfce7";
+					color = "#166534";
+				} else if (raw_value >= 75) {
+					bg = "#fef9c3";
+					color = "#854d0e";
+				}
+			} else if (column.fieldname === "util_percent") {
+				if (raw_value >= 80) {
+					bg = "#dcfce7";
+					color = "#166534";
+				} else if (raw_value >= 70) {
+					bg = "#fef9c3";
+					color = "#854d0e";
+				}
+			} else if (column.fieldname === "emp_avail_percent") {
+				if (raw_value >= 85) {
+					bg = "#dcfce7";
+					color = "#166534";
+				} else if (raw_value >= 75) {
+					bg = "#fef9c3";
+					color = "#854d0e";
+				}
 			}
 
 			return `
