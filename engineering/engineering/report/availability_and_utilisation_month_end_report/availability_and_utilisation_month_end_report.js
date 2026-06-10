@@ -268,9 +268,44 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 			line: "#dbeafe",
 		};
 
+	const has_times = details.some(detail => detail.start_datetime || detail.resolved_datetime);
+
+	const header = has_times
+		? `
+			<tr style="background:${colours.head_bg};color:${colours.text};">
+				<th style="padding:8px 10px;text-align:left;width:170px;">Start</th>
+				<th style="padding:8px 10px;text-align:left;width:170px;">Resolved</th>
+				<th style="padding:8px 10px;text-align:left;">Reason</th>
+			</tr>
+		`
+		: `
+			<tr style="background:${colours.head_bg};color:${colours.text};">
+				<th style="padding:8px 10px;text-align:left;width:130px;">Date</th>
+				<th style="padding:8px 10px;text-align:left;">Reason</th>
+			</tr>
+		`;
+
 	const rows = details.map(detail => {
 		const date_value = frappe.utils.escape_html(detail.date || "");
+		const start_value = frappe.utils.escape_html(detail.start_datetime || "");
+		const resolved_value = frappe.utils.escape_html(detail.resolved_datetime || "");
 		const reason_value = frappe.utils.escape_html(detail.reason || "");
+
+		if (has_times) {
+			return `
+				<tr>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;">
+						${start_value || "-"}
+					</td>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;">
+						${resolved_value || "Open"}
+					</td>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};">
+						${reason_value}
+					</td>
+				</tr>
+			`;
+		}
 
 		return `
 			<tr>
@@ -297,10 +332,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 
 			<table style="width:100%;border-collapse:collapse;">
 				<thead>
-					<tr style="background:${colours.head_bg};color:${colours.text};">
-						<th style="padding:8px 10px;text-align:left;width:130px;">Date</th>
-						<th style="padding:8px 10px;text-align:left;">Reason</th>
-					</tr>
+					${header}
 				</thead>
 				<tbody>
 					${rows || `<tr><td colspan="2" style="padding:10px;">No reasons found.</td></tr>`}

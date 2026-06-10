@@ -333,6 +333,8 @@ def clean_reason_details(details):
 
 	for detail in details or []:
 		date_value = str(detail.get("date") or "")[:10]
+		start_datetime = str(detail.get("start_datetime") or "")[:16]
+		resolved_datetime = str(detail.get("resolved_datetime") or "")[:16]
 		reason_value = detail.get("reason") or ""
 
 		for part in str(reason_value).replace("\n", ";").split(";"):
@@ -341,7 +343,7 @@ def clean_reason_details(details):
 			if not part:
 				continue
 
-			key = (date_value, part)
+			key = (date_value, start_datetime, resolved_datetime, part)
 
 			if key in seen:
 				continue
@@ -349,10 +351,79 @@ def clean_reason_details(details):
 			seen.add(key)
 			cleaned.append({
 				"date": date_value,
+				"start_datetime": start_datetime,
+				"resolved_datetime": resolved_datetime,
 				"reason": part,
 			})
 
 	return cleaned
+
+def get_plant_breakdown_reason_details(filters, asset_names):
+	if not asset_names:
+		return {}
+
+	if not frappe.db.exists("DocType", "Plant Breakdown or Maintenance"):
+		return {}
+
+	filters = frappe._dict(filters or {})
+
+	from_date = _month_end_get_filter_value(filters, "from_date", "start_date")
+	to_date = _month_end_get_filter_value(filters, "to_date", "end_date")
+	location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+
+	if not from_date or not to_date:
+		return {}
+
+	values = {
+		"from_datetime": f"{from_date} 00:00:00",
+		"to_datetime": f"{to_date} 23:59:59",
+		"asset_names": tuple(asset_names),
+		"plant_breakdown_trust_datetime": "2026-01-01 00:00:00",
+	}
+
+	conditions = [
+		"IFNULL(asset_name, '') != ''",
+		"IFNULL(breakdown_reason, '') != ''",
+		"IFNULL(exclude_from_au, 0) = 0",
+		"asset_name in %(asset_names)s",
+		"breakdown_start_datetime >= %(plant_breakdown_trust_datetime)s",
+		"breakdown_start_datetime >= %(from_datetime)s",
+		"breakdown_start_datetime <= %(to_datetime)s",
+	]
+
+	if location:
+		conditions.append("location = %(location)s")
+		values["location"] = location
+
+	rows = frappe.db.sql(
+		f"""
+		SELECT
+			asset_name,
+			breakdown_start_datetime,
+			resolved_datetime,
+			breakdown_reason
+		FROM `tabPlant Breakdown or Maintenance`
+		WHERE {" AND ".join(conditions)}
+		ORDER BY breakdown_start_datetime ASC
+		""",
+		values,
+		as_dict=True,
+	)
+
+	details_by_asset = {}
+
+	for row in rows:
+		start_datetime = row.get("breakdown_start_datetime")
+		resolved_datetime = row.get("resolved_datetime")
+
+		details_by_asset.setdefault(row.get("asset_name"), []).append({
+			"date": str(start_datetime or "")[:10],
+			"start_datetime": start_datetime,
+			"resolved_datetime": resolved_datetime,
+			"reason": row.get("breakdown_reason"),
+		})
+
+	return details_by_asset
 
 
 def get_breakdown_reason(row, filters):
@@ -719,7 +790,7 @@ def _month_end_direct_rows(filters):
         "machine_scope": machine_scope,
     })
 
-    reasons_by_key = {}
+    other_delay_reasons_by_key = {}
 
     for row in summary_rows:
         if row.get("indent") != 2:
@@ -728,19 +799,12 @@ def _month_end_direct_rows(filters):
         key = (row.get("asset_category"), row.get("asset_name"))
         reason_date = row.get("shift_date") or row.get("date") or row.get("posting_date") or ""
 
-        reasons_by_key.setdefault(key, {
-            "breakdown_reason_details": [],
+        other_delay_reasons_by_key.setdefault(key, {
             "other_delay_reason_details": [],
         })
 
-        if row.get("breakdown_reason"):
-            reasons_by_key[key]["breakdown_reason_details"].append({
-                "date": reason_date,
-                "reason": row.get("breakdown_reason"),
-            })
-
         if row.get("other_delay_reason"):
-            reasons_by_key[key]["other_delay_reason_details"].append({
+            other_delay_reasons_by_key[key]["other_delay_reason_details"].append({
                 "date": reason_date,
                 "reason": row.get("other_delay_reason"),
             })
@@ -792,6 +856,15 @@ def _month_end_direct_rows(filters):
         if row.asset_category in machines_by_category and row.asset_name:
             machines_by_category[row.asset_category].add(row.asset_name)
 
+    all_asset_names = sorted({
+        asset_name
+        for asset_names in machines_by_category.values()
+        for asset_name in asset_names
+        if asset_name
+    })
+
+    plant_breakdown_details_by_asset = get_plant_breakdown_reason_details(filters, all_asset_names)
+
     output = []
 
     for category in categories:
@@ -816,9 +889,9 @@ def _month_end_direct_rows(filters):
                     au_row.get("work_hrs"),
                     au_row.get("mechanical_downtime"),
                 )
-                reason_row = reasons_by_key.get((category, asset_name), {})
+                reason_row = other_delay_reasons_by_key.get((category, asset_name), {})
 
-                breakdown_details = clean_reason_details(reason_row.get("breakdown_reason_details") or [])
+                breakdown_details = clean_reason_details(plant_breakdown_details_by_asset.get(asset_name) or [])
                 other_delay_details = clean_reason_details(reason_row.get("other_delay_reason_details") or [])
 
                 machine_row["breakdown_reason_details"] = breakdown_details
