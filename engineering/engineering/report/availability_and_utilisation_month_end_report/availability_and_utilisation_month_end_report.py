@@ -479,6 +479,176 @@ def _asset_condition_and_values(categories, location):
 
     return conditions, values
 
+SPARE_SWING_PURPLE = "#e6d6ff"
+SPARE_SWING_TEXT = "#4b0082"
+
+
+def add_asset_identifiers(asset_set, asset_name):
+    if not asset_name:
+        return
+
+    value = str(asset_name).strip()
+    if not value:
+        return
+
+    asset_set.add(value)
+
+    try:
+        asset_doc = frappe.db.get_value("Asset", value, ["name", "asset_name"], as_dict=True)
+        if asset_doc:
+            if asset_doc.get("name"):
+                asset_set.add(str(asset_doc.get("name")).strip())
+            if asset_doc.get("asset_name"):
+                asset_set.add(str(asset_doc.get("asset_name")).strip())
+    except Exception:
+        pass
+
+
+def get_spare_swing_asset_map(filters):
+    filters = frappe._dict(filters or {})
+
+    start_date = _month_end_get_filter_value(filters, "from_date", "start_date")
+    end_date = _month_end_get_filter_value(filters, "to_date", "end_date")
+    location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+
+    if not start_date or not end_date:
+        return {}
+
+    args = {
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+
+    conditions = [
+        "mpp.docstatus < 2",
+        "mpp.prod_month_start_date <= %(end_date)s",
+        "mpp.prod_month_end_date >= %(start_date)s",
+    ]
+
+    if location:
+        conditions.append("mpp.location = %(location)s")
+        args["location"] = location
+
+    condition_sql = " AND ".join(conditions)
+    spare_map = {}
+
+    def add_reason(asset_name, reason):
+        identifiers = set()
+        add_asset_identifiers(identifiers, asset_name)
+
+        for identifier in identifiers:
+            spare_map.setdefault(identifier, set()).add(reason)
+
+    try:
+        truck_rows = frappe.db.sql(f"""
+            SELECT DISTINCT etl.truck AS asset_name
+            FROM `tabMonthly Production Planning` mpp
+            INNER JOIN `tabExcavator Truck Link` etl
+                ON etl.parent = mpp.name
+               AND etl.parenttype = 'Monthly Production Planning'
+            WHERE {condition_sql}
+              AND IFNULL(etl.truck, '') != ''
+              AND IFNULL(etl.excavator, '') = ''
+        """, args, as_dict=True)
+
+        for row in truck_rows:
+            add_reason(row.get("asset_name"), "Spare/Swing unit Truck")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Month End Spare/Swing Trucks")
+        frappe.clear_messages()
+
+    try:
+        excavator_rows = frappe.db.sql(f"""
+            SELECT DISTINCT etl.excavator AS asset_name
+            FROM `tabMonthly Production Planning` mpp
+            INNER JOIN `tabExcavator Truck Link` etl
+                ON etl.parent = mpp.name
+               AND etl.parenttype = 'Monthly Production Planning'
+            WHERE {condition_sql}
+              AND IFNULL(etl.excavator, '') != ''
+              AND IFNULL(etl.truck, '') = ''
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM `tabExcavator Truck Link` assigned_etl
+                  WHERE assigned_etl.parent = etl.parent
+                    AND assigned_etl.parenttype = etl.parenttype
+                    AND assigned_etl.excavator = etl.excavator
+                    AND IFNULL(assigned_etl.truck, '') != ''
+              )
+        """, args, as_dict=True)
+
+        for row in excavator_rows:
+            add_reason(row.get("asset_name"), "Spare/Swing unit Excavator")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Month End Spare/Swing Excavators")
+        frappe.clear_messages()
+
+    try:
+        dozer_rows = frappe.db.sql(f"""
+            SELECT DISTINCT dp.asset_name AS asset_name
+            FROM `tabMonthly Production Planning` mpp
+            INNER JOIN `tabDozers Planned` dp
+                ON dp.parent = mpp.name
+               AND dp.parenttype = 'Monthly Production Planning'
+            WHERE {condition_sql}
+              AND IFNULL(dp.asset_name, '') != ''
+              AND IFNULL(dp.dozing_type, '') = ''
+        """, args, as_dict=True)
+
+        for row in dozer_rows:
+            add_reason(row.get("asset_name"), "Spare/Swing unit Dozer")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Month End Spare/Swing Dozers")
+        frappe.clear_messages()
+
+    return {
+        asset_name: ", ".join(sorted(reasons))
+        for asset_name, reasons in spare_map.items()
+    }
+
+
+def is_spare_swing_asset(asset_name, spare_swing_asset_map):
+    if not asset_name or not spare_swing_asset_map:
+        return False
+
+    value = str(asset_name).strip()
+    if value in spare_swing_asset_map:
+        return True
+
+    identifiers = set()
+    add_asset_identifiers(identifiers, value)
+    return any(identifier in spare_swing_asset_map for identifier in identifiers)
+
+
+def get_spare_swing_reason(asset_name, spare_swing_asset_map):
+    if not asset_name or not spare_swing_asset_map:
+        return ""
+
+    value = str(asset_name).strip()
+    if value in spare_swing_asset_map:
+        return spare_swing_asset_map.get(value) or ""
+
+    identifiers = set()
+    add_asset_identifiers(identifiers, value)
+
+    for identifier in identifiers:
+        if identifier in spare_swing_asset_map:
+            return spare_swing_asset_map.get(identifier) or ""
+
+    return ""
+
+
+def apply_spare_swing_flags(row, spare_swing_asset_map):
+    reason = get_spare_swing_reason(row.get("asset_name"), spare_swing_asset_map)
+
+    if reason:
+        row["is_spare_swing_unit"] = 1
+        row["spare_swing_reason"] = reason
+        row["spare_swing_background"] = SPARE_SWING_PURPLE
+        row["spare_swing_text_colour"] = SPARE_SWING_TEXT
+
+    return row
+
 
 def _get_submitted_assets(categories, location):
     columns = _asset_columns()
@@ -511,11 +681,37 @@ def _month_end_direct_rows(filters):
     to_date = _month_end_get_filter_value(filters, "to_date", "end_date")
     location = _month_end_get_filter_value(filters, "location", "site", "production_site")
     selected_category = _month_end_get_filter_value(filters, "asset_category")
+    machine_scope = _month_end_get_filter_value(filters, "machine_scope") or "Include Swing/Spare"
+    spare_swing_asset_map = get_spare_swing_asset_map(filters)
 
     categories = [selected_category] if selected_category else list(MONTH_END_CATEGORIES)
 
     asset_rows = _get_submitted_assets(categories, location)
+    summary_rows = summary.get_grouped_data({
+        "start_date": from_date,
+        "end_date": to_date,
+        "location": location,
+        "machine_scope": machine_scope,
+    })
 
+    reasons_by_key = {}
+
+    for row in summary_rows:
+        if row.get("indent") != 2:
+            continue
+
+        key = (row.get("asset_category"), row.get("asset_name"))
+
+        reasons_by_key.setdefault(key, {
+            "breakdown_reason": [],
+            "other_delay_reason": [],
+        })
+
+        if row.get("breakdown_reason"):
+            reasons_by_key[key]["breakdown_reason"].append(row.get("breakdown_reason"))
+
+        if row.get("other_delay_reason"):
+            reasons_by_key[key]["other_delay_reason"].append(row.get("other_delay_reason"))
     machines_by_category = {category: set() for category in categories}
     for row in asset_rows:
         if row.asset_category in machines_by_category and row.asset_name:
@@ -570,20 +766,31 @@ def _month_end_direct_rows(filters):
         machine_rows = []
 
         for asset_name in sorted(machines_by_category.get(category) or []):
+            is_spare = is_spare_swing_asset(asset_name, spare_swing_asset_map)
+
+            if machine_scope == "Production Machines" and is_spare:
+                continue
+
+            if machine_scope == "Swing/Spare Machines" and not is_spare:
+                continue
+
             au_row = au_by_key.get((category, asset_name))
 
             if au_row:
-                machine_rows.append(
-                    _month_end_calc_row(
-                        category,
-                        asset_name,
-                        au_row.get("required_hrs"),
-                        au_row.get("work_hrs"),
-                        au_row.get("mechanical_downtime"),
-                    )
+                machine_row = _month_end_calc_row(
+                    category,
+                    asset_name,
+                    au_row.get("required_hrs"),
+                    au_row.get("work_hrs"),
+                    au_row.get("mechanical_downtime"),
                 )
+                reason_row = reasons_by_key.get((category, asset_name), {})
+                machine_row["breakdown_reason"] = clean_join(reason_row.get("breakdown_reason") or [])
+                machine_row["other_delay_reason"] = clean_join(reason_row.get("other_delay_reason") or [])
             else:
-                machine_rows.append(_month_end_calc_row(category, asset_name, 0, 0, 0))
+                machine_row = _month_end_calc_row(category, asset_name, 0, 0, 0)
+
+            machine_rows.append(apply_spare_swing_flags(machine_row, spare_swing_asset_map))
 
         if not machine_rows:
             continue

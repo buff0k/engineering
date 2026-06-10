@@ -37,6 +37,18 @@ TLB
 Water Bowser
 Diesel Bowsers
 Drills`
+		},
+		{
+			fieldname: "machine_scope",
+			label: __("Machine Filter"),
+			fieldtype: "Select",
+			options: [
+				"Production Machines",
+				"Swing/Spare Machines",
+				"Include Swing/Spare"
+			].join("\n"),
+			default: "Include Swing/Spare",
+			reqd: 1
 		}
 	],
 
@@ -52,6 +64,25 @@ Drills`
 
 		if (data.is_separator) {
 			return "";
+		}
+
+		if (data.is_spare_swing_unit) {
+			const reason = data.spare_swing_reason || "Spare/Swing unit in Monthly Production Planning";
+
+			return `
+				<span style="
+					display: block;
+					margin: -8px -10px;
+					padding: 8px 10px;
+					background: #e6d6ff;
+					color: #4b0082;
+					font-weight: 700;
+					border-left: 3px solid #7b2cbf;
+					min-height: 100%;
+				" title="${frappe.utils.escape_html ? frappe.utils.escape_html(reason) : reason}">
+					${value || ""}
+				</span>
+			`;
 		}
 
 		if (data.is_category_total) {
