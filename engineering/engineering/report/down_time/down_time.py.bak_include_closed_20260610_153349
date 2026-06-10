@@ -247,27 +247,19 @@ def get_data(filters):
     window_end = windows[-1][2]
 
     conditions = [
+        "ifnull(pbm.open_closed, 'Open') = 'Open'",
         """
         (
             pbm.breakdown_start_datetime is null
             or pbm.breakdown_start_datetime = ''
-            or
-            (
-                pbm.breakdown_start_datetime < %(window_end)s
-                and
-                (
-                    pbm.resolved_datetime is null
-                    or pbm.resolved_datetime = ''
-                    or pbm.resolved_datetime > %(window_start)s
-                )
-            )
-            or
-            (
-                pbm.resolved_datetime is not null
-                and pbm.resolved_datetime != ''
-                and pbm.resolved_datetime >= %(window_start)s
-                and pbm.resolved_datetime <= %(window_end)s
-            )
+            or pbm.breakdown_start_datetime < %(window_end)s
+        )
+        """,
+        """
+        (
+            pbm.resolved_datetime is null
+            or pbm.resolved_datetime = ''
+            or pbm.resolved_datetime > %(window_start)s
         )
         """,
     ]
@@ -314,6 +306,8 @@ def get_data(filters):
     data = []
 
     hours_cache = {}
+    status_cache = {}
+
     for row in rows:
         cache_key = (row.site, row.plant_no)
 
@@ -325,11 +319,19 @@ def get_data(filters):
                 filters.get("shift"),
             )
 
+        if cache_key not in status_cache:
+            status_cache[cache_key] = get_open_closed_from_breakdown_history(
+                row.site,
+                row.plant_no,
+                report_date,
+                filters.get("shift"),
+            )
+
         data.append({
             "date": report_date,
             "site": row.site,
             "plant_no": row.plant_no,
-            "open_closed": row.open_closed or ("Closed" if row.resolved_datetime else "Open"),
+            "open_closed": status_cache[cache_key],
             "breakdown_reason": row.breakdown_reason,
             "resolution_summary": row.resolution_summary,
             "breakdown_start_datetime": row.breakdown_start_datetime,
