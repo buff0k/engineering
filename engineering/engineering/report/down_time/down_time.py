@@ -17,14 +17,15 @@ def execute(filters=None):
 def get_columns():
     return [
         {"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 110},
-        {"label": _("Site"), "fieldname": "site", "fieldtype": "Data", "width": 150},
-        {"label": _("Plant No."), "fieldname": "plant_no", "fieldtype": "Data", "width": 130},
-        {"label": _("Breakdown/Maintenance Reason"), "fieldname": "breakdown_reason", "fieldtype": "Small Text", "width": 260},
-        {"label": _("Resolution Summary"), "fieldname": "resolution_summary", "fieldtype": "Small Text", "width": 210},
-        {"label": _("Breakdown/Maintenance Start Time"), "fieldname": "breakdown_start_datetime", "fieldtype": "Datetime", "width": 230},
-        {"label": _("Datetime back in production"), "fieldname": "resolved_datetime", "fieldtype": "Datetime", "width": 210},
-        {"label": _("Breakdown/Maintenance Hours"), "fieldname": "breakdown_hours", "fieldtype": "Float", "precision": 2, "width": 210},
+        {"label": _("Site"), "fieldname": "site", "fieldtype": "Data", "width": 140},
+        {"label": _("Plant No."), "fieldname": "plant_no", "fieldtype": "Data", "width": 120},
         {"label": _("Open/Closed"), "fieldname": "open_closed", "fieldtype": "Data", "width": 120},
+        {"label": _("Breakdown/Maintenance Reason"), "fieldname": "breakdown_reason", "fieldtype": "Small Text", "width": 260},
+        {"label": _("Resolution Summary"), "fieldname": "resolution_summary", "fieldtype": "Small Text", "width": 220},
+        {"label": _("Breakdown/Maintenance Start Time"), "fieldname": "breakdown_start_datetime", "fieldtype": "Datetime", "width": 230},
+        {"label": _("Datetime back in production"), "fieldname": "resolved_datetime", "fieldtype": "Datetime", "width": 220},
+        {"label": _("Plant Category"), "fieldname": "asset_category", "fieldtype": "Data", "width": 160},
+        {"label": _("Breakdown/Maintenance Hours"), "fieldname": "breakdown_hours", "fieldtype": "Float", "precision": 2, "width": 210},
     ]
 
 
@@ -179,7 +180,7 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
     return intervals
 
 
-def calculate_au_engine_breakdown_hours(site, plant_no, shift, window_start, window_end):
+def calculate_availability_engine_breakdown_hours(site, plant_no, shift, window_start, window_end):
     intervals = get_breakdown_history_intervals(site, plant_no, window_start, window_end)
     excluded = exclusion_windows(shift, window_start, window_end)
 
@@ -198,64 +199,32 @@ def calculate_au_engine_breakdown_hours(site, plant_no, shift, window_start, win
     return round(max(effective_hours, 0), 2)
 
 
-def get_latest_pbm_details(site, plant_no, window_start, window_end):
-    rows = frappe.db.sql(
-        """
-        select
-            pbm.name,
-            pbm.location as site,
-            pbm.asset_name as plant_no,
-            pbm.asset_category as asset_category,
-            pbm.breakdown_reason as breakdown_reason,
-            pbm.resolution_summary as resolution_summary,
-            pbm.breakdown_start_datetime as breakdown_start_datetime,
-            pbm.resolved_datetime as resolved_datetime,
-            pbm.open_closed as open_closed,
-            pbm.modified as modified
-        from `tabPlant Breakdown or Maintenance` pbm
-        where pbm.location = %(site)s
-          and pbm.asset_name = %(plant_no)s
-          and pbm.breakdown_start_datetime is not null
-          and pbm.breakdown_start_datetime < %(window_end)s
-          and (
-                pbm.resolved_datetime is null
-                or pbm.resolved_datetime > %(window_start)s
-          )
-        order by pbm.breakdown_start_datetime desc, pbm.modified desc
-        limit 1
-        """,
-        {
-            "site": site,
-            "plant_no": plant_no,
-            "window_start": window_start,
-            "window_end": window_end,
-        },
-        as_dict=True,
-    )
+def get_availability_engine_hours(site, plant_no, report_date, shift=None):
+    total_hours = 0.0
 
-    if rows:
-        return rows[0]
+    for shift_name, window_start, window_end in get_report_windows(report_date, shift):
+        total_hours += calculate_availability_engine_breakdown_hours(
+            site,
+            plant_no,
+            shift_name,
+            window_start,
+            window_end,
+        )
 
-    return frappe._dict({
-        "site": site,
-        "plant_no": plant_no,
-        "asset_category": None,
-        "breakdown_reason": "",
-        "resolution_summary": "",
-        "breakdown_start_datetime": None,
-        "resolved_datetime": None,
-        "open_closed": "Open",
-    })
+    return round(min(total_hours, 24), 2)
 
 
-def get_open_closed(site, plant_no, window_end):
+def get_open_closed_from_breakdown_history(site, plant_no, report_date, shift=None):
+    windows = get_report_windows(report_date, shift)
+    last_window_end = windows[-1][2]
+
     last_event = frappe.get_all(
         "Breakdown History",
         filters={
             "location": site,
             "asset_name": plant_no,
             "exclude_from_au": 0,
-            "update_date_time": ["<=", window_end],
+            "update_date_time": ["<=", last_window_end],
         },
         fields=["breakdown_status"],
         order_by="update_date_time desc",
@@ -268,110 +237,236 @@ def get_open_closed(site, plant_no, window_end):
     return "Open"
 
 
-def get_assets_from_breakdown_history(report_start_datetime, report_end_datetime, filters):
+def get_data(filters):
+    report_date = getdate(filters.get("report_date")) if filters.get("report_date") else getdate(now_datetime())
+
+    windows = get_report_windows(report_date, filters.get("shift"))
+    window_start = windows[0][1]
+    window_end = windows[-1][2]
+
     conditions = [
-        "bh.update_date_time is not null",
-        "bh.update_date_time < %(report_end_datetime)s",
-        "bh.exclude_from_au = 0",
-        "ifnull(bh.location, '') != ''",
-        "ifnull(bh.asset_name, '') != ''",
+        "ifnull(pbm.open_closed, 'Open') = 'Open'",
+        """
+        (
+            pbm.breakdown_start_datetime is null
+            or pbm.breakdown_start_datetime = ''
+            or pbm.breakdown_start_datetime < %(window_end)s
+        )
+        """,
+        """
+        (
+            pbm.resolved_datetime is null
+            or pbm.resolved_datetime = ''
+            or pbm.resolved_datetime > %(window_start)s
+        )
+        """,
     ]
 
     values = {
-        "report_start_datetime": report_start_datetime,
-        "report_end_datetime": report_end_datetime,
+        "window_start": window_start,
+        "window_end": window_end,
     }
 
-    # IMPORTANT:
-    # If site is blank, do NOT add a site condition.
-    # This allows all sites to populate.
     if is_filter_set(filters.get("site")):
-        conditions.append("bh.location = %(site)s")
+        conditions.append("pbm.location = %(site)s")
         values["site"] = filters.get("site")
 
     if is_filter_set(filters.get("asset_category")):
-        conditions.append("""
-            exists (
-                select 1
-                from `tabPlant Breakdown or Maintenance` pbm
-                where pbm.location = bh.location
-                  and pbm.asset_name = bh.asset_name
-                  and upper(pbm.asset_category) = %(asset_category)s
-            )
-        """)
-        values["asset_category"] = filters.get("asset_category").upper()
+        conditions.append("pbm.asset_category = %(asset_category)s")
+        values["asset_category"] = filters.get("asset_category")
 
-    return frappe.db.sql(
+    rows = frappe.db.sql(
         f"""
-        select distinct
-            bh.location as site,
-            bh.asset_name as plant_no
-        from `tabBreakdown History` bh
+        select
+            pbm.name as pbm_document,
+            pbm.location as site,
+            pbm.asset_name as plant_no,
+            pbm.open_closed as open_closed,
+            pbm.breakdown_reason as breakdown_reason,
+            pbm.resolution_summary as resolution_summary,
+            pbm.breakdown_start_datetime as breakdown_start_datetime,
+            pbm.resolved_datetime as resolved_datetime,
+            pbm.asset_category as asset_category,
+            pbm.creation as creation
+        from `tabPlant Breakdown or Maintenance` pbm
         where {" and ".join(conditions)}
-        order by bh.location asc, bh.asset_name asc
+        order by
+            case
+                when pbm.breakdown_start_datetime is null then pbm.creation
+                else pbm.breakdown_start_datetime
+            end desc,
+            pbm.modified desc
         """,
         values,
         as_dict=True,
     )
 
-
-def get_data(filters):
-    start_date = getdate(filters.get("start_date")) if filters.get("start_date") else getdate(now_datetime())
-    end_date = getdate(filters.get("end_date")) if filters.get("end_date") else start_date
-
-    report_start_datetime = get_datetime(str(start_date) + " 06:00:00")
-    report_end_datetime = get_datetime(str(end_date + timedelta(days=1)) + " 06:00:00")
-
-    assets = get_assets_from_breakdown_history(report_start_datetime, report_end_datetime, filters)
-
     data = []
 
-    for asset in assets:
-        current_day = start_date
+    hours_cache = {}
+    status_cache = {}
 
-        while current_day <= end_date:
-            total_day_hours = 0.0
-            first_window_start = None
-            last_window_end = None
+    for row in rows:
+        cache_key = (row.site, row.plant_no)
 
-            for shift, window_start, window_end in get_report_windows(current_day, filters.get("shift")):
-                if first_window_start is None:
-                    first_window_start = window_start
+        if cache_key not in hours_cache:
+            hours_cache[cache_key] = get_availability_engine_hours(
+                row.site,
+                row.plant_no,
+                report_date,
+                filters.get("shift"),
+            )
 
-                last_window_end = window_end
+        if cache_key not in status_cache:
+            status_cache[cache_key] = get_open_closed_from_breakdown_history(
+                row.site,
+                row.plant_no,
+                report_date,
+                filters.get("shift"),
+            )
 
-                total_day_hours += calculate_au_engine_breakdown_hours(
-                    asset.site,
-                    asset.plant_no,
-                    shift,
-                    window_start,
-                    window_end,
-                )
-
-            total_day_hours = round(min(total_day_hours, 24), 2)
-
-            if total_day_hours > 0:
-                details = get_latest_pbm_details(
-                    asset.site,
-                    asset.plant_no,
-                    first_window_start,
-                    last_window_end,
-                )
-
-                data.append({
-                    "date": current_day,
-                    "site": asset.site,
-                    "plant_no": asset.plant_no,
-                    "breakdown_reason": details.breakdown_reason,
-                    "resolution_summary": details.resolution_summary,
-                    "breakdown_start_datetime": details.breakdown_start_datetime,
-                    "resolved_datetime": details.resolved_datetime,
-                    "breakdown_hours": total_day_hours,
-                    "open_closed": get_open_closed(asset.site, asset.plant_no, last_window_end),
-                })
-
-            current_day = current_day + timedelta(days=1)
-
-    data.sort(key=lambda d: (d.get("date"), d.get("site") or "", d.get("plant_no") or ""), reverse=True)
+        data.append({
+            "date": report_date,
+            "site": row.site,
+            "plant_no": row.plant_no,
+            "open_closed": status_cache[cache_key],
+            "breakdown_reason": row.breakdown_reason,
+            "resolution_summary": row.resolution_summary,
+            "breakdown_start_datetime": row.breakdown_start_datetime,
+            "resolved_datetime": row.resolved_datetime,
+            "asset_category": row.asset_category,
+            "breakdown_hours": hours_cache[cache_key],
+        })
 
     return data
+
+
+
+@frappe.whitelist()
+def save_downtime_signoff(report_date, shift, signature):
+    report_date = getdate(report_date)
+    shift = shift or "All Shifts"
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+    full_name = frappe.db.get_value("User", user, "full_name") or user
+
+    production_roles = ["Production Supervisor", "Production Foreman"]
+    engineering_roles = ["Engineering Supervisor", "Engineering Foreman"]
+
+    is_production_user = any(role in roles for role in production_roles)
+    is_engineering_user = any(role in roles for role in engineering_roles)
+
+    if is_production_user and is_engineering_user:
+        frappe.throw(_("You cannot sign both Production and Engineering sections."))
+
+    if not is_production_user and not is_engineering_user:
+        frappe.throw(_("Only Production Supervisor, Production Foreman, Engineering Supervisor, or Engineering Foreman can sign this report."))
+
+    parent = get_or_create_signoff_parent(report_date, shift)
+    row = get_or_create_signoff_row(parent, report_date, shift)
+
+    if is_production_user:
+        row.data_date_p = report_date
+        row.date_time_p = now_datetime()
+        row.shift_p = shift
+        row.production_user = full_name
+        row.production_signature = signature
+
+    if is_engineering_user:
+        row.data_date_e = report_date
+        row.date_time_e = now_datetime()
+        row.shift_e = shift
+        row.engineering_user = full_name
+        row.engineering_signature = signature
+
+    parent.status = get_signoff_status(row)
+    parent.save(ignore_permissions=True)
+
+    new_name = make_signoff_name(row, report_date, shift)
+
+    if parent.name != new_name:
+        if frappe.db.exists("Mechanical Downtime sign-off", new_name):
+            frappe.throw(_("A sign-off already exists with this name: {0}").format(new_name))
+
+        frappe.rename_doc("Mechanical Downtime sign-off", parent.name, new_name, force=True)
+
+    return _("Downtime sign-off saved. Status: {0}").format(parent.status)
+
+
+def get_or_create_signoff_parent(report_date, shift):
+    existing_parent = frappe.db.sql(
+        """
+        select parent
+        from `tabMechanical Downtime sign-off child`
+        where parenttype = 'Mechanical Downtime sign-off'
+            and (
+                (data_date_p = %(report_date)s and ifnull(shift_p, '') in (%(shift)s, ''))
+                or
+                (data_date_e = %(report_date)s and ifnull(shift_e, '') in (%(shift)s, ''))
+            )
+        order by modified desc
+        limit 1
+        """,
+        {
+            "report_date": report_date,
+            "shift": shift,
+        },
+    )
+
+    if existing_parent:
+        return frappe.get_doc("Mechanical Downtime sign-off", existing_parent[0][0])
+
+    parent = frappe.new_doc("Mechanical Downtime sign-off")
+    parent.status = "Open"
+    parent.insert(ignore_permissions=True)
+
+    return parent
+
+
+def get_or_create_signoff_row(parent, report_date, shift):
+    for row in parent.signoff_information:
+        same_production = row.data_date_p and getdate(row.data_date_p) == report_date and (row.shift_p in (shift, None, ""))
+        same_engineering = row.data_date_e and getdate(row.data_date_e) == report_date and (row.shift_e in (shift, None, ""))
+
+        if same_production or same_engineering:
+            return row
+
+    row = parent.append("signoff_information", {})
+    row.data_date_p = report_date
+    row.data_date_e = report_date
+    row.shift_p = shift
+    row.shift_e = shift
+
+    return row
+
+
+def get_signoff_status(row):
+    if row.production_signature and row.engineering_signature:
+        return "Closed"
+
+    return "Open"
+
+
+def make_signoff_name(row, report_date, shift):
+    production_user = row.production_user or "Pending Production"
+    engineering_user = row.engineering_user or "Pending Engineering"
+    data_date = row.data_date_p or row.data_date_e or report_date
+    shift = row.shift_p or row.shift_e or shift or "All Shifts"
+
+    return clean_docname("{0}-{1}-{2}-{3}".format(
+        production_user,
+        engineering_user,
+        data_date,
+        shift,
+    ))
+
+
+def clean_docname(value):
+    value = str(value or "").strip()
+    value = value.replace("/", "-")
+    value = value.replace("\\", "-")
+    value = value.replace(":", "-")
+    value = value.replace("\n", " ")
+    value = " ".join(value.split())
+
+    return value

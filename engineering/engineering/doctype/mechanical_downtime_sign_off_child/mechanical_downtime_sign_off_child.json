@@ -1,0 +1,111 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-10 11:01:31.301938",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "production_user_section",
+  "data_date_p",
+  "date_time_p",
+  "shift_p",
+  "production_user",
+  "production_signature",
+  "engineering_user_table",
+  "data_date_e",
+  "date_time_e",
+  "shift_e",
+  "engineering_user",
+  "engineering_signature"
+ ],
+ "fields": [
+  {
+   "fieldname": "production_user_section",
+   "fieldtype": "Column Break",
+   "label": "Production User"
+  },
+  {
+   "fieldname": "date_time_p",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date and Time"
+  },
+  {
+   "fieldname": "production_user",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Production User"
+  },
+  {
+   "fieldname": "production_signature",
+   "fieldtype": "Signature",
+   "in_list_view": 1,
+   "label": "Production Signature"
+  },
+  {
+   "fieldname": "engineering_user_table",
+   "fieldtype": "Section Break",
+   "label": "Engineering User"
+  },
+  {
+   "fieldname": "date_time_e",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date and Time"
+  },
+  {
+   "fieldname": "engineering_user",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Engineering User"
+  },
+  {
+   "fieldname": "engineering_signature",
+   "fieldtype": "Signature",
+   "in_list_view": 1,
+   "label": "Engineering Signature"
+  },
+  {
+   "fieldname": "data_date_p",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date of data correct"
+  },
+  {
+   "fieldname": "data_date_e",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date of data correct"
+  },
+  {
+   "fieldname": "shift_p",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Day Shift\nNight Shift"
+  },
+  {
+   "fieldname": "shift_e",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Day Shift\nNight Shift"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-10 12:16:54.316573",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Mechanical Downtime sign-off child",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -20,10 +20,20 @@
  "report_name": "Down Time",
  "report_type": "Script Report",
  "roles": [
-  {"role": "System Manager"},
-  {"role": "Production Manager"},
-  {"role": "Production User"},
-  {"role": "Engineering Manager"},
-  {"role": "Engineering User"}
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Production User"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering User"
+  }
  ]
 }
