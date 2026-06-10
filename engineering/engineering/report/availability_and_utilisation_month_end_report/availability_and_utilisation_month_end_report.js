@@ -93,17 +93,19 @@ Drills`
 				? "Breakdown Reasons"
 				: "Other Delay Reasons";
 
+			const button_style = data.is_spare_swing_unit
+				? "background:#e6d6ff;color:#4b0082;border:1px solid #7b2cbf;"
+				: "background:#dbeafe;color:#1d4ed8;border:1px solid #2563eb;";
+
 			return `
 				<button class="btn btn-xs"
 					style="
-						background:#e6d6ff;
-						color:#4b0082;
-						border:1px solid #7b2cbf;
+						${button_style}
 						font-weight:800;
 						border-radius:999px;
 						padding:3px 12px;
 					"
-					onclick="show_au_month_end_reason_dialog('${key}', '${title}', '${frappe.utils.escape_html(data.asset_name || '')}')">
+					onclick="window.show_au_month_end_reason_dialog('${key}', '${title}', '${frappe.utils.escape_html(data.asset_name || '')}')">
 					View
 				</button>
 			`;
@@ -247,7 +249,7 @@ Drills`
 	}
 };
 
-function show_au_month_end_reason_dialog(key, title, asset_name) {
+window.show_au_month_end_reason_dialog = function(key, title, asset_name) {
 	const details = (window.au_month_end_reason_details || {})[key] || [];
 
 	const rows = details.map(detail => {
@@ -292,4 +294,4 @@ function show_au_month_end_reason_dialog(key, title, asset_name) {
 	`);
 
 	dialog.show();
-}
+};
