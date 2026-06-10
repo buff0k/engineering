@@ -327,7 +327,32 @@ def clean_join(values):
 
 	return "\n".join(cleaned)
 
+def clean_reason_details(details):
+	cleaned = []
+	seen = set()
 
+	for detail in details or []:
+		date_value = str(detail.get("date") or "")[:10]
+		reason_value = detail.get("reason") or ""
+
+		for part in str(reason_value).replace("\n", ";").split(";"):
+			part = part.strip()
+
+			if not part:
+				continue
+
+			key = (date_value, part)
+
+			if key in seen:
+				continue
+
+			seen.add(key)
+			cleaned.append({
+				"date": date_value,
+				"reason": part,
+			})
+
+	return cleaned
 
 
 def get_breakdown_reason(row, filters):
@@ -701,17 +726,24 @@ def _month_end_direct_rows(filters):
             continue
 
         key = (row.get("asset_category"), row.get("asset_name"))
+        reason_date = row.get("shift_date") or row.get("date") or row.get("posting_date") or ""
 
         reasons_by_key.setdefault(key, {
-            "breakdown_reason": [],
-            "other_delay_reason": [],
+            "breakdown_reason_details": [],
+            "other_delay_reason_details": [],
         })
 
         if row.get("breakdown_reason"):
-            reasons_by_key[key]["breakdown_reason"].append(row.get("breakdown_reason"))
+            reasons_by_key[key]["breakdown_reason_details"].append({
+                "date": reason_date,
+                "reason": row.get("breakdown_reason"),
+            })
 
         if row.get("other_delay_reason"):
-            reasons_by_key[key]["other_delay_reason"].append(row.get("other_delay_reason"))
+            reasons_by_key[key]["other_delay_reason_details"].append({
+                "date": reason_date,
+                "reason": row.get("other_delay_reason"),
+            })
     machines_by_category = {category: set() for category in categories}
     for row in asset_rows:
         if row.asset_category in machines_by_category and row.asset_name:
@@ -785,8 +817,15 @@ def _month_end_direct_rows(filters):
                     au_row.get("mechanical_downtime"),
                 )
                 reason_row = reasons_by_key.get((category, asset_name), {})
-                machine_row["breakdown_reason"] = clean_join(reason_row.get("breakdown_reason") or [])
-                machine_row["other_delay_reason"] = clean_join(reason_row.get("other_delay_reason") or [])
+
+                breakdown_details = clean_reason_details(reason_row.get("breakdown_reason_details") or [])
+                other_delay_details = clean_reason_details(reason_row.get("other_delay_reason_details") or [])
+
+                machine_row["breakdown_reason_details"] = breakdown_details
+                machine_row["other_delay_reason_details"] = other_delay_details
+
+                machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
+                machine_row["other_delay_reason"] = "\n".join([d.get("reason") for d in other_delay_details])
             else:
                 machine_row = _month_end_calc_row(category, asset_name, 0, 0, 0)
 
