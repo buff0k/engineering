@@ -641,7 +641,7 @@ def _month_end_calc_row(asset_category, asset_name, required_hrs, work_hrs, mech
         "asset_name": asset_name or "",
         "required_hrs": round(required_hrs, 1),
         "work_hrs": round(work_hrs, 1),
-        "mechanical_downtime": round(mechanical_downtime, 1),
+        "mechanical_downtime": round(mechanical_downtime, 3),
         "avail_percent": _month_end_percent(avail_percent),
         "util_percent": _month_end_percent(util_percent),
         "emp_avail_percent": _month_end_percent(emp_avail_percent),
@@ -981,17 +981,20 @@ def _month_end_direct_rows(filters):
 
             au_row = au_by_key.get((category, asset_name))
 
+            breakdown_details = clean_reason_details(plant_breakdown_details_by_asset.get(asset_name) or [])
+            pbm_total_minutes = sum(int(flt(d.get("total_minutes"))) for d in breakdown_details)
+            pbm_mechanical_downtime = pbm_total_minutes / 60
+
             if au_row:
                 machine_row = _month_end_calc_row(
                     category,
                     asset_name,
                     au_row.get("required_hrs"),
                     au_row.get("work_hrs"),
-                    au_row.get("mechanical_downtime"),
+                    pbm_mechanical_downtime,
                 )
                 reason_row = other_delay_reasons_by_key.get((category, asset_name), {})
 
-                breakdown_details = clean_reason_details(plant_breakdown_details_by_asset.get(asset_name) or [])
                 other_delay_details = clean_reason_details(reason_row.get("other_delay_reason_details") or [])
 
                 machine_row["breakdown_reason_details"] = breakdown_details
@@ -1000,7 +1003,10 @@ def _month_end_direct_rows(filters):
                 machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
                 machine_row["other_delay_reason"] = "\n".join([d.get("reason") for d in other_delay_details])
             else:
-                machine_row = _month_end_calc_row(category, asset_name, 0, 0, 0)
+                machine_row = _month_end_calc_row(category, asset_name, 0, 0, pbm_mechanical_downtime)
+                machine_row["breakdown_reason_details"] = breakdown_details
+                machine_row["other_delay_reason_details"] = []
+                machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
 
             machine_rows.append(apply_spare_swing_flags(machine_row, spare_swing_asset_map))
 
