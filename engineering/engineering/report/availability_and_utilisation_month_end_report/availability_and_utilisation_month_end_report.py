@@ -466,8 +466,8 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 		"IFNULL(exclude_from_au, 0) = 0",
 		"asset_name in %(asset_names)s",
 		"breakdown_start_datetime >= %(plant_breakdown_trust_datetime)s",
-		"breakdown_start_datetime >= %(from_datetime)s",
 		"breakdown_start_datetime <= %(to_datetime)s",
+		"(resolved_datetime >= %(from_datetime)s OR resolved_datetime IS NULL)",
 	]
 
 	if location:
@@ -499,24 +499,36 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 		startup_fatigue_minutes = 0
 		au_minutes = 0
 
-		if start_datetime and resolved_datetime:
+		display_start_datetime = start_datetime
+		display_resolved_datetime = resolved_datetime
+
+		if start_datetime:
 			start_dt = get_datetime(start_datetime)
-			end_dt = get_datetime(resolved_datetime)
+			end_dt = get_datetime(resolved_datetime) if resolved_datetime else get_datetime(values["to_datetime"])
+			filter_start_dt = get_datetime(values["from_datetime"])
+			filter_end_dt = get_datetime(values["to_datetime"])
 
 			if start_dt and end_dt and end_dt > start_dt:
-				total_minutes = int(round((end_dt - start_dt).total_seconds() / 60))
-				startup_fatigue_minutes = get_startup_fatigue_minutes_for_breakdown(
-					filters,
-					row.get("asset_name"),
-					start_datetime,
-					resolved_datetime,
-				)
-				au_minutes = max(total_minutes - startup_fatigue_minutes, 0)
+				clipped_start_dt = max(start_dt, filter_start_dt)
+				clipped_end_dt = min(end_dt, filter_end_dt)
+
+				if clipped_end_dt > clipped_start_dt:
+					display_start_datetime = clipped_start_dt
+					display_resolved_datetime = clipped_end_dt
+
+					total_minutes = int(round((clipped_end_dt - clipped_start_dt).total_seconds() / 60))
+					startup_fatigue_minutes = get_startup_fatigue_minutes_for_breakdown(
+						filters,
+						row.get("asset_name"),
+						clipped_start_dt,
+						clipped_end_dt,
+					)
+					au_minutes = max(total_minutes - startup_fatigue_minutes, 0)
 
 		details_by_asset.setdefault(row.get("asset_name"), []).append({
-			"date": str(start_datetime or "")[:10],
-			"start_datetime": start_datetime,
-			"resolved_datetime": resolved_datetime,
+			"date": str(display_start_datetime or "")[:10],
+			"start_datetime": display_start_datetime,
+			"resolved_datetime": display_resolved_datetime,
 			"total_minutes": total_minutes,
 			"startup_fatigue_minutes": startup_fatigue_minutes,
 			"au_minutes": au_minutes,
