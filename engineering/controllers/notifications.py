@@ -27,15 +27,15 @@ from frappe.utils import now_datetime, cint
 
 # Wearcheck urgent / critical recipients per site/location
 WEARCHECK_ALERT_SITE_RECIPIENTS = {
-    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za", "japie@isambane.co.za"],
-    "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za", "gert@isambane.co.za"],
-    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "msani@isambane.co.za", "japie@isambane.co.za"],
-    "Gwab": ["bongani@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za", "gert@isambane.co.za"],
-    "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za", "japie@isambane.co.za"],
-    "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za", "gert@isambane.co.za"],
+    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "maria@isambane.co.za", "juan@isambane.co.za", "japie@isambane.co.za"],
+    "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "maria@isambane.co.za", "gert@isambane.co.za"],
+    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "maria@isambane.co.za", "japie@isambane.co.za"],
+    "Gwab": ["bongani@isambane.co.za", "matimba@isambane.co.za", "maria@isambane.co.za", "gert@isambane.co.za"],
+    "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "maria@isambane.co.za", "japie@isambane.co.za"],
+    "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "maria@isambane.co.za", "gert@isambane.co.za"],
 }
 
-WEARCHECK_ALERT_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
+WEARCHECK_ALERT_DEFAULT_RECIPIENTS = ["maria@isambane.co.za,"]
 WEARCHECK_SEVERITY_MAP = {
     3: "Urgent",
     4: "Critical",

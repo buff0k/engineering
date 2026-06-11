@@ -1,5 +1,6 @@
 import frappe
 from frappe.utils import getdate, now_datetime
+from frappe.utils.file_manager import save_file
 
 
 def execute(filters=None):
@@ -97,14 +98,13 @@ def export_sage_vip_txt(from_date=None, to_date=None):
 
 	file_name = f"LVEXP{now_datetime().strftime('%H%M')}.txt"
 
-	file_doc = frappe.get_doc({
-		"doctype": "File",
-		"file_name": file_name,
-		"is_private": 0,
-		"content": content,
-	})
-
-	file_doc.save(ignore_permissions=True)
+	file_doc = save_file(
+		file_name,
+		content,
+		"Report",
+		"Leave Export Report",
+		is_private=0
+	)
 
 	return {
 		"file_url": file_doc.file_url,
@@ -117,9 +117,10 @@ def build_sage_vip_leave_line(row):
 	company = "014"
 	transaction_type = "1"
 	employee = fixed(row.employee, 8)
-	leave_type = get_sage_leave_type(row.leave_type)
+	leave_type = fixed(get_sage_leave_type(row.leave_type), 1)
+	spaces_before_method = fixed("", 2)
 	method = "1"
-	reason = get_sage_leave_reason(row.leave_type)
+	reason = fixed(get_sage_leave_reason(row.leave_type), 4)
 	from_date = format_yyyymmdd(row.from_date)
 	to_date = format_yyyymmdd(row.to_date)
 	days = row.ir_leave_as_per_payroll or row.total_leave_days or 0
@@ -131,14 +132,14 @@ def build_sage_vip_leave_line(row):
 	practice_number = fixed("", 15)
 	comment = fixed(row.description or row.employee_name or "", 50)
 
-	return (
+	line = (
 		"D"
 		+ company
 		+ "@"
 		+ transaction_type
 		+ employee
 		+ leave_type
-		+ " "
+		+ spaces_before_method
 		+ method
 		+ reason
 		+ from_date
@@ -152,6 +153,11 @@ def build_sage_vip_leave_line(row):
 		+ comment
 		+ "Z"
 	)
+
+	if len(line) != 150:
+		frappe.throw(f"Sage VIP export line must be 150 characters, got {len(line)} for {row.name}")
+
+	return line
 
 
 def fixed(value, length):
