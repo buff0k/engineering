@@ -1,6 +1,30 @@
 // Copyright (c) 2026, BuFf0k and contributors
 // For license information, please see license.txt
 
+
+
+window.au_month_end_format_minutes = function(total_minutes) {
+	total_minutes = Math.round(flt(total_minutes || 0));
+
+	const hours = Math.floor(total_minutes / 60);
+	const minutes = total_minutes % 60;
+
+	if (hours && minutes) {
+		return `${hours}h ${minutes}m`;
+	}
+
+	if (hours) {
+		return `${hours}h`;
+	}
+
+	return `${minutes}m`;
+};
+
+window.au_month_end_format_hours_minutes = function(hours_value) {
+	return window.au_month_end_format_minutes(flt(hours_value || 0) * 60);
+};
+
+
 frappe.query_reports["Availability and Utilisation Month End Report"] = {
 	filters: [
 		{
@@ -65,6 +89,12 @@ Drills`
 		if (data.is_separator) {
 			return "";
 		}
+
+
+		if (column.fieldname === "mechanical_downtime" && data[column.fieldname] != null) {
+			value = window.au_month_end_format_hours_minutes(data[column.fieldname]);
+		}
+
 
 		if (column.fieldname === "breakdown_reason" || column.fieldname === "other_delay_reason") {
 			const detail_field = column.fieldname === "breakdown_reason"
@@ -280,29 +310,23 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 			return "-";
 		}
 
-		const total_minutes = resolved.diff(start, "minutes");
-		const hours = Math.floor(total_minutes / 60);
-		const minutes = total_minutes % 60;
-
-		if (hours && minutes) {
-			return `${hours}h ${minutes}m`;
-		}
-
-		if (hours) {
-			return `${hours}h`;
-		}
-
-		return `${minutes}m`;
+		return window.au_month_end_format_minutes(resolved.diff(start, "minutes"));
 	};
 
 	const has_times = details.some(detail => detail.start_datetime || detail.resolved_datetime);
 
+	const total_raw_minutes = details.reduce((total, detail) => total + flt(detail.total_minutes || 0), 0);
+	const total_excluded_minutes = details.reduce((total, detail) => total + flt(detail.startup_fatigue_minutes || 0), 0);
+	const total_au_minutes = details.reduce((total, detail) => total + flt(detail.au_minutes || 0), 0);
+
 	const header = has_times
 		? `
 			<tr style="background:${colours.head_bg};color:${colours.text};">
-				<th style="padding:8px 10px;text-align:left;width:160px;">Start</th>
-				<th style="padding:8px 10px;text-align:left;width:160px;">Resolved</th>
-				<th style="padding:8px 10px;text-align:left;width:110px;">Total Time</th>
+				<th style="padding:8px 10px;text-align:left;width:150px;">Start</th>
+				<th style="padding:8px 10px;text-align:left;width:150px;">Resolved</th>
+				<th style="padding:8px 10px;text-align:left;width:100px;">Total Time</th>
+				<th style="padding:8px 10px;text-align:left;width:150px;">Start-up + Fatigue</th>
+				<th style="padding:8px 10px;text-align:left;width:100px;">A&U Time</th>
 				<th style="padding:8px 10px;text-align:left;">Reason</th>
 			</tr>
 		`
@@ -317,7 +341,13 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 		const date_value = frappe.utils.escape_html(detail.date || "");
 		const start_value = frappe.utils.escape_html(detail.start_datetime || "");
 		const resolved_value = frappe.utils.escape_html(detail.resolved_datetime || "");
-		const total_time_value = frappe.utils.escape_html(format_total_time(detail.start_datetime, detail.resolved_datetime));
+		const total_time_value = frappe.utils.escape_html(
+			detail.total_minutes
+				? window.au_month_end_format_minutes(detail.total_minutes)
+				: format_total_time(detail.start_datetime, detail.resolved_datetime)
+		);
+		const startup_fatigue_value = frappe.utils.escape_html(window.au_month_end_format_minutes(detail.startup_fatigue_minutes || 0));
+		const au_time_value = frappe.utils.escape_html(window.au_month_end_format_minutes(detail.au_minutes || 0));
 		const reason_value = frappe.utils.escape_html(detail.reason || "");
 
 		if (has_times) {
@@ -331,6 +361,12 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 					</td>
 					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;">
 						${total_time_value}
+					</td>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;color:#b45309;">
+						${startup_fatigue_value}
+					</td>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;color:#166534;">
+						${au_time_value}
 					</td>
 					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};">
 						${reason_value}
@@ -351,9 +387,21 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 		`;
 	}).join("");
 
+	const total_row = has_times
+		? `
+			<tr style="background:${colours.head_bg};color:${colours.text};font-weight:900;">
+				<td colspan="2" style="padding:9px 10px;text-align:right;">Totals</td>
+				<td style="padding:9px 10px;white-space:nowrap;">${window.au_month_end_format_minutes(total_raw_minutes)}</td>
+				<td style="padding:9px 10px;white-space:nowrap;color:#b45309;">${window.au_month_end_format_minutes(total_excluded_minutes)}</td>
+				<td style="padding:9px 10px;white-space:nowrap;color:#166534;">${window.au_month_end_format_minutes(total_au_minutes)}</td>
+				<td style="padding:9px 10px;"></td>
+			</tr>
+		`
+		: "";
+
 	const dialog = new frappe.ui.Dialog({
 		title: `${title} - ${asset_name || ""}`,
-		size: "large"
+		size: "extra-large"
 	});
 
 	dialog.$body.html(`
@@ -367,7 +415,8 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 					${header}
 				</thead>
 				<tbody>
-					${rows || `<tr><td colspan="4" style="padding:10px;">No reasons found.</td></tr>`}
+					${rows || `<tr><td colspan="6" style="padding:10px;">No reasons found.</td></tr>`}
+					${rows ? total_row : ""}
 				</tbody>
 			</table>
 		</div>

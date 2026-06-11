@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import flt, get_datetime
 
 _ = frappe._
 
@@ -336,6 +336,9 @@ def clean_reason_details(details):
 		start_datetime = str(detail.get("start_datetime") or "")[:16]
 		resolved_datetime = str(detail.get("resolved_datetime") or "")[:16]
 		reason_value = detail.get("reason") or ""
+		total_minutes = int(flt(detail.get("total_minutes")))
+		startup_fatigue_minutes = int(flt(detail.get("startup_fatigue_minutes")))
+		au_minutes = int(flt(detail.get("au_minutes")))
 
 		for part in str(reason_value).replace("\n", ";").split(";"):
 			part = part.strip()
@@ -353,10 +356,86 @@ def clean_reason_details(details):
 				"date": date_value,
 				"start_datetime": start_datetime,
 				"resolved_datetime": resolved_datetime,
+				"total_minutes": total_minutes,
+				"startup_fatigue_minutes": startup_fatigue_minutes,
+				"au_minutes": au_minutes,
 				"reason": part,
 			})
 
 	return cleaned
+
+
+
+def get_startup_fatigue_minutes_for_breakdown(filters, asset_name, start_datetime, resolved_datetime):
+	if not start_datetime or not resolved_datetime:
+		return 0
+
+	try:
+		from engineering.engineering.doctype.availability_and_utilisation import availability_and_utilisation as au
+	except Exception:
+		return 0
+
+	filters = frappe._dict(filters or {})
+	location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+
+	start_dt = get_datetime(start_datetime)
+	end_dt = get_datetime(resolved_datetime)
+
+	if not start_dt or not end_dt or end_dt <= start_dt:
+		return 0
+
+	au_rows = frappe.db.sql("""
+		SELECT
+			name,
+			shift_date,
+			shift,
+			shift_system,
+			location,
+			asset_name
+		FROM `tabAvailability and Utilisation`
+		WHERE asset_name = %(asset_name)s
+		  AND shift_date >= DATE(%(start_datetime)s) - INTERVAL 1 DAY
+		  AND shift_date <= DATE(%(resolved_datetime)s) + INTERVAL 1 DAY
+		  AND (%(location)s = '' OR location = %(location)s)
+		ORDER BY shift_date ASC, FIELD(shift, 'Day', 'Night') ASC
+	""", {
+		"asset_name": asset_name,
+		"location": location or "",
+		"start_datetime": start_dt,
+		"resolved_datetime": end_dt,
+	}, as_dict=True)
+
+	excluded_hours = 0.0
+
+	for row in au_rows:
+		try:
+			shift_start, shift_end = au.get_shift_timings(
+				row.shift_system,
+				row.shift,
+				str(row.shift_date),
+			)
+
+			excluded_windows = au._exclusion_windows(
+				row.location,
+				row.shift,
+				shift_start,
+				shift_end,
+			)
+
+			for window_start, window_end in excluded_windows:
+				excluded_hours += au._overlap_hours(
+					start_dt,
+					end_dt,
+					window_start,
+					window_end,
+				)
+		except Exception:
+			continue
+
+	return int(round(excluded_hours * 60))
+
+
+
 
 def get_plant_breakdown_reason_details(filters, asset_names):
 	if not asset_names:
@@ -416,10 +495,31 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 		start_datetime = row.get("breakdown_start_datetime")
 		resolved_datetime = row.get("resolved_datetime")
 
+		total_minutes = 0
+		startup_fatigue_minutes = 0
+		au_minutes = 0
+
+		if start_datetime and resolved_datetime:
+			start_dt = get_datetime(start_datetime)
+			end_dt = get_datetime(resolved_datetime)
+
+			if start_dt and end_dt and end_dt > start_dt:
+				total_minutes = int(round((end_dt - start_dt).total_seconds() / 60))
+				startup_fatigue_minutes = get_startup_fatigue_minutes_for_breakdown(
+					filters,
+					row.get("asset_name"),
+					start_datetime,
+					resolved_datetime,
+				)
+				au_minutes = max(total_minutes - startup_fatigue_minutes, 0)
+
 		details_by_asset.setdefault(row.get("asset_name"), []).append({
 			"date": str(start_datetime or "")[:10],
 			"start_datetime": start_datetime,
 			"resolved_datetime": resolved_datetime,
+			"total_minutes": total_minutes,
+			"startup_fatigue_minutes": startup_fatigue_minutes,
+			"au_minutes": au_minutes,
 			"reason": row.get("breakdown_reason"),
 		})
 

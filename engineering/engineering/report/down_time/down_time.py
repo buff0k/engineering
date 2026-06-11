@@ -3,10 +3,13 @@
 
 import frappe
 from frappe import _
+from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
 from frappe.utils.xlsxutils import make_xlsx
 from frappe.utils.file_manager import save_file
-from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
 from datetime import timedelta
+
+
+START_LOOKUP_DATETIME = get_datetime("2026-05-01 00:00:00")
 
 
 def execute(filters=None):
@@ -125,6 +128,11 @@ def exclusion_windows(shift, window_start, window_end):
 
 
 def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
+    effective_window_start = max(window_start, START_LOOKUP_DATETIME)
+
+    if window_end <= START_LOOKUP_DATETIME:
+        return []
+
     base_filters = {
         "location": site,
         "asset_name": plant_no,
@@ -133,7 +141,7 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
 
     last_before = frappe.get_all(
         "Breakdown History",
-        filters={**base_filters, "update_date_time": ["<", window_start]},
+        filters={**base_filters, "update_date_time": ["<", effective_window_start]},
         fields=["update_date_time", "breakdown_status"],
         order_by="update_date_time desc",
         limit=1,
@@ -141,7 +149,7 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
 
     events_in_window = frappe.get_all(
         "Breakdown History",
-        filters={**base_filters, "update_date_time": ["between", [window_start, window_end]]},
+        filters={**base_filters, "update_date_time": ["between", [effective_window_start, window_end]]},
         fields=["update_date_time", "breakdown_status"],
         order_by="update_date_time asc",
     )
@@ -152,7 +160,7 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
 
     if last_before and str(last_before[0].get("breakdown_status")) != "3":
         in_breakdown = True
-        current_start = window_start
+        current_start = effective_window_start
 
     for event in events_in_window:
         event_time = get_datetime(event.get("update_date_time"))
@@ -163,7 +171,7 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
             current_start = event_time
 
         elif event_status == "3" and in_breakdown:
-            clip_start = max(current_start, window_start)
+            clip_start = max(current_start, effective_window_start)
             clip_end = min(event_time, window_end)
 
             if clip_end > clip_start:
@@ -173,7 +181,7 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
             current_start = None
 
     if in_breakdown and current_start:
-        clip_start = max(current_start, window_start)
+        clip_start = max(current_start, effective_window_start)
         clip_end = window_end
 
         if clip_end > clip_start:
@@ -183,8 +191,13 @@ def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
 
 
 def calculate_availability_engine_breakdown_hours(site, plant_no, shift, window_start, window_end):
-    intervals = get_breakdown_history_intervals(site, plant_no, window_start, window_end)
-    excluded = exclusion_windows(shift, window_start, window_end)
+    if window_end <= START_LOOKUP_DATETIME:
+        return 0.0
+
+    effective_window_start = max(window_start, START_LOOKUP_DATETIME)
+
+    intervals = get_breakdown_history_intervals(site, plant_no, effective_window_start, window_end)
+    excluded = exclusion_windows(shift, effective_window_start, window_end)
 
     effective_hours = 0.0
 
@@ -216,24 +229,13 @@ def get_availability_engine_hours(site, plant_no, report_date, shift=None):
     return round(min(total_hours, 24), 2)
 
 
-def get_open_closed_from_breakdown_history(site, plant_no, report_date, shift=None):
-    windows = get_report_windows(report_date, shift)
-    last_window_end = windows[-1][2]
+def get_open_closed_value(row):
+    value = str(row.open_closed or "").strip()
 
-    last_event = frappe.get_all(
-        "Breakdown History",
-        filters={
-            "location": site,
-            "asset_name": plant_no,
-            "exclude_from_au": 0,
-            "update_date_time": ["<=", last_window_end],
-        },
-        fields=["breakdown_status"],
-        order_by="update_date_time desc",
-        limit=1,
-    )
+    if value:
+        return value
 
-    if last_event and str(last_event[0].get("breakdown_status")) == "3":
+    if row.resolved_datetime:
         return "Closed"
 
     return "Open"
@@ -246,27 +248,38 @@ def get_data(filters):
     window_start = windows[0][1]
     window_end = windows[-1][2]
 
+    if window_end <= START_LOOKUP_DATETIME:
+        return []
+
     conditions = [
         """
         (
-            pbm.breakdown_start_datetime is null
-            or pbm.breakdown_start_datetime = ''
-            or
             (
-                pbm.breakdown_start_datetime < %(window_end)s
-                and
-                (
-                    pbm.resolved_datetime is null
-                    or pbm.resolved_datetime = ''
-                    or pbm.resolved_datetime > %(window_start)s
-                )
+                pbm.breakdown_start_datetime is not null
+                and pbm.breakdown_start_datetime != ''
+                and pbm.breakdown_start_datetime >= %(start_lookup_datetime)s
+                and pbm.breakdown_start_datetime < %(window_end)s
             )
             or
             (
                 pbm.resolved_datetime is not null
                 and pbm.resolved_datetime != ''
-                and pbm.resolved_datetime >= %(window_start)s
-                and pbm.resolved_datetime <= %(window_end)s
+                and pbm.resolved_datetime >= %(start_lookup_datetime)s
+                and pbm.resolved_datetime < %(window_end)s
+            )
+            or
+            (
+                (
+                    pbm.breakdown_start_datetime is null
+                    or pbm.breakdown_start_datetime = ''
+                )
+                and
+                (
+                    pbm.resolved_datetime is null
+                    or pbm.resolved_datetime = ''
+                )
+                and pbm.creation >= %(start_lookup_datetime)s
+                and pbm.creation < %(window_end)s
             )
         )
         """,
@@ -275,6 +288,7 @@ def get_data(filters):
     values = {
         "window_start": window_start,
         "window_end": window_end,
+        "start_lookup_datetime": START_LOOKUP_DATETIME,
     }
 
     if is_filter_set(filters.get("site")):
@@ -288,7 +302,6 @@ def get_data(filters):
     rows = frappe.db.sql(
         f"""
         select
-            pbm.name as pbm_document,
             pbm.location as site,
             pbm.asset_name as plant_no,
             pbm.open_closed as open_closed,
@@ -302,8 +315,9 @@ def get_data(filters):
         where {" and ".join(conditions)}
         order by
             case
-                when pbm.breakdown_start_datetime is null then pbm.creation
-                else pbm.breakdown_start_datetime
+                when pbm.breakdown_start_datetime is not null then pbm.breakdown_start_datetime
+                when pbm.resolved_datetime is not null then pbm.resolved_datetime
+                else pbm.creation
             end desc,
             pbm.modified desc
         """,
@@ -312,8 +326,8 @@ def get_data(filters):
     )
 
     data = []
-
     hours_cache = {}
+
     for row in rows:
         cache_key = (row.site, row.plant_no)
 
@@ -329,7 +343,7 @@ def get_data(filters):
             "date": report_date,
             "site": row.site,
             "plant_no": row.plant_no,
-            "open_closed": row.open_closed or ("Closed" if row.resolved_datetime else "Open"),
+            "open_closed": get_open_closed_value(row),
             "breakdown_reason": row.breakdown_reason,
             "resolution_summary": row.resolution_summary,
             "breakdown_start_datetime": row.breakdown_start_datetime,
@@ -339,7 +353,6 @@ def get_data(filters):
         })
 
     return data
-
 
 
 @frappe.whitelist()
@@ -457,7 +470,6 @@ def make_signoff_name(row, report_date, shift, site):
     engineering_user = row.engineering_user or "Pending Engineering"
     data_date = row.data_date_p or row.data_date_e or report_date
     shift = row.shift_p or row.shift_e or shift or "All Shifts"
-
     site = site or "All Sites"
 
     return clean_docname("{0}-{1}-{2}-{3}-{4}".format(
