@@ -1472,6 +1472,14 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
 
     metric_cards = []
 
+    month_end_url = (
+        "/desk/query-report/Availability%20and%20Utilisation%20Month%20End%20Report"
+        f"?from_date={quote(str(start_date or ''))}"
+        f"&to_date={quote(str(end_date or ''))}"
+        f"&location={quote(str(location or ''))}"
+        f"&machine_scope={quote(str(machine_scope or 'Include Swing/Spare'))}"
+    )
+
     for category in UI_CATEGORIES:
         values = avgs.get(category) or {}
 
@@ -1486,12 +1494,12 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
     <div class="isd-metric-title">{esc(category)} Avg</div>
 
     <div class="isd-pill-row">
-        <div class="isd-mbubble {bubble_colour('avail', av)}">
+        <div class="isd-mbubble {bubble_colour('avail', av)}" onclick="window.open('{month_end_url}', '_blank')" title="Open Month End Report" style="cursor:pointer;">
             <div class="isd-mbubble-label">Availability</div>
             <div class="isd-mbubble-value">{fmt_percent(av)}</div>
         </div>
 
-        <div class="isd-mbubble {bubble_colour('util', ut)}">
+        <div class="isd-mbubble {bubble_colour('util', ut)}" onclick="window.open('{month_end_url}', '_blank')" title="Open Month End Report" style="cursor:pointer;">
             <div class="isd-mbubble-label">Utilisation</div>
             <div class="isd-mbubble-value">{fmt_percent(ut)}</div>
         </div>
