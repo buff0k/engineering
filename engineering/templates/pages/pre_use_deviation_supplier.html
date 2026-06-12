@@ -1,6 +1,45 @@
 {% extends "templates/web.html" %}
 
 {% block page_content %}
+
+<style>
+#completion_percentage_range {
+    pointer-events: none !important;
+}
+</style>
+
+
+<style>
+#completion_percentage_number {
+    display: none !important;
+}
+
+#completion_percentage_range {
+    width: 140px;
+}
+
+#completion_percentage_range.completion-red {
+    accent-color: #dc2626 !important;
+}
+
+#completion_percentage_range.completion-green {
+    accent-color: #16a34a !important;
+}
+
+#completion_percentage_label.completion-red {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+
+#completion_percentage_label.completion-green {
+    color: #16a34a !important;
+    font-weight: 700;
+}
+</style>
+
+
+
+
 <div class="container my-4">
     <h2>Pre Use Deviation</h2>
 
@@ -130,7 +169,7 @@
         <div class="mb-3">
             <label><strong>Completion Percentage</strong></label>
             <input type="number" class="form-control mb-2" id="completion_percentage_number" name="completion_percentage" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
-            <input type="range" class="form-range" id="completion_percentage_range" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
+            <input type="range" class="form-range" id="completion_percentage_range" tabindex="-1" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
             <div class="text-success mt-1">
                 <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span>%
             </div>
@@ -245,4 +284,99 @@
         <a href="/pre_use_deviation_list" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
+
+<script>
+(function () {
+    function applyAssetDetails() {
+        const fleet = document.querySelector('[name="fleet_number"]');
+        const machineType = document.querySelector('[name="machine_type"]');
+        const machineModel = document.querySelector('[name="machine_model"]');
+        const jsonEl = document.getElementById("asset_details_json");
+
+        if (!fleet || !machineType || !machineModel || !jsonEl) {
+            return;
+        }
+
+        const details = JSON.parse(jsonEl.textContent || "{}");
+        const selected = fleet.value || "";
+        const asset = details[selected] || {};
+
+        machineType.value = asset.machine_type || "";
+        machineModel.value = asset.machine_model || "";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const fleet = document.querySelector('[name="fleet_number"]');
+        if (fleet) {
+            fleet.addEventListener("change", applyAssetDetails);
+            applyAssetDetails();
+        }
+    });
+})();
+</script>
+
+
+
+
+
+
+
+<script>
+(function () {
+    function setCompletion(value) {
+        const numberInput = document.getElementById("completion_percentage_number");
+        const rangeInput = document.getElementById("completion_percentage_range");
+        const label = document.getElementById("completion_percentage_label");
+        const actionStatus = document.querySelector('[name="action_status"]');
+
+        value = parseInt(value || 0, 10);
+        if (isNaN(value)) value = 0;
+        value = value >= 100 ? 100 : 0;
+
+        const colorClass = value === 100 ? "completion-green" : "completion-red";
+
+        if (numberInput) {
+            numberInput.value = value;
+        }
+
+        if (rangeInput) {
+            rangeInput.value = value;
+            rangeInput.classList.remove("completion-red", "completion-green");
+            rangeInput.classList.add(colorClass);
+        }
+
+        if (label) {
+            label.textContent = value;
+            label.classList.remove("completion-red", "completion-green");
+            label.classList.add(colorClass);
+        }
+
+        if (actionStatus) {
+            actionStatus.value = value === 100 ? "Closed" : "Open";
+        }
+    }
+
+    function syncCompletionFromActionDate() {
+        const actionDate = document.querySelector('[name="action_date_and_time"]');
+
+        if (actionDate && actionDate.value) {
+            setCompletion(100);
+        } else {
+            setCompletion(0);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const actionDate = document.querySelector('[name="action_date_and_time"]');
+
+        if (actionDate) {
+            actionDate.addEventListener("input", syncCompletionFromActionDate);
+            actionDate.addEventListener("change", syncCompletionFromActionDate);
+        }
+
+        syncCompletionFromActionDate();
+    });
+})();
+</script>
+
 {% endblock %}

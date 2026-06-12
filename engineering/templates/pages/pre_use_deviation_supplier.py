@@ -200,55 +200,30 @@ def _get_asset_options():
 
 
 
+
 def _get_asset_details(asset_names):
     if not asset_names:
         return {}
 
     available_columns = set(frappe.db.sql_list("SHOW COLUMNS FROM `tabAsset`"))
+    wanted_fields = ["name"]
 
-    possible_machine_type_fields = [
-        "machine_type",
-        "asset_type",
-        "asset_category",
-        "item_code",
-    ]
-
-    possible_machine_model_fields = [
-        "machine_model",
-        "model",
-        "asset_model",
-        "item_name",
-        "asset_name",
-    ]
-
-    fields = ["name"]
-
-    machine_type_field = None
-    for field in possible_machine_type_fields:
+    for field in ["asset_category", "item_code", "asset_name"]:
         if field in available_columns:
-            machine_type_field = field
-            fields.append(field)
-            break
-
-    machine_model_field = None
-    for field in possible_machine_model_fields:
-        if field in available_columns:
-            machine_model_field = field
-            fields.append(field)
-            break
+            wanted_fields.append(field)
 
     rows = frappe.get_all(
         "Asset",
         filters={"name": ["in", asset_names]},
-        fields=list(set(fields)),
+        fields=wanted_fields,
         limit_page_length=0,
     )
 
     details = {}
     for row in rows:
         details[row.name] = {
-            "machine_type": row.get(machine_type_field) if machine_type_field else "",
-            "machine_model": row.get(machine_model_field) if machine_model_field else "",
+            "machine_type": row.get("asset_category") or "",
+            "machine_model": row.get("item_code") or row.get("asset_name") or "",
         }
 
     return details

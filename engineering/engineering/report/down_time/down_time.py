@@ -554,46 +554,105 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 62mm 8mm 35mm 8mm;
+                    margin: 0;
                 }}
 
                 html, body {{
                     margin: 0;
                     padding: 0;
+                    width: 210mm;
+                    height: 297mm;
                     font-family: Arial, sans-serif;
                     color: #000;
                     font-size: 8px;
                 }}
 
-                .letterhead-header {{
-                    position: fixed;
+                .page {{
+                    position: relative;
+                    width: 210mm;
+                    height: 297mm;
+                    overflow: hidden;
+                }}
+
+                .header-bg {{
+                    position: absolute;
                     top: 0;
                     left: 0;
-                    right: 0;
-                    height: 58mm;
+                    width: 210mm;
+                    height: 62mm;
                     background-image: url("/assets/engineering/images/Template_Background.jpg");
                     background-size: 210mm 297mm;
                     background-position: top center;
                     background-repeat: no-repeat;
+                    z-index: 1;
                 }}
 
-                .letterhead-footer {{
-                    position: fixed;
+                .pdf-footer {{
+                    position: absolute;
                     bottom: 0;
                     left: 0;
-                    right: 0;
-                    height: 30mm;
-                    background-image: url("/assets/engineering/images/Template_Background.jpg");
-                    background-size: 210mm 297mm;
-                    background-position: bottom center;
-                    background-repeat: no-repeat;
+                    width: 210mm;
+                    height: 34mm;
+                    z-index: 1;
+                    overflow: hidden;
+                    font-size: 8px;
+                    color: #000;
+                }}
+
+                .footer-text {{
+                    position: absolute;
+                    left: 24mm;
+                    bottom: 9mm;
+                    z-index: 3;
+                    line-height: 1.25;
+                }}
+
+                .footer-page {{
+                    position: absolute;
+                    right: 24mm;
+                    bottom: 9mm;
+                    z-index: 3;
+                }}
+
+                .footer-dark {{
+                    position: absolute;
+                    left: -5mm;
+                    right: -5mm;
+                    bottom: -10mm;
+                    height: 22mm;
+                    background: #3f3f3f;
+                    transform: rotate(-3deg);
+                    transform-origin: left bottom;
+                    z-index: 1;
+                }}
+
+                .footer-red {{
+                    position: absolute;
+                    left: -5mm;
+                    right: 25mm;
+                    bottom: 6mm;
+                    height: 1.8mm;
+                    background: #e30613;
+                    transform: rotate(-3deg);
+                    transform-origin: left bottom;
+                    z-index: 2;
+                }}
+
+                .content {{
+                    position: absolute;
+                    top: 72mm;
+                    left: 8mm;
+                    right: 8mm;
+                    bottom: 38mm;
+                    z-index: 2;
+                    overflow: hidden;
                 }}
 
                 .title {{
                     text-align: center;
                     font-size: 13px;
                     font-weight: bold;
-                    margin-bottom: 5mm;
+                    margin-bottom: 4mm;
                 }}
 
                 .meta {{
@@ -612,108 +671,117 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     width: 100%;
                     border-collapse: collapse;
                     table-layout: fixed;
-                    font-size: 7px;
+                    font-size: 6.6px;
                 }}
 
                 table.data th {{
-                    border: 0.3mm solid #000;
-                    padding: 0.8mm 0.5mm;
+                    border: 0.25mm solid #000;
+                    padding: 0.7mm 0.5mm;
                     font-weight: bold;
                     text-align: center;
                     vertical-align: middle;
                     line-height: 1.15;
                     overflow-wrap: break-word;
+                    word-wrap: break-word;
+                    white-space: normal;
                 }}
 
                 table.data td {{
-                    border: 0.3mm solid #000;
-                    padding: 0.8mm 0.5mm;
+                    border: 0.25mm solid #000;
+                    padding: 0.7mm 0.5mm;
                     vertical-align: top;
-                    line-height: 1.2;
+                    line-height: 1.15;
                     overflow-wrap: break-word;
                     word-wrap: break-word;
                     white-space: normal;
                 }}
 
-                table.data tr {{
-                    page-break-inside: avoid;
-                }}
-
                 .signatures {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 6mm;
-                    font-size: 9px;
-                    page-break-inside: avoid;
+                    margin-top: 5mm;
+                    font-size: 8.5px;
                 }}
 
                 .signature-box {{
                     width: 50%;
                     border: 0.3mm solid #000;
                     padding: 2mm;
-                    height: 30mm;
+                    height: 27mm;
                     vertical-align: top;
                 }}
 
                 .signature-title {{
                     font-weight: bold;
-                    font-size: 10px;
-                    margin-bottom: 2mm;
+                    font-size: 9.5px;
+                    margin-bottom: 1.5mm;
                 }}
 
                 .signature-img {{
-                    max-height: 15mm;
+                    max-height: 13mm;
                     max-width: 55mm;
-                    margin-top: 2mm;
+                    margin-top: 1.5mm;
                 }}
 
                 .pending {{
                     font-style: italic;
-                    margin-top: 6mm;
+                    margin-top: 5mm;
                 }}
             </style>
         </head>
 
         <body>
-            <div class="letterhead-header"></div>
-            <div class="letterhead-footer"></div>
+            <div class="page">
+                <div class="header-bg"></div>
+                <div class="pdf-footer">
+                    <div class="footer-dark"></div>
+                    <div class="footer-red"></div>
+                    <div class="footer-text">
+                        Directors: JP Jordaan, B Giyose, JG Venter<br>
+                        Non-Executive Director: R Lakhoo
+                    </div>
+                    <div class="footer-page">Page 1 of 1</div>
+                </div>
 
-            <div class="title">Mechanical Downtime Sign-off Report</div>
+                <div class="content">
+                    <div class="title">Mechanical Downtime Sign-off Report</div>
 
-            <table class="meta">
-                <tr>
-                    <td><b>Date:</b> {report_date}</td>
-                    <td><b>Site:</b> {site}</td>
-                    <td><b>Shift:</b> {shift}</td>
-                    <td><b>Status:</b> {status}</td>
-                </tr>
-            </table>
+                    <table class="meta">
+                        <tr>
+                            <td><b>Date:</b> {report_date}</td>
+                            <td><b>Site:</b> {site}</td>
+                            <td><b>Shift:</b> {shift}</td>
+                            <td><b>Status:</b> {status}</td>
+                        </tr>
+                    </table>
 
-            <table class="data">
-                <thead>
-                    <tr>{table_headers}</tr>
-                </thead>
-                <tbody>
-                    {table_rows}
-                </tbody>
-            </table>
+                    <table class="data">
+                        <thead>
+                            <tr>{table_headers}</tr>
+                        </thead>
+                        <tbody>
+                            {table_rows}
+                        </tbody>
+                    </table>
 
-            <table class="signatures">
-                <tr>
-                    <td class="signature-box">
-                        <div class="signature-title">Production Sign-off</div>
-                        <b>User:</b> {production_user}<br>
-                        <b>Date/Time:</b> {production_date_time}<br>
-                        {production_signature_html}
-                    </td>
-                    <td class="signature-box">
-                        <div class="signature-title">Engineering Sign-off</div>
-                        <b>User:</b> {engineering_user}<br>
-                        <b>Date/Time:</b> {engineering_date_time}<br>
-                        {engineering_signature_html}
-                    </td>
-                </tr>
-            </table>
+                    <table class="signatures">
+                        <tr>
+                            <td class="signature-box">
+                                <div class="signature-title">Production Sign-off</div>
+                                <b>User:</b> {production_user}<br>
+                                <b>Date/Time:</b> {production_date_time}<br>
+                                {production_signature_html}
+                            </td>
+                            <td class="signature-box">
+                                <div class="signature-title">Engineering Sign-off</div>
+                                <b>User:</b> {engineering_user}<br>
+                                <b>Date/Time:</b> {engineering_date_time}<br>
+                                {engineering_signature_html}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
         </body>
     </html>
     """.format(
