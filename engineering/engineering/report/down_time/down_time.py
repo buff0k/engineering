@@ -570,7 +570,9 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                 .page {{
                     position: relative;
                     width: 210mm;
-                    min-height: 297mm;
+                    height: 297mm;
+                    overflow: hidden;
+                    page-break-after: avoid;
                     background-image: url("/assets/engineering/images/Template_Background.jpg");
                     background-size: 210mm 297mm;
                     background-repeat: no-repeat;
@@ -578,10 +580,11 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
 
                 .content {{
                     position: absolute;
-                    top: 72mm;
+                    top: 88mm;
                     left: 8mm;
                     right: 8mm;
-                    bottom: 25mm;
+                    bottom: 48mm;
+                    overflow: hidden;
                 }}
 
                 .title {{
@@ -671,7 +674,6 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                         <tr>
                             <td><b>Date:</b> {report_date}</td>
                             <td><b>Site:</b> {site}</td>
-                            <td><b>Asset Category:</b> {asset_category}</td>
                             <td><b>Shift:</b> {shift}</td>
                             <td><b>Status:</b> {status}</td>
                         </tr>
@@ -723,19 +725,21 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     )
 
 
+
+
+
 def get_pdf_columns():
     return [
-        {"label": "Date", "fieldname": "date", "width": "9%"},
-        {"label": "Site", "fieldname": "site", "width": "9%"},
-        {"label": "Plant No.", "fieldname": "plant_no", "width": "9%"},
-        {"label": "Plant Category", "fieldname": "asset_category", "width": "10%"},
-        {"label": "Reason", "fieldname": "breakdown_reason", "width": "17%"},
-        {"label": "Resolution", "fieldname": "resolution_summary", "width": "13%"},
-        {"label": "Start Time", "fieldname": "breakdown_start_datetime", "width": "11%"},
-        {"label": "Back in Production", "fieldname": "resolved_datetime", "width": "11%"},
+        {"label": "Plant No.", "fieldname": "plant_no", "width": "11%"},
+        {"label": "Plant Category", "fieldname": "asset_category", "width": "13%"},
+        {"label": "Reason", "fieldname": "breakdown_reason", "width": "25%"},
+        {"label": "Resolution", "fieldname": "resolution_summary", "width": "20%"},
+        {"label": "Start Time", "fieldname": "breakdown_start_datetime", "width": "13%"},
+        {"label": "Back in Production", "fieldname": "resolved_datetime", "width": "13%"},
         {"label": "Hours", "fieldname": "breakdown_hours", "width": "5%"},
-        {"label": "Status", "fieldname": "open_closed", "width": "6%"},
     ]
+
+
 
 
 

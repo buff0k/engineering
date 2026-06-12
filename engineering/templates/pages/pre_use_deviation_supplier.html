@@ -1,0 +1,176 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    <h2>Pre Use Deviation</h2>
+
+    <div class="mb-3">
+        <a href="/pre_use_deviation_list" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token or '' }}">
+        <input type="hidden" name="name" value="{{ form_values.name or '' }}">
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Report Date and Time</strong></label>
+                <input type="datetime-local" class="form-control" name="report_datetime" value="{{ form_values.report_datetime or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Site</strong></label>
+                <select class="form-control" name="site" required>
+                    <option value="">Select Site</option>
+                    {% for site in site_options %}
+                    <option value="{{ site }}" {% if form_values.site == site %}selected{% endif %}>{{ site }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Fleet Number</strong></label>
+            <select class="form-control" name="fleet_number" required>
+                <option value="">Select Fleet Number</option>
+                {% for asset in asset_options %}
+                <option value="{{ asset }}" {% if form_values.fleet_number == asset %}selected{% endif %}>{{ asset }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label><strong>Pre-Use No.</strong></label>
+                <input type="number" class="form-control" name="pre_use_no" value="{{ form_values.pre_use_no or 0 }}">
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label><strong>Machine Type</strong></label>
+                <input type="text" class="form-control" name="machine_type" value="{{ form_values.machine_type or '' }}">
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label><strong>Machine Model</strong></label>
+                <input type="text" class="form-control" name="machine_model" value="{{ form_values.machine_model or '' }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Operating Status</strong></label>
+            <select class="form-control" name="operating_status">
+                <option value="">Select Operating Status</option>
+                {% for status in operating_status_options %}
+                <option value="{{ status }}" {% if form_values.operating_status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Deviation Details</strong></label>
+            <textarea class="form-control" name="deviation_details" rows="4">{{ form_values.deviation_details or '' }}</textarea>
+        </div>
+
+        <hr>
+        <h5>Reported By</h5>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Reported By Coy Number</strong></label>
+                <input type="text" class="form-control" name="reported_by_coy_number" value="{{ form_values.reported_by_coy_number or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Reported By Name and Surname</strong></label>
+                <input type="text" class="form-control" name="reported_by_name_and_surname" value="{{ form_values.reported_by_name_and_surname or '' }}">
+            </div>
+        </div>
+
+        <hr>
+        <h5>Resolution</h5>
+
+        <div class="mb-3">
+            <label><strong>Resolution Summary</strong></label>
+            <textarea class="form-control" name="resolution_summary" rows="4">{{ form_values.resolution_summary or '' }}</textarea>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Action Date and Time</strong></label>
+                <input type="datetime-local" class="form-control" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Job Card Number</strong></label>
+                <input type="text" class="form-control" name="job_card_number" value="{{ form_values.job_card_number or '' }}">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Actioned By Coy Number</strong></label>
+                <input type="text" class="form-control" name="actioned_by_coy_number" value="{{ form_values.actioned_by_coy_number or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Actioned By Name and Surname</strong></label>
+                <input type="text" class="form-control" name="actioned_by_name_and_surname" value="{{ form_values.actioned_by_name_and_surname or '' }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Action Status</strong></label>
+            <select class="form-control" name="action_status" required>
+                {% for status in action_status_options %}
+                <option value="{{ status }}" {% if form_values.action_status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Completion Percentage</strong></label>
+            <input type="number" class="form-control mb-2" id="completion_percentage_number" name="completion_percentage" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
+            <input type="range" class="form-range" id="completion_percentage_range" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
+            <div class="text-danger mt-1">
+                <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span>%
+            </div>
+        </div>
+
+        <script>
+        (function () {
+            const numberInput = document.getElementById("completion_percentage_number");
+            const rangeInput = document.getElementById("completion_percentage_range");
+            const label = document.getElementById("completion_percentage_label");
+
+            function clamp(value) {
+                value = parseInt(value || 0, 10);
+                if (isNaN(value)) value = 0;
+                if (value < 0) value = 0;
+                if (value > 100) value = 100;
+                return value;
+            }
+
+            function syncFromNumber() {
+                const value = clamp(numberInput.value);
+                numberInput.value = value;
+                rangeInput.value = value;
+                label.textContent = value;
+            }
+
+            function syncFromRange() {
+                const value = clamp(rangeInput.value);
+                numberInput.value = value;
+                label.textContent = value;
+            }
+
+            numberInput.addEventListener("input", syncFromNumber);
+            rangeInput.addEventListener("input", syncFromRange);
+            syncFromNumber();
+        })();
+        </script>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/pre_use_deviation_list" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

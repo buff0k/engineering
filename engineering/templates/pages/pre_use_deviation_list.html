@@ -1,0 +1,50 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    <h2>My Pre Use Deviations</h2>
+
+    <div class="mb-3">
+        <a class="btn btn-primary" href="/pre_use_deviation_supplier">New Pre Use Deviation</a>
+    </div>
+
+    {% if records %}
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Report Date</th>
+                    <th>Site</th>
+                    <th>Fleet Number</th>
+                    <th>Machine Type</th>
+                    <th>Machine Model</th>
+                    <th>Action Status</th>
+                    <th>Completion</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in records %}
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.report_datetime or "" }}</td>
+                    <td>{{ row.site or "" }}</td>
+                    <td>{{ row.fleet_number or "" }}</td>
+                    <td>{{ row.machine_type or "" }}</td>
+                    <td>{{ row.machine_model or "" }}</td>
+                    <td>{{ row.action_status or "" }}</td>
+                    <td>{{ row.completion_percentage or 0 }}%</td>
+                    <td>
+                        <a class="btn btn-sm btn-primary" href="/pre_use_deviation_supplier?name={{ row.name }}">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No Pre Use Deviation records found.</div>
+    {% endif %}
+</div>
+{% endblock %}
