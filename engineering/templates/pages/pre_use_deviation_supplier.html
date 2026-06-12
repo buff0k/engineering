@@ -54,7 +54,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label><strong>Report Date and Time</strong></label>
-                <input type="datetime-local" class="form-control" name="report_datetime" value="{{ form_values.report_datetime or '' }}">
+                <input type="text" class="form-control" name="report_datetime" placeholder="yyyy/mm/dd hh:mm" value="{{ form_values.report_datetime or '' }}">
             </div>
 
             <div class="col-md-6 mb-3">
@@ -136,7 +136,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label><strong>Action Date and Time</strong></label>
-                <input type="datetime-local" class="form-control" id="action_date_and_time" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}">
+                <input type="text" class="form-control" id="action_date_and_time" name="action_date_and_time" placeholder="yyyy/mm/dd hh:mm" value="{{ form_values.action_date_and_time or '' }}">
             </div>
 
             <div class="col-md-6 mb-3">
@@ -393,7 +393,12 @@
         if (reportDate && !reportDate.value) {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            reportDate.value = now.toISOString().slice(0, 16);
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, "0");
+            const dd = String(now.getDate()).padStart(2, "0");
+            const hh = String(now.getHours()).padStart(2, "0");
+            const min = String(now.getMinutes()).padStart(2, "0");
+            reportDate.value = `${yyyy}/${mm}/${dd} ${hh}:${min}`;
         }
     });
 })();

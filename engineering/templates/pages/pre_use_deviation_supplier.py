@@ -42,7 +42,7 @@ def get_context(context):
 
     context.form_values = {
         "name": doc.name if doc else "",
-        "report_datetime": _format_datetime_for_input(doc.report_datetime) if doc else frappe.utils.now_datetime().strftime("%Y-%m-%dT%H:%M"),
+        "report_datetime": _format_datetime_for_input(doc.report_datetime) if doc else frappe.utils.now_datetime().strftime("%Y/%m/%d %H:%M"),
         "site": doc.site if doc else "",
         "fleet_number": doc.fleet_number if doc else "",
         "pre_use_no": doc.pre_use_no if doc else "",
@@ -124,13 +124,17 @@ def _parse_datetime(value):
     value = (value or "").strip()
     if not value:
         return None
-    return frappe.utils.get_datetime(value.replace("T", " "))
+
+    value = value.replace("T", " ")
+    value = value.replace("/", "-")
+
+    return frappe.utils.get_datetime(value)
 
 
 def _format_datetime_for_input(value):
     if not value:
         return ""
-    return frappe.utils.get_datetime(value).strftime("%Y-%m-%dT%H:%M")
+    return frappe.utils.get_datetime(value).strftime("%Y/%m/%d %H:%M")
 
 
 def _get_doc_from_query():

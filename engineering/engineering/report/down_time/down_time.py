@@ -554,7 +554,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 10mm 10mm 12mm 10mm;
+                    margin: 58mm 10mm 32mm 10mm;
                 }}
 
                 body {{
@@ -563,8 +563,22 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     color: #111;
                 }}
 
-                .iso-letterhead {{
-                    margin-bottom: 12px;
+                .pdf-header {{
+                    position: fixed;
+                    top: -48mm;
+                    left: -7mm;
+                    right: -2mm;
+                    height: 44mm;
+                    overflow: hidden;
+                }}
+
+                .pdf-header img {{
+                    max-width: 100% !important;
+                    height: auto !important;
+                }}
+
+                .pdf-header table {{
+                    width: 100% !important;
                 }}
 
                 .report-title {{
@@ -626,6 +640,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     border: 1px solid #111;
                     margin-bottom: 9px;
                     page-break-inside: avoid;
+                    break-inside: avoid;
                 }}
 
                 .downtime-card-title {{
@@ -664,26 +679,45 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     white-space: pre-wrap;
                 }}
 
-                .footer {{
-                    margin-top: 10px;
-                    border-top: 1.5px solid #111;
-                    padding-top: 5px;
+                .pdf-footer {{
+                    position: fixed;
+                    bottom: -28mm;
+                    left: -10mm;
+                    right: -10mm;
+                    height: 30mm;
+                    overflow: hidden;
                     font-size: 8px;
-                    page-break-inside: avoid;
                 }}
 
-                .footer-left {{
-                    float: left;
+                .footer-svg {{
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 230mm;
+                    height: 30mm;
+                    z-index: 1;
                 }}
 
-                .footer-right {{
-                    float: right;
+                .footer-text {{
+                    position: absolute;
+                    left: 24mm;
+                    bottom: 7mm;
+                    z-index: 2;
+                    line-height: 1.25;
+                }}
+
+                .footer-page {{
+                    position: absolute;
+                    right: 24mm;
+                    bottom: 7mm;
+                    z-index: 2;
                 }}
             </style>
         </head>
 
         <body>
-            <div class="iso-letterhead">
+            <div class="pdf-header">
                 {letter_head}
             </div>
 
@@ -717,13 +751,16 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
 
             {downtime_cards}
 
-            <div class="footer">
-                <div class="footer-left">
+            <div class="pdf-footer">
+                <svg class="footer-svg" viewBox="0 0 230 30" preserveAspectRatio="none">
+                    <path d="M0,20 C55,30 145,22 230,5 L230,30 L0,30 Z" fill="#3f3f3f"></path>
+                    <path d="M0,23 C60,30 145,23 230,9" fill="none" stroke="#e30613" stroke-width="2"></path>
+                </svg>
+                <div class="footer-text">
                     Directors: JP Jordaan, B Giyose, JG Venter<br>
                     Non-Executive Director: R Lakhoo
                 </div>
-                <div class="footer-right">Page 1 of 1</div>
-                <div style="clear: both;"></div>
+                <div class="footer-page">Page</div>
             </div>
         </body>
     </html>
