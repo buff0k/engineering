@@ -534,6 +534,8 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift):
     parent.db_set("signed_report_excel", file_doc.file_url, update_modified=False)
 
 
+
+
 def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row):
     production_signature = signoff_row.production_signature if signoff_row else ""
     engineering_signature = signoff_row.engineering_signature if signoff_row else ""
@@ -544,204 +546,163 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     production_date_time = format_datetime(signoff_row.date_time_p) if signoff_row and signoff_row.date_time_p else ""
     engineering_date_time = format_datetime(signoff_row.date_time_e) if signoff_row and signoff_row.date_time_e else ""
 
+    pdf_columns = get_pdf_columns()
+
     return """
     <html>
         <head>
             <style>
                 @page {{
-                    size: A4 landscape;
-                    margin: 18mm 10mm 18mm 10mm;
+                    size: A4 portrait;
+                    margin: 0;
                 }}
 
-                body {{
+                html, body {{
+                    margin: 0;
+                    padding: 0;
+                    width: 210mm;
+                    min-height: 297mm;
                     font-family: Arial, sans-serif;
-                    font-size: 9px;
                     color: #000;
+                    font-size: 7px;
                 }}
 
-                .header {{
-                    width: 100%;
-                    border-bottom: 2px solid #000;
-                    padding-bottom: 8px;
-                    margin-bottom: 14px;
+                .page {{
+                    position: relative;
+                    width: 210mm;
+                    min-height: 297mm;
+                    background-image: url("/assets/engineering/images/Template_Background.jpg");
+                    background-size: 210mm 297mm;
+                    background-repeat: no-repeat;
                 }}
 
-                .header-table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                }}
-
-                .logo {{
-                    font-size: 34px;
-                    font-weight: bold;
-                    line-height: 28px;
-                }}
-
-                .logo-small {{
-                    font-size: 18px;
-                    font-weight: bold;
-                    padding-left: 110px;
-                }}
-
-                .red {{
-                    color: #b00020;
+                .content {{
+                    position: absolute;
+                    top: 72mm;
+                    left: 8mm;
+                    right: 8mm;
+                    bottom: 25mm;
                 }}
 
                 .title {{
-                    font-size: 16px;
-                    font-weight: bold;
                     text-align: center;
-                    margin-bottom: 10px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    margin-bottom: 5mm;
                 }}
 
                 .meta {{
                     width: 100%;
-                    margin-bottom: 10px;
                     border-collapse: collapse;
+                    margin-bottom: 3mm;
+                    font-size: 7px;
                 }}
 
                 .meta td {{
-                    padding: 3px;
-                    font-size: 10px;
+                    padding: 1mm;
+                    white-space: nowrap;
                 }}
 
                 table.data {{
                     width: 100%;
                     border-collapse: collapse;
                     table-layout: fixed;
+                    font-size: 5.2px;
                 }}
 
                 table.data th {{
-                    border: 1px solid #000;
-                    padding: 4px;
-                    background: #e6e6e6;
-                    font-size: 8px;
+                    border: 0.35mm solid #000;
+                    padding: 0.8mm 0.5mm;
+                    font-weight: bold;
+                    text-align: center;
+                    vertical-align: middle;
+                    line-height: 1.1;
+                    overflow-wrap: break-word;
                 }}
 
                 table.data td {{
-                    border: 1px solid #000;
-                    padding: 4px;
-                    font-size: 8px;
+                    border: 0.35mm solid #000;
+                    padding: 0.8mm 0.5mm;
                     vertical-align: top;
-                    word-wrap: break-word;
+                    line-height: 1.15;
+                    overflow-wrap: break-word;
                 }}
 
-                .signature-table {{
+                .signatures {{
                     width: 100%;
-                    margin-top: 18px;
                     border-collapse: collapse;
+                    margin-top: 6mm;
+                    font-size: 9px;
                 }}
 
                 .signature-box {{
                     width: 50%;
-                    border: 1px solid #000;
-                    padding: 8px;
+                    border: 0.35mm solid #000;
+                    padding: 2mm;
+                    height: 30mm;
                     vertical-align: top;
-                    height: 95px;
+                }}
+
+                .signature-title {{
+                    font-weight: bold;
+                    font-size: 10px;
+                    margin-bottom: 2mm;
                 }}
 
                 .signature-img {{
-                    max-height: 55px;
-                    max-width: 260px;
+                    max-height: 15mm;
+                    max-width: 55mm;
+                    margin-top: 2mm;
                 }}
 
-                .footer {{
-                    position: fixed;
-                    bottom: -10mm;
-                    left: 0;
-                    right: 0;
-                    font-size: 9px;
-                    border-top: 6px solid #444;
-                    padding-top: 5px;
-                }}
-
-                .footer-red {{
-                    border-top: 3px solid #b00020;
-                    margin-top: -8px;
-                    width: 88%;
-                }}
-
-                .page-number {{
-                    float: right;
+                .pending {{
+                    font-style: italic;
+                    margin-top: 6mm;
                 }}
             </style>
         </head>
 
         <body>
-            <div class="header">
-                <table class="header-table">
-                    <tr>
-                        <td style="width: 36%;">
-                            <div class="logo"><span class="red">I</span>sambane</div>
-                            <div class="logo-small">mining</div>
-                        </td>
-                        <td style="width: 24%;">
-                            Suite MW331<br>
-                            Private Bag X1838<br>
-                            Middelburg, MP, 1050<br><br>
-                            Plot 22<br>
-                            Vaalbank<br>
-                            Middelburg, MP, 1050
-                        </td>
-                        <td style="width: 22%;">
-                            Tel: +27(0)13 591 4078<br>
-                            Email: info@isambane.co.za
-                        </td>
-                        <td style="width: 18%;">
-                            Registration No.:<br>
-                            2005/016301/07<br><br>
-                            VAT Registration No.: 4590<br>
-                            237 279
-                        </td>
-                    </tr>
-                </table>
-            </div>
+            <div class="page">
+                <div class="content">
+                    <div class="title">Mechanical Downtime Sign-off Report</div>
 
-            <div class="title">Mechanical Downtime Sign-off Report</div>
+                    <table class="meta">
+                        <tr>
+                            <td><b>Date:</b> {report_date}</td>
+                            <td><b>Site:</b> {site}</td>
+                            <td><b>Asset Category:</b> {asset_category}</td>
+                            <td><b>Shift:</b> {shift}</td>
+                            <td><b>Status:</b> {status}</td>
+                        </tr>
+                    </table>
 
-            <table class="meta">
-                <tr>
-                    <td><b>Date:</b> {report_date}</td>
-                    <td><b>Site:</b> {site}</td>
-                    <td><b>Asset Category:</b> {asset_category}</td>
-                    <td><b>Shift:</b> {shift}</td>
-                    <td><b>Status:</b> {status}</td>
-                </tr>
-            </table>
+                    <table class="data">
+                        <thead>
+                            <tr>{table_headers}</tr>
+                        </thead>
+                        <tbody>
+                            {table_rows}
+                        </tbody>
+                    </table>
 
-            <table class="data">
-                <thead>
-                    <tr>
-                        {table_headers}
-                    </tr>
-                </thead>
-                <tbody>
-                    {table_rows}
-                </tbody>
-            </table>
-
-            <table class="signature-table">
-                <tr>
-                    <td class="signature-box">
-                        <b>Production Sign-off</b><br>
-                        User: {production_user}<br>
-                        Date/Time: {production_date_time}<br><br>
-                        {production_signature_html}
-                    </td>
-                    <td class="signature-box">
-                        <b>Engineering Sign-off</b><br>
-                        User: {engineering_user}<br>
-                        Date/Time: {engineering_date_time}<br><br>
-                        {engineering_signature_html}
-                    </td>
-                </tr>
-            </table>
-
-            <div class="footer">
-                <div class="footer-red"></div>
-                Directors: JP Jordaan, B Giyose, JG Venter<br>
-                Non-Executive Director: R Lakhoo
-                <span class="page-number">Page 1 of 1</span>
+                    <table class="signatures">
+                        <tr>
+                            <td class="signature-box">
+                                <div class="signature-title">Production Sign-off</div>
+                                <b>User:</b> {production_user}<br>
+                                <b>Date/Time:</b> {production_date_time}<br>
+                                {production_signature_html}
+                            </td>
+                            <td class="signature-box">
+                                <div class="signature-title">Engineering Sign-off</div>
+                                <b>User:</b> {engineering_user}<br>
+                                <b>Date/Time:</b> {engineering_date_time}<br>
+                                {engineering_signature_html}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
             </div>
         </body>
     </html>
@@ -751,8 +712,8 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         asset_category=frappe.utils.escape_html(asset_category or "All Categories"),
         shift=frappe.utils.escape_html(shift or "All Shifts"),
         status=frappe.utils.escape_html(parent.status or ""),
-        table_headers=get_pdf_table_headers(columns),
-        table_rows=get_pdf_table_rows(columns, data),
+        table_headers=get_pdf_table_headers(pdf_columns),
+        table_rows=get_pdf_table_rows(pdf_columns, data),
         production_user=frappe.utils.escape_html(production_user or ""),
         engineering_user=frappe.utils.escape_html(engineering_user or ""),
         production_date_time=frappe.utils.escape_html(production_date_time or ""),
@@ -762,9 +723,29 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     )
 
 
+def get_pdf_columns():
+    return [
+        {"label": "Date", "fieldname": "date", "width": "9%"},
+        {"label": "Site", "fieldname": "site", "width": "9%"},
+        {"label": "Plant No.", "fieldname": "plant_no", "width": "9%"},
+        {"label": "Plant Category", "fieldname": "asset_category", "width": "10%"},
+        {"label": "Reason", "fieldname": "breakdown_reason", "width": "17%"},
+        {"label": "Resolution", "fieldname": "resolution_summary", "width": "13%"},
+        {"label": "Start Time", "fieldname": "breakdown_start_datetime", "width": "11%"},
+        {"label": "Back in Production", "fieldname": "resolved_datetime", "width": "11%"},
+        {"label": "Hours", "fieldname": "breakdown_hours", "width": "5%"},
+        {"label": "Status", "fieldname": "open_closed", "width": "6%"},
+    ]
+
+
+
+
 def get_pdf_table_headers(columns):
     return "".join([
-        "<th>{0}</th>".format(frappe.utils.escape_html(column.get("label") or ""))
+        '<th style="width: {0};">{1}</th>'.format(
+            column.get("width"),
+            frappe.utils.escape_html(column.get("label") or "")
+        )
         for column in columns
     ])
 
@@ -793,7 +774,7 @@ def get_pdf_table_rows(columns, data):
 
 def get_signature_html(signature):
     if not signature:
-        return "<i>Pending signature</i>"
+        return '<div class="pending">Pending signature</div>'
 
     if str(signature).startswith("data:image"):
         return '<img class="signature-img" src="{0}">'.format(signature)
