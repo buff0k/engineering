@@ -546,180 +546,113 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     production_date_time = format_datetime(signoff_row.date_time_p) if signoff_row and signoff_row.date_time_p else ""
     engineering_date_time = format_datetime(signoff_row.date_time_e) if signoff_row and signoff_row.date_time_e else ""
 
-    pdf_columns = get_pdf_columns()
-
     return """
     <html>
         <head>
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 0;
+                    margin: 45mm 10mm 22mm 10mm;
                 }}
 
                 html, body {{
                     margin: 0;
                     padding: 0;
-                    width: 210mm;
-                    height: 297mm;
                     font-family: Arial, sans-serif;
                     color: #000;
-                    font-size: 8px;
+                    font-size: 9px;
                 }}
 
-                .page {{
-                    position: relative;
-                    width: 210mm;
-                    height: 297mm;
-                    overflow: hidden;
-                }}
-
-                .header-bg {{
-                    position: absolute;
-                    top: 0;
+                .pdf-header {{
+                    position: fixed;
+                    top: -37mm;
                     left: 0;
-                    width: 210mm;
-                    height: 62mm;
-                    background-image: url("/assets/engineering/images/Template_Background.jpg");
-                    background-size: 210mm 297mm;
-                    background-position: top center;
-                    background-repeat: no-repeat;
-                    z-index: 1;
-                }}
-
-                .pdf-footer {{
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 210mm;
+                    right: 0;
                     height: 34mm;
-                    z-index: 1;
-                    overflow: hidden;
-                    font-size: 8px;
-                    color: #000;
+                    border-bottom: 1.5px solid #000;
                 }}
 
-                .footer-text {{
-                    position: absolute;
-                    left: 24mm;
-                    bottom: 9mm;
-                    z-index: 3;
+                .header-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                }}
+
+                .header-table td {{
+                    vertical-align: top;
+                    font-size: 9px;
                     line-height: 1.25;
                 }}
 
-                .footer-page {{
-                    position: absolute;
-                    right: 24mm;
-                    bottom: 9mm;
-                    z-index: 3;
+                .logo-img {{
+                    width: 72mm;
+                    height: auto;
+                    margin-top: 2mm;
                 }}
 
-                .footer-dark {{
-                    position: absolute;
-                    left: -5mm;
-                    right: -5mm;
-                    bottom: -10mm;
-                    height: 22mm;
-                    background: #3f3f3f;
-                    transform: rotate(-3deg);
-                    transform-origin: left bottom;
-                    z-index: 1;
+                .pdf-footer {{
+                    position: fixed;
+                    bottom: -17mm;
+                    left: 0;
+                    right: 0;
+                    height: 15mm;
+                    border-top: 1.5px solid #000;
+                    font-size: 8px;
+                    padding-top: 2mm;
                 }}
 
-                .footer-red {{
-                    position: absolute;
-                    left: -5mm;
-                    right: 25mm;
-                    bottom: 6mm;
-                    height: 1.8mm;
-                    background: #e30613;
-                    transform: rotate(-3deg);
-                    transform-origin: left bottom;
-                    z-index: 2;
+                .footer-left {{
+                    float: left;
+                    line-height: 1.25;
                 }}
 
-                .content {{
-                    position: absolute;
-                    top: 72mm;
-                    left: 8mm;
-                    right: 8mm;
-                    bottom: 38mm;
-                    z-index: 2;
-                    overflow: hidden;
+                .footer-right {{
+                    float: right;
                 }}
 
                 .title {{
                     text-align: center;
-                    font-size: 13px;
+                    font-size: 14px;
                     font-weight: bold;
-                    margin-bottom: 4mm;
+                    margin-bottom: 5mm;
                 }}
 
                 .meta {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 3mm;
-                    font-size: 8px;
+                    margin-bottom: 4mm;
+                    font-size: 9px;
                 }}
 
                 .meta td {{
-                    padding: 1mm;
+                    padding: 1mm 2mm;
                     white-space: nowrap;
-                }}
-
-                table.data {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    table-layout: fixed;
-                    font-size: 6.6px;
-                }}
-
-                table.data th {{
-                    border: 0.25mm solid #000;
-                    padding: 0.7mm 0.5mm;
-                    font-weight: bold;
-                    text-align: center;
-                    vertical-align: middle;
-                    line-height: 1.15;
-                    overflow-wrap: break-word;
-                    word-wrap: break-word;
-                    white-space: normal;
-                }}
-
-                table.data td {{
-                    border: 0.25mm solid #000;
-                    padding: 0.7mm 0.5mm;
-                    vertical-align: top;
-                    line-height: 1.15;
-                    overflow-wrap: break-word;
-                    word-wrap: break-word;
-                    white-space: normal;
                 }}
 
                 .signatures {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 5mm;
-                    font-size: 8.5px;
+                    margin-bottom: 5mm;
+                    font-size: 9px;
+                    page-break-inside: avoid;
                 }}
 
                 .signature-box {{
                     width: 50%;
                     border: 0.3mm solid #000;
                     padding: 2mm;
-                    height: 27mm;
+                    height: 25mm;
                     vertical-align: top;
                 }}
 
                 .signature-title {{
                     font-weight: bold;
-                    font-size: 9.5px;
+                    font-size: 10px;
                     margin-bottom: 1.5mm;
                 }}
 
                 .signature-img {{
                     max-height: 13mm;
-                    max-width: 55mm;
+                    max-width: 60mm;
                     margin-top: 1.5mm;
                 }}
 
@@ -727,61 +660,116 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     font-style: italic;
                     margin-top: 5mm;
                 }}
+
+                .downtime-card {{
+                    border: 0.3mm solid #000;
+                    margin-bottom: 4mm;
+                    page-break-inside: avoid;
+                }}
+
+                .downtime-card-header {{
+                    background: #e9e9e9;
+                    border-bottom: 0.3mm solid #000;
+                    font-weight: bold;
+                    padding: 1.5mm;
+                    font-size: 9px;
+                }}
+
+                .downtime-grid {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                }}
+
+                .downtime-grid td {{
+                    border: 0.2mm solid #999;
+                    padding: 1.4mm;
+                    vertical-align: top;
+                    font-size: 8.5px;
+                    line-height: 1.25;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    white-space: normal;
+                }}
+
+                .label {{
+                    font-weight: bold;
+                    background: #f6f6f6;
+                    width: 22%;
+                }}
+
+                .full-text {{
+                    min-height: 10mm;
+                }}
             </style>
         </head>
 
         <body>
-            <div class="page">
-                <div class="header-bg"></div>
-                <div class="pdf-footer">
-                    <div class="footer-dark"></div>
-                    <div class="footer-red"></div>
-                    <div class="footer-text">
-                        Directors: JP Jordaan, B Giyose, JG Venter<br>
-                        Non-Executive Director: R Lakhoo
-                    </div>
-                    <div class="footer-page">Page 1 of 1</div>
-                </div>
-
-                <div class="content">
-                    <div class="title">Mechanical Downtime Sign-off Report</div>
-
-                    <table class="meta">
-                        <tr>
-                            <td><b>Date:</b> {report_date}</td>
-                            <td><b>Site:</b> {site}</td>
-                            <td><b>Shift:</b> {shift}</td>
-                            <td><b>Status:</b> {status}</td>
-                        </tr>
-                    </table>
-
-                    <table class="data">
-                        <thead>
-                            <tr>{table_headers}</tr>
-                        </thead>
-                        <tbody>
-                            {table_rows}
-                        </tbody>
-                    </table>
-
-                    <table class="signatures">
-                        <tr>
-                            <td class="signature-box">
-                                <div class="signature-title">Production Sign-off</div>
-                                <b>User:</b> {production_user}<br>
-                                <b>Date/Time:</b> {production_date_time}<br>
-                                {production_signature_html}
-                            </td>
-                            <td class="signature-box">
-                                <div class="signature-title">Engineering Sign-off</div>
-                                <b>User:</b> {engineering_user}<br>
-                                <b>Date/Time:</b> {engineering_date_time}<br>
-                                {engineering_signature_html}
-                            </td>
-                        </tr>
-                    </table>
-                </div>
+            <div class="pdf-header">
+                <table class="header-table">
+                    <tr>
+                        <td style="width: 42%;">
+                            <img class="logo-img" src="/assets/engineering/images/is-logo.png">
+                        </td>
+                        <td style="width: 24%;">
+                            Suite MW331<br>
+                            Private Bag X1838<br>
+                            Middelburg, MP, 1050<br><br>
+                            Plot 22<br>
+                            Vaalbank<br>
+                            Middelburg, MP, 1050
+                        </td>
+                        <td style="width: 18%;">
+                            Tel: +27(0)13 591 4078<br>
+                            Email: info@isambane.co.za
+                        </td>
+                        <td style="width: 16%;">
+                            Registration No.:<br>
+                            2005/016301/07<br><br>
+                            VAT Registration No.:<br>
+                            4590 237 279
+                        </td>
+                    </tr>
+                </table>
             </div>
+
+            <div class="pdf-footer">
+                <div class="footer-left">
+                    Directors: JP Jordaan, B Giyose, JG Venter<br>
+                    Non-Executive Director: R Lakhoo
+                </div>
+                <div class="footer-right">Page</div>
+            </div>
+
+            <div class="title">Mechanical Downtime Sign-off Report</div>
+
+            <table class="meta">
+                <tr>
+                    <td><b>Date:</b> {report_date}</td>
+                    <td><b>Site:</b> {site}</td>
+                    <td><b>Shift:</b> {shift}</td>
+                    <td><b>Status:</b> {status}</td>
+                </tr>
+            </table>
+
+            <table class="signatures">
+                <tr>
+                    <td class="signature-box">
+                        <div class="signature-title">Production Sign-off</div>
+                        <b>User:</b> {production_user}<br>
+                        <b>Date/Time:</b> {production_date_time}<br>
+                        {production_signature_html}
+                    </td>
+                    <td class="signature-box">
+                        <div class="signature-title">Engineering Sign-off</div>
+                        <b>User:</b> {engineering_user}<br>
+                        <b>Date/Time:</b> {engineering_date_time}<br>
+                        {engineering_signature_html}
+                    </td>
+                </tr>
+            </table>
+
+            {downtime_cards}
         </body>
     </html>
     """.format(
@@ -789,60 +777,58 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         site=frappe.utils.escape_html(site or "All Sites"),
         shift=frappe.utils.escape_html(shift or "All Shifts"),
         status=frappe.utils.escape_html(parent.status or ""),
-        table_headers=get_pdf_table_headers(pdf_columns),
-        table_rows=get_pdf_table_rows(pdf_columns, data),
         production_user=frappe.utils.escape_html(production_user or ""),
         engineering_user=frappe.utils.escape_html(engineering_user or ""),
         production_date_time=frappe.utils.escape_html(production_date_time or ""),
         engineering_date_time=frappe.utils.escape_html(engineering_date_time or ""),
         production_signature_html=get_signature_html(production_signature),
         engineering_signature_html=get_signature_html(engineering_signature),
+        downtime_cards=get_downtime_cards_html(data),
     )
 
 
-def get_pdf_columns():
-    return [
-        {"label": "Plant No.", "fieldname": "plant_no", "width": "10%"},
-        {"label": "Category", "fieldname": "asset_category", "width": "12%"},
-        {"label": "Reason", "fieldname": "breakdown_reason", "width": "24%"},
-        {"label": "Resolution", "fieldname": "resolution_summary", "width": "20%"},
-        {"label": "Start", "fieldname": "breakdown_start_datetime", "width": "12%"},
-        {"label": "Back In Prod.", "fieldname": "resolved_datetime", "width": "12%"},
-        {"label": "Hours", "fieldname": "breakdown_hours", "width": "5%"},
-        {"label": "Status", "fieldname": "open_closed", "width": "5%"},
-    ]
-
-
-def get_pdf_table_headers(columns):
-    return "".join([
-        '<th style="width: {0};">{1}</th>'.format(
-            column.get("width"),
-            frappe.utils.escape_html(column.get("label") or "")
-        )
-        for column in columns
-    ])
-
-
-def get_pdf_table_rows(columns, data):
+def get_downtime_cards_html(data):
     if not data:
-        return '<tr><td colspan="{0}">No downtime records found.</td></tr>'.format(len(columns))
+        return '<div class="downtime-card"><div class="downtime-card-header">No downtime records found.</div></div>'
 
-    rows = []
+    cards = []
 
     for row in data:
-        cells = []
+        cards.append("""
+            <div class="downtime-card">
+                <div class="downtime-card-header">
+                    {plant_no} | {asset_category} | {status} | {hours} hrs
+                </div>
 
-        for column in columns:
-            value = row.get(column.get("fieldname"))
+                <table class="downtime-grid">
+                    <tr>
+                        <td class="label">Start</td>
+                        <td>{start}</td>
+                        <td class="label">Back In Production</td>
+                        <td>{resolved}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Reason</td>
+                        <td colspan="3" class="full-text">{reason}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Resolution</td>
+                        <td colspan="3" class="full-text">{resolution}</td>
+                    </tr>
+                </table>
+            </div>
+        """.format(
+            plant_no=frappe.utils.escape_html(str(row.get("plant_no") or "")),
+            asset_category=frappe.utils.escape_html(str(row.get("asset_category") or "")),
+            status=frappe.utils.escape_html(str(row.get("open_closed") or "")),
+            hours=frappe.utils.escape_html(str(row.get("breakdown_hours") or "")),
+            start=frappe.utils.escape_html(str(row.get("breakdown_start_datetime") or "")),
+            resolved=frappe.utils.escape_html(str(row.get("resolved_datetime") or "")),
+            reason=frappe.utils.escape_html(str(row.get("breakdown_reason") or "")),
+            resolution=frappe.utils.escape_html(str(row.get("resolution_summary") or "")),
+        ))
 
-            if value is None:
-                value = ""
-
-            cells.append("<td>{0}</td>".format(frappe.utils.escape_html(str(value))))
-
-        rows.append("<tr>{0}</tr>".format("".join(cells)))
-
-    return "".join(rows)
+    return "".join(cards)
 
 
 def get_signature_html(signature):

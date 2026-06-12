@@ -321,6 +321,9 @@
 
 
 
+
+
+
 <script>
 (function () {
     function setCompletion(value) {
@@ -357,7 +360,7 @@
     }
 
     function syncCompletionFromActionDate() {
-        const actionDate = document.querySelector('[name="action_date_and_time"]');
+        const actionDate = document.getElementById("action_date_and_time");
 
         if (actionDate && actionDate.value) {
             setCompletion(100);
@@ -367,14 +370,31 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        const actionDate = document.querySelector('[name="action_date_and_time"]');
+        const actionDate = document.getElementById("action_date_and_time");
 
         if (actionDate) {
             actionDate.addEventListener("input", syncCompletionFromActionDate);
             actionDate.addEventListener("change", syncCompletionFromActionDate);
+            actionDate.addEventListener("keyup", syncCompletionFromActionDate);
+            actionDate.addEventListener("blur", syncCompletionFromActionDate);
         }
 
         syncCompletionFromActionDate();
+    });
+})();
+</script>
+
+
+<script>
+(function () {
+    document.addEventListener("DOMContentLoaded", function () {
+        const reportDate = document.querySelector('[name="report_datetime"]');
+
+        if (reportDate && !reportDate.value) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            reportDate.value = now.toISOString().slice(0, 16);
+        }
     });
 })();
 </script>
