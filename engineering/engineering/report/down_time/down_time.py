@@ -3,8 +3,8 @@
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
-from frappe.utils.xlsxutils import make_xlsx
+from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours, format_datetime
+from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 from datetime import timedelta
 
@@ -406,7 +406,7 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature):
         frappe.rename_doc("Mechanical Downtime sign-off", parent.name, new_name, force=True)
         parent = frappe.get_doc("Mechanical Downtime sign-off", new_name)
 
-    attach_signed_report_excel(parent, report_date, site, asset_category, signoff_shift)
+    attach_signed_report_pdf(parent, report_date, site, asset_category, signoff_shift)
 
     return _("Downtime sign-off saved. Status: {0}").format(parent.status)
 
@@ -492,7 +492,7 @@ def clean_docname(value):
     return value
 
 
-def attach_signed_report_excel(parent, report_date, site, asset_category, shift):
+def attach_signed_report_pdf(parent, report_date, site, asset_category, shift):
     filters = frappe._dict({
         "report_date": report_date,
         "site": site,
@@ -503,28 +503,299 @@ def attach_signed_report_excel(parent, report_date, site, asset_category, shift)
     columns = get_columns()
     data = get_data(filters)
 
-    rows = []
-    rows.append([column.get("label") for column in columns])
+    signoff_row = parent.signoff_information[0] if parent.signoff_information else None
 
-    for row in data:
-        rows.append([
-            row.get(column.get("fieldname"))
-            for column in columns
-        ])
+    html = get_signed_report_html(
+        parent=parent,
+        report_date=report_date,
+        site=site,
+        asset_category=asset_category,
+        shift=shift,
+        columns=columns,
+        data=data,
+        signoff_row=signoff_row,
+    )
 
-    file_name = "Down Time {0} {1}.xlsx".format(
+    file_name = "Down Time {0} {1}.pdf".format(
         report_date,
         shift or "All Shifts",
     )
 
-    xlsx_file = make_xlsx(rows, "Down Time")
+    pdf_file = get_pdf(html)
 
     file_doc = save_file(
         file_name,
-        xlsx_file.getvalue(),
+        pdf_file,
         "Mechanical Downtime sign-off",
         parent.name,
         is_private=1,
     )
 
     parent.db_set("signed_report_excel", file_doc.file_url, update_modified=False)
+
+
+def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row):
+    production_signature = signoff_row.production_signature if signoff_row else ""
+    engineering_signature = signoff_row.engineering_signature if signoff_row else ""
+
+    production_user = signoff_row.production_user if signoff_row else ""
+    engineering_user = signoff_row.engineering_user if signoff_row else ""
+
+    production_date_time = format_datetime(signoff_row.date_time_p) if signoff_row and signoff_row.date_time_p else ""
+    engineering_date_time = format_datetime(signoff_row.date_time_e) if signoff_row and signoff_row.date_time_e else ""
+
+    return """
+    <html>
+        <head>
+            <style>
+                @page {{
+                    size: A4 landscape;
+                    margin: 18mm 10mm 18mm 10mm;
+                }}
+
+                body {{
+                    font-family: Arial, sans-serif;
+                    font-size: 9px;
+                    color: #000;
+                }}
+
+                .header {{
+                    width: 100%;
+                    border-bottom: 2px solid #000;
+                    padding-bottom: 8px;
+                    margin-bottom: 14px;
+                }}
+
+                .header-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                }}
+
+                .logo {{
+                    font-size: 34px;
+                    font-weight: bold;
+                    line-height: 28px;
+                }}
+
+                .logo-small {{
+                    font-size: 18px;
+                    font-weight: bold;
+                    padding-left: 110px;
+                }}
+
+                .red {{
+                    color: #b00020;
+                }}
+
+                .title {{
+                    font-size: 16px;
+                    font-weight: bold;
+                    text-align: center;
+                    margin-bottom: 10px;
+                }}
+
+                .meta {{
+                    width: 100%;
+                    margin-bottom: 10px;
+                    border-collapse: collapse;
+                }}
+
+                .meta td {{
+                    padding: 3px;
+                    font-size: 10px;
+                }}
+
+                table.data {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                }}
+
+                table.data th {{
+                    border: 1px solid #000;
+                    padding: 4px;
+                    background: #e6e6e6;
+                    font-size: 8px;
+                }}
+
+                table.data td {{
+                    border: 1px solid #000;
+                    padding: 4px;
+                    font-size: 8px;
+                    vertical-align: top;
+                    word-wrap: break-word;
+                }}
+
+                .signature-table {{
+                    width: 100%;
+                    margin-top: 18px;
+                    border-collapse: collapse;
+                }}
+
+                .signature-box {{
+                    width: 50%;
+                    border: 1px solid #000;
+                    padding: 8px;
+                    vertical-align: top;
+                    height: 95px;
+                }}
+
+                .signature-img {{
+                    max-height: 55px;
+                    max-width: 260px;
+                }}
+
+                .footer {{
+                    position: fixed;
+                    bottom: -10mm;
+                    left: 0;
+                    right: 0;
+                    font-size: 9px;
+                    border-top: 6px solid #444;
+                    padding-top: 5px;
+                }}
+
+                .footer-red {{
+                    border-top: 3px solid #b00020;
+                    margin-top: -8px;
+                    width: 88%;
+                }}
+
+                .page-number {{
+                    float: right;
+                }}
+            </style>
+        </head>
+
+        <body>
+            <div class="header">
+                <table class="header-table">
+                    <tr>
+                        <td style="width: 36%;">
+                            <div class="logo"><span class="red">I</span>sambane</div>
+                            <div class="logo-small">mining</div>
+                        </td>
+                        <td style="width: 24%;">
+                            Suite MW331<br>
+                            Private Bag X1838<br>
+                            Middelburg, MP, 1050<br><br>
+                            Plot 22<br>
+                            Vaalbank<br>
+                            Middelburg, MP, 1050
+                        </td>
+                        <td style="width: 22%;">
+                            Tel: +27(0)13 591 4078<br>
+                            Email: info@isambane.co.za
+                        </td>
+                        <td style="width: 18%;">
+                            Registration No.:<br>
+                            2005/016301/07<br><br>
+                            VAT Registration No.: 4590<br>
+                            237 279
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="title">Mechanical Downtime Sign-off Report</div>
+
+            <table class="meta">
+                <tr>
+                    <td><b>Date:</b> {report_date}</td>
+                    <td><b>Site:</b> {site}</td>
+                    <td><b>Asset Category:</b> {asset_category}</td>
+                    <td><b>Shift:</b> {shift}</td>
+                    <td><b>Status:</b> {status}</td>
+                </tr>
+            </table>
+
+            <table class="data">
+                <thead>
+                    <tr>
+                        {table_headers}
+                    </tr>
+                </thead>
+                <tbody>
+                    {table_rows}
+                </tbody>
+            </table>
+
+            <table class="signature-table">
+                <tr>
+                    <td class="signature-box">
+                        <b>Production Sign-off</b><br>
+                        User: {production_user}<br>
+                        Date/Time: {production_date_time}<br><br>
+                        {production_signature_html}
+                    </td>
+                    <td class="signature-box">
+                        <b>Engineering Sign-off</b><br>
+                        User: {engineering_user}<br>
+                        Date/Time: {engineering_date_time}<br><br>
+                        {engineering_signature_html}
+                    </td>
+                </tr>
+            </table>
+
+            <div class="footer">
+                <div class="footer-red"></div>
+                Directors: JP Jordaan, B Giyose, JG Venter<br>
+                Non-Executive Director: R Lakhoo
+                <span class="page-number">Page 1 of 1</span>
+            </div>
+        </body>
+    </html>
+    """.format(
+        report_date=frappe.utils.escape_html(str(report_date)),
+        site=frappe.utils.escape_html(site or "All Sites"),
+        asset_category=frappe.utils.escape_html(asset_category or "All Categories"),
+        shift=frappe.utils.escape_html(shift or "All Shifts"),
+        status=frappe.utils.escape_html(parent.status or ""),
+        table_headers=get_pdf_table_headers(columns),
+        table_rows=get_pdf_table_rows(columns, data),
+        production_user=frappe.utils.escape_html(production_user or ""),
+        engineering_user=frappe.utils.escape_html(engineering_user or ""),
+        production_date_time=frappe.utils.escape_html(production_date_time or ""),
+        engineering_date_time=frappe.utils.escape_html(engineering_date_time or ""),
+        production_signature_html=get_signature_html(production_signature),
+        engineering_signature_html=get_signature_html(engineering_signature),
+    )
+
+
+def get_pdf_table_headers(columns):
+    return "".join([
+        "<th>{0}</th>".format(frappe.utils.escape_html(column.get("label") or ""))
+        for column in columns
+    ])
+
+
+def get_pdf_table_rows(columns, data):
+    if not data:
+        return '<tr><td colspan="{0}">No downtime records found.</td></tr>'.format(len(columns))
+
+    rows = []
+
+    for row in data:
+        cells = []
+
+        for column in columns:
+            value = row.get(column.get("fieldname"))
+
+            if value is None:
+                value = ""
+
+            cells.append("<td>{0}</td>".format(frappe.utils.escape_html(str(value))))
+
+        rows.append("<tr>{0}</tr>".format("".join(cells)))
+
+    return "".join(rows)
+
+
+def get_signature_html(signature):
+    if not signature:
+        return "<i>Pending signature</i>"
+
+    if str(signature).startswith("data:image"):
+        return '<img class="signature-img" src="{0}">'.format(signature)
+
+    return '<img class="signature-img" src="{0}">'.format(frappe.utils.escape_html(signature))
