@@ -42,7 +42,7 @@ def get_context(context):
 
     context.form_values = {
         "name": doc.name if doc else "",
-        "report_datetime": _format_datetime_for_input(doc.report_datetime) if doc else frappe.utils.now_datetime().strftime("%Y/%m/%d %H:%M"),
+        "report_datetime": _format_datetime_for_input(doc.report_datetime) if doc else frappe.utils.now_datetime().strftime("%d-%m-%Y %H:%M:%S"),
         "site": doc.site if doc else "",
         "fleet_number": doc.fleet_number if doc else "",
         "pre_use_no": doc.pre_use_no if doc else "",
@@ -125,16 +125,30 @@ def _parse_datetime(value):
     if not value:
         return None
 
-    value = value.replace("T", " ")
-    value = value.replace("/", "-")
+    from datetime import datetime
 
-    return frappe.utils.get_datetime(value)
+    formats = [
+        "%d-%m-%Y %H:%M:%S",
+        "%d-%m-%Y %H:%M",
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d %H:%M",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            pass
+
+    return frappe.utils.get_datetime(value.replace("T", " "))
 
 
 def _format_datetime_for_input(value):
     if not value:
         return ""
-    return frappe.utils.get_datetime(value).strftime("%Y/%m/%d %H:%M")
+    return frappe.utils.get_datetime(value).strftime("%d-%m-%Y %H:%M:%S")
 
 
 def _get_doc_from_query():

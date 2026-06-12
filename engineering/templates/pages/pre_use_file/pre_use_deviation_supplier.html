@@ -3,6 +3,18 @@
 {% block page_content %}
 
 <style>
+#completion_percentage_percent.completion-red {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+#completion_percentage_percent.completion-green {
+    color: #16a34a !important;
+    font-weight: 700;
+}
+</style>
+
+
+<style>
 #completion_percentage_range {
     pointer-events: none !important;
 }
@@ -54,7 +66,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label><strong>Report Date and Time</strong></label>
-                <input type="text" class="form-control" name="report_datetime" placeholder="yyyy/mm/dd hh:mm" value="{{ form_values.report_datetime or '' }}">
+                <input type="text" class="form-control datetime-popup" name="report_datetime" value="{{ form_values.report_datetime or '' }}" autocomplete="off">
             </div>
 
             <div class="col-md-6 mb-3">
@@ -136,7 +148,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label><strong>Action Date and Time</strong></label>
-                <input type="text" class="form-control" id="action_date_and_time" name="action_date_and_time" placeholder="yyyy/mm/dd hh:mm" value="{{ form_values.action_date_and_time or '' }}">
+                <input type="text" class="form-control datetime-popup" id="action_date_and_time" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}" autocomplete="off">
             </div>
 
             <div class="col-md-6 mb-3">
@@ -171,7 +183,7 @@
             <input type="number" class="form-control mb-2" id="completion_percentage_number" name="completion_percentage" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
             <input type="range" class="form-range" id="completion_percentage_range" tabindex="-1" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
             <div class="text-success mt-1">
-                <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span>%
+                <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span><span id="completion_percentage_percent">%</span>
             </div>
         </div>
 
@@ -182,6 +194,7 @@
             const numberInput = document.getElementById("completion_percentage_number");
             const rangeInput = document.getElementById("completion_percentage_range");
             const label = document.getElementById("completion_percentage_label");
+        const percent = document.getElementById("completion_percentage_percent");
             const fleetNumberInput = document.getElementById("fleet_number");
             const machineTypeInput = document.getElementById("machine_type");
             const machineModelInput = document.getElementById("machine_model");
@@ -330,6 +343,7 @@
         const numberInput = document.getElementById("completion_percentage_number");
         const rangeInput = document.getElementById("completion_percentage_range");
         const label = document.getElementById("completion_percentage_label");
+        const percent = document.getElementById("completion_percentage_percent");
         const actionStatus = document.querySelector('[name="action_status"]');
 
         value = parseInt(value || 0, 10);
@@ -352,6 +366,11 @@
             label.textContent = value;
             label.classList.remove("completion-red", "completion-green");
             label.classList.add(colorClass);
+        }
+
+        if (percent) {
+            percent.classList.remove("completion-red", "completion-green");
+            percent.classList.add(colorClass);
         }
 
         if (actionStatus) {
@@ -385,21 +404,159 @@
 </script>
 
 
+
+
+
+
+
+
 <script>
 (function () {
-    document.addEventListener("DOMContentLoaded", function () {
-        const reportDate = document.querySelector('[name="report_datetime"]');
+    function pad(value) {
+        return String(value).padStart(2, "0");
+    }
 
-        if (reportDate && !reportDate.value) {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            const yyyy = now.getFullYear();
-            const mm = String(now.getMonth() + 1).padStart(2, "0");
-            const dd = String(now.getDate()).padStart(2, "0");
-            const hh = String(now.getHours()).padStart(2, "0");
-            const min = String(now.getMinutes()).padStart(2, "0");
-            reportDate.value = `${yyyy}/${mm}/${dd} ${hh}:${min}`;
+    function formatDateTime(date) {
+        return (
+            pad(date.getDate()) + "-" +
+            pad(date.getMonth() + 1) + "-" +
+            date.getFullYear() + " " +
+            pad(date.getHours()) + ":" +
+            pad(date.getMinutes()) + ":" +
+            pad(date.getSeconds())
+        );
+    }
+
+    function setupDateTimePopups() {
+        if (typeof flatpickr === "undefined") {
+            return;
         }
+
+        document.querySelectorAll(".datetime-popup").forEach(function (input) {
+            if (input._flatpickr) {
+                input._flatpickr.destroy();
+            }
+
+            flatpickr(input, {
+                enableTime: true,
+                enableSeconds: true,
+                allowInput: true,
+                clickOpens: true,
+                dateFormat: "d-m-Y H:i:S",
+                time_24hr: true,
+                closeOnSelect: false,
+
+                onOpen: function (selectedDates, dateStr, instance) {
+                    if (!input.value) {
+                        const now = new Date();
+                        instance.jumpToDate(now);
+                        instance.setDate(now, false);
+                        input.value = "";
+                    }
+                },
+
+                onChange: function (selectedDates) {
+                    if (selectedDates.length) {
+                        input.value = formatDateTime(selectedDates[0]);
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                        input.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+            });
+
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Backspace" || event.key === "Delete") {
+                    setTimeout(function () {
+                        if (!input.value) {
+                            input.dispatchEvent(new Event("input", { bubbles: true }));
+                            input.dispatchEvent(new Event("change", { bubbles: true }));
+                        }
+                    }, 50);
+                }
+            });
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", setupDateTimePopups);
+})();
+</script>
+
+
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+.flatpickr-calendar {
+    font-size: 12px !important;
+    width: 260px !important;
+}
+
+.flatpickr-calendar .flatpickr-months {
+    padding-top: 4px;
+}
+
+.flatpickr-calendar .flatpickr-day {
+    max-width: 30px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+}
+
+.flatpickr-calendar .flatpickr-time {
+    height: 38px !important;
+}
+
+.flatpickr-calendar .numInputWrapper {
+    height: 28px !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+(function () {
+    function setupSmallCalendar() {
+        if (typeof flatpickr === "undefined") {
+            console.log("flatpickr not loaded");
+            return;
+        }
+
+        document.querySelectorAll(".datetime-popup").forEach(function (input) {
+            if (input._flatpickr) {
+                input._flatpickr.destroy();
+            }
+
+            flatpickr(input, {
+                enableTime: true,
+                enableSeconds: true,
+                allowInput: true,
+                clickOpens: true,
+                dateFormat: "d-m-Y H:i:S",
+                time_24hr: true,
+                disableMobile: true,
+                closeOnSelect: false,
+
+                onChange: function (selectedDates, dateStr) {
+                    input.value = dateStr || "";
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Backspace" || event.key === "Delete") {
+                    setTimeout(function () {
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                        input.dispatchEvent(new Event("change", { bubbles: true }));
+                    }, 50);
+                }
+            });
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        setTimeout(setupSmallCalendar, 300);
     });
 })();
 </script>

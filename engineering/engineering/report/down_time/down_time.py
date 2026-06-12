@@ -536,6 +536,7 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift):
 
 
 
+
 def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row):
     production_signature = signoff_row.production_signature if signoff_row else ""
     engineering_signature = signoff_row.engineering_signature if signoff_row else ""
@@ -554,174 +555,198 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 58mm 10mm 32mm 10mm;
+                    margin: 15mm 15mm 18mm 15mm;
                 }}
 
                 body {{
                     font-family: Arial, sans-serif;
-                    font-size: 9px;
+                    font-size: 10px;
                     color: #111;
                 }}
 
-                .pdf-header {{
-                    position: fixed;
-                    top: -48mm;
-                    left: -7mm;
-                    right: -2mm;
-                    height: 44mm;
-                    overflow: hidden;
+                .letterhead {{
+                    margin-bottom: 18px;
+                    transform: scale(0.88);
+                    transform-origin: top left;
+                    width: 113%;
                 }}
 
-                .pdf-header img {{
+                .letterhead img {{
                     max-width: 100% !important;
                     height: auto !important;
                 }}
 
-                .pdf-header table {{
+                .letterhead table {{
                     width: 100% !important;
+                    table-layout: fixed;
                 }}
 
-                .report-title {{
+                .letterhead td {{
+                    vertical-align: top;
+                    font-size: 9px;
+                    line-height: 1.2;
+                }}
+
+                .letterhead td:first-child {{
+                    width: 43%;
+                    padding-left: 10mm;
+                }}
+
+                .letterhead td:nth-child(2) {{
+                    width: 25%;
+                }}
+
+                .letterhead td:nth-child(3) {{
+                    width: 18%;
+                    padding-left: 0;
+                }}
+
+                .letterhead td:nth-child(4) {{
+                    width: 14%;
+                    padding-left: 0;
+                }}
+
+                .print-heading {{
                     text-align: center;
-                    font-size: 15px;
+                    margin-bottom: 14px;
+                }}
+
+                .print-heading h2 {{
+                    margin: 0;
+                    font-size: 18px;
                     font-weight: 800;
                     text-transform: uppercase;
-                    border: 1.5px solid #111;
+                    border: 2px solid #111;
                     background: #f2f2f2;
-                    padding: 6px;
-                    margin-bottom: 8px;
+                    padding: 8px;
                 }}
 
                 .meta-table {{
                     width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 10px;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-bottom: 14px;
                 }}
 
                 .meta-table td {{
-                    border: 1px solid #111;
-                    padding: 5px 7px;
-                    font-size: 9px;
+                    padding: 8px;
+                    border-right: 1px solid #ddd;
+                    font-size: 10px;
                 }}
 
-                .signatures {{
+                .meta-table td:last-child {{
+                    border-right: none;
+                }}
+
+                .signatures table {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 12px;
+                    margin-bottom: 18px;
                     page-break-inside: avoid;
                 }}
 
-                .signature-box {{
-                    width: 50%;
-                    border: 1px solid #111;
-                    padding: 7px;
-                    height: 78px;
+                .signatures td {{
+                    border: none;
+                    padding: 12px 10px;
                     vertical-align: top;
+                    width: 50%;
                 }}
 
-                .signature-title {{
+                .sign-box {{
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    padding: 10px;
+                    min-height: 85px;
+                }}
+
+                .sign-title {{
+                    font-size: 13px;
                     font-weight: 800;
                     text-transform: uppercase;
-                    margin-bottom: 6px;
+                    margin-bottom: 8px;
                 }}
 
                 .signature-img {{
-                    max-height: 42px;
-                    max-width: 230px;
-                    margin-top: 4px;
+                    max-height: 45px;
+                    max-width: 240px;
+                    margin-top: 6px;
                 }}
 
                 .pending {{
                     font-style: italic;
-                    margin-top: 18px;
+                    margin-top: 20px;
                 }}
 
-                .downtime-card {{
-                    border: 1px solid #111;
-                    margin-bottom: 9px;
-                    page-break-inside: avoid;
-                    break-inside: avoid;
-                }}
-
-                .downtime-card-title {{
-                    font-weight: 800;
-                    background: #e9e9e9;
-                    border-bottom: 1px solid #111;
-                    padding: 5px 7px;
-                    font-size: 9px;
-                }}
-
-                .downtime-grid {{
+                .term-table {{
                     width: 100%;
-                    border-collapse: collapse;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-bottom: 14px;
+                    page-break-inside: avoid;
                 }}
 
-                .downtime-grid td {{
-                    border: 1px solid #ccc;
-                    padding: 5px 7px;
+                .term-table th,
+                .term-table td {{
+                    padding: 8px;
+                    font-size: 10px;
                     vertical-align: top;
-                    line-height: 1.25;
+                }}
+
+                .term-table th {{
+                    background-color: #f5f5f5;
+                    border-bottom: 1px solid #ddd;
+                    font-weight: 800;
+                    text-align: left;
+                }}
+
+                .term-table td {{
+                    border-bottom: 1px solid #ddd;
+                    border-right: 1px solid #ddd;
+                    line-height: 1.35;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                }}
-
-                .label {{
-                    width: 18%;
-                    font-weight: 800;
-                    background: #fafafa;
-                }}
-
-                .value {{
-                    width: 32%;
-                }}
-
-                .full-value {{
                     white-space: pre-wrap;
                 }}
 
-                .pdf-footer {{
-                    position: fixed;
-                    bottom: -28mm;
-                    left: -10mm;
-                    right: -10mm;
-                    height: 30mm;
-                    overflow: hidden;
-                    font-size: 8px;
+                .term-table td:last-child,
+                .term-table th:last-child {{
+                    border-right: none;
                 }}
 
-                .footer-svg {{
-                    position: absolute;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    width: 230mm;
-                    height: 30mm;
-                    z-index: 1;
+                .term-table tbody tr:last-child td {{
+                    border-bottom: none;
                 }}
 
-                .footer-text {{
-                    position: absolute;
-                    left: 24mm;
-                    bottom: 7mm;
-                    z-index: 2;
-                    line-height: 1.25;
+                .term-table tbody tr:nth-child(odd) {{
+                    background-color: #fafafa;
                 }}
 
-                .footer-page {{
-                    position: absolute;
-                    right: 24mm;
-                    bottom: 7mm;
-                    z-index: 2;
+                .label-cell {{
+                    width: 18%;
+                    font-weight: 800;
+                    background: #f7f7f7;
+                }}
+
+                .value-cell {{
+                    width: 32%;
                 }}
             </style>
         </head>
 
         <body>
-            <div class="pdf-header">
+            <div class="letterhead">
                 {letter_head}
             </div>
 
-            <div class="report-title">Mechanical Downtime Sign-off Report</div>
+            <div class="print-heading">
+                <h2>Mechanical Downtime Sign-off Report</h2>
+            </div>
 
             <table class="meta-table">
                 <tr>
@@ -732,36 +757,30 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                 </tr>
             </table>
 
-            <table class="signatures">
-                <tr>
-                    <td class="signature-box">
-                        <div class="signature-title">Production Sign-off</div>
-                        <b>User:</b> {production_user}<br>
-                        <b>Date/Time:</b> {production_date_time}<br>
-                        {production_signature_html}
-                    </td>
-                    <td class="signature-box">
-                        <div class="signature-title">Engineering Sign-off</div>
-                        <b>User:</b> {engineering_user}<br>
-                        <b>Date/Time:</b> {engineering_date_time}<br>
-                        {engineering_signature_html}
-                    </td>
-                </tr>
-            </table>
+            <div class="signatures">
+                <table>
+                    <tr>
+                        <td>
+                            <div class="sign-box">
+                                <div class="sign-title">Production Sign-off</div>
+                                <b>User:</b> {production_user}<br>
+                                <b>Date/Time:</b> {production_date_time}<br>
+                                {production_signature_html}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="sign-box">
+                                <div class="sign-title">Engineering Sign-off</div>
+                                <b>User:</b> {engineering_user}<br>
+                                <b>Date/Time:</b> {engineering_date_time}<br>
+                                {engineering_signature_html}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
             {downtime_cards}
-
-            <div class="pdf-footer">
-                <svg class="footer-svg" viewBox="0 0 230 30" preserveAspectRatio="none">
-                    <path d="M0,20 C55,30 145,22 230,5 L230,30 L0,30 Z" fill="#3f3f3f"></path>
-                    <path d="M0,23 C60,30 145,23 230,9" fill="none" stroke="#e30613" stroke-width="2"></path>
-                </svg>
-                <div class="footer-text">
-                    Directors: JP Jordaan, B Giyose, JG Venter<br>
-                    Non-Executive Director: R Lakhoo
-                </div>
-                <div class="footer-page">Page</div>
-            </div>
         </body>
     </html>
     """.format(
@@ -791,33 +810,43 @@ def get_default_letter_head_html():
 
 def get_downtime_cards_html(data):
     if not data:
-        return '<div class="downtime-card"><div class="downtime-card-title">No downtime records found.</div></div>'
+        return """
+            <table class="term-table">
+                <thead>
+                    <tr>
+                        <th>No downtime records found.</th>
+                    </tr>
+                </thead>
+            </table>
+        """
 
     cards = []
 
     for row in data:
         cards.append("""
-            <div class="downtime-card">
-                <div class="downtime-card-title">
-                    {plant_no} | {asset_category} | {status} | {hours} hrs
-                </div>
-                <table class="downtime-grid">
+            <table class="term-table">
+                <thead>
                     <tr>
-                        <td class="label">Start</td>
-                        <td class="value">{start}</td>
-                        <td class="label">Back In Production</td>
-                        <td class="value">{resolved}</td>
+                        <th colspan="4">{plant_no} | {asset_category} | {status} | {hours} hrs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="label-cell">Start</td>
+                        <td class="value-cell">{start}</td>
+                        <td class="label-cell">Back In Production</td>
+                        <td class="value-cell">{resolved}</td>
                     </tr>
                     <tr>
-                        <td class="label">Reason</td>
-                        <td colspan="3" class="full-value">{reason}</td>
+                        <td class="label-cell">Reason</td>
+                        <td colspan="3">{reason}</td>
                     </tr>
                     <tr>
-                        <td class="label">Resolution</td>
-                        <td colspan="3" class="full-value">{resolution}</td>
+                        <td class="label-cell">Resolution</td>
+                        <td colspan="3">{resolution}</td>
                     </tr>
-                </table>
-            </div>
+                </tbody>
+            </table>
         """.format(
             plant_no=frappe.utils.escape_html(str(row.get("plant_no") or "")),
             asset_category=frappe.utils.escape_html(str(row.get("asset_category") or "")),
