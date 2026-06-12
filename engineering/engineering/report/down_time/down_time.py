@@ -554,42 +554,44 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 0;
+                    margin: 62mm 8mm 35mm 8mm;
                 }}
 
                 html, body {{
                     margin: 0;
                     padding: 0;
-                    width: 210mm;
-                    min-height: 297mm;
                     font-family: Arial, sans-serif;
                     color: #000;
-                    font-size: 7px;
+                    font-size: 8px;
                 }}
 
-                .page {{
-                    position: relative;
-                    width: 210mm;
-                    height: 297mm;
-                    overflow: hidden;
-                    page-break-after: avoid;
+                .letterhead-header {{
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 58mm;
                     background-image: url("/assets/engineering/images/Template_Background.jpg");
                     background-size: 210mm 297mm;
+                    background-position: top center;
                     background-repeat: no-repeat;
                 }}
 
-                .content {{
-                    position: absolute;
-                    top: 88mm;
-                    left: 8mm;
-                    right: 8mm;
-                    bottom: 48mm;
-                    overflow: hidden;
+                .letterhead-footer {{
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    height: 30mm;
+                    background-image: url("/assets/engineering/images/Template_Background.jpg");
+                    background-size: 210mm 297mm;
+                    background-position: bottom center;
+                    background-repeat: no-repeat;
                 }}
 
                 .title {{
                     text-align: center;
-                    font-size: 12px;
+                    font-size: 13px;
                     font-weight: bold;
                     margin-bottom: 5mm;
                 }}
@@ -598,7 +600,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 3mm;
-                    font-size: 7px;
+                    font-size: 8px;
                 }}
 
                 .meta td {{
@@ -610,25 +612,31 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     width: 100%;
                     border-collapse: collapse;
                     table-layout: fixed;
-                    font-size: 5.2px;
+                    font-size: 7px;
                 }}
 
                 table.data th {{
-                    border: 0.35mm solid #000;
+                    border: 0.3mm solid #000;
                     padding: 0.8mm 0.5mm;
                     font-weight: bold;
                     text-align: center;
                     vertical-align: middle;
-                    line-height: 1.1;
+                    line-height: 1.15;
                     overflow-wrap: break-word;
                 }}
 
                 table.data td {{
-                    border: 0.35mm solid #000;
+                    border: 0.3mm solid #000;
                     padding: 0.8mm 0.5mm;
                     vertical-align: top;
-                    line-height: 1.15;
+                    line-height: 1.2;
                     overflow-wrap: break-word;
+                    word-wrap: break-word;
+                    white-space: normal;
+                }}
+
+                table.data tr {{
+                    page-break-inside: avoid;
                 }}
 
                 .signatures {{
@@ -636,11 +644,12 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     border-collapse: collapse;
                     margin-top: 6mm;
                     font-size: 9px;
+                    page-break-inside: avoid;
                 }}
 
                 .signature-box {{
                     width: 50%;
-                    border: 0.35mm solid #000;
+                    border: 0.3mm solid #000;
                     padding: 2mm;
                     height: 30mm;
                     vertical-align: top;
@@ -666,52 +675,50 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         </head>
 
         <body>
-            <div class="page">
-                <div class="content">
-                    <div class="title">Mechanical Downtime Sign-off Report</div>
+            <div class="letterhead-header"></div>
+            <div class="letterhead-footer"></div>
 
-                    <table class="meta">
-                        <tr>
-                            <td><b>Date:</b> {report_date}</td>
-                            <td><b>Site:</b> {site}</td>
-                            <td><b>Shift:</b> {shift}</td>
-                            <td><b>Status:</b> {status}</td>
-                        </tr>
-                    </table>
+            <div class="title">Mechanical Downtime Sign-off Report</div>
 
-                    <table class="data">
-                        <thead>
-                            <tr>{table_headers}</tr>
-                        </thead>
-                        <tbody>
-                            {table_rows}
-                        </tbody>
-                    </table>
+            <table class="meta">
+                <tr>
+                    <td><b>Date:</b> {report_date}</td>
+                    <td><b>Site:</b> {site}</td>
+                    <td><b>Shift:</b> {shift}</td>
+                    <td><b>Status:</b> {status}</td>
+                </tr>
+            </table>
 
-                    <table class="signatures">
-                        <tr>
-                            <td class="signature-box">
-                                <div class="signature-title">Production Sign-off</div>
-                                <b>User:</b> {production_user}<br>
-                                <b>Date/Time:</b> {production_date_time}<br>
-                                {production_signature_html}
-                            </td>
-                            <td class="signature-box">
-                                <div class="signature-title">Engineering Sign-off</div>
-                                <b>User:</b> {engineering_user}<br>
-                                <b>Date/Time:</b> {engineering_date_time}<br>
-                                {engineering_signature_html}
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
+            <table class="data">
+                <thead>
+                    <tr>{table_headers}</tr>
+                </thead>
+                <tbody>
+                    {table_rows}
+                </tbody>
+            </table>
+
+            <table class="signatures">
+                <tr>
+                    <td class="signature-box">
+                        <div class="signature-title">Production Sign-off</div>
+                        <b>User:</b> {production_user}<br>
+                        <b>Date/Time:</b> {production_date_time}<br>
+                        {production_signature_html}
+                    </td>
+                    <td class="signature-box">
+                        <div class="signature-title">Engineering Sign-off</div>
+                        <b>User:</b> {engineering_user}<br>
+                        <b>Date/Time:</b> {engineering_date_time}<br>
+                        {engineering_signature_html}
+                    </td>
+                </tr>
+            </table>
         </body>
     </html>
     """.format(
         report_date=frappe.utils.escape_html(str(report_date)),
         site=frappe.utils.escape_html(site or "All Sites"),
-        asset_category=frappe.utils.escape_html(asset_category or "All Categories"),
         shift=frappe.utils.escape_html(shift or "All Shifts"),
         status=frappe.utils.escape_html(parent.status or ""),
         table_headers=get_pdf_table_headers(pdf_columns),
@@ -725,23 +732,17 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     )
 
 
-
-
-
 def get_pdf_columns():
     return [
-        {"label": "Plant No.", "fieldname": "plant_no", "width": "11%"},
-        {"label": "Plant Category", "fieldname": "asset_category", "width": "13%"},
-        {"label": "Reason", "fieldname": "breakdown_reason", "width": "25%"},
+        {"label": "Plant No.", "fieldname": "plant_no", "width": "10%"},
+        {"label": "Category", "fieldname": "asset_category", "width": "12%"},
+        {"label": "Reason", "fieldname": "breakdown_reason", "width": "24%"},
         {"label": "Resolution", "fieldname": "resolution_summary", "width": "20%"},
-        {"label": "Start Time", "fieldname": "breakdown_start_datetime", "width": "13%"},
-        {"label": "Back in Production", "fieldname": "resolved_datetime", "width": "13%"},
+        {"label": "Start", "fieldname": "breakdown_start_datetime", "width": "12%"},
+        {"label": "Back In Prod.", "fieldname": "resolved_datetime", "width": "12%"},
         {"label": "Hours", "fieldname": "breakdown_hours", "width": "5%"},
+        {"label": "Status", "fieldname": "open_closed", "width": "5%"},
     ]
-
-
-
-
 
 
 def get_pdf_table_headers(columns):

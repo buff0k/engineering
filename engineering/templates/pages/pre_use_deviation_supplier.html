@@ -31,7 +31,7 @@
 
         <div class="mb-3">
             <label><strong>Fleet Number</strong></label>
-            <select class="form-control" name="fleet_number" required>
+            <select class="form-control" id="fleet_number" id="fleet_number" name="fleet_number" required>
                 <option value="">Select Fleet Number</option>
                 {% for asset in asset_options %}
                 <option value="{{ asset }}" {% if form_values.fleet_number == asset %}selected{% endif %}>{{ asset }}</option>
@@ -47,12 +47,12 @@
 
             <div class="col-md-4 mb-3">
                 <label><strong>Machine Type</strong></label>
-                <input type="text" class="form-control" name="machine_type" value="{{ form_values.machine_type or '' }}">
+                <input type="text" class="form-control" id="machine_type" name="machine_type" value="{{ form_values.machine_type or '' }}">
             </div>
 
             <div class="col-md-4 mb-3">
                 <label><strong>Machine Model</strong></label>
-                <input type="text" class="form-control" name="machine_model" value="{{ form_values.machine_model or '' }}">
+                <input type="text" class="form-control" id="machine_model" name="machine_model" value="{{ form_values.machine_model or '' }}">
             </div>
         </div>
 
@@ -97,7 +97,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label><strong>Action Date and Time</strong></label>
-                <input type="datetime-local" class="form-control" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}">
+                <input type="datetime-local" class="form-control" id="action_date_and_time" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}">
             </div>
 
             <div class="col-md-6 mb-3">
@@ -131,16 +131,66 @@
             <label><strong>Completion Percentage</strong></label>
             <input type="number" class="form-control mb-2" id="completion_percentage_number" name="completion_percentage" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
             <input type="range" class="form-range" id="completion_percentage_range" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
-            <div class="text-danger mt-1">
+            <div class="text-success mt-1">
                 <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span>%
             </div>
         </div>
+
+        <script type="application/json" id="asset_details_json">{{ asset_details | tojson }}</script>
 
         <script>
         (function () {
             const numberInput = document.getElementById("completion_percentage_number");
             const rangeInput = document.getElementById("completion_percentage_range");
             const label = document.getElementById("completion_percentage_label");
+            const fleetNumberInput = document.getElementById("fleet_number");
+            const machineTypeInput = document.getElementById("machine_type");
+            const machineModelInput = document.getElementById("machine_model");
+            const actionDateTimeInput = document.getElementById("action_date_and_time");
+            const assetDetails = JSON.parse(document.getElementById("asset_details_json").textContent || "{}");
+
+            function currentDateTimeLocal() {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                return now.toISOString().slice(0, 16);
+            }
+
+            function populateMachineDetails() {
+                const selectedAsset = fleetNumberInput ? fleetNumberInput.value : "";
+                const details = assetDetails[selectedAsset] || {};
+
+                if (machineTypeInput) {
+                    machineTypeInput.value = details.machine_type || "";
+                }
+
+                if (machineModelInput) {
+                    machineModelInput.value = details.machine_model || "";
+                }
+            }
+            const fleetNumberInput = document.getElementById("fleet_number");
+            const machineTypeInput = document.getElementById("machine_type");
+            const machineModelInput = document.getElementById("machine_model");
+            const actionDateTimeInput = document.getElementById("action_date_and_time");
+            const assetDetails = JSON.parse(document.getElementById("asset_details_json").textContent || "{}");
+
+            function currentDateTimeLocal() {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                return now.toISOString().slice(0, 16);
+            }
+
+            function populateMachineDetails() {
+                const selectedAsset = fleetNumberInput ? fleetNumberInput.value : "";
+                const details = assetDetails[selectedAsset] || {};
+
+                if (machineTypeInput) {
+                    machineTypeInput.value = details.machine_type || "";
+                }
+
+                if (machineModelInput) {
+                    machineModelInput.value = details.machine_model || "";
+                }
+            }
 
             function clamp(value) {
                 value = parseInt(value || 0, 10);
@@ -155,16 +205,38 @@
                 numberInput.value = value;
                 rangeInput.value = value;
                 label.textContent = value;
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
             }
 
             function syncFromRange() {
                 const value = clamp(rangeInput.value);
                 numberInput.value = value;
                 label.textContent = value;
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
             }
 
             numberInput.addEventListener("input", syncFromNumber);
             rangeInput.addEventListener("input", syncFromRange);
+
+            if (fleetNumberInput) {
+                fleetNumberInput.addEventListener("change", populateMachineDetails);
+                populateMachineDetails();
+            }
+
             syncFromNumber();
         })();
         </script>
