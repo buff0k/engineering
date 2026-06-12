@@ -546,204 +546,150 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     production_date_time = format_datetime(signoff_row.date_time_p) if signoff_row and signoff_row.date_time_p else ""
     engineering_date_time = format_datetime(signoff_row.date_time_e) if signoff_row and signoff_row.date_time_e else ""
 
+    letter_head = get_default_letter_head_html()
+
     return """
     <html>
         <head>
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 45mm 10mm 22mm 10mm;
+                    margin: 10mm 10mm 12mm 10mm;
                 }}
 
-                html, body {{
-                    margin: 0;
-                    padding: 0;
+                body {{
                     font-family: Arial, sans-serif;
-                    color: #000;
                     font-size: 9px;
+                    color: #111;
                 }}
 
-                .pdf-header {{
-                    position: fixed;
-                    top: -37mm;
-                    left: 0;
-                    right: 0;
-                    height: 34mm;
-                    border-bottom: 1.5px solid #000;
+                .iso-letterhead {{
+                    margin-bottom: 12px;
                 }}
 
-                .header-table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                }}
-
-                .header-table td {{
-                    vertical-align: top;
-                    font-size: 9px;
-                    line-height: 1.25;
-                }}
-
-                .logo-img {{
-                    width: 72mm;
-                    height: auto;
-                    margin-top: 2mm;
-                }}
-
-                .pdf-footer {{
-                    position: fixed;
-                    bottom: -17mm;
-                    left: 0;
-                    right: 0;
-                    height: 15mm;
-                    border-top: 1.5px solid #000;
-                    font-size: 8px;
-                    padding-top: 2mm;
-                }}
-
-                .footer-left {{
-                    float: left;
-                    line-height: 1.25;
-                }}
-
-                .footer-right {{
-                    float: right;
-                }}
-
-                .title {{
+                .report-title {{
                     text-align: center;
-                    font-size: 14px;
-                    font-weight: bold;
-                    margin-bottom: 5mm;
+                    font-size: 15px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    border: 1.5px solid #111;
+                    background: #f2f2f2;
+                    padding: 6px;
+                    margin-bottom: 8px;
                 }}
 
-                .meta {{
+                .meta-table {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 4mm;
-                    font-size: 9px;
+                    margin-bottom: 10px;
                 }}
 
-                .meta td {{
-                    padding: 1mm 2mm;
-                    white-space: nowrap;
+                .meta-table td {{
+                    border: 1px solid #111;
+                    padding: 5px 7px;
+                    font-size: 9px;
                 }}
 
                 .signatures {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 5mm;
-                    font-size: 9px;
+                    margin-bottom: 12px;
                     page-break-inside: avoid;
                 }}
 
                 .signature-box {{
                     width: 50%;
-                    border: 0.3mm solid #000;
-                    padding: 2mm;
-                    height: 25mm;
+                    border: 1px solid #111;
+                    padding: 7px;
+                    height: 78px;
                     vertical-align: top;
                 }}
 
                 .signature-title {{
-                    font-weight: bold;
-                    font-size: 10px;
-                    margin-bottom: 1.5mm;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    margin-bottom: 6px;
                 }}
 
                 .signature-img {{
-                    max-height: 13mm;
-                    max-width: 60mm;
-                    margin-top: 1.5mm;
+                    max-height: 42px;
+                    max-width: 230px;
+                    margin-top: 4px;
                 }}
 
                 .pending {{
                     font-style: italic;
-                    margin-top: 5mm;
+                    margin-top: 18px;
                 }}
 
                 .downtime-card {{
-                    border: 0.3mm solid #000;
-                    margin-bottom: 4mm;
+                    border: 1px solid #111;
+                    margin-bottom: 9px;
                     page-break-inside: avoid;
                 }}
 
-                .downtime-card-header {{
+                .downtime-card-title {{
+                    font-weight: 800;
                     background: #e9e9e9;
-                    border-bottom: 0.3mm solid #000;
-                    font-weight: bold;
-                    padding: 1.5mm;
+                    border-bottom: 1px solid #111;
+                    padding: 5px 7px;
                     font-size: 9px;
                 }}
 
                 .downtime-grid {{
                     width: 100%;
                     border-collapse: collapse;
-                    table-layout: fixed;
                 }}
 
                 .downtime-grid td {{
-                    border: 0.2mm solid #999;
-                    padding: 1.4mm;
+                    border: 1px solid #ccc;
+                    padding: 5px 7px;
                     vertical-align: top;
-                    font-size: 8.5px;
                     line-height: 1.25;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                    white-space: normal;
                 }}
 
                 .label {{
-                    font-weight: bold;
-                    background: #f6f6f6;
-                    width: 22%;
+                    width: 18%;
+                    font-weight: 800;
+                    background: #fafafa;
                 }}
 
-                .full-text {{
-                    min-height: 10mm;
+                .value {{
+                    width: 32%;
+                }}
+
+                .full-value {{
+                    white-space: pre-wrap;
+                }}
+
+                .footer {{
+                    margin-top: 10px;
+                    border-top: 1.5px solid #111;
+                    padding-top: 5px;
+                    font-size: 8px;
+                    page-break-inside: avoid;
+                }}
+
+                .footer-left {{
+                    float: left;
+                }}
+
+                .footer-right {{
+                    float: right;
                 }}
             </style>
         </head>
 
         <body>
-            <div class="pdf-header">
-                <table class="header-table">
-                    <tr>
-                        <td style="width: 42%;">
-                            <img class="logo-img" src="/assets/engineering/images/is-logo.png">
-                        </td>
-                        <td style="width: 24%;">
-                            Suite MW331<br>
-                            Private Bag X1838<br>
-                            Middelburg, MP, 1050<br><br>
-                            Plot 22<br>
-                            Vaalbank<br>
-                            Middelburg, MP, 1050
-                        </td>
-                        <td style="width: 18%;">
-                            Tel: +27(0)13 591 4078<br>
-                            Email: info@isambane.co.za
-                        </td>
-                        <td style="width: 16%;">
-                            Registration No.:<br>
-                            2005/016301/07<br><br>
-                            VAT Registration No.:<br>
-                            4590 237 279
-                        </td>
-                    </tr>
-                </table>
+            <div class="iso-letterhead">
+                {letter_head}
             </div>
 
-            <div class="pdf-footer">
-                <div class="footer-left">
-                    Directors: JP Jordaan, B Giyose, JG Venter<br>
-                    Non-Executive Director: R Lakhoo
-                </div>
-                <div class="footer-right">Page</div>
-            </div>
+            <div class="report-title">Mechanical Downtime Sign-off Report</div>
 
-            <div class="title">Mechanical Downtime Sign-off Report</div>
-
-            <table class="meta">
+            <table class="meta-table">
                 <tr>
                     <td><b>Date:</b> {report_date}</td>
                     <td><b>Site:</b> {site}</td>
@@ -770,9 +716,19 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
             </table>
 
             {downtime_cards}
+
+            <div class="footer">
+                <div class="footer-left">
+                    Directors: JP Jordaan, B Giyose, JG Venter<br>
+                    Non-Executive Director: R Lakhoo
+                </div>
+                <div class="footer-right">Page 1 of 1</div>
+                <div style="clear: both;"></div>
+            </div>
         </body>
     </html>
     """.format(
+        letter_head=letter_head,
         report_date=frappe.utils.escape_html(str(report_date)),
         site=frappe.utils.escape_html(site or "All Sites"),
         shift=frappe.utils.escape_html(shift or "All Shifts"),
@@ -787,33 +743,41 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     )
 
 
+def get_default_letter_head_html():
+    letter_head = frappe.db.get_value("Letter Head", {"is_default": 1}, "content")
+
+    if letter_head:
+        return letter_head
+
+    return ""
+
+
 def get_downtime_cards_html(data):
     if not data:
-        return '<div class="downtime-card"><div class="downtime-card-header">No downtime records found.</div></div>'
+        return '<div class="downtime-card"><div class="downtime-card-title">No downtime records found.</div></div>'
 
     cards = []
 
     for row in data:
         cards.append("""
             <div class="downtime-card">
-                <div class="downtime-card-header">
+                <div class="downtime-card-title">
                     {plant_no} | {asset_category} | {status} | {hours} hrs
                 </div>
-
                 <table class="downtime-grid">
                     <tr>
                         <td class="label">Start</td>
-                        <td>{start}</td>
+                        <td class="value">{start}</td>
                         <td class="label">Back In Production</td>
-                        <td>{resolved}</td>
+                        <td class="value">{resolved}</td>
                     </tr>
                     <tr>
                         <td class="label">Reason</td>
-                        <td colspan="3" class="full-text">{reason}</td>
+                        <td colspan="3" class="full-value">{reason}</td>
                     </tr>
                     <tr>
                         <td class="label">Resolution</td>
-                        <td colspan="3" class="full-text">{resolution}</td>
+                        <td colspan="3" class="full-value">{resolution}</td>
                     </tr>
                 </table>
             </div>
