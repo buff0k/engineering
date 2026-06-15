@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Isambane Mining (Pty) Ltd
 # For license information, please see license.txt
 
+import base64
 import frappe
 from frappe import _
 from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours, format_datetime
@@ -547,93 +548,52 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     production_date_time = format_datetime(signoff_row.date_time_p) if signoff_row and signoff_row.date_time_p else ""
     engineering_date_time = format_datetime(signoff_row.date_time_e) if signoff_row and signoff_row.date_time_e else ""
 
-    letter_head = get_default_letter_head_html()
-
     return """
     <html>
         <head>
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 15mm 15mm 18mm 15mm;
+                    margin: 12mm 13mm 14mm 13mm;
                 }}
 
                 body {{
                     font-family: Arial, sans-serif;
-                    font-size: 10px;
                     color: #111;
+                    font-size: 10px;
                 }}
 
-                .letterhead {{
-                    margin-bottom: 18px;
-                    transform: scale(0.88);
-                    transform-origin: top left;
-                    width: 113%;
+                .header-img {{
+                    width: 100%;
+                    height: auto;
+                    margin-bottom: 16px;
+                    display: block;
                 }}
 
-                .letterhead img {{
-                    max-width: 100% !important;
-                    height: auto !important;
-                }}
-
-                .letterhead table {{
-                    width: 100% !important;
-                    table-layout: fixed;
-                }}
-
-                .letterhead td {{
-                    vertical-align: top;
-                    font-size: 9px;
-                    line-height: 1.2;
-                }}
-
-                .letterhead td:first-child {{
-                    width: 43%;
-                    padding-left: 10mm;
-                }}
-
-                .letterhead td:nth-child(2) {{
-                    width: 25%;
-                }}
-
-                .letterhead td:nth-child(3) {{
-                    width: 18%;
-                    padding-left: 0;
-                }}
-
-                .letterhead td:nth-child(4) {{
-                    width: 14%;
-                    padding-left: 0;
-                }}
-
-                .print-heading {{
+                .report-title {{
                     text-align: center;
-                    margin-bottom: 14px;
-                }}
-
-                .print-heading h2 {{
-                    margin: 0;
-                    font-size: 18px;
+                    font-size: 19px;
                     font-weight: 800;
                     text-transform: uppercase;
                     border: 2px solid #111;
                     background: #f2f2f2;
-                    padding: 8px;
+                    padding: 9px;
+                    margin-bottom: 14px;
                 }}
 
                 .meta-table {{
                     width: 100%;
                     border-collapse: separate;
                     border-spacing: 0;
-                    border: 1px solid #ddd;
+                    border: 1px solid #d9d9d9;
                     border-radius: 8px;
                     overflow: hidden;
-                    margin-bottom: 14px;
+                    margin-bottom: 20px;
                 }}
 
                 .meta-table td {{
                     padding: 8px;
-                    border-right: 1px solid #ddd;
+                    border-right: 1px solid #d9d9d9;
                     font-size: 10px;
                 }}
 
@@ -641,96 +601,82 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     border-right: none;
                 }}
 
-                .signatures table {{
+                .sign-table {{
                     width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 18px;
+                    border-collapse: separate;
+                    border-spacing: 12px 0;
+                    margin-bottom: 20px;
                     page-break-inside: avoid;
                 }}
 
-                .signatures td {{
-                    border: none;
-                    padding: 12px 10px;
-                    vertical-align: top;
-                    width: 50%;
-                }}
-
                 .sign-box {{
-                    border: 1px solid #ddd;
+                    width: 50%;
+                    border: 1px solid #d9d9d9;
                     border-radius: 8px;
-                    padding: 10px;
-                    min-height: 85px;
+                    padding: 12px;
+                    min-height: 92px;
+                    vertical-align: top;
                 }}
 
                 .sign-title {{
-                    font-size: 13px;
+                    font-size: 14px;
                     font-weight: 800;
-                    text-transform: uppercase;
                     margin-bottom: 8px;
                 }}
 
                 .signature-img {{
                     max-height: 45px;
-                    max-width: 240px;
-                    margin-top: 6px;
+                    max-width: 230px;
+                    margin-top: 8px;
                 }}
 
                 .pending {{
                     font-style: italic;
-                    margin-top: 20px;
+                    margin-top: 22px;
                 }}
 
-                .term-table {{
+                .record-card {{
                     width: 100%;
                     border-collapse: separate;
                     border-spacing: 0;
-                    border: 1px solid #ddd;
+                    border: 1px solid #d9d9d9;
                     border-radius: 8px;
                     overflow: hidden;
                     margin-bottom: 14px;
                     page-break-inside: avoid;
                 }}
 
-                .term-table th,
-                .term-table td {{
+                .record-card th {{
+                    background: #f2f2f2;
+                    border-bottom: 1px solid #d9d9d9;
                     padding: 8px;
-                    font-size: 10px;
-                    vertical-align: top;
-                }}
-
-                .term-table th {{
-                    background-color: #f5f5f5;
-                    border-bottom: 1px solid #ddd;
-                    font-weight: 800;
                     text-align: left;
+                    font-size: 10px;
                 }}
 
-                .term-table td {{
-                    border-bottom: 1px solid #ddd;
-                    border-right: 1px solid #ddd;
+                .record-card td {{
+                    border-bottom: 1px solid #d9d9d9;
+                    border-right: 1px solid #d9d9d9;
+                    padding: 8px;
+                    vertical-align: top;
                     line-height: 1.35;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
                     white-space: pre-wrap;
                 }}
 
-                .term-table td:last-child,
-                .term-table th:last-child {{
+                .record-card td:last-child {{
                     border-right: none;
                 }}
 
-                .term-table tbody tr:last-child td {{
+                .record-card tr:last-child td {{
                     border-bottom: none;
-                }}
-
-                .term-table tbody tr:nth-child(odd) {{
-                    background-color: #fafafa;
                 }}
 
                 .label-cell {{
                     width: 18%;
                     font-weight: 800;
-                    background: #f7f7f7;
+                    background: #fafafa;
                 }}
 
                 .value-cell {{
@@ -740,13 +686,9 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         </head>
 
         <body>
-            <div class="letterhead">
-                {letter_head}
-            </div>
+            {header_html}
 
-            <div class="print-heading">
-                <h2>Mechanical Downtime Sign-off Report</h2>
-            </div>
+            <div class="report-title">Mechanical Downtime Sign-off Report</div>
 
             <table class="meta-table">
                 <tr>
@@ -757,34 +699,28 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                 </tr>
             </table>
 
-            <div class="signatures">
-                <table>
-                    <tr>
-                        <td>
-                            <div class="sign-box">
-                                <div class="sign-title">Production Sign-off</div>
-                                <b>User:</b> {production_user}<br>
-                                <b>Date/Time:</b> {production_date_time}<br>
-                                {production_signature_html}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="sign-box">
-                                <div class="sign-title">Engineering Sign-off</div>
-                                <b>User:</b> {engineering_user}<br>
-                                <b>Date/Time:</b> {engineering_date_time}<br>
-                                {engineering_signature_html}
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
+            <table class="sign-table">
+                <tr>
+                    <td class="sign-box">
+                        <div class="sign-title">Production Sign-off</div>
+                        <b>User:</b> {production_user}<br>
+                        <b>Date/Time:</b> {production_date_time}<br>
+                        {production_signature_html}
+                    </td>
+                    <td class="sign-box">
+                        <div class="sign-title">Engineering Sign-off</div>
+                        <b>User:</b> {engineering_user}<br>
+                        <b>Date/Time:</b> {engineering_date_time}<br>
+                        {engineering_signature_html}
+                    </td>
+                </tr>
+            </table>
 
             {downtime_cards}
         </body>
     </html>
     """.format(
-        letter_head=letter_head,
+        header_html=get_pdf_header_image_html(),
         report_date=frappe.utils.escape_html(str(report_date)),
         site=frappe.utils.escape_html(site or "All Sites"),
         shift=frappe.utils.escape_html(shift or "All Shifts"),
@@ -799,19 +735,27 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     )
 
 
-def get_default_letter_head_html():
-    letter_head = frappe.db.get_value("Letter Head", {"is_default": 1}, "content")
+def get_pdf_header_image_html():
+    header_path = frappe.get_app_path(
+        "engineering",
+        "public",
+        "images",
+        "isambane_header.png",
+    )
 
-    if letter_head:
-        return letter_head
+    try:
+        with open(header_path, "rb") as header_file:
+            encoded_header = base64.b64encode(header_file.read()).decode("utf-8")
 
-    return ""
+        return '<img class="header-img" src="data:image/png;base64,{0}">'.format(encoded_header)
+    except Exception:
+        return ""
 
 
 def get_downtime_cards_html(data):
     if not data:
         return """
-            <table class="term-table">
+            <table class="record-card">
                 <thead>
                     <tr>
                         <th>No downtime records found.</th>
@@ -824,7 +768,7 @@ def get_downtime_cards_html(data):
 
     for row in data:
         cards.append("""
-            <table class="term-table">
+            <table class="record-card">
                 <thead>
                     <tr>
                         <th colspan="4">{plant_no} | {asset_category} | {status} | {hours} hrs</th>
