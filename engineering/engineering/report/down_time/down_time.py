@@ -255,32 +255,17 @@ def get_data(filters):
     conditions = [
         """
         (
+            coalesce(nullif(pbm.breakdown_start_datetime, ''), pbm.creation) < %(window_end)s
+            and
             (
-                pbm.breakdown_start_datetime is not null
-                and pbm.breakdown_start_datetime != ''
-                and pbm.breakdown_start_datetime >= %(start_lookup_datetime)s
-                and pbm.breakdown_start_datetime < %(window_end)s
+                pbm.resolved_datetime is null
+                or pbm.resolved_datetime = ''
+                or pbm.resolved_datetime >= %(window_start)s
             )
-            or
+            and
             (
-                pbm.resolved_datetime is not null
-                and pbm.resolved_datetime != ''
-                and pbm.resolved_datetime >= %(start_lookup_datetime)s
-                and pbm.resolved_datetime < %(window_end)s
-            )
-            or
-            (
-                (
-                    pbm.breakdown_start_datetime is null
-                    or pbm.breakdown_start_datetime = ''
-                )
-                and
-                (
-                    pbm.resolved_datetime is null
-                    or pbm.resolved_datetime = ''
-                )
-                and pbm.creation >= %(start_lookup_datetime)s
-                and pbm.creation < %(window_end)s
+                coalesce(nullif(pbm.breakdown_start_datetime, ''), pbm.creation) >= %(start_lookup_datetime)s
+                or pbm.resolved_datetime >= %(start_lookup_datetime)s
             )
         )
         """,
@@ -328,8 +313,16 @@ def get_data(filters):
 
     data = []
     hours_cache = {}
+    seen_machines = set()
 
     for row in rows:
+        machine_key = (row.site, row.plant_no)
+
+        if machine_key in seen_machines:
+            continue
+
+        seen_machines.add(machine_key)
+
         cache_key = (row.site, row.plant_no)
 
         if cache_key not in hours_cache:
