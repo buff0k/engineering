@@ -643,7 +643,8 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     border-radius: 8px;
                     overflow: hidden;
                     margin-bottom: 14px;
-                    page-break-inside: avoid;
+                    page-break-inside: auto;
+                    page-break-after: auto;
                 }}
 
                 .record-card th {{
@@ -669,8 +670,8 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     border-right: none;
                 }}
 
-                .record-card tr:last-child td {{
-                    border-bottom: none;
+                .record-card tr {{
+                    page-break-inside: avoid;
                 }}
 
                 .label-cell {{
