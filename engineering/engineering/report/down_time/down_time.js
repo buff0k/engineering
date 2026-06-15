@@ -52,10 +52,10 @@ frappe.query_reports["Down Time"] = {
         hide_generate_button(report);
         add_signoff_button(report);
         setup_mobile_downtime_view(report);
+    },
 
-        setTimeout(function () {
-            render_mobile_downtime_cards(report);
-        }, 500);
+    after_datatable_render: function (report) {
+        render_mobile_downtime_cards(report);
     }
 };
 
@@ -153,9 +153,9 @@ function setup_mobile_downtime_view(report) {
 
     add_mobile_downtime_styles();
 
-    setTimeout(function () {
+    frappe.after_ajax(function () {
         render_mobile_downtime_cards(report);
-    }, 500);
+    });
 
     $(window).off("resize.mobile_downtime").on("resize.mobile_downtime", function () {
         render_mobile_downtime_cards(report);
