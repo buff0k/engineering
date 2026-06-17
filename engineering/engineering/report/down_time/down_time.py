@@ -586,6 +586,8 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift, d
 
     signoff_row = parent.signoff_information[0] if parent.signoff_information else None
 
+    avail_util_summary = get_previous_day_avail_util_summary(report_date, site)
+
     html = get_signed_report_html(
         parent=parent,
         report_date=report_date,
@@ -596,6 +598,7 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift, d
         data=data,
         signoff_row=signoff_row,
         downtime_comments=downtime_comments,
+        avail_util_summary=avail_util_summary,
     )
 
     file_name = "Down Time {0} {1}.pdf".format(
@@ -619,7 +622,7 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift, d
 
 
 
-def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row, downtime_comments=None):
+def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row, downtime_comments=None, avail_util_summary=None):
     production_signature = signoff_row.production_signature if signoff_row else ""
     engineering_signature = signoff_row.engineering_signature if signoff_row else ""
     information_officer = signoff_row.information_officer if signoff_row else ""
@@ -694,7 +697,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                 }}
 
                 .sign-box {{
-                    width: 50%;
+                    width: 33.33%;
                     border: 1px solid #d9d9d9;
                     border-radius: 8px;
                     padding: 12px;
@@ -784,6 +787,10 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                 </tr>
             </table>
 
+            {avail_util_html}
+
+            {downtime_cards}
+
             <table class="sign-table">
                 <tr>
                     <td class="sign-box">
@@ -806,8 +813,6 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                     </td>
                 </tr>
             </table>
-
-            {downtime_cards}
         </body>
     </html>
     """.format(
@@ -825,9 +830,89 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         engineering_date_time=frappe.utils.escape_html(engineering_date_time or ""),
         production_signature_html=get_signature_html(production_signature),
         engineering_signature_html=get_signature_html(engineering_signature),
+        avail_util_html=get_avail_util_pdf_html(avail_util_summary),
         downtime_cards=get_downtime_cards_html(data, downtime_comments),
     )
 
+def get_avail_util_pdf_html(summary):
+    if not summary:
+        return ""
+
+    previous_date = frappe.utils.escape_html(str(summary.get("previous_date") or ""))
+    production = summary.get("production") or {}
+    spare = summary.get("spare") or {}
+
+    return """
+        <div class="report-title" style="font-size:13px;margin-top:8px;">Previous Day Availability and Utilisation {previous_date}</div>
+        {production_html}
+        {spare_html}
+    """.format(
+        previous_date="({0})".format(previous_date) if previous_date else "",
+        production_html=get_avail_util_pdf_scope_html(
+            "Previous Day Production Machine Availability and Utilisation",
+            production,
+        ),
+        spare_html=get_avail_util_pdf_scope_html(
+            "Previous Day Spare Machine Availability and Utilisation",
+            spare,
+        ),
+    )
+
+
+def get_avail_util_pdf_scope_html(title, rows):
+    return """
+        <table class="record-card">
+            <thead>
+                <tr>
+                    <th colspan="6">{title}</th>
+                </tr>
+                <tr>
+                    <th>Machine Type</th>
+                    <th>Availability</th>
+                    <th>Utilisation</th>
+                    <th>Machine Type</th>
+                    <th>Availability</th>
+                    <th>Utilisation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {adt_html}
+                    {excavator_html}
+                </tr>
+                <tr>
+                    {dozer_html}
+                    <td></td><td></td><td></td>
+                </tr>
+            </tbody>
+        </table>
+    """.format(
+        title=frappe.utils.escape_html(title),
+        adt_html=get_avail_util_pdf_cells(rows.get("adts")),
+        excavator_html=get_avail_util_pdf_cells(rows.get("excavators")),
+        dozer_html=get_avail_util_pdf_cells(rows.get("dozers")),
+    )
+
+
+def get_avail_util_pdf_cells(row):
+    row = row or {}
+
+    return """
+        <td>{label}</td>
+        <td>{availability}</td>
+        <td>{utilisation}</td>
+    """.format(
+        label=frappe.utils.escape_html(str(row.get("label") or "")),
+        availability=frappe.utils.escape_html(format_pdf_percent(row.get("availability"))),
+        utilisation=frappe.utils.escape_html(format_pdf_percent(row.get("utilisation"))),
+    )
+
+
+def format_pdf_percent(value):
+    if value is None or value == "":
+        return "N/A"
+
+    return "{0:.1f}%".format(float(value or 0))
 
 def get_pdf_header_image_html():
     header_path = frappe.get_app_path(
