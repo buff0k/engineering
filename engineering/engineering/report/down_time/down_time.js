@@ -313,6 +313,31 @@ function add_mobile_downtime_styles() {
                 border-radius: 8px;
                 padding: 5px;
                 font-size: 11px;
+                font-weight: 800;
+            }
+
+            .downtime-au-red {
+                background: #ffe5e5 !important;
+                border-color: #ff4d4f !important;
+                color: #a8071a !important;
+            }
+
+            .downtime-au-yellow {
+                background: #fff7d6 !important;
+                border-color: #faad14 !important;
+                color: #ad6800 !important;
+            }
+
+            .downtime-au-green {
+                background: #e6f7e6 !important;
+                border-color: #52c41a !important;
+                color: #237804 !important;
+            }
+
+            .downtime-au-na {
+                background: #f5f5f5 !important;
+                border-color: #d9d9d9 !important;
+                color: #8c8c8c !important;
             }
 
             @media (max-width: 768px) {
@@ -623,16 +648,50 @@ function get_avail_util_bubble_html(row) {
     const availability = format_avail_util_percent(row.availability);
     const utilisation = format_avail_util_percent(row.utilisation);
 
+    const availability_class = get_avail_util_colour_class(raw_availability, "availability");
+    const utilisation_class = get_avail_util_colour_class(raw_utilisation, "utilisation");
+
     return `
         <div class="downtime-avail-util-bubble">
             <strong>${label}</strong>
             <div class="downtime-avail-util-values">
-                <div class="downtime-avail-util-value">Avail<br>${availability}</div>
-                <div class="downtime-avail-util-value">Util<br>${utilisation}</div>
+                <div class="downtime-avail-util-value ${availability_class}">Avail<br>${availability}</div>
+                <div class="downtime-avail-util-value ${utilisation_class}">Util<br>${utilisation}</div>
             </div>
         </div>
     `;
 }
+
+function get_avail_util_colour_class(value, type) {
+    if (value === null || value === undefined || value === "") {
+        return "downtime-au-na";
+    }
+
+    const percent = flt(value);
+
+    if (type === "availability") {
+        if (percent <= 75) {
+            return "downtime-au-red";
+        }
+
+        if (percent <= 84) {
+            return "downtime-au-yellow";
+        }
+
+        return "downtime-au-green";
+    }
+
+    if (percent <= 70) {
+        return "downtime-au-red";
+    }
+
+    if (percent <= 79) {
+        return "downtime-au-yellow";
+    }
+
+    return "downtime-au-green";
+}
+
 
 function format_avail_util_percent(value) {
     if (value === null || value === undefined || value === "") {

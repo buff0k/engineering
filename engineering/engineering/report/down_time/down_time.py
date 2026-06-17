@@ -776,6 +776,31 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
                 .value-cell {{
                     width: 32%;
                 }}
+
+                .au-red {{
+                    background: #ffe5e5;
+                    color: #a8071a;
+                    font-weight: 800;
+                }}
+
+                .au-yellow {{
+                    background: #fff7d6;
+                    color: #ad6800;
+                    font-weight: 800;
+                }}
+
+                .au-green {{
+                    background: #e6f7e6;
+                    color: #237804;
+                    font-weight: 800;
+                }}
+
+                .au-na {{
+                    background: #f5f5f5;
+                    color: #8c8c8c;
+                    font-weight: 800;
+                }}
+
             </style>
         </head>
 
@@ -902,17 +927,43 @@ def get_avail_util_pdf_scope_html(title, rows):
 
 def get_avail_util_pdf_cells(row):
     row = row or {}
+    availability = row.get("availability")
+    utilisation = row.get("utilisation")
 
     return """
         <td>{label}</td>
-        <td>{availability}</td>
-        <td>{utilisation}</td>
+        <td class="{availability_class}">{availability}</td>
+        <td class="{utilisation_class}">{utilisation}</td>
     """.format(
         label=frappe.utils.escape_html(str(row.get("label") or "")),
-        availability=frappe.utils.escape_html(format_pdf_percent(row.get("availability"))),
-        utilisation=frappe.utils.escape_html(format_pdf_percent(row.get("utilisation"))),
+        availability=frappe.utils.escape_html(format_pdf_percent(availability)),
+        utilisation=frappe.utils.escape_html(format_pdf_percent(utilisation)),
+        availability_class=get_pdf_avail_util_colour_class(availability, "availability"),
+        utilisation_class=get_pdf_avail_util_colour_class(utilisation, "utilisation"),
     )
 
+def get_pdf_avail_util_colour_class(value, value_type):
+    if value is None or value == "":
+        return "au-na"
+
+    percent = float(value or 0)
+
+    if value_type == "availability":
+        if percent <= 75:
+            return "au-red"
+
+        if percent <= 84:
+            return "au-yellow"
+
+        return "au-green"
+
+    if percent <= 70:
+        return "au-red"
+
+    if percent <= 79:
+        return "au-yellow"
+
+    return "au-green"
 
 def format_pdf_percent(value):
     if value is None or value == "":
