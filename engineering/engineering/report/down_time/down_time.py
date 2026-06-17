@@ -875,16 +875,25 @@ def get_avail_util_pdf_html(summary):
 
     return """
         <div class="report-title" style="font-size:13px;margin-top:8px;">Previous Day Availability and Utilisation {previous_date}</div>
-        {production_html}
-        {spare_html}
+
+        <table style="width:100%; border-collapse:separate; border-spacing:10px 0; margin-bottom:14px;">
+            <tr>
+                <td style="width:50%; vertical-align:top;">
+                    {production_html}
+                </td>
+                <td style="width:50%; vertical-align:top;">
+                    {spare_html}
+                </td>
+            </tr>
+        </table>
     """.format(
         previous_date="({0})".format(previous_date) if previous_date else "",
         production_html=get_avail_util_pdf_scope_html(
-            "Previous Day Production Machine Availability and Utilisation",
+            "Production Machine Availability and Utilisation",
             production,
         ),
         spare_html=get_avail_util_pdf_scope_html(
-            "Previous Day Spare Machine Availability and Utilisation",
+            "Spare Machine Availability and Utilisation",
             spare,
         ),
     )
@@ -892,29 +901,21 @@ def get_avail_util_pdf_html(summary):
 
 def get_avail_util_pdf_scope_html(title, rows):
     return """
-        <table class="record-card">
+        <table class="record-card" style="margin-bottom:0;">
             <thead>
                 <tr>
-                    <th colspan="6">{title}</th>
+                    <th colspan="3">{title}</th>
                 </tr>
                 <tr>
-                    <th>Machine Type</th>
-                    <th>Availability</th>
-                    <th>Utilisation</th>
                     <th>Machine Type</th>
                     <th>Availability</th>
                     <th>Utilisation</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    {adt_html}
-                    {excavator_html}
-                </tr>
-                <tr>
-                    {dozer_html}
-                    <td></td><td></td><td></td>
-                </tr>
+                <tr>{adt_html}</tr>
+                <tr>{excavator_html}</tr>
+                <tr>{dozer_html}</tr>
             </tbody>
         </table>
     """.format(
