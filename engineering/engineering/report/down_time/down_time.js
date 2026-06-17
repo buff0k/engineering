@@ -72,6 +72,11 @@ function add_signoff_button(report) {
             return;
         }
 
+        if (is_mobile_downtime_view() && !all_mobile_downtime_records_verified()) {
+            frappe.throw(__("Please verify Downtime first before signing off."));
+            return;
+        }
+
         const dialog = new frappe.ui.Dialog({
             title: __("Save Downtime Sign-off"),
             fields: [
@@ -252,6 +257,24 @@ function add_mobile_downtime_styles() {
                     line-height: 1.35;
                 }
 
+                .mobile-downtime-verify {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px;
+                    margin-bottom: 10px;
+                    background: #fff7e6;
+                    border: 1px solid #ffd591;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 700;
+                }
+
+                .mobile-downtime-verify input {
+                    width: 20px;
+                    height: 20px;
+                }
+
                 .mobile-downtime-label {
                     font-weight: 700;
                     color: #555;
@@ -297,6 +320,11 @@ function render_mobile_downtime_cards(report) {
 
         html += `
             <div class="mobile-downtime-card">
+                <label class="mobile-downtime-verify">
+                    <input type="checkbox" class="mobile-downtime-verify-checkbox">
+                    <span>Verify Downtime</span>
+                </label>
+
                 <div class="mobile-downtime-title">${frappe.utils.escape_html(row.plant_no || "")}</div>
 
                 <div class="mobile-downtime-badges">
@@ -336,4 +364,22 @@ function render_mobile_downtime_cards(report) {
     html += `</div>`;
 
     $(".report-wrapper").append(html);
+}
+
+function all_mobile_downtime_records_verified() {
+    const checkboxes = $(".mobile-downtime-verify-checkbox");
+
+    if (!checkboxes.length) {
+        return true;
+    }
+
+    let all_verified = true;
+
+    checkboxes.each(function () {
+        if (!$(this).is(":checked")) {
+            all_verified = false;
+        }
+    });
+
+    return all_verified;
 }

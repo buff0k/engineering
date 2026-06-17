@@ -6,6 +6,13 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "information_officer_section",
+  "data_date_io",
+  "date_time_io",
+  "shift_io",
+  "information_officer",
+  "information_officer_signature",
+  "section_break_jumn",
   "production_user_section",
   "data_date_p",
   "date_time_p",
@@ -91,13 +98,53 @@
    "in_list_view": 1,
    "label": "Shift",
    "options": "Day Shift\nNight Shift"
+  },
+  {
+   "fieldname": "information_officer_section",
+   "fieldtype": "Section Break",
+   "label": "Information Officer"
+  },
+  {
+   "fieldname": "data_date_io",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date of data correct"
+  },
+  {
+   "fieldname": "date_time_io",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date and Time"
+  },
+  {
+   "fieldname": "shift_io",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Day Shift\nNight Shift"
+  },
+  {
+   "fieldname": "information_officer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Information Officer"
+  },
+  {
+   "fieldname": "information_officer_signature",
+   "fieldtype": "Signature",
+   "in_list_view": 1,
+   "label": "Information Officer Signature"
+  },
+  {
+   "fieldname": "section_break_jumn",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-10 12:16:54.316573",
+ "modified": "2026-06-17 08:37:56.258214",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Downtime sign-off child",
