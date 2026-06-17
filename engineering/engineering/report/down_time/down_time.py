@@ -8,7 +8,14 @@ from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
 from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 from datetime import timedelta
-
+import importlib.util
+AVAIL_UTIL_REPORT_FILE = frappe.get_app_path(
+    "is_production",
+    "production",
+    "report",
+    "avail_and_util_report",
+    "avail_and_util_report.py",
+)
 
 START_LOOKUP_DATETIME = get_datetime("2026-05-01 00:00:00")
 
@@ -242,6 +249,86 @@ def get_open_closed_value(row):
     return "Open"
 
 
+def get_avail_util_grouped_data_method():
+    spec = importlib.util.spec_from_file_location(
+        "availability_utilisation_report_loader",
+        AVAIL_UTIL_REPORT_FILE,
+    )
+
+    if not spec or not spec.loader:
+        frappe.throw(_("Could not load Avail and Util report file."))
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    if not hasattr(module, "get_grouped_data"):
+        frappe.throw(_("Avail and Util report has no get_grouped_data method."))
+
+    return module.get_grouped_data
+
+
+def get_summary_category_key(asset_category):
+    value = str(asset_category or "").strip().lower()
+
+    if "adt" in value or "articulated" in value or "dump truck" in value:
+        return "adts"
+
+    if "excavator" in value:
+        return "excavators"
+
+    if "dozer" in value:
+        return "dozers"
+
+    return ""
+
+
+def blank_avail_util_summary():
+    return {
+        "adts": {"label": "ADT's", "availability": None, "utilisation": None},
+        "excavators": {"label": "Excavators", "availability": None, "utilisation": None},
+        "dozers": {"label": "Dozers", "availability": None, "utilisation": None},
+    }
+
+
+def get_avail_util_scope_summary(previous_date, site, machine_scope):
+    get_grouped_data = get_avail_util_grouped_data_method()
+
+    filters = frappe._dict({
+        "start_date": previous_date,
+        "end_date": previous_date,
+        "location": site or "",
+        "machine_scope": machine_scope,
+    })
+
+    data = get_grouped_data(filters) or []
+    summary = blank_avail_util_summary()
+
+    for row in data:
+        if row.get("indent") != 0:
+            continue
+
+        key = get_summary_category_key(row.get("asset_category"))
+
+        if not key:
+            continue
+
+        summary[key]["availability"] = row.get("plant_shift_availability")
+        summary[key]["utilisation"] = row.get("plant_shift_utilisation")
+
+    return summary
+
+
+@frappe.whitelist()
+def get_previous_day_avail_util_summary(report_date, site=None):
+    previous_date = getdate(report_date) - timedelta(days=1)
+
+    return {
+        "previous_date": previous_date,
+        "production": get_avail_util_scope_summary(previous_date, site, "Production Machines"),
+        "spare": get_avail_util_scope_summary(previous_date, site, "Swing/Spare Machines"),
+    }
+
+
 def get_data(filters):
     report_date = getdate(filters.get("report_date")) if filters.get("report_date") else getdate(now_datetime())
 
@@ -350,7 +437,7 @@ def get_data(filters):
 
 
 @frappe.whitelist()
-def save_downtime_signoff(report_date, site, asset_category, shift, signature):
+def save_downtime_signoff(report_date, site, asset_category, shift, signature, downtime_comments=None):
     report_date = getdate(report_date)
     signoff_shift = shift or ""
     report_shift = shift or "All Shifts"
@@ -400,7 +487,7 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature):
         frappe.rename_doc("Mechanical Downtime sign-off", parent.name, new_name, force=True)
         parent = frappe.get_doc("Mechanical Downtime sign-off", new_name)
 
-    attach_signed_report_pdf(parent, report_date, site, asset_category, signoff_shift)
+    attach_signed_report_pdf(parent, report_date, site, asset_category, signoff_shift, downtime_comments)
 
     return _("Downtime sign-off saved. Status: {0}").format(parent.status)
 
@@ -486,7 +573,7 @@ def clean_docname(value):
     return value
 
 
-def attach_signed_report_pdf(parent, report_date, site, asset_category, shift):
+def attach_signed_report_pdf(parent, report_date, site, asset_category, shift, downtime_comments=None):
     filters = frappe._dict({
         "report_date": report_date,
         "site": site,
@@ -508,6 +595,7 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift):
         columns=columns,
         data=data,
         signoff_row=signoff_row,
+        downtime_comments=downtime_comments,
     )
 
     file_name = "Down Time {0} {1}.pdf".format(
@@ -531,7 +619,7 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift):
 
 
 
-def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row):
+def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row, downtime_comments=None):
     production_signature = signoff_row.production_signature if signoff_row else ""
     engineering_signature = signoff_row.engineering_signature if signoff_row else ""
 
@@ -725,7 +813,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         engineering_date_time=frappe.utils.escape_html(engineering_date_time or ""),
         production_signature_html=get_signature_html(production_signature),
         engineering_signature_html=get_signature_html(engineering_signature),
-        downtime_cards=get_downtime_cards_html(data),
+        downtime_cards=get_downtime_cards_html(data, downtime_comments),
     )
 
 
@@ -746,7 +834,11 @@ def get_pdf_header_image_html():
         return ""
 
 
-def get_downtime_cards_html(data):
+def get_downtime_cards_html(data, downtime_comments=None):
+    if isinstance(downtime_comments, str):
+        downtime_comments = frappe.parse_json(downtime_comments) or {}
+
+    downtime_comments = downtime_comments or {}
     if not data:
         return """
             <table class="record-card">
@@ -783,6 +875,10 @@ def get_downtime_cards_html(data):
                         <td class="label-cell">Resolution</td>
                         <td colspan="3">{resolution}</td>
                     </tr>
+                    <tr>
+                        <td class="label-cell">Comment</td>
+                        <td colspan="3">{comment}</td>
+                    </tr>
                 </tbody>
             </table>
         """.format(
@@ -794,6 +890,7 @@ def get_downtime_cards_html(data):
             resolved=frappe.utils.escape_html(str(row.get("resolved_datetime") or "")),
             reason=frappe.utils.escape_html(str(row.get("breakdown_reason") or "")),
             resolution=frappe.utils.escape_html(str(row.get("resolution_summary") or "")),
+            comment=frappe.utils.escape_html(str(downtime_comments.get(row.get("plant_no")) or "")),
         ))
 
     return "".join(cards)
