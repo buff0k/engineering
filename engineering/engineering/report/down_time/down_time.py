@@ -448,26 +448,32 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
     production_roles = ["Production Supervisor", "Production Foreman"]
     engineering_roles = ["Engineering Supervisor", "Engineering Foreman"]
 
+    is_information_officer = "Information Officer" in roles
     is_production_user = any(role in roles for role in production_roles)
     is_engineering_user = any(role in roles for role in engineering_roles)
 
-    if is_production_user and is_engineering_user:
+    if not is_information_officer and is_production_user and is_engineering_user:
         frappe.throw(_("You cannot sign both Production and Engineering sections."))
 
-    if not is_production_user and not is_engineering_user:
-        frappe.throw(_("Only Production Supervisor, Production Foreman, Engineering Supervisor, or Engineering Foreman can sign this report."))
+    if not is_information_officer and not is_production_user and not is_engineering_user:
+        frappe.throw(_("Only Information Officer, Production Supervisor, Production Foreman, Engineering Supervisor, or Engineering Foreman can sign this report."))
 
     parent = get_or_create_signoff_parent(report_date, signoff_shift)
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
-    if is_production_user:
+    if is_information_officer:
+        row.information_officer = full_name
+        row.date_time_io = now_datetime()
+        row.information_officer_signature = signature
+
+    elif is_production_user:
         row.data_date_p = report_date
         row.date_time_p = now_datetime()
         row.shift_p = signoff_shift
         row.production_user = full_name
         row.production_signature = signature
 
-    if is_engineering_user:
+    elif is_engineering_user:
         row.data_date_e = report_date
         row.date_time_e = now_datetime()
         row.shift_e = signoff_shift
