@@ -644,9 +644,12 @@ function render_previous_day_avail_util_summary(summary) {
 function get_avail_util_bubble_html(row) {
     row = row || {};
 
+    const raw_availability = row.availability;
+    const raw_utilisation = row.utilisation;
+
     const label = frappe.utils.escape_html(row.label || "");
-    const availability = format_avail_util_percent(row.availability);
-    const utilisation = format_avail_util_percent(row.utilisation);
+    const availability = format_avail_util_percent(raw_availability);
+    const utilisation = format_avail_util_percent(raw_utilisation);
 
     const availability_class = get_avail_util_colour_class(raw_availability, "availability");
     const utilisation_class = get_avail_util_colour_class(raw_utilisation, "utilisation");
