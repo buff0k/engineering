@@ -39,6 +39,7 @@ def get_columns():
         {"label": _("Breakdown/Maintenance Start Time"), "fieldname": "breakdown_start_datetime", "fieldtype": "Datetime", "width": 230},
         {"label": _("Datetime back in production"), "fieldname": "resolved_datetime", "fieldtype": "Datetime", "width": 220},
         {"label": _("Plant Category"), "fieldname": "asset_category", "fieldtype": "Data", "width": 160},
+        {"label": _("Comment"), "fieldname": "downtime_comment", "fieldtype": "Data", "width": 260},
     ]
 
 

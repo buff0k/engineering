@@ -42,6 +42,24 @@ frappe.query_reports["Down Time"] = {
         }
     ],
 
+    formatter: function (value, row, column, data, default_formatter) {
+        if (column.fieldname === "downtime_comment") {
+            const plant_no = data && data.plant_no ? data.plant_no : "";
+
+            return `
+                <input
+                    type="text"
+                    class="form-control downtime-comment-input"
+                    data-plant-no="${frappe.utils.escape_html(plant_no)}"
+                    placeholder="Add comment..."
+                    style="height: 28px; min-width: 220px;"
+                >
+            `;
+        }
+
+        return default_formatter(value, row, column, data);
+    },
+
     onload: function (report) {
         hide_generate_button(report);
         add_signoff_button(report);
@@ -78,7 +96,7 @@ function add_signoff_button(report) {
         </div>
     `;
 
-    $(".report-wrapper").before(html);
+    $(".report-wrapper").after(html);
 
     $(".downtime-signoff-action-button").off("click").on("click", function () {
         const report_date = frappe.query_report.get_filter_value("report_date");
@@ -275,6 +293,17 @@ function add_mobile_downtime_styles() {
                 font-size: 14px;
                 font-weight: 800;
                 margin: 10px 0 8px 0;
+            }
+
+            .tmm-equipment-downtime-heading {
+                background: #fff;
+                border: 1px solid #d9d9d9;
+                border-radius: 6px 6px 0 0;
+                padding: 10px 14px;
+                margin: 10px 0 0 0;
+                font-size: 14px;
+                font-weight: 800;
+                color: #4d6280;
             }
 
             .downtime-avail-util-grid {
@@ -585,7 +614,7 @@ function render_desktop_downtime_verification() {
         </div>
     `;
 
-    $(".report-wrapper").before(html);
+    $(".report-wrapper").after(html);
 }
 
 
@@ -639,6 +668,14 @@ function render_previous_day_avail_util_summary(summary) {
     `;
 
     $(".report-wrapper").prepend(html);
+
+    $(".tmm-equipment-downtime-heading").remove();
+
+    $(".downtime-avail-util-wrapper").after(`
+        <div class="tmm-equipment-downtime-heading">
+            TMM EQUIPMENT DOWNTIME
+        </div>
+    `);
 }
 
 function get_avail_util_bubble_html(row) {
@@ -707,7 +744,7 @@ function format_avail_util_percent(value) {
 function get_mobile_downtime_comments() {
     const comments = {};
 
-    $(".mobile-downtime-comment-input").each(function () {
+    $(".mobile-downtime-comment-input, .downtime-comment-input").each(function () {
         const plant_no = $(this).data("plant-no");
         const comment = ($(this).val() || "").trim();
 
