@@ -622,9 +622,6 @@ def attach_signed_report_pdf(parent, report_date, site, asset_category, shift, d
 def get_signed_report_html(parent, report_date, site, asset_category, shift, columns, data, signoff_row, downtime_comments=None):
     production_signature = signoff_row.production_signature if signoff_row else ""
     engineering_signature = signoff_row.engineering_signature if signoff_row else ""
-    information_officer = signoff_row.information_officer if signoff_row else ""
-    information_officer_date_time = signoff_row.date_time_io if signoff_row else ""
-    information_officer_signature = signoff_row.information_officer_signature if signoff_row else ""
 
     production_user = signoff_row.production_user if signoff_row else ""
     engineering_user = signoff_row.engineering_user if signoff_row else ""
@@ -773,7 +770,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         <body>
             {header_html}
 
-            <div class="report-title">TMM Equipment Downtime Verification</div>
+            <div class="report-title">Mechanical Downtime Sign-off Report</div>
 
             <table class="meta-table">
                 <tr>
@@ -786,12 +783,6 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
 
             <table class="sign-table">
                 <tr>
-                    <td class="sign-box">
-                        <div class="sign-title">Information Officer Sign-off</div>
-                        <b>User:</b> {information_officer}<br>
-                        <b>Date/Time:</b> {information_officer_date_time}<br>
-                        {information_officer_signature_html}
-                    </td>
                     <td class="sign-box">
                         <div class="sign-title">Production Sign-off</div>
                         <b>User:</b> {production_user}<br>
@@ -816,9 +807,6 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         site=frappe.utils.escape_html(site or "All Sites"),
         shift=frappe.utils.escape_html(shift or "All Shifts"),
         status=frappe.utils.escape_html(parent.status or ""),
-        information_officer=frappe.utils.escape_html(information_officer or ""),
-        information_officer_date_time=frappe.utils.escape_html(str(information_officer_date_time or "")),
-        information_officer_signature_html=get_signature_html(information_officer_signature),
         production_user=frappe.utils.escape_html(production_user or ""),
         engineering_user=frappe.utils.escape_html(engineering_user or ""),
         production_date_time=frappe.utils.escape_html(production_date_time or ""),
