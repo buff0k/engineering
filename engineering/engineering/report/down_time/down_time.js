@@ -58,6 +58,8 @@ frappe.query_reports["Down Time"] = {
 
     after_datatable_render: function (report) {
         render_mobile_downtime_cards(report);
+        render_desktop_downtime_verification();
+        load_previous_day_avail_util_summary(report);
     }
 };
 
@@ -86,7 +88,7 @@ function add_signoff_button(report) {
             return;
         }
 
-        if (is_mobile_downtime_view() && !all_mobile_downtime_records_verified()) {
+        if (!all_downtime_records_verified()) {
             frappe.throw(__("Please verify Downtime first before signing off."));
             return;
         }
@@ -217,6 +219,49 @@ function add_mobile_downtime_styles() {
                 }
             }
 
+            .downtime-desktop-verify-wrapper {
+                background: #fff7e6;
+                border: 1px solid #ffd591;
+                border-radius: 12px;
+                padding: 12px;
+                margin: 10px 0 14px 0;
+            }
+
+            .downtime-desktop-verify-title {
+                font-size: 14px;
+                font-weight: 800;
+                margin-bottom: 8px;
+            }
+
+            .downtime-desktop-verify-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 8px;
+            }
+
+            .downtime-desktop-verify-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: #fff;
+                border: 1px solid #f0d9a0;
+                border-radius: 8px;
+                padding: 8px 10px;
+                font-size: 13px;
+                font-weight: 700;
+            }
+
+            .downtime-desktop-verify-item input {
+                width: 18px;
+                height: 18px;
+            }
+
+            @media (max-width: 768px) {
+                .downtime-desktop-verify-wrapper {
+                    display: none;
+                }
+            }
+
 
             .downtime-avail-util-wrapper {
                 background: #fff;
@@ -252,6 +297,22 @@ function add_mobile_downtime_styles() {
             .downtime-avail-util-bubble strong {
                 display: block;
                 font-size: 13px;
+                margin-bottom: 5px;
+            }
+
+            .downtime-avail-util-values {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px;
+                margin-top: 4px;
+            }
+
+            .downtime-avail-util-value {
+                background: #fff;
+                border: 1px solid #e5e5e5;
+                border-radius: 8px;
+                padding: 5px;
+                font-size: 11px;
             }
 
             @media (max-width: 768px) {
@@ -414,7 +475,7 @@ function render_mobile_downtime_cards(report) {
         html += `
             <div class="mobile-downtime-card">
                 <label class="mobile-downtime-verify">
-                    <input type="checkbox" class="mobile-downtime-verify-checkbox">
+                    <input type="checkbox" class="mobile-downtime-verify-checkbox downtime-verify-checkbox">
                     <span>Verify Downtime</span>
                 </label>
 
@@ -467,6 +528,41 @@ function render_mobile_downtime_cards(report) {
 
     $(".report-wrapper").append(html);
 }
+
+
+function render_desktop_downtime_verification() {
+    const is_mobile = is_mobile_downtime_view();
+    const data = frappe.query_report && frappe.query_report.data ? frappe.query_report.data : [];
+
+    $(".downtime-desktop-verify-wrapper").remove();
+
+    if (is_mobile || !data.length) {
+        return;
+    }
+
+    let html = `
+        <div class="downtime-desktop-verify-wrapper">
+            <div class="downtime-desktop-verify-title">Verify Downtime</div>
+            <div class="downtime-desktop-verify-grid">
+    `;
+
+    data.forEach(function (row) {
+        html += `
+            <label class="downtime-desktop-verify-item">
+                <input type="checkbox" class="downtime-verify-checkbox">
+                <span>${frappe.utils.escape_html(row.plant_no || "")}</span>
+            </label>
+        `;
+    });
+
+    html += `
+            </div>
+        </div>
+    `;
+
+    $(".report-wrapper").before(html);
+}
+
 
 function load_previous_day_avail_util_summary(report) {
     const report_date = frappe.query_report.get_filter_value("report_date");
@@ -530,7 +626,10 @@ function get_avail_util_bubble_html(row) {
     return `
         <div class="downtime-avail-util-bubble">
             <strong>${label}</strong>
-            Avail: ${availability} | Util: ${utilisation}
+            <div class="downtime-avail-util-values">
+                <div class="downtime-avail-util-value">Avail<br>${availability}</div>
+                <div class="downtime-avail-util-value">Util<br>${utilisation}</div>
+            </div>
         </div>
     `;
 }
@@ -559,8 +658,8 @@ function get_mobile_downtime_comments() {
 }
 
 
-function all_mobile_downtime_records_verified() {
-    const checkboxes = $(".mobile-downtime-verify-checkbox");
+function all_downtime_records_verified() {
+    const checkboxes = $(".downtime-verify-checkbox:visible");
 
     if (!checkboxes.length) {
         return true;
