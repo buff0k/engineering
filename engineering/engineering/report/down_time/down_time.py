@@ -907,6 +907,8 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
 
             {avail_util_html}
 
+            <div class="report-title" style="font-size:13px;margin-top:8px;">TMM EQUIPMENT DOWNTIME</div>
+
             {downtime_cards}
 
             <table class="sign-table">

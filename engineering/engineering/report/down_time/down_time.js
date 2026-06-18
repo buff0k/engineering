@@ -358,14 +358,16 @@ function add_mobile_downtime_styles() {
             }
 
             .tmm-equipment-downtime-heading {
-                background: #fff;
-                border: 1px solid #d9d9d9;
-                border-radius: 6px 6px 0 0;
-                padding: 10px 14px;
-                margin: 10px 0 0 0;
-                font-size: 14px;
+                background: #f2f2f2;
+                border: 2px solid #111;
+                border-radius: 0;
+                padding: 9px;
+                margin: 10px 0 8px 0;
+                font-size: 13px;
                 font-weight: 800;
-                color: #4d6280;
+                color: #111;
+                text-align: center;
+                text-transform: uppercase;
             }
 
             .downtime-avail-util-grid {
