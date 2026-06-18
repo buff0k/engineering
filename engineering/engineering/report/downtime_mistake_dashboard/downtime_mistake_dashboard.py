@@ -22,7 +22,7 @@ def get_columns():
 	return [
 		{"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 110},
 		{"label": _("Site"), "fieldname": "site", "fieldtype": "Data", "width": 130},
-		{"label": _("Fleet / Source"), "fieldname": "fleet_source", "fieldtype": "HTML", "width": 260},
+		{"label": _("Fleet"), "fieldname": "fleet_source", "fieldtype": "HTML", "width": 260},
 		{"label": _("Status"), "fieldname": "status_html", "fieldtype": "HTML", "width": 120},
 		{"label": _("Action"), "fieldname": "action_html", "fieldtype": "HTML", "width": 220},
 	]
@@ -58,7 +58,7 @@ def get_data(from_date, to_date, site=None):
 		as_dict=True,
 	)
 
-	data = []
+	grouped = {}
 
 	for row in rows:
 		comment_groups = [
@@ -77,19 +77,51 @@ def get_data(from_date, to_date, site=None):
 				continue
 
 			for item in split_fleet_comments(comments):
-				fixed_key = make_fixed_key(row.name, source, comment_date, item["fleet"], item["comment"])
-				is_fixed = get_fixed_status(row.fixes, fixed_key)
+				group_key = (str(comment_date), row.site or "", item["fleet"])
 
-				data.append({
-					"date": comment_date,
-					"site": row.site,
-					"fleet_source": f"""
-						<div class="dmd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
-						<div class="dmd-source">{frappe.utils.escape_html(source)}</div>
-					""",
-					"status_html": get_status_html(is_fixed),
-					"action_html": get_action_html(row.name, fixed_key, item["fleet"], source, comment_date, item["comment"], is_fixed),
+				if group_key not in grouped:
+					grouped[group_key] = {
+						"date": comment_date,
+						"site": row.site,
+						"fleet": item["fleet"],
+						"child_row": row.name,
+						"fixes": row.fixes,
+						"comments": [],
+					}
+
+				grouped[group_key]["comments"].append({
+					"source": source,
+					"comment": item["comment"],
 				})
+
+	data = []
+
+	for item in grouped.values():
+		fixed_key = make_fixed_key(
+			item["child_row"],
+			"Combined",
+			item["date"],
+			item["fleet"],
+			frappe.as_json(item["comments"]),
+		)
+		is_fixed = get_fixed_status(item["fixes"], fixed_key)
+
+		data.append({
+			"date": item["date"],
+			"site": item["site"],
+			"fleet_source": f"""
+				<div class="dmd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
+			""",
+			"status_html": get_status_html(is_fixed),
+			"action_html": get_action_html(
+				item["child_row"],
+				fixed_key,
+				item["fleet"],
+				item["date"],
+				item["comments"],
+				is_fixed,
+			),
+		})
 
 	return data
 
@@ -160,15 +192,15 @@ def get_status_html(is_fixed):
 	return '<span class="dmd-status dmd-open">Open</span>'
 
 
-def get_action_html(child_row, fixed_key, fleet, source, date, comment, is_fixed):
+def get_action_html(child_row, fixed_key, fleet, date, comments, is_fixed):
 	checked = "checked" if is_fixed else ""
+	comments_json = frappe.utils.escape_html(frappe.as_json(comments))
 
 	return f"""
 		<button class="btn btn-xs btn-default dmd-view"
 			data-fleet="{frappe.utils.escape_html(fleet)}"
-			data-source="{frappe.utils.escape_html(source)}"
 			data-date="{date}"
-			data-comment="{frappe.utils.escape_html(comment)}">
+			data-comments="{comments_json}">
 			View
 		</button>
 
