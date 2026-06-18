@@ -21,6 +21,7 @@ def execute(filters=None):
 def get_columns():
 	return [
 		{"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 110},
+		{"label": _("Site"), "fieldname": "site", "fieldtype": "Data", "width": 130},
 		{"label": _("Fleet / Source"), "fieldname": "fleet_source", "fieldtype": "HTML", "width": 260},
 		{"label": _("Status"), "fieldname": "status_html", "fieldtype": "HTML", "width": 120},
 		{"label": _("Action"), "fieldname": "action_html", "fieldtype": "HTML", "width": 220},
@@ -33,6 +34,7 @@ def get_data(from_date, to_date):
 		SELECT
 			c.name,
 			c.parent,
+			p.site,
 			c.fixes,
 			c.date_time_io,
 			c.date_time_p,
@@ -41,6 +43,7 @@ def get_data(from_date, to_date):
 			c.comments2,
 			c.comments3
 		FROM `tabMechanical Downtime sign-off child` c
+		LEFT JOIN `tabMechanical Downtime sign-off` p ON p.name = c.parent
 		WHERE c.parenttype = 'Mechanical Downtime sign-off'
 		ORDER BY COALESCE(c.date_time_io, c.date_time_p, c.date_time_e) DESC
 		""",
@@ -71,6 +74,7 @@ def get_data(from_date, to_date):
 
 				data.append({
 					"date": comment_date,
+					"site": row.site,
 					"fleet_source": f"""
 						<div class="dmd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
 						<div class="dmd-source">{frappe.utils.escape_html(source)}</div>
