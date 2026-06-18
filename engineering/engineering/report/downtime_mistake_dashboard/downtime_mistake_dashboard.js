@@ -14,6 +14,12 @@ frappe.query_reports["Downtime mistake dashboard"] = {
 			default: frappe.datetime.get_today(),
 			reqd: 1,
 		},
+		{
+			fieldname: "site",
+			label: __("Site"),
+			fieldtype: "Link",
+			options: "Location",
+		},
 	],
 
 	onload: function () {

@@ -15,7 +15,7 @@ def execute(filters=None):
 	to_date = getdate(filters.get("to_date") or nowdate())
 	from_date = getdate(filters.get("from_date") or add_days(to_date, -7))
 
-	return get_columns(), get_data(from_date, to_date)
+	return get_columns(), get_data(from_date, to_date, filters.get("site"))
 
 
 def get_columns():
@@ -28,9 +28,16 @@ def get_columns():
 	]
 
 
-def get_data(from_date, to_date):
+def get_data(from_date, to_date, site=None):
+	conditions = ["c.parenttype = 'Mechanical Downtime sign-off'"]
+	values = {}
+
+	if site:
+		conditions.append("p.site = %(site)s")
+		values["site"] = site
+
 	rows = frappe.db.sql(
-		"""
+		f"""
 		SELECT
 			c.name,
 			c.parent,
@@ -44,9 +51,10 @@ def get_data(from_date, to_date):
 			c.comments3
 		FROM `tabMechanical Downtime sign-off child` c
 		LEFT JOIN `tabMechanical Downtime sign-off` p ON p.name = c.parent
-		WHERE c.parenttype = 'Mechanical Downtime sign-off'
+		WHERE {" AND ".join(conditions)}
 		ORDER BY COALESCE(c.date_time_io, c.date_time_p, c.date_time_e) DESC
 		""",
+		values,
 		as_dict=True,
 	)
 
