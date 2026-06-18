@@ -40,6 +40,7 @@ def get_items(from_date, to_date, site=None):
 			c.name,
 			c.parent,
 			p.site,
+			c.shift,
 			c.fixes,
 			c.date_time_io,
 			c.date_time_p,
@@ -75,12 +76,13 @@ def get_items(from_date, to_date, site=None):
 				continue
 
 			for item in split_fleet_comments(comments):
-				group_key = (str(comment_date), row.site or "", item["fleet"])
+				group_key = (row.name, str(comment_date), row.site or "", item["fleet"])
 
 				if group_key not in grouped:
 					grouped[group_key] = {
 						"date": comment_date,
 						"site": row.site,
+						"shift": row.shift,
 						"fleet": item["fleet"],
 						"child_row": row.name,
 						"fixes": row.fixes,
@@ -107,6 +109,7 @@ def get_items(from_date, to_date, site=None):
 		items.append({
 			"date": item["date"],
 			"site": item["site"],
+			"shift": item["shift"],
 			"fleet": item["fleet"],
 			"child_row": item["child_row"],
 			"fixed_key": fixed_key,
@@ -153,6 +156,7 @@ def get_card_html(item):
 			<div class="dcd-meta">
 				<div><b>Date:</b> {item["date"]}</div>
 				<div><b>Site:</b> {frappe.utils.escape_html(item["site"] or "")}</div>
+				<div><b>Shift:</b> {frappe.utils.escape_html(item["shift"] or "")}</div>
 			</div>
 
 			<div class="dcd-actions">
