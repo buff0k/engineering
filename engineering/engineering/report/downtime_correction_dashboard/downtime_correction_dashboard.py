@@ -40,7 +40,7 @@ def get_items(from_date, to_date, site=None):
 			c.name,
 			c.parent,
 			p.site,
-			c.shift,
+			p.shift,
 			c.fixes,
 			c.date_time_io,
 			c.date_time_p,
