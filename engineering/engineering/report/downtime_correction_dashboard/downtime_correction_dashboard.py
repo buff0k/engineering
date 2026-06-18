@@ -81,6 +81,7 @@ def get_items(from_date, to_date, site=None):
 					grouped[group_key] = {
 						"date": comment_date,
 						"site": row.site,
+						"shift": get_shift_from_parent(row.parent),
 						"fleet": item["fleet"],
 						"child_row": row.name,
 						"fixes": row.fixes,
@@ -107,6 +108,7 @@ def get_items(from_date, to_date, site=None):
 		items.append({
 			"date": item["date"],
 			"site": item["site"],
+			"shift": item["shift"],
 			"fleet": item["fleet"],
 			"child_row": item["child_row"],
 			"fixed_key": fixed_key,
@@ -151,7 +153,7 @@ def get_card_html(item):
 			</div>
 
 			<div class="dcd-meta">
-				<div><b>Date:</b> {item["date"]}</div>
+				<div><b>Date:</b> {item["date"]} <b style="margin-left: 10px;">Shift:</b> {frappe.utils.escape_html(item["shift"] or "")}</div>
 				<div><b>Site:</b> {frappe.utils.escape_html(item["site"] or "")}</div>
 			</div>
 
@@ -172,6 +174,17 @@ def get_card_html(item):
 			</div>
 		</div>
 	"""
+
+def get_shift_from_parent(parent_name):
+	value = str(parent_name or "")
+
+	if "Night Shift" in value:
+		return "Night Shift"
+
+	if "Day Shift" in value:
+		return "Day Shift"
+
+	return ""
 
 
 def split_fleet_comments(text):
