@@ -117,12 +117,14 @@ function add_downtime_mistake_dashboard_style() {
 				width: 100%;
 			}
 			.dmd-card {
-				background: #ffffff;
+				width: 100%;
+				background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 				border: 1px solid #e5e7eb;
-				border-radius: 16px;
-				padding: 16px;
-				margin-bottom: 10px;
-				box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+				border-radius: 18px;
+				padding: 18px;
+				margin-bottom: 12px;
+				box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+				box-sizing: border-box;
 			}
 
 			.dmd-card-main {
@@ -189,11 +191,17 @@ function add_downtime_mistake_dashboard_style() {
 
 			.dmd-view {
 				border-radius: 999px !important;
-				padding: 7px 16px !important;
+				padding: 8px 18px !important;
 				font-weight: 900 !important;
-				border: 1px solid #cbd5e1 !important;
-				background: #0f172a !important;
+				border: 1px solid #4674e0 !important;
+				background: #3165dd !important;
 				color: #ffffff !important;
+				box-shadow: 0 4px 10px rgba(50, 98, 211, 0.18);
+			}
+
+			.dmd-view:hover {
+				background: #0f3675 !important;
+				border-color: #1c64d8 !important;
 			}
 
 			.dmd-check {
