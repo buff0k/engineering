@@ -520,6 +520,8 @@ def get_or_create_signoff_parent(report_date, shift):
                 (data_date_p = %(report_date)s and ifnull(shift_p, '') in (%(shift)s, ''))
                 or
                 (data_date_e = %(report_date)s and ifnull(shift_e, '') in (%(shift)s, ''))
+                or
+                (date(date_time_io) = %(report_date)s and ifnull(shift_io, '') in (%(shift)s, ''))
             )
         order by modified desc
         limit 1
@@ -542,10 +544,11 @@ def get_or_create_signoff_parent(report_date, shift):
 
 def get_or_create_signoff_row(parent, report_date, shift):
     for row in parent.signoff_information:
+        same_information_officer = row.date_time_io and getdate(row.date_time_io) == report_date and (row.shift_io in (shift, None, ""))
         same_production = row.data_date_p and getdate(row.data_date_p) == report_date and (row.shift_p in (shift, None, ""))
         same_engineering = row.data_date_e and getdate(row.data_date_e) == report_date and (row.shift_e in (shift, None, ""))
 
-        if same_production or same_engineering:
+        if same_information_officer or same_production or same_engineering:
             return row
 
     row = parent.append("signoff_information", {})
