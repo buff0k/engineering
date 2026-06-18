@@ -22,6 +22,13 @@ frappe.query_reports["Downtime mistake dashboard"] = {
 		},
 	],
 
+	get_datatable_options(options) {
+		return Object.assign(options, {
+			dynamicRowHeight: true,
+			inlineFilters: false,
+		});
+	},
+
 	onload: function () {
 		add_downtime_mistake_dashboard_style();
 
@@ -99,21 +106,21 @@ function add_downtime_mistake_dashboard_style() {
 				border: none !important;
 				background: transparent !important;
 				height: auto !important;
-				min-height: 96px !important;
+				min-height: 120px !important;
 			}
 
 			.query-report .dt-cell {
 				border: none !important;
 				background: transparent !important;
 				height: auto !important;
-				min-height: 96px !important;
+				min-height: 120px !important;
 			}
 
 			.query-report .dt-cell__content {
 				padding: 0 !important;
 				white-space: normal !important;
 				height: auto !important;
-				min-height: 96px !important;
+				min-height: 120px !important;
 				overflow: visible !important;
 				display: block !important;
 			}
