@@ -47,24 +47,52 @@ function render_downtime_correction_dashboard_html() {
 	$(".dcd-dashboard-holder").remove();
 
 	const wrapper = report.$report || $(".query-report");
-	const datatable_wrapper = wrapper.find(".datatable").closest(".dt-scrollable, .datatable-wrapper, .frappe-datatable").first();
+	const report_wrapper = wrapper.find(".report-wrapper").first();
 
-	if (datatable_wrapper.length) {
-		datatable_wrapper.before(`<div class="dcd-dashboard-holder">${html}</div>`);
+	if (report_wrapper.length) {
+		report_wrapper.before(`<div class="dcd-dashboard-holder">${html}</div>`);
 	} else {
 		wrapper.prepend(`<div class="dcd-dashboard-holder">${html}</div>`);
 	}
 
-	wrapper.find(".dt-scrollable, .datatable-wrapper, .frappe-datatable").hide();
+	hide_downtime_correction_datatable();
 }
+
+
+function hide_downtime_correction_datatable() {
+	const wrapper = frappe.query_report.$report || $(".query-report");
+
+	wrapper.find(".report-wrapper").hide();
+	wrapper.find(".datatable").hide();
+	wrapper.find(".dt-scrollable").hide();
+	wrapper.find(".frappe-datatable").hide();
+	wrapper.find(".datatable-wrapper").hide();
+	wrapper.find(".report-footer").hide();
+}
+
+
 
 function add_open_downtime_button() {
 	setTimeout(function () {
 		if ($(".dcd-open-downtime").length) return;
 
-		frappe.query_report.page.add_inner_button(__("Open Downtime"), function () {
+		const button = $(`
+			<button class="btn dcd-open-downtime" type="button">
+				Open Downtime
+			</button>
+		`);
+
+		button.on("click", function () {
 			window.open("https://www.isambane.co.za/desk/plant-breakdown-or-maintenance", "_blank");
-		}).addClass("dcd-open-downtime");
+		});
+
+		const site_filter = $(".page-form .frappe-control[data-fieldname='site']").first();
+
+		if (site_filter.length) {
+			site_filter.after(button);
+		} else {
+			$(".page-form").append(button);
+		}
 	}, 300);
 }
 
@@ -123,11 +151,33 @@ function add_downtime_correction_dashboard_style() {
 				padding: 16px 0;
 			}
 
-			.query-report .report-wrapper .dt-scrollable,
-			.query-report .report-wrapper .datatable-wrapper,
-			.query-report .report-wrapper .frappe-datatable {
+			.query-report .report-wrapper,
+			.query-report .datatable,
+			.query-report .dt-scrollable,
+			.query-report .frappe-datatable,
+			.query-report .datatable-wrapper,
+			.query-report .report-footer {
 				display: none !important;
 			}
+
+			.dcd-open-downtime {
+				margin-left: 12px;
+				border-radius: 10px !important;
+				padding: 7px 16px !important;
+				font-weight: 900 !important;
+				border: 1px solid #16a34a !important;
+				background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+				color: #ffffff !important;
+				box-shadow: 0 5px 14px rgba(22, 163, 74, 0.25);
+			}
+
+			.dcd-open-downtime:hover {
+				background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+				border-color: #15803d !important;
+				color: #ffffff !important;
+			}
+
+
 
 			.dcd-dashboard {
 				padding: 4px 0 24px 0;
@@ -140,11 +190,19 @@ function add_downtime_correction_dashboard_style() {
 			}
 
 			.dcd-card {
-				background: #ffffff;
-				border: 1px solid #e5e7eb;
 				border-radius: 18px;
 				padding: 16px;
 				box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+			}
+
+			.dcd-card-not-fixed {
+				background: #fff1f2;
+				border: 1px solid #fecdd3;
+			}
+
+			.dcd-card-fixed {
+				background: #f0fdf4;
+				border: 1px solid #bbf7d0;
 			}
 
 			.dcd-top {

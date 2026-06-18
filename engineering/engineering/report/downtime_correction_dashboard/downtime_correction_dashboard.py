@@ -138,12 +138,13 @@ def get_dashboard_html(items):
 
 def get_card_html(item):
 	status_class = "dcd-fixed" if item["is_fixed"] else "dcd-open"
-	status_text = "Fixed" if item["is_fixed"] else "Open"
+	status_text = "Fixed" if item["is_fixed"] else "Not Fixed"
+	card_class = "dcd-card-fixed" if item["is_fixed"] else "dcd-card-not-fixed"
 	checked = "checked" if item["is_fixed"] else ""
 	comments_json = frappe.utils.escape_html(frappe.as_json(item["comments"]))
 
 	return f"""
-		<div class="dcd-card">
+		<div class="dcd-card {card_class}">
 			<div class="dcd-top">
 				<div class="dcd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
 				<div class="dcd-status {status_class}">{status_text}</div>
