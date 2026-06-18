@@ -22,12 +22,7 @@ frappe.query_reports["Downtime mistake dashboard"] = {
 		},
 	],
 
-	get_datatable_options(options) {
-		return Object.assign(options, {
-			dynamicRowHeight: true,
-			inlineFilters: false,
-		});
-	},
+
 
 	onload: function () {
 		add_downtime_mistake_dashboard_style();
@@ -82,99 +77,39 @@ function add_downtime_mistake_dashboard_style() {
 
 	$("head").append(`
 		<style id="dmd-style">
-			.query-report .datatable {
-				background: transparent !important;
-				border: none !important;
-			}
-
-			.query-report .dt-header,
-			.query-report .dt-row-filter {
-				display: none !important;
-			}
-
 			.query-report .dt-scrollable {
-				width: 100% !important;
-				max-width: 900px !important;
-				margin: 16px auto 0 auto !important;
-				border: none !important;
-				box-shadow: none !important;
-				background: transparent !important;
-				overflow: visible !important;
+				border-radius: 14px;
+				border: 1px solid #e5e7eb;
+				overflow: hidden;
+				box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 			}
 
-			.query-report .dt-row {
-				border: none !important;
-				background: transparent !important;
-				height: auto !important;
-				min-height: 120px !important;
-			}
-
-			.query-report .dt-cell {
-				border: none !important;
-				background: transparent !important;
-				height: auto !important;
-				min-height: 120px !important;
+			.query-report .dt-header .dt-cell__content {
+				font-weight: 900;
+				color: #334155;
+				text-align: center;
 			}
 
 			.query-report .dt-cell__content {
-				padding: 0 !important;
-				white-space: normal !important;
-				height: auto !important;
-				min-height: 120px !important;
-				overflow: visible !important;
-				display: block !important;
-			}
-			.query-report .dt-cell__content > div {
-				width: 100%;
-			}
-			.dmd-card {
-				width: 100%;
-				background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-				border: 1px solid #e5e7eb;
-				border-radius: 18px;
-				padding: 18px;
-				margin-bottom: 12px;
-				box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-				box-sizing: border-box;
-			}
-
-			.dmd-card-main {
 				display: flex;
 				align-items: center;
-				justify-content: space-between;
-				gap: 14px;
+				justify-content: center;
+				min-height: 42px;
 			}
 
-			.dmd-fleet-large {
-				font-size: 20px;
-				font-weight: 900;
-				color: #0f172a;
-				letter-spacing: 0.3px;
-			}
-
-			.dmd-meta {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 8px;
-				margin-top: 7px;
-			}
-
-			.dmd-meta span {
-				background: #f8fafc;
-				border: 1px solid #e2e8f0;
+			.dmd-fleet {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				min-width: 90px;
 				border-radius: 999px;
-				padding: 4px 10px;
-				font-size: 12px;
-				font-weight: 700;
-				color: #475569;
-			}
-
-			.dmd-card-actions {
-				display: flex;
-				align-items: center;
-				justify-content: flex-end;
-				gap: 10px;
-				flex-wrap: wrap;
+				padding: 7px 13px;
+				background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+				border: 1px solid #cbd5e1;
+				color: #0f172a;
+				font-weight: 900;
+				font-size: 13px;
+				letter-spacing: 0.3px;
 			}
 
 			.dmd-status {
@@ -185,7 +120,7 @@ function add_downtime_mistake_dashboard_style() {
 				padding: 6px 13px;
 				font-weight: 900;
 				font-size: 12px;
-				min-width: 68px;
+				min-width: 72px;
 			}
 
 			.dmd-open {
@@ -218,7 +153,8 @@ function add_downtime_mistake_dashboard_style() {
 			.dmd-check {
 				display: inline-flex;
 				align-items: center;
-				gap: 6px;
+				gap: 7px;
+				margin-left: 12px;
 				font-weight: 800;
 				color: #334155;
 			}
@@ -256,18 +192,6 @@ function add_downtime_mistake_dashboard_style() {
 				border-radius: 12px;
 				padding: 12px;
 				color: #0f172a;
-			}
-
-			@media (max-width: 768px) {
-				.dmd-card-main {
-					align-items: flex-start;
-					flex-direction: column;
-				}
-
-				.dmd-card-actions {
-					width: 100%;
-					justify-content: space-between;
-				}
 			}
 		</style>
 	`);

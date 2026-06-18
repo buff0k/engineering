@@ -20,7 +20,11 @@ def execute(filters=None):
 
 def get_columns():
 	return [
-		{"label": _("Dashboard"), "fieldname": "dashboard_html", "fieldtype": "HTML", "width": 1100},
+		{"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 120},
+		{"label": _("Site"), "fieldname": "site", "fieldtype": "Data", "width": 150},
+		{"label": _("Fleet"), "fieldname": "fleet_source", "fieldtype": "HTML", "width": 220},
+		{"label": _("Status"), "fieldname": "status_html", "fieldtype": "HTML", "width": 130},
+		{"label": _("Action"), "fieldname": "action_html", "fieldtype": "HTML", "width": 260},
 	]
 
 
@@ -103,12 +107,17 @@ def get_data(from_date, to_date, site=None):
 		is_fixed = get_fixed_status(item["fixes"], fixed_key)
 
 		data.append({
-			"dashboard_html": get_dashboard_card_html(
+			"date": item["date"],
+			"site": item["site"],
+			"fleet_source": f"""
+				<div class="dmd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
+			""",
+			"status_html": get_status_html(is_fixed),
+			"action_html": get_action_html(
 				item["child_row"],
 				fixed_key,
-				item["date"],
-				item["site"],
 				item["fleet"],
+				item["date"],
 				item["comments"],
 				is_fixed,
 			),
@@ -117,28 +126,7 @@ def get_data(from_date, to_date, site=None):
 	return data
 
 
-def get_dashboard_card_html(child_row, fixed_key, date, site, fleet, comments, is_fixed):
-	comment_count = len(comments or [])
 
-	return f"""
-		<div class="dmd-card">
-			<div class="dmd-card-main">
-				<div>
-					<div class="dmd-fleet-large">{frappe.utils.escape_html(fleet)}</div>
-					<div class="dmd-meta">
-						<span>{frappe.utils.escape_html(str(site or ""))}</span>
-						<span>{frappe.utils.escape_html(str(date or ""))}</span>
-						<span>{comment_count} comment{"s" if comment_count != 1 else ""}</span>
-					</div>
-				</div>
-
-				<div class="dmd-card-actions">
-					{get_status_html(is_fixed)}
-					{get_action_html(child_row, fixed_key, fleet, date, comments, is_fixed)}
-				</div>
-			</div>
-		</div>
-	"""
 
 
 
