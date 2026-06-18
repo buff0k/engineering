@@ -98,18 +98,22 @@ function add_downtime_mistake_dashboard_style() {
 			.query-report .dt-row {
 				border: none !important;
 				background: transparent !important;
+				height: auto !important;
+				min-height: 96px !important;
 			}
 
 			.query-report .dt-cell {
 				border: none !important;
 				background: transparent !important;
+				height: auto !important;
+				min-height: 96px !important;
 			}
 
 			.query-report .dt-cell__content {
 				padding: 0 !important;
 				white-space: normal !important;
 				height: auto !important;
-				min-height: 0 !important;
+				min-height: 96px !important;
 				overflow: visible !important;
 				display: block !important;
 			}
@@ -193,15 +197,15 @@ function add_downtime_mistake_dashboard_style() {
 				border-radius: 999px !important;
 				padding: 8px 18px !important;
 				font-weight: 900 !important;
-				border: 1px solid #4674e0 !important;
-				background: #3165dd !important;
+				border: 1px solid #2563eb !important;
+				background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
 				color: #ffffff !important;
-				box-shadow: 0 4px 10px rgba(50, 98, 211, 0.18);
+				box-shadow: 0 5px 14px rgba(37, 99, 235, 0.28);
 			}
 
 			.dmd-view:hover {
-				background: #0f3675 !important;
-				border-color: #1c64d8 !important;
+				background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+				border-color: #1e40af !important;
 			}
 
 			.dmd-check {
