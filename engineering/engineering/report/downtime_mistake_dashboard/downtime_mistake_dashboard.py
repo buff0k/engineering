@@ -129,10 +129,6 @@ def looks_like_fleet(line):
 		return False
 
 	return bool(re.match(r"^[A-Z]{2,8}\d{2,6}[A-Z]?$", value))
-	if len(line) > 30:
-		return False
-
-	return bool(re.match(r"^[A-Z]{1,8}[-\s]?\d{1,6}[A-Z]?$", line.upper()))
 
 
 def make_fixed_key(child_row, source, date, fleet, comment):
