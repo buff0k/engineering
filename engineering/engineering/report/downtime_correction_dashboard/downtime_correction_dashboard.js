@@ -24,6 +24,7 @@ frappe.query_reports["Downtime Correction Dashboard"] = {
 
 	onload: function () {
 		add_downtime_correction_dashboard_style();
+		add_open_downtime_button();
 		bind_downtime_correction_dashboard_events();
 	},
 
@@ -56,6 +57,17 @@ function render_downtime_correction_dashboard_html() {
 
 	wrapper.find(".dt-scrollable, .datatable-wrapper, .frappe-datatable").hide();
 }
+
+function add_open_downtime_button() {
+	setTimeout(function () {
+		if ($(".dcd-open-downtime").length) return;
+
+		frappe.query_report.page.add_inner_button(__("Open Downtime"), function () {
+			window.open("https://www.isambane.co.za/desk/plant-breakdown-or-maintenance", "_blank");
+		}).addClass("dcd-open-downtime");
+	}, 300);
+}
+
 
 function bind_downtime_correction_dashboard_events() {
 	$(document).off("click", ".dcd-view").on("click", ".dcd-view", function () {
@@ -109,6 +121,12 @@ function add_downtime_correction_dashboard_style() {
 		<style id="dcd-style">
 			.dcd-dashboard-holder {
 				padding: 16px 0;
+			}
+
+			.query-report .report-wrapper .dt-scrollable,
+			.query-report .report-wrapper .datatable-wrapper,
+			.query-report .report-wrapper .frappe-datatable {
+				display: none !important;
 			}
 
 			.dcd-dashboard {
