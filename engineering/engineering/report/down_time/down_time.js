@@ -223,6 +223,52 @@ function add_mobile_downtime_styles() {
 
     $("head").append(`
         <style id="mobile-downtime-styles">
+            .query-report .dt-scrollable {
+                border-radius: 8px;
+                border: 1px solid #d9d9d9;
+                overflow: hidden;
+            }
+
+            .query-report .dt-header {
+                background: #f3f3f3;
+            }
+
+            .query-report .dt-header .dt-cell__content {
+                font-weight: 800;
+                color: #1f2937;
+                font-size: 13px;
+            }
+
+            .query-report .dt-cell__content {
+                min-height: 30px;
+                display: flex;
+                align-items: center;
+                font-size: 13px;
+                color: #374151;
+            }
+
+            .query-report .dt-cell {
+                border-color: #e5e7eb !important;
+            }
+
+            .query-report .dt-row:hover .dt-cell {
+                background: #f8fafc !important;
+            }
+
+            .query-report .dt-row-filter .dt-cell__content input {
+                border-radius: 8px;
+                background: #f1f1f1;
+                border: none;
+                height: 24px;
+            }
+
+            .downtime-comment-input {
+                border-radius: 8px !important;
+                border: 1px solid #d9d9d9 !important;
+                background: #ffffff !important;
+                height: 28px !important;
+            }
+
             .mobile-downtime-wrapper {
                 display: none;
             }
@@ -385,7 +431,7 @@ function add_mobile_downtime_styles() {
                 color: #8c8c8c !important;
             }
 
-            @media (max-width: 1024px) {
+            @media (max-width: 1024px), (pointer: coarse) {
                 .dt-scrollable,
                 .datatable,
                 .frappe-datatable {
