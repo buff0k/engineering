@@ -7,24 +7,24 @@
  "engine": "InnoDB",
  "field_order": [
   "information_officer_section",
-  "data_date_io",
   "date_time_io",
   "shift_io",
   "information_officer",
   "information_officer_signature",
+  "comments1",
   "section_break_jumn",
   "production_user_section",
-  "data_date_p",
   "date_time_p",
   "shift_p",
   "production_user",
   "production_signature",
+  "comments2",
   "engineering_user_table",
-  "data_date_e",
   "date_time_e",
   "shift_e",
   "engineering_user",
-  "engineering_signature"
+  "engineering_signature",
+  "comments3"
  ],
  "fields": [
   {
@@ -74,18 +74,6 @@
    "label": "Engineering Signature"
   },
   {
-   "fieldname": "data_date_p",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date of data correct"
-  },
-  {
-   "fieldname": "data_date_e",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date of data correct"
-  },
-  {
    "fieldname": "shift_p",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -103,12 +91,6 @@
    "fieldname": "information_officer_section",
    "fieldtype": "Section Break",
    "label": "Information Officer"
-  },
-  {
-   "fieldname": "data_date_io",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date of data correct"
   },
   {
    "fieldname": "date_time_io",
@@ -138,13 +120,28 @@
   {
    "fieldname": "section_break_jumn",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "comments1",
+   "fieldtype": "Long Text",
+   "label": "Comments"
+  },
+  {
+   "fieldname": "comments2",
+   "fieldtype": "Long Text",
+   "label": "Comments"
+  },
+  {
+   "fieldname": "comments3",
+   "fieldtype": "Long Text",
+   "label": "Comments"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-17 08:37:56.258214",
+ "modified": "2026-06-18 06:28:21.207226",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Downtime sign-off child",
