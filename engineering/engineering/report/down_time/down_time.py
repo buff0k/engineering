@@ -615,44 +615,53 @@ def format_downtime_comments_for_signoff(downtime_comments=None):
 
 
 def get_pdf_downtime_comments_map(downtime_comments=None, signoff_row=None):
+    comments = {}
+
     if isinstance(downtime_comments, str):
         downtime_comments = frappe.parse_json(downtime_comments) or {}
-
-    comments = {}
 
     for plant_no, comment in (downtime_comments or {}).items():
         plant_no = str(plant_no or "").strip()
         comment = str(comment or "").strip()
 
         if plant_no and comment:
-            comments[plant_no] = comment
+            comments.setdefault(plant_no, []).append({
+                "source": "Current User",
+                "comment": comment,
+            })
 
     if comments:
         return comments
 
-    stored_comments = ""
-
-    if signoff_row:
-        stored_comments = "\n\n".join([
-            str(getattr(signoff_row, "comments1", "") or "").strip(),
-            str(getattr(signoff_row, "comments2", "") or "").strip(),
-            str(getattr(signoff_row, "comments3", "") or "").strip(),
-        ]).strip()
-
-    if not stored_comments:
+    if not signoff_row:
         return comments
 
-    blocks = [block.strip() for block in stored_comments.split("\n\n") if block.strip()]
+    comment_groups = [
+        ("Information Officer", getattr(signoff_row, "comments1", "")),
+        ("Production Manager", getattr(signoff_row, "comments2", "")),
+        ("Engineering Manager", getattr(signoff_row, "comments3", "")),
+    ]
 
-    for block in blocks:
-        lines = [line.strip() for line in block.split("\n") if line.strip()]
+    for source, stored_comments in comment_groups:
+        stored_comments = str(stored_comments or "").strip()
 
-        if len(lines) >= 2:
-            plant_no = lines[0]
-            comment = "\n".join(lines[1:]).strip()
+        if not stored_comments:
+            continue
 
-            if plant_no and comment:
-                comments[plant_no] = comment
+        blocks = [block.strip() for block in stored_comments.split("\n\n") if block.strip()]
+
+        for block in blocks:
+            lines = [line.strip() for line in block.split("\n") if line.strip()]
+
+            if len(lines) >= 2:
+                plant_no = lines[0]
+                comment = "\n".join(lines[1:]).strip()
+
+                if plant_no and comment:
+                    comments.setdefault(plant_no, []).append({
+                        "source": source,
+                        "comment": comment,
+                    })
 
     return comments
 
@@ -1067,6 +1076,28 @@ def get_pdf_header_image_html():
         return ""
 
 
+def get_pdf_comment_html(comment_rows):
+    comment_rows = comment_rows or []
+
+    if not comment_rows:
+        return ""
+
+    html = []
+
+    for row in comment_rows:
+        html.append("""
+            <div style="margin-bottom:8px;">
+                <div style="font-weight:800; margin-bottom:3px;">{source}</div>
+                <div>{comment}</div>
+            </div>
+        """.format(
+            source=frappe.utils.escape_html(str(row.get("source") or "")),
+            comment=frappe.utils.escape_html(str(row.get("comment") or "")),
+        ))
+
+    return "".join(html)
+
+
 def get_downtime_cards_html(data, downtime_comments=None, signoff_row=None):
     downtime_comments = get_pdf_downtime_comments_map(downtime_comments, signoff_row)
     if not data:
@@ -1120,7 +1151,7 @@ def get_downtime_cards_html(data, downtime_comments=None, signoff_row=None):
             resolved=frappe.utils.escape_html(str(row.get("resolved_datetime") or "")),
             reason=frappe.utils.escape_html(str(row.get("breakdown_reason") or "")),
             resolution=frappe.utils.escape_html(str(row.get("resolution_summary") or "")),
-            comment=frappe.utils.escape_html(str(downtime_comments.get(row.get("plant_no")) or "")),
+            comment=get_pdf_comment_html(downtime_comments.get(row.get("plant_no"))),
         ))
 
     return "".join(cards)
