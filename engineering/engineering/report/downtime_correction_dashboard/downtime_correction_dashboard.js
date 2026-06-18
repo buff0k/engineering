@@ -24,84 +24,95 @@ frappe.query_reports["Downtime Correction Dashboard"] = {
 
 	onload: function () {
 		add_downtime_correction_dashboard_style();
+		bind_downtime_correction_dashboard_events();
+	},
 
-		$(document).off("click", ".dcd-view").on("click", ".dcd-view", function () {
-			const btn = $(this);
-			const comments = JSON.parse(btn.attr("data-comments") || "[]");
+	after_datatable_render: function () {
+		render_downtime_correction_dashboard_html();
+	},
 
-			const comments_html = comments.map(function (row) {
-				return `
-					<div class="dcd-comment-block">
-						<div class="dcd-comment-source">${frappe.utils.escape_html(row.source || "")}</div>
-						<div class="dcd-popup-comment">${frappe.utils.escape_html(row.comment || "").replace(/\n/g, "<br>")}</div>
-					</div>
-				`;
-			}).join("");
-
-			frappe.msgprint({
-				title: __("Downtime Correction Comment"),
-				indicator: "red",
-				message: `
-					<div class="dcd-popup">
-						<div><b>Fleet:</b> ${frappe.utils.escape_html(btn.data("fleet") || "")}</div>
-						<div><b>Date:</b> ${frappe.utils.escape_html(String(btn.data("date") || ""))}</div>
-						<hr>
-						${comments_html}
-					</div>
-				`,
-			});
-		});
-
-		$(document).off("change", ".dcd-fixed-checkbox").on("change", ".dcd-fixed-checkbox", function () {
-			const checkbox = $(this);
-
-			frappe.call({
-				method: "engineering.engineering.report.downtime_correction_dashboard.downtime_correction_dashboard.set_fixed_status",
-				args: {
-					child_row: checkbox.data("row"),
-					fixed_key: checkbox.data("key"),
-					fixed: checkbox.is(":checked") ? 1 : 0,
-				},
-				callback: function () {
-					frappe.query_report.refresh();
-				},
-			});
-		});
+	formatter: function () {
+		return "";
 	},
 };
+
+function render_downtime_correction_dashboard_html() {
+	const report = frappe.query_report;
+
+	if (!report || !report.data || !report.data.length) return;
+
+	const html = report.data[0].dashboard_html || "";
+
+	$(".dcd-dashboard-holder").remove();
+
+	const wrapper = report.$report || $(".query-report");
+	const datatable_wrapper = wrapper.find(".datatable").closest(".dt-scrollable, .datatable-wrapper, .frappe-datatable").first();
+
+	if (datatable_wrapper.length) {
+		datatable_wrapper.before(`<div class="dcd-dashboard-holder">${html}</div>`);
+	} else {
+		wrapper.prepend(`<div class="dcd-dashboard-holder">${html}</div>`);
+	}
+
+	wrapper.find(".dt-scrollable, .datatable-wrapper, .frappe-datatable").hide();
+}
+
+function bind_downtime_correction_dashboard_events() {
+	$(document).off("click", ".dcd-view").on("click", ".dcd-view", function () {
+		const btn = $(this);
+		const comments = JSON.parse(btn.attr("data-comments") || "[]");
+
+		const comments_html = comments.map(function (row) {
+			return `
+				<div class="dcd-comment-block">
+					<div class="dcd-comment-source">${frappe.utils.escape_html(row.source || "")}</div>
+					<div class="dcd-popup-comment">${frappe.utils.escape_html(row.comment || "").replace(/\n/g, "<br>")}</div>
+				</div>
+			`;
+		}).join("");
+
+		frappe.msgprint({
+			title: __("Downtime Correction Comment"),
+			indicator: "red",
+			message: `
+				<div class="dcd-popup">
+					<div><b>Fleet:</b> ${frappe.utils.escape_html(btn.data("fleet") || "")}</div>
+					<div><b>Date:</b> ${frappe.utils.escape_html(String(btn.data("date") || ""))}</div>
+					<hr>
+					${comments_html}
+				</div>
+			`,
+		});
+	});
+
+	$(document).off("change", ".dcd-fixed-checkbox").on("change", ".dcd-fixed-checkbox", function () {
+		const checkbox = $(this);
+
+		frappe.call({
+			method: "engineering.engineering.report.downtime_correction_dashboard.downtime_correction_dashboard.set_fixed_status",
+			args: {
+				child_row: checkbox.data("row"),
+				fixed_key: checkbox.data("key"),
+				fixed: checkbox.is(":checked") ? 1 : 0,
+			},
+			callback: function () {
+				frappe.query_report.refresh();
+			},
+		});
+	});
+}
 
 function add_downtime_correction_dashboard_style() {
 	if ($("#dcd-style").length) return;
 
 	$("head").append(`
 		<style id="dcd-style">
-			.query-report .dt-scrollable {
-				border: none !important;
-				box-shadow: none !important;
-				overflow: visible !important;
-			}
-
-			.query-report .dt-header {
-				display: none !important;
-			}
-
-			.query-report .dt-row {
-				border: none !important;
-			}
-
-			.query-report .dt-cell {
-				border: none !important;
-				background: transparent !important;
-			}
-
-			.query-report .dt-cell__content {
-				padding: 0 !important;
-				width: 100% !important;
-				display: block !important;
+			.dcd-dashboard-holder {
+				padding: 16px 0;
 			}
 
 			.dcd-dashboard {
-				padding: 16px;
+				padding: 4px 0 24px 0;
 			}
 
 			.dcd-grid {

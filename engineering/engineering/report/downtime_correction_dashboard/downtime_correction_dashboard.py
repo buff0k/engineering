@@ -125,10 +125,7 @@ def get_dashboard_html(items):
 			</div>
 		"""
 
-	cards = []
-
-	for item in items:
-		cards.append(get_card_html(item))
+	cards = [get_card_html(item) for item in items]
 
 	return f"""
 		<div class="dcd-dashboard">
