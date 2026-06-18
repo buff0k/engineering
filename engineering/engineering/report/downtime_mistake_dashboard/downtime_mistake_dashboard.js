@@ -75,11 +75,20 @@ function add_downtime_mistake_dashboard_style() {
 
 	$("head").append(`
 		<style id="dmd-style">
-			.query-report .dt-header {
-				display: none;
+			.query-report .datatable {
+				background: transparent !important;
+				border: none !important;
+			}
+
+			.query-report .dt-header,
+			.query-report .dt-row-filter {
+				display: none !important;
 			}
 
 			.query-report .dt-scrollable {
+				width: 100% !important;
+				max-width: 900px !important;
+				margin: 16px auto 0 auto !important;
 				border: none !important;
 				box-shadow: none !important;
 				background: transparent !important;
@@ -97,13 +106,16 @@ function add_downtime_mistake_dashboard_style() {
 			}
 
 			.query-report .dt-cell__content {
-				padding: 6px 0 !important;
+				padding: 0 !important;
 				white-space: normal !important;
 				height: auto !important;
 				min-height: 0 !important;
 				overflow: visible !important;
+				display: block !important;
 			}
-
+			.query-report .dt-cell__content > div {
+				width: 100%;
+			}
 			.dmd-card {
 				background: #ffffff;
 				border: 1px solid #e5e7eb;
