@@ -463,9 +463,8 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
     if is_information_officer:
-        row.date_time_io = now_datetime()
-        row.shift_io = signoff_shift
         row.information_officer = full_name
+        row.date_time_io = now_datetime()
         row.information_officer_signature = signature
 
     elif is_production_user:
@@ -481,16 +480,6 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
         row.shift_e = signoff_shift
         row.engineering_user = full_name
         row.engineering_signature = signature
-
-    formatted_downtime_comments = format_downtime_comments_for_signoff(downtime_comments)
-
-    if formatted_downtime_comments:
-        if is_information_officer:
-            row.comments1 = formatted_downtime_comments
-        elif is_production_user:
-            row.comments2 = formatted_downtime_comments
-        elif is_engineering_user:
-            row.comments3 = formatted_downtime_comments
 
     parent.site = site
     parent.status = get_signoff_status(row)
@@ -591,69 +580,6 @@ def clean_docname(value):
     return value
 
 
-
-
-def format_downtime_comments_for_signoff(downtime_comments=None):
-    if isinstance(downtime_comments, str):
-        downtime_comments = frappe.parse_json(downtime_comments) or {}
-
-    downtime_comments = downtime_comments or {}
-
-    lines = []
-
-    for plant_no, comment in downtime_comments.items():
-        plant_no = str(plant_no or "").strip()
-        comment = str(comment or "").strip()
-
-        if plant_no and comment:
-            lines.append("{0}\n{1}".format(plant_no, comment))
-
-    return "\n\n".join(lines)
-
-
-def get_pdf_downtime_comments_map(downtime_comments=None, signoff_row=None):
-    if isinstance(downtime_comments, str):
-        downtime_comments = frappe.parse_json(downtime_comments) or {}
-
-    comments = {}
-
-    for plant_no, comment in (downtime_comments or {}).items():
-        plant_no = str(plant_no or "").strip()
-        comment = str(comment or "").strip()
-
-        if plant_no and comment:
-            comments[plant_no] = comment
-
-    if comments:
-        return comments
-
-    stored_comments = ""
-
-    if signoff_row:
-        stored_comments = "\n\n".join([
-            str(getattr(signoff_row, "comments1", "") or "").strip(),
-            str(getattr(signoff_row, "comments2", "") or "").strip(),
-            str(getattr(signoff_row, "comments3", "") or "").strip(),
-        ]).strip()
-
-    if not stored_comments:
-        return comments
-
-    blocks = [block.strip() for block in stored_comments.split("\n\n") if block.strip()]
-
-    for block in blocks:
-        lines = [line.strip() for line in block.split("\n") if line.strip()]
-
-        if len(lines) >= 2:
-            plant_no = lines[0]
-            comment = "\n".join(lines[1:]).strip()
-
-            if plant_no and comment:
-                comments[plant_no] = comment
-
-    return comments
-
-
 def attach_signed_report_pdf(parent, report_date, site, asset_category, shift, downtime_comments=None):
     filters = frappe._dict({
         "report_date": report_date,
@@ -707,7 +633,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
     production_signature = signoff_row.production_signature if signoff_row else ""
     engineering_signature = signoff_row.engineering_signature if signoff_row else ""
     information_officer = signoff_row.information_officer if signoff_row else ""
-    information_officer_date_time = format_datetime(signoff_row.date_time_io) if signoff_row and signoff_row.date_time_io else ""
+    information_officer_date_time = signoff_row.date_time_io if signoff_row else ""
     information_officer_signature = signoff_row.information_officer_signature if signoff_row else ""
 
     production_user = signoff_row.production_user if signoff_row else ""
@@ -937,7 +863,7 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         production_signature_html=get_signature_html(production_signature),
         engineering_signature_html=get_signature_html(engineering_signature),
         avail_util_html=get_avail_util_pdf_html(avail_util_summary),
-        downtime_cards=get_downtime_cards_html(data, downtime_comments, signoff_row),
+        downtime_cards=get_downtime_cards_html(data, downtime_comments),
     )
 
 def get_avail_util_pdf_html(summary):
@@ -1064,8 +990,11 @@ def get_pdf_header_image_html():
         return ""
 
 
-def get_downtime_cards_html(data, downtime_comments=None, signoff_row=None):
-    downtime_comments = get_pdf_downtime_comments_map(downtime_comments, signoff_row)
+def get_downtime_cards_html(data, downtime_comments=None):
+    if isinstance(downtime_comments, str):
+        downtime_comments = frappe.parse_json(downtime_comments) or {}
+
+    downtime_comments = downtime_comments or {}
     if not data:
         return """
             <table class="record-card">

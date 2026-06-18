@@ -181,7 +181,7 @@ function hide_generate_button(report) {
 
 
 function is_mobile_downtime_view() {
-    return window.innerWidth <= 1024;
+    return window.innerWidth <= 768;
 }
 
 function setup_mobile_downtime_view(report) {
@@ -225,7 +225,7 @@ function add_mobile_downtime_styles() {
                 box-shadow: 0 2px 8px rgba(176, 0, 32, 0.25);
             }
 
-            @media (max-width: 1024px) {
+            @media (max-width: 768px) {
                 .downtime-signoff-action-wrapper {
                     justify-content: stretch;
                 }
@@ -274,7 +274,7 @@ function add_mobile_downtime_styles() {
                 height: 18px;
             }
 
-            @media (max-width: 1024px) {
+            @media (max-width: 768px) {
                 .downtime-desktop-verify-wrapper {
                     display: none;
                 }
@@ -369,7 +369,7 @@ function add_mobile_downtime_styles() {
                 color: #8c8c8c !important;
             }
 
-            @media (max-width: 1024px) {
+            @media (max-width: 768px) {
                 .dt-scrollable,
                 .datatable,
                 .frappe-datatable {
