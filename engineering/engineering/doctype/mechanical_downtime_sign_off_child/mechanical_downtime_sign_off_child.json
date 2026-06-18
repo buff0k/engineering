@@ -24,7 +24,9 @@
   "shift_e",
   "engineering_user",
   "engineering_signature",
-  "comments3"
+  "comments3",
+  "section_break_hnno",
+  "fixes"
  ],
  "fields": [
   {
@@ -135,13 +137,22 @@
    "fieldname": "comments3",
    "fieldtype": "Long Text",
    "label": "Comments"
+  },
+  {
+   "fieldname": "section_break_hnno",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "fixes",
+   "fieldtype": "Long Text",
+   "label": "Control Room Fixes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-18 06:28:21.207226",
+ "modified": "2026-06-18 08:13:45.903887",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Downtime sign-off child",

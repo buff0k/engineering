@@ -6,7 +6,7 @@ from frappe import _
 from frappe.utils import add_days, getdate, nowdate
 
 
-FIXED_DOCTYPE = "Downtime Mistake Fixed"
+FIXES_FIELD = "fixes"
 
 
 def execute(filters=None):
@@ -15,10 +15,7 @@ def execute(filters=None):
 	to_date = getdate(filters.get("to_date") or nowdate())
 	from_date = getdate(filters.get("from_date") or add_days(to_date, -7))
 
-	columns = get_columns()
-	data = get_data(from_date, to_date)
-
-	return columns, data
+	return get_columns(), get_data(from_date, to_date)
 
 
 def get_columns():
@@ -36,6 +33,7 @@ def get_data(from_date, to_date):
 		SELECT
 			c.name,
 			c.parent,
+			c.fixes,
 			c.date_time_io,
 			c.date_time_p,
 			c.date_time_e,
@@ -63,46 +61,57 @@ def get_data(from_date, to_date):
 				continue
 
 			comment_date = getdate(dt)
+
 			if comment_date < from_date or comment_date > to_date:
 				continue
 
 			for item in split_fleet_comments(comments):
 				fixed_key = make_fixed_key(row.name, source, comment_date, item["fleet"], item["comment"])
-				is_fixed = get_fixed_status(fixed_key)
+				is_fixed = get_fixed_status(row.fixes, fixed_key)
 
-				data.append(
-					{
-						"date": comment_date,
-						"fleet_source": f"""
-							<div class="dmd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
-							<div class="dmd-source">{frappe.utils.escape_html(source)}</div>
-						""",
-						"status_html": get_status_html(is_fixed),
-						"action_html": get_action_html(fixed_key, item["fleet"], source, comment_date, item["comment"], is_fixed),
-					}
-				)
+				data.append({
+					"date": comment_date,
+					"fleet_source": f"""
+						<div class="dmd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
+						<div class="dmd-source">{frappe.utils.escape_html(source)}</div>
+					""",
+					"status_html": get_status_html(is_fixed),
+					"action_html": get_action_html(row.name, fixed_key, item["fleet"], source, comment_date, item["comment"], is_fixed),
+				})
 
 	return data
 
 
 def split_fleet_comments(text):
 	blocks = []
-	lines = [line.strip() for line in text.splitlines() if line.strip()]
-
 	current_fleet = None
 	current_comment = []
 
-	for line in lines:
+	for raw_line in text.splitlines():
+		line = raw_line.strip()
+
+		if not line:
+			continue
+
 		if looks_like_fleet(line):
-			if current_fleet and current_comment:
-				blocks.append({"fleet": current_fleet, "comment": "\n".join(current_comment).strip()})
+			if current_fleet:
+				blocks.append({
+					"fleet": current_fleet,
+					"comment": "\n".join(current_comment).strip() or "No comment",
+				})
+
 			current_fleet = line
 			current_comment = []
-		else:
+			continue
+
+		if current_fleet:
 			current_comment.append(line)
 
-	if current_fleet and current_comment:
-		blocks.append({"fleet": current_fleet, "comment": "\n".join(current_comment).strip()})
+	if current_fleet:
+		blocks.append({
+			"fleet": current_fleet,
+			"comment": "\n".join(current_comment).strip() or "No comment",
+		})
 
 	if not blocks and text.strip():
 		blocks.append({"fleet": "Unknown Fleet", "comment": text.strip()})
@@ -111,9 +120,19 @@ def split_fleet_comments(text):
 
 
 def looks_like_fleet(line):
+	value = str(line or "").strip().upper()
+
+	if len(value) > 20:
+		return False
+
+	if " " in value:
+		return False
+
+	return bool(re.match(r"^[A-Z]{2,8}\d{2,6}[A-Z]?$", value))
 	if len(line) > 30:
 		return False
-	return bool(re.match(r"^[A-Z]{2,6}[-\s]?\d{1,5}[A-Z]?$", line.upper()))
+
+	return bool(re.match(r"^[A-Z]{1,8}[-\s]?\d{1,6}[A-Z]?$", line.upper()))
 
 
 def make_fixed_key(child_row, source, date, fleet, comment):
@@ -121,21 +140,21 @@ def make_fixed_key(child_row, source, date, fleet, comment):
 	return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def get_fixed_status(fixed_key):
-	if not frappe.db.exists("DocType", FIXED_DOCTYPE):
-		return 0
-
-	return 1 if frappe.db.exists(FIXED_DOCTYPE, {"fixed_key": fixed_key}) else 0
+def get_fixed_status(fixes_json, fixed_key):
+	fixes = frappe.parse_json(fixes_json or "{}") or {}
+	return 1 if fixes.get(fixed_key) else 0
 
 
 def get_status_html(is_fixed):
 	if is_fixed:
 		return '<span class="dmd-status dmd-fixed">Fixed</span>'
+
 	return '<span class="dmd-status dmd-open">Open</span>'
 
 
-def get_action_html(fixed_key, fleet, source, date, comment, is_fixed):
+def get_action_html(child_row, fixed_key, fleet, source, date, comment, is_fixed):
 	checked = "checked" if is_fixed else ""
+
 	return f"""
 		<button class="btn btn-xs btn-default dmd-view"
 			data-fleet="{frappe.utils.escape_html(fleet)}"
@@ -146,33 +165,28 @@ def get_action_html(fixed_key, fleet, source, date, comment, is_fixed):
 		</button>
 
 		<label class="dmd-check">
-			<input type="checkbox" class="dmd-fixed-checkbox" data-key="{fixed_key}" {checked}>
+			<input type="checkbox" class="dmd-fixed-checkbox" data-row="{child_row}" data-key="{fixed_key}" {checked}>
 			Fixed
 		</label>
 	"""
 
 
 @frappe.whitelist()
-def set_fixed_status(fixed_key, fixed):
-	if not frappe.db.exists("DocType", FIXED_DOCTYPE):
-		frappe.throw(_("Missing helper DocType: Downtime Mistake Fixed"))
-
+def set_fixed_status(child_row, fixed_key, fixed):
 	fixed = int(fixed)
 
-	existing = frappe.db.exists(FIXED_DOCTYPE, {"fixed_key": fixed_key})
+	row = frappe.get_doc("Mechanical Downtime sign-off child", child_row)
+	fixes = frappe.parse_json(row.fixes or "{}") or {}
 
-	if fixed and not existing:
-		doc = frappe.get_doc(
-			{
-				"doctype": FIXED_DOCTYPE,
-				"fixed_key": fixed_key,
-				"fixed_by": frappe.session.user,
-			}
-		)
-		doc.insert(ignore_permissions=True)
+	if fixed:
+		fixes[fixed_key] = {
+			"fixed": 1,
+			"fixed_by": frappe.session.user,
+			"fixed_on": frappe.utils.now(),
+		}
+	else:
+		fixes.pop(fixed_key, None)
 
-	if not fixed and existing:
-		frappe.delete_doc(FIXED_DOCTYPE, existing, ignore_permissions=True)
+	row.db_set(FIXES_FIELD, frappe.as_json(fixes), update_modified=False)
 
-	frappe.db.commit()
 	return {"ok": 1}

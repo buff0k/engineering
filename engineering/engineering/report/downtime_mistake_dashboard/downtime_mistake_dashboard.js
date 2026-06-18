@@ -43,6 +43,7 @@ frappe.query_reports["Downtime mistake dashboard"] = {
 			frappe.call({
 				method: "engineering.engineering.report.downtime_mistake_dashboard.downtime_mistake_dashboard.set_fixed_status",
 				args: {
+					child_row: checkbox.data("row"),
 					fixed_key: checkbox.data("key"),
 					fixed: checkbox.is(":checked") ? 1 : 0,
 				},

@@ -1,6 +1,8 @@
 // Copyright (c) 2026, Isambane Mining (Pty) Ltd
 // For license information, please see license.txt
 
+let downtime_mobile_comment_cache = {};
+
 frappe.query_reports["Down Time"] = {
     filters: [
         {
@@ -196,6 +198,20 @@ function setup_mobile_downtime_view(report) {
     });
 
     $(window).off("resize.mobile_downtime").on("resize.mobile_downtime", function () {
+        const active = document.activeElement;
+
+        if (
+            active &&
+            (
+                active.classList.contains("mobile-downtime-comment-input") ||
+                active.classList.contains("downtime-comment-input") ||
+                active.tagName === "TEXTAREA" ||
+                active.tagName === "INPUT"
+            )
+        ) {
+            return;
+        }
+
         render_mobile_downtime_cards(report);
     });
 }
@@ -572,7 +588,7 @@ function render_mobile_downtime_cards(report) {
                         class="mobile-downtime-comment-input"
                         data-plant-no="${frappe.utils.escape_html(row.plant_no || "")}"
                         placeholder="Add comment for this downtime record..."
-                    ></textarea>
+                    >${frappe.utils.escape_html(downtime_mobile_comment_cache[row.plant_no || ""] || "")}</textarea>
                 </div>
             </div>
         `;
@@ -581,6 +597,11 @@ function render_mobile_downtime_cards(report) {
     html += `</div>`;
 
     $(".report-wrapper").append(html);
+
+    $(".mobile-downtime-comment-input").off("input.mobile_comment").on("input.mobile_comment", function () {
+        const plant_no = $(this).data("plant-no");
+        downtime_mobile_comment_cache[plant_no] = $(this).val() || "";
+    });
 }
 
 
@@ -747,6 +768,15 @@ function get_mobile_downtime_comments() {
     $(".mobile-downtime-comment-input, .downtime-comment-input").each(function () {
         const plant_no = $(this).data("plant-no");
         const comment = ($(this).val() || "").trim();
+
+        if (plant_no && comment) {
+            comments[plant_no] = comment;
+            downtime_mobile_comment_cache[plant_no] = comment;
+        }
+    });
+
+    Object.keys(downtime_mobile_comment_cache || {}).forEach(function (plant_no) {
+        const comment = (downtime_mobile_comment_cache[plant_no] || "").trim();
 
         if (plant_no && comment) {
             comments[plant_no] = comment;
