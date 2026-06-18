@@ -218,12 +218,13 @@ function add_downtime_correction_dashboard_style() {
 				align-items: center;
 				justify-content: center;
 				border-radius: 999px;
-				padding: 8px 14px;
-				background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-				border: 1px solid #cbd5e1;
-				color: #0f172a;
+				padding: 8px 15px;
+				background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%);
+				border: 1px solid #facc15;
+				color: #713f12;
 				font-weight: 900;
 				font-size: 14px;
+				box-shadow: 0 4px 12px rgba(250, 204, 21, 0.28);
 			}
 
 			.dcd-status {
