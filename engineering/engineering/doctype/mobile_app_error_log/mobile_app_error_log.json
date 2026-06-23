@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "autoname": "format:MOB-ERR-.{#####}",
+ "creation": "2026-06-23 09:23:38.491608",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "log_type",
+  "severity",
+  "status",
+  "user",
+  "device_id",
+  "app_version",
+  "platform",
+  "action",
+  "record_type",
+  "local_queue_id",
+  "local_record_name",
+  "server_record_name",
+  "error_title",
+  "error_message",
+  "error_details",
+  "payload_json",
+  "first_seen",
+  "last_seen",
+  "occurrence_count"
+ ],
+ "fields": [
+  {
+   "fieldname": "log_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Log Type",
+   "options": "Sync Blocking\nOther Error\nInfo"
+  },
+  {
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Severity",
+   "options": "Red\nOrange\nGreen"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Open\nFixed\nIgnored"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User"
+  },
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "label": "Device ID"
+  },
+  {
+   "fieldname": "app_version",
+   "fieldtype": "Data",
+   "label": "App Version"
+  },
+  {
+   "fieldname": "platform",
+   "fieldtype": "Data",
+   "label": "Platform"
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Action",
+   "options": "create\nupdate\nsignoff\nlookup_sync\nlogin\nlogout\nsync\nother"
+  },
+  {
+   "fieldname": "record_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Record Type"
+  },
+  {
+   "fieldname": "local_queue_id",
+   "fieldtype": "Data",
+   "label": "Local Queue ID"
+  },
+  {
+   "fieldname": "local_record_name",
+   "fieldtype": "Data",
+   "label": "Local Record Name"
+  },
+  {
+   "fieldname": "server_record_name",
+   "fieldtype": "Data",
+   "label": "Server Record Name"
+  },
+  {
+   "fieldname": "error_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Error Title"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message"
+  },
+  {
+   "fieldname": "error_details",
+   "fieldtype": "Long Text",
+   "label": "Error Details"
+  },
+  {
+   "fieldname": "payload_json",
+   "fieldtype": "Code",
+   "label": "Payload JSON",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "first_seen",
+   "fieldtype": "Datetime",
+   "label": "First Seen",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_seen",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Last Seen",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "occurrence_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Occurrence Count",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-23 10:00:00.370947",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Mobile App Error Log",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

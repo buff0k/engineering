@@ -1,5 +1,6 @@
 import json
 import frappe
+from frappe.utils import now_datetime
 
 
 
@@ -203,6 +204,88 @@ def _has_any_role(user_roles, allowed_roles):
     user_role_set = set(user_roles or [])
     allowed_role_set = set(allowed_roles or [])
     return bool(user_role_set.intersection(allowed_role_set))
+
+
+
+@frappe.whitelist()
+def create_mobile_app_error_log(data):
+    user = frappe.session.user
+
+    if not user or user == "Guest":
+        frappe.throw("Not logged in")
+
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    now = now_datetime()
+
+    log_type = data.get("log_type") or "Other Error"
+    severity = data.get("severity") or ("Red" if log_type == "Sync Blocking" else "Orange")
+    action = data.get("action") or "other"
+    local_queue_id = data.get("local_queue_id") or ""
+    record_type = data.get("record_type") or ""
+    local_record_name = data.get("local_record_name") or ""
+    error_title = data.get("error_title") or "Mobile app error"
+    error_message = data.get("error_message") or ""
+
+    existing_name = None
+
+    if local_queue_id:
+        existing_name = frappe.db.get_value(
+            "Mobile App Error Log",
+            {
+                "user": user,
+                "local_queue_id": local_queue_id,
+                "status": "Open",
+            },
+            "name",
+        )
+
+    if existing_name:
+        doc = frappe.get_doc("Mobile App Error Log", existing_name)
+        doc.last_seen = now
+        doc.occurrence_count = (doc.occurrence_count or 0) + 1
+        doc.error_title = error_title
+        doc.error_message = error_message
+        doc.error_details = data.get("error_details")
+        doc.payload_json = json.dumps(data.get("payload") or data, default=str, indent=2)
+        doc.save(ignore_permissions=True)
+    else:
+        doc = frappe.get_doc({
+            "doctype": "Mobile App Error Log",
+            "log_type": log_type,
+            "severity": severity,
+            "status": data.get("status") or "Open",
+            "user": user,
+            "device_id": data.get("device_id"),
+            "app_version": data.get("app_version"),
+            "platform": data.get("platform") or "Android",
+            "action": action,
+            "record_type": record_type,
+            "local_queue_id": local_queue_id,
+            "local_record_name": local_record_name,
+            "server_record_name": data.get("server_record_name"),
+            "error_title": error_title,
+            "error_message": error_message,
+            "error_details": data.get("error_details"),
+            "payload_json": json.dumps(data.get("payload") or data, default=str, indent=2),
+            "first_seen": now,
+            "last_seen": now,
+            "occurrence_count": 1,
+        })
+        doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+    return {
+        "name": doc.name,
+        "status": doc.status,
+        "occurrence_count": doc.occurrence_count,
+    }
+
+
+
+
 
 def _require_parts_driver(user):
     roles = frappe.get_roles(user)
