@@ -373,7 +373,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
       return 2;
     }
 
-    return Math.max(2, Math.round(numberValue * 1.35));
+    return Math.max(2, Math.round(numberValue * 1.2));
   }
 
   function report_url(site, fromDate, toDate) {
@@ -435,32 +435,26 @@ function render_weekly_availability_dashboard_page(wrapper) {
       const utilisationText = fmt_percent(item.util) || "No Utilisation Data";
 
       return `
-        <div class="eng-asset-pair">
-          <div
-            class="eng-bar eng-bar--availability"
-            title="${escape_html(item.plant_no)} Availability: ${escape_html(availabilityText)}"
-            style="height:${bar_height(item.avail)}px"
-          ></div>
-          <div
-            class="eng-bar eng-bar--utilisation"
-            title="${escape_html(item.plant_no)} Utilisation: ${escape_html(utilisationText)}"
-            style="height:${bar_height(item.util)}px"
-          ></div>
-        </div>
-      `;
-    }).join("");
-  }
+        <div class="eng-asset-tile">
+          <div class="eng-asset-bars">
+            <div
+              class="eng-bar eng-bar--availability"
+              title="${escape_html(item.plant_no)} Availability: ${escape_html(availabilityText)}"
+              style="height:${bar_height(item.avail)}px"
+            ></div>
+            <div
+              class="eng-bar eng-bar--utilisation"
+              title="${escape_html(item.plant_no)} Utilisation: ${escape_html(utilisationText)}"
+              style="height:${bar_height(item.util)}px"
+            ></div>
+          </div>
 
-  function render_asset_labels_for(category, assetSeriesMap) {
-    const items = normalise_assets(assetSeriesMap[category] || []);
-
-    return items.map((item) => {
-      return `
-        <div
-          class="eng-asset-label"
-          title="${escape_html(item.plant_no)}"
-        >
-          ${escape_html(item.plant_no)}
+          <div
+            class="eng-asset-label"
+            title="${escape_html(item.plant_no)}"
+          >
+            ${escape_html(item.plant_no)}
+          </div>
         </div>
       `;
     }).join("");
@@ -468,17 +462,28 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
   function render_asset_group(category, assetSeriesMap) {
     return `
-      <div class="eng-asset-group">
-        <div class="eng-asset-bars">
-          ${render_asset_bars_for(category, assetSeriesMap)}
+      <div class="eng-asset-row">
+        <div class="eng-asset-row-head">
+          <div class="eng-asset-row-title">${escape_html(category)}</div>
+          <div class="eng-asset-row-subtitle">Availability / Utilisation by plant no.</div>
         </div>
 
-        <div class="eng-asset-labels">
-          ${render_asset_labels_for(category, assetSeriesMap)}
-        </div>
+        <div class="eng-asset-row-body">
+          <div class="eng-yaxis eng-yaxis--asset-row">
+            <div>100%</div>
+            <div>80%</div>
+            <div>60%</div>
+            <div>40%</div>
+            <div>20%</div>
+            <div>0%</div>
+          </div>
 
-        <div class="eng-asset-group-title">
-          ${escape_html(category)}
+          <div class="eng-asset-threshold-line eng-asset-threshold-line--availability"></div>
+          <div class="eng-asset-threshold-line eng-asset-threshold-line--utilisation"></div>
+
+          <div class="eng-asset-wrap">
+            ${render_asset_bars_for(category, assetSeriesMap)}
+          </div>
         </div>
       </div>
     `;
@@ -486,50 +491,38 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
   function render_chart(assetSeriesMap) {
     return `
-      <div class="eng-chart">
-        <div class="eng-yaxis">
-          <div>100%</div>
-          <div>80%</div>
-          <div>60%</div>
-          <div>40%</div>
-          <div>20%</div>
-          <div>0%</div>
-        </div>
-
-        <div class="eng-avgline eng-avgline--availability"></div>
-        <div class="eng-avgline eng-avgline--utilisation"></div>
-
-        <div class="eng-asset-chart">
-          ${UI_CATEGORIES.map((category) => {
-            return render_asset_group(category, assetSeriesMap);
-          }).join("")}
-        </div>
+      <div class="eng-category-chart">
+        ${UI_CATEGORIES.map((category) => {
+          return render_asset_group(category, assetSeriesMap);
+        }).join("")}
       </div>
     `;
   }
 
-  function render_side(site, fromDate, toDate, seriesMap) {
+  function render_trend_summary(site, fromDate, toDate, seriesMap) {
     const availabilityState = trend_state(seriesMap, "avail");
     const utilisationState = trend_state(seriesMap, "util");
     const href = report_url(site, fromDate, toDate);
 
     return `
-      <div class="eng-side">
-        <div class="eng-trend-cards">
-          <div class="eng-circle-card">
-            <a class="eng-circle-link" target="_blank" rel="noopener" href="${escape_html(href)}">
-              <div class="${circle_class(availabilityState)}">${escape_html(trend_word(availabilityState))}</div>
-            </a>
-          </div>
+      <div class="eng-trend-summary">
+        <div class="eng-trend-bubbles">
+          <a class="eng-trend-link" target="_blank" rel="noopener" href="${escape_html(href)}">
+            <div class="${circle_class(availabilityState)} eng-circle--heading">
+              <span class="eng-circle-kicker">Availability</span>
+              <span class="eng-circle-main">${escape_html(trend_word(availabilityState))}</span>
+            </div>
+          </a>
 
-          <div class="eng-circle-card">
-            <a class="eng-circle-link" target="_blank" rel="noopener" href="${escape_html(href)}">
-              <div class="${circle_class(utilisationState)}">${escape_html(trend_word(utilisationState))}</div>
-            </a>
-          </div>
+          <a class="eng-trend-link" target="_blank" rel="noopener" href="${escape_html(href)}">
+            <div class="${circle_class(utilisationState)} eng-circle--heading">
+              <span class="eng-circle-kicker">Utilisation</span>
+              <span class="eng-circle-main">${escape_html(trend_word(utilisationState))}</span>
+            </div>
+          </a>
         </div>
 
-        <div class="eng-legend">
+        <div class="eng-legend eng-legend--heading">
           <span class="eng-legend-item">
             <i class="eng-legend-swatch eng-legend-swatch--availability"></i>
             Availability
@@ -558,8 +551,12 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
     return `
       <div class="eng-site eng-site--${escape_html(slugify(site))}">
-        <div class="eng-site-title">
-          ${escape_html(site)} • ${escape_html(startLabel)} → ${escape_html(endLabel)}
+        <div class="eng-site-heading">
+          <div class="eng-site-title">
+            ${escape_html(site)} • ${escape_html(startLabel)} → ${escape_html(endLabel)}
+          </div>
+
+          ${render_trend_summary(site, fromDate, toDate, seriesMap)}
         </div>
 
         <div class="eng-band">
@@ -568,9 +565,8 @@ function render_weekly_availability_dashboard_page(wrapper) {
           </div>
         </div>
 
-        <div class="eng-content-row">
+        <div class="eng-site-main">
           ${render_chart(assetSeriesMap)}
-          ${render_side(site, fromDate, toDate, seriesMap)}
         </div>
       </div>
     `;
