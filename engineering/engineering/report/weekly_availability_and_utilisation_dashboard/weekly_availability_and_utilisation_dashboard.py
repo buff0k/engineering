@@ -1,7 +1,6 @@
 # Copyright (c) 2026, BuFf0k and contributors
 # For license information, please see license.txt
 
-
 import re
 from datetime import timedelta
 
@@ -40,10 +39,11 @@ def execute(filters=None):
     data = []
 
     for idx, site in enumerate(sites):
-        rows = fetch_site_rows(site, from_date, to_date)
+        summary_rows = fetch_site_rows(site, from_date, to_date)
+        asset_rows = fetch_asset_rows(site, from_date, to_date)
 
-        daily_series = build_daily_series(rows, date_list)
-        asset_series = build_asset_series(rows)
+        daily_series = build_daily_series(summary_rows, date_list)
+        asset_series = build_asset_series(asset_rows)
         avgs = build_7day_averages(daily_series)
 
         data.append({
@@ -137,6 +137,13 @@ def is_sunday(date_value):
 
 
 def fetch_site_rows(site, from_date, to_date):
+    """
+    Fetch grouped report rows.
+
+    These rows are still used for the daily category trend and site-level averages,
+    because the existing Avail and Util summary already produces the category/day
+    summary rows we need.
+    """
     from is_production.production.report.avail_and_util_summary.avail_and_util_summary import (
         get_grouped_data,
     )
@@ -146,6 +153,33 @@ def fetch_site_rows(site, from_date, to_date):
         "end_date": to_date,
         "location": site,
     })
+
+
+def fetch_asset_rows(site, from_date, to_date):
+    """
+    Fetch raw Availability and Utilisation rows.
+
+    This is required for the asset-level graph because the grouped summary rows do
+    not reliably contain the plant number. The plant number lives in `asset_name`.
+    """
+    return frappe.get_all(
+        DT,
+        filters={
+            "location": site,
+            "shift_date": ["between", [from_date, to_date]],
+            "asset_category": ["in", DB_CATEGORIES],
+        },
+        fields=[
+            "name",
+            "location",
+            "shift_date",
+            "asset_name",
+            "asset_category",
+            "plant_shift_availability",
+            "plant_shift_utilisation",
+        ],
+        order_by="asset_category asc, asset_name asc, shift_date asc",
+    )
 
 
 def build_daily_series(rows, date_list):
@@ -220,7 +254,6 @@ def build_asset_series(rows):
             continue
 
         ui_label = CATEGORY_MAP[db_cat]
-
         plant_no = get_plant_no(row)
 
         if not plant_no:
@@ -273,19 +306,23 @@ def build_asset_series(rows):
 
 
 def get_plant_no(row):
-    possible_keys = [
+    value = row.get("asset_name")
+
+    if value not in [None, ""]:
+        return str(value).strip()
+
+    fallback_keys = [
         "plant_no",
         "plant_number",
         "plant",
         "asset",
-        "asset_name",
         "machine",
         "machine_no",
         "equipment",
         "equipment_no",
     ]
 
-    for key in possible_keys:
+    for key in fallback_keys:
         value = row.get(key)
 
         if value not in [None, ""]:

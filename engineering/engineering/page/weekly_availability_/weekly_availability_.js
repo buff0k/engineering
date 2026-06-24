@@ -1,7 +1,6 @@
 // Copyright (c) 2026, BuFf0k and contributors
 // For license information, please see license.txt
 
-
 frappe.pages["weekly-availability-"].on_page_load = function (wrapper) {
   render_weekly_availability_dashboard_page(wrapper);
 };
@@ -501,9 +500,9 @@ function render_weekly_availability_dashboard_page(wrapper) {
         <div class="eng-avgline eng-avgline--utilisation"></div>
 
         <div class="eng-asset-chart">
-          ${render_asset_group("ADT's", assetSeriesMap)}
-          ${render_asset_group("Excavator's", assetSeriesMap)}
-          ${render_asset_group("Dozer's", assetSeriesMap)}
+          ${UI_CATEGORIES.map((category) => {
+            return render_asset_group(category, assetSeriesMap);
+          }).join("")}
         </div>
       </div>
     `;
