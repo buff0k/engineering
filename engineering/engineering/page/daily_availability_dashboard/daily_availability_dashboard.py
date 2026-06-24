@@ -731,12 +731,12 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
 
     <div class="isd-pill-row">
         <div class="isd-mbubble {bubble_colour('avail', av)}" onclick="window.open('{month_end_url}', '_blank')" title="Open Month End Report" style="cursor:pointer;">
-            <div class="isd-mbubble-label">Availability</div>
+            <div class="isd-mbubble-label">Avail.</div>
             <div class="isd-mbubble-value">{fmt_percent(av)}</div>
         </div>
 
         <div class="isd-mbubble {bubble_colour('util', ut)}" onclick="window.open('{month_end_url}', '_blank')" title="Open Month End Report" style="cursor:pointer;">
-            <div class="isd-mbubble-label">Utilisation</div>
+            <div class="isd-mbubble-label">Util.</div>
             <div class="isd-mbubble-value">{fmt_percent(ut)}</div>
         </div>
     </div>
@@ -1670,7 +1670,7 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
     frappe.local.response.filename = filename
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "download"
-    
+
 
 def get_engineering_css_for_pdf():
     try:
