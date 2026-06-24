@@ -10,6 +10,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
   const STORAGE_KEY = "weekly_availability_dashboard_filters";
 
   const UI_CATEGORIES = ["ADTs", "Excavators", "Dozers"];
+  const ASSETS_PER_VISUAL_ROW = 24;
 
   const page = frappe.ui.make_app_page({
     parent: wrapper,
@@ -393,6 +394,16 @@ function render_weekly_availability_dashboard_page(wrapper) {
     });
   }
 
+  function chunk_array(items, chunkSize) {
+    const chunks = [];
+
+    for (let i = 0; i < items.length; i += chunkSize) {
+      chunks.push(items.slice(i, i + chunkSize));
+    }
+
+    return chunks;
+  }
+
   function render_metric_pills(averages) {
     return UI_CATEGORIES.map((category) => {
       const average = averages[category] || {};
@@ -419,48 +430,82 @@ function render_weekly_availability_dashboard_page(wrapper) {
     }).join("");
   }
 
-  function render_asset_bars_for(category, assetSeriesMap) {
+  function render_asset_tile(item) {
+    const availabilityText = fmt_percent(item.avail) || "No Availability Data";
+    const utilisationText = fmt_percent(item.util) || "No Utilisation Data";
+
+    return `
+      <div class="eng-asset-tile">
+        <div class="eng-asset-bars">
+          <div
+            class="eng-bar eng-bar--availability"
+            title="${escape_html(item.plant_no)} Availability: ${escape_html(availabilityText)}"
+            style="height:${bar_height(item.avail)}px"
+          ></div>
+          <div
+            class="eng-bar eng-bar--utilisation"
+            title="${escape_html(item.plant_no)} Utilisation: ${escape_html(utilisationText)}"
+            style="height:${bar_height(item.util)}px"
+          ></div>
+        </div>
+
+        <div
+          class="eng-asset-label"
+          title="${escape_html(item.plant_no)}"
+        >
+          ${escape_html(item.plant_no)}
+        </div>
+      </div>
+    `;
+  }
+
+  function render_asset_visual_row(items, rowIndex) {
+    const count = Math.max(items.length, 1);
+
+    return `
+      <div class="eng-asset-visual-row" data-row-index="${rowIndex}">
+        <div class="eng-yaxis eng-yaxis--asset-row">
+          <div>100%</div>
+          <div>80%</div>
+          <div>60%</div>
+          <div>40%</div>
+          <div>20%</div>
+          <div>0%</div>
+        </div>
+
+        <div class="eng-asset-line-scroll">
+          <div class="eng-asset-line-inner" style="--eng-asset-count:${count};">
+            <div class="eng-asset-line-grid">
+              ${items.map(render_asset_tile).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function render_asset_group(category, assetSeriesMap) {
     const items = normalise_assets(assetSeriesMap[category] || []);
 
     if (!items.length) {
       return `
-        <div class="eng-asset-empty">
-          No asset data
+        <div class="eng-asset-row">
+          <div class="eng-asset-row-head">
+            <div class="eng-asset-row-title">${escape_html(category)}</div>
+            <div class="eng-asset-row-subtitle">Availability / Utilisation by plant no.</div>
+          </div>
+
+          <div class="eng-asset-row-body">
+            <div class="eng-asset-empty">
+              No asset data
+            </div>
+          </div>
         </div>
       `;
     }
 
-    return items.map((item) => {
-      const availabilityText = fmt_percent(item.avail) || "No Availability Data";
-      const utilisationText = fmt_percent(item.util) || "No Utilisation Data";
+    const chunks = chunk_array(items, ASSETS_PER_VISUAL_ROW);
 
-      return `
-        <div class="eng-asset-tile">
-          <div class="eng-asset-bars">
-            <div
-              class="eng-bar eng-bar--availability"
-              title="${escape_html(item.plant_no)} Availability: ${escape_html(availabilityText)}"
-              style="height:${bar_height(item.avail)}px"
-            ></div>
-            <div
-              class="eng-bar eng-bar--utilisation"
-              title="${escape_html(item.plant_no)} Utilisation: ${escape_html(utilisationText)}"
-              style="height:${bar_height(item.util)}px"
-            ></div>
-          </div>
-
-          <div
-            class="eng-asset-label"
-            title="${escape_html(item.plant_no)}"
-          >
-            ${escape_html(item.plant_no)}
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  function render_asset_group(category, assetSeriesMap) {
     return `
       <div class="eng-asset-row">
         <div class="eng-asset-row-head">
@@ -469,21 +514,9 @@ function render_weekly_availability_dashboard_page(wrapper) {
         </div>
 
         <div class="eng-asset-row-body">
-          <div class="eng-yaxis eng-yaxis--asset-row">
-            <div>100%</div>
-            <div>80%</div>
-            <div>60%</div>
-            <div>40%</div>
-            <div>20%</div>
-            <div>0%</div>
-          </div>
-
-          <div class="eng-asset-threshold-line eng-asset-threshold-line--availability"></div>
-          <div class="eng-asset-threshold-line eng-asset-threshold-line--utilisation"></div>
-
-          <div class="eng-asset-wrap">
-            ${render_asset_bars_for(category, assetSeriesMap)}
-          </div>
+          ${chunks.map((chunk, index) => {
+            return render_asset_visual_row(chunk, index);
+          }).join("")}
         </div>
       </div>
     `;

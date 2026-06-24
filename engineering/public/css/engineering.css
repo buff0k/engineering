@@ -235,10 +235,16 @@
 }
 
 .eng-asset-row-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+
+.eng-asset-visual-row {
   position: relative;
-  min-height: 165px;
+  min-height: 150px;
   padding-left: 38px;
-  padding-right: 8px;
 }
 
 .eng-yaxis {
@@ -262,29 +268,46 @@
   bottom: 24px;
 }
 
-.eng-asset-threshold-line {
-  position: absolute;
-  left: 38px;
-  right: 8px;
-  height: 2px;
-  opacity: 0.55;
-  pointer-events: none;
+.eng-asset-line-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 2px;
 }
 
-.eng-asset-threshold-line--availability {
+.eng-asset-line-inner {
+  position: relative;
+  min-width: calc(var(--eng-asset-count, 1) * 42px);
+}
+
+.eng-asset-line-inner::before,
+.eng-asset-line-inner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.eng-asset-line-inner::before {
   top: 18px;
   background: var(--eng-orange, #f39c12);
+  opacity: 0.75;
 }
 
-.eng-asset-threshold-line--utilisation {
+.eng-asset-line-inner::after {
   top: 24px;
   background: var(--eng-grey, #6b6b6b);
+  opacity: 0.75;
 }
 
-.eng-asset-wrap {
+.eng-asset-line-grid {
+  position: relative;
+  z-index: 1;
   min-height: 145px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  grid-template-columns: repeat(var(--eng-asset-count, 1), minmax(34px, 1fr));
   gap: 8px 10px;
   align-items: end;
 }
@@ -303,12 +326,21 @@
   grid-template-columns: 1fr 1fr;
   gap: 2px;
   align-items: end;
+  background:
+    linear-gradient(
+      to top,
+      rgba(107, 107, 107, 0.18) 1px,
+      transparent 1px
+    );
+  background-size: 100% 24px;
 }
 
 .eng-bar {
   width: 100%;
   border-radius: 2px 2px 0 0;
   min-height: 2px;
+  position: relative;
+  z-index: 2;
 }
 
 .eng-bar--availability {
@@ -475,10 +507,6 @@
     grid-template-columns: 1fr;
   }
 
-  .eng-asset-row-body {
-    padding-left: 38px;
-  }
-
   .eng-metrics {
     grid-template-columns: 1fr;
   }
@@ -493,83 +521,4 @@
     box-shadow: none;
     break-inside: avoid;
   }
-}
-
-/* =========================================================
-   Weekly Availability Dashboard
-   Repeating target/reference lines for wrapped asset rows
-   ========================================================= */
-
-.eng-dashboard--weekly-availability .eng-asset-row-body {
-  position: relative;
-  min-height: 165px;
-  padding-left: 38px;
-  padding-right: 8px;
-}
-
-/* Hide the old single-position target lines.
-   They only work for a single row of bars. */
-.eng-dashboard--weekly-availability .eng-asset-threshold-line {
-  display: none !important;
-}
-
-/* Each wrapped asset tile gets its own 100/80/60/40/20/0 visual frame. */
-.eng-dashboard--weekly-availability .eng-asset-tile {
-  position: relative;
-  min-width: 0;
-  display: grid;
-  grid-template-rows: 120px auto;
-  gap: 4px;
-  align-items: end;
-}
-
-/* Repeating reference lines behind every asset pair */
-.eng-dashboard--weekly-availability .eng-asset-bars {
-  position: relative;
-  height: 120px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  align-items: end;
-  background:
-    linear-gradient(
-      to top,
-      rgba(107, 107, 107, 0.22) 1px,
-      transparent 1px
-    );
-  background-size: 100% 24px;
-  background-position: 0 0;
-}
-
-/* Availability target line, repeated per wrapped asset tile */
-.eng-dashboard--weekly-availability .eng-asset-bars::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 18px;
-  height: 2px;
-  background: var(--eng-orange, #f39c12);
-  opacity: 0.65;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Utilisation target line, repeated per wrapped asset tile */
-.eng-dashboard--weekly-availability .eng-asset-bars::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 24px;
-  height: 2px;
-  background: var(--eng-grey, #6b6b6b);
-  opacity: 0.65;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.eng-dashboard--weekly-availability .eng-bar {
-  position: relative;
-  z-index: 2;
 }
