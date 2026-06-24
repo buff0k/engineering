@@ -881,7 +881,7 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
     if not all_dates:
         return f'''
 <div class="isd-chart-stack">
-    <div class="isd-chart-section">
+    <div class="isd-chart-section isd-daily-summary-section">
         <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare").upper()}</div>
         <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
     </div>
@@ -943,7 +943,7 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
 
     return f'''
 <div class="isd-chart-stack">
-    <div class="isd-chart-section">
+    <div class="isd-chart-section isd-daily-summary-section">
         <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare").upper()}</div>
 
         <div class="isd-chart" style="min-width:{min_width}px;">
@@ -1200,92 +1200,98 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
 
 
 @frappe.whitelist()
-def download_daily_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+    from frappe.utils.pdf import get_pdf
+    from frappe.utils import now_datetime
+
     location = location or site
     summary_type = summary_type or "Daily Summary"
     machine_scope = machine_scope or "Include Swing/Spare"
 
-    if not start_date:
-        frappe.throw("Please select Start Date.")
+    html = get_dashboard_html(
+        start_date=start_date,
+        end_date=end_date,
+        location=location,
+        site=site,
+        summary_type=summary_type,
+        machine_scope=machine_scope,
+    )
 
-    if not end_date:
-        frappe.throw("Please select End Date.")
+    engineering_css = get_engineering_css_for_pdf()
+    pdf_override_css = get_daily_dashboard_pdf_override_css()
 
-    if not location:
-        frappe.throw("Please select Site.")
+    full_html = f"""
+    <!doctype html>
+    <html>
+    <head>
+        <meta charset="utf-8">
 
-    source_rows = fetch_grouped_data(location, start_date, end_date, machine_scope)
-    spare_swing_asset_map = get_spare_swing_asset_map(frappe._dict({"start_date": start_date, "end_date": end_date, "location": location, "site": location, "machine_scope": machine_scope}))
-    source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, frappe._dict({"machine_scope": machine_scope}), spare_swing_asset_map)
-    avgs = build_summary_averages_from_source_rows(source_rows)
-    machine_series = build_machine_series_from_source_rows(source_rows)
+        <style>
+            @page {{
+                size: A4 landscape;
+                margin: 6mm;
+            }}
 
-    dashboard_html = build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows, summary_type, machine_scope, spare_swing_asset_map)
+            html,
+            body {{
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                background: #ffffff;
+                font-family: Arial, sans-serif;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }}
 
-    html = f'''
-<!doctype html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <style>
-        @page {{
-            size: A4 landscape;
-            margin: 6mm;
-        }}
+            * {{
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }}
+        </style>
 
-        body {{
-            margin: 0;
-            padding: 0;
-            background: #ffffff;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }}
+        <style>
+            {engineering_css}
+        </style>
 
-        * {{
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }}
+        <style>
+            {pdf_override_css}
+        </style>
+    </head>
+    <body>
+        <div class="eng-dashboard eng-dashboard--daily-availability">
+            {html}
+        </div>
+    </body>
+    </html>
+    """
 
-        .isd-contentrow {{
-            display: block !important;
-        }}
+    pdf = get_pdf(
+        full_html,
+        options={
+            "orientation": "Landscape",
+            "page-size": "A4",
+            "margin-top": "6mm",
+            "margin-right": "6mm",
+            "margin-bottom": "6mm",
+            "margin-left": "6mm",
+            "encoding": "UTF-8",
+            "disable-smart-shrinking": None,
+            "print-media-type": None,
+        },
+    )
 
-        .isd-side {{
-            display: none !important;
-        }}
+    safe_location = str(location or "site").replace(" ", "_")
+    safe_summary = str(summary_type or "summary").replace(" ", "_")
+    safe_scope = str(machine_scope or "scope").replace(" ", "_").replace("/", "_")
+    safe_start = str(start_date or "")
+    safe_end = str(end_date or "")
+    timestamp = now_datetime().strftime("%Y%m%d_%H%M%S")
 
-        .isd-chart-stack {{
-            display: block !important;
-            overflow: visible !important;
-            padding: 0 !important;
-        }}
-
-        .isd-chart-section {{
-            page-break-inside: avoid;
-            break-inside: avoid;
-            overflow: visible !important;
-            margin-bottom: 18px !important;
-        }}
-
-        .isd-chart {{
-            overflow: visible !important;
-        }}
-    </style>
-</head>
-<body>
-    {dashboard_html}
-</body>
-</html>
-'''
-
-    pdf = frappe.utils.pdf.get_pdf(html)
-
-    filename = f"Daily Availability and Utilisation Dashboard - {location} - {start_date} to {end_date}.pdf"
+    filename = f"Daily_Availability_Dashboard_{safe_summary}_{safe_scope}_{safe_location}_{safe_start}_to_{safe_end}_{timestamp}.pdf"
 
     frappe.local.response.filename = filename
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "download"
-
 
 
 def build_pdf_dashboard_html(location, start_date, end_date, avgs, machine_series):
@@ -1688,3 +1694,369 @@ def get_engineering_css_for_pdf():
         frappe.log_error(frappe.get_traceback(), "Daily Dashboard PDF CSS Load Error")
         frappe.clear_messages()
         return ""
+
+
+def get_daily_dashboard_pdf_override_css():
+    return """
+    .eng-dashboard,
+    .eng-dashboard * {
+        box-sizing: border-box !important;
+    }
+
+    .eng-dashboard--daily-availability {
+        padding: 0 !important;
+        color: #1f272e !important;
+    }
+
+    .isd-hourly-dashboard {
+        padding: 0 !important;
+        color: #1f272e !important;
+    }
+
+    .isd-note {
+        margin: 0 0 8px 0 !important;
+        padding: 6px 8px !important;
+        border: 1px solid #d8dde2 !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+        font-size: 9px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+    }
+
+    .isd-site {
+        border: 1px solid #d8dde2 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        box-shadow: none !important;
+        background: #ffffff !important;
+    }
+
+    .isd-site-title {
+        padding: 7px 9px !important;
+        font-size: 10px !important;
+        font-weight: 900 !important;
+        color: #111827 !important;
+        background: #ffffff !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+
+    .isd-band {
+        padding: 8px !important;
+        background: var(--site-colour, #f7f7f7) !important;
+        border-top: 0 !important;
+        border-bottom: 1px solid #d8dde2 !important;
+    }
+
+    .isd-metrics {
+        display: block !important;
+        width: 100% !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+    }
+
+    .isd-metric {
+        display: inline-block !important;
+        vertical-align: top !important;
+        width: 106px !important;
+        height: 86px !important;
+        min-height: 86px !important;
+        margin: 0 6px 6px 0 !important;
+        padding: 6px !important;
+        border: 1px solid #d8dde2 !important;
+        border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.82) !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+
+    .isd-metric-title {
+        display: block !important;
+        width: 100% !important;
+        height: 24px !important;
+        min-height: 24px !important;
+        margin: 0 0 4px 0 !important;
+        padding: 0 !important;
+        text-align: center !important;
+        font-size: 8px !important;
+        font-weight: 900 !important;
+        line-height: 1.1 !important;
+        color: #000000 !important;
+        text-transform: uppercase !important;
+    }
+
+    .isd-pill-row {
+        display: block !important;
+        width: 100% !important;
+        height: 48px !important;
+        min-height: 48px !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+    }
+
+    .isd-mbubble {
+        display: inline-block !important;
+        vertical-align: top !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        margin: 0 2px !important;
+        padding: 7px 2px 2px 2px !important;
+        border-radius: 999px !important;
+        text-align: center !important;
+        box-shadow: none !important;
+        color: #111827 !important;
+        line-height: 1 !important;
+    }
+
+    .isd-mbubble-green {
+        border: 2px solid #1e8e3e !important;
+        background: rgba(30, 142, 62, 0.16) !important;
+    }
+
+    .isd-mbubble-yellow {
+        border: 2px solid #1a73e8 !important;
+        background: rgba(26, 115, 232, 0.16) !important;
+    }
+
+    .isd-mbubble-red {
+        border: 2px solid #d93025 !important;
+        background: rgba(217, 48, 37, 0.15) !important;
+    }
+
+    .isd-mbubble-label {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 6px !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        text-transform: uppercase !important;
+        white-space: nowrap !important;
+        color: inherit !important;
+    }
+
+    .isd-mbubble-value {
+        display: block !important;
+        margin: 2px 0 0 0 !important;
+        padding: 0 !important;
+        font-size: 7px !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        color: inherit !important;
+    }
+
+    .isd-contentrow {
+        display: block !important;
+        width: 100% !important;
+        border-top: 1px solid #d8dde2 !important;
+        background: #ffffff !important;
+    }
+
+    .isd-side {
+        display: none !important;
+    }
+
+    .isd-chart-stack {
+        display: block !important;
+        width: 100% !important;
+        padding: 8px !important;
+        overflow: visible !important;
+    }
+
+    .isd-chart-section {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 10px 0 !important;
+        border: 1px solid #d8dde2 !important;
+        border-radius: 8px !important;
+        background: #ffffff !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        box-shadow: none !important;
+    }
+
+    .isd-chart-section-title {
+        display: block !important;
+        width: 100% !important;
+        padding: 7px 8px !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        line-height: 1.2 !important;
+        text-align: center !important;
+        color: #111827 !important;
+        background: #ffffff !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        text-shadow: none !important;
+        text-transform: uppercase !important;
+    }
+
+    .isd-chart {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 10px 10px 44px 10px !important;
+        position: relative !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+    }
+
+    .isd-yaxis {
+        position: absolute !important;
+        left: 8px !important;
+        top: 10px !important;
+        width: 44px !important;
+        height: 170px !important;
+        min-height: 170px !important;
+        max-height: 170px !important;
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-box-pack: justify !important;
+        padding-right: 5px !important;
+        background: #ffffff !important;
+        color: #475569 !important;
+        font-size: 8px !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        text-align: right !important;
+        text-shadow: none !important;
+        z-index: 20 !important;
+    }
+
+    .isd-chart-grid {
+        display: block !important;
+        white-space: nowrap !important;
+        width: auto !important;
+        max-width: none !important;
+        height: 170px !important;
+        min-height: 170px !important;
+        max-height: 170px !important;
+        margin-left: 54px !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border-bottom: 2px solid #94a3b8 !important;
+        background:
+            linear-gradient(
+                to top,
+                rgba(107, 114, 128, 0.20) 1px,
+                transparent 1px
+            ) !important;
+        background-size: 100% 17px !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+    }
+
+    .isd-bar,
+    .isd-bar.avail,
+    .isd-bar.util {
+        display: inline-block !important;
+        vertical-align: bottom !important;
+        width: 30px !important;
+        min-width: 30px !important;
+        max-width: 30px !important;
+        margin: 0 3px 0 0 !important;
+        border-radius: 2px 2px 0 0 !important;
+        min-height: 2px !important;
+        max-height: 170px !important;
+        box-sizing: border-box !important;
+    }
+
+    .isd-bar.avail {
+        background: #f39c12 !important;
+    }
+
+    .isd-bar.util {
+        background: #6b6b6b !important;
+    }
+
+    .isd-avgline {
+        position: absolute !important;
+        left: 64px !important;
+        right: 10px !important;
+        height: 2px !important;
+        z-index: 30 !important;
+        opacity: 0.95 !important;
+        box-shadow:
+            0 -1px 0 rgba(255, 255, 255, 0.95),
+            0 1px 0 rgba(0, 0, 0, 0.35) !important;
+    }
+
+    .isd-avgline.isd-avg-85 {
+        background: #ff0000 !important;
+        top: calc(10px + 170px * 0.15) !important;
+    }
+
+    .isd-avgline.isd-avg-80 {
+        background: #92d050 !important;
+        top: calc(10px + 170px * 0.20) !important;
+    }
+
+    .isd-machinelabels {
+        display: block !important;
+        white-space: nowrap !important;
+        width: auto !important;
+        max-width: none !important;
+        margin-left: 54px !important;
+        margin-top: 6px !important;
+        min-height: 34px !important;
+        max-height: 34px !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+        color: #475569 !important;
+    }
+
+    .isd-machinelab,
+    .isd-summary-group-label {
+        display: inline-block !important;
+        vertical-align: top !important;
+        width: 66px !important;
+        min-width: 66px !important;
+        max-width: 66px !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        max-height: 34px !important;
+        padding: 3px 1px 0 1px !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        white-space: normal !important;
+        text-align: center !important;
+        font-size: 7px !important;
+        font-weight: 900 !important;
+        line-height: 1.05 !important;
+        color: #475569 !important;
+        text-shadow: none !important;
+        border: 0 !important;
+    }
+
+    .isd-daily-summary-section .isd-machinelab {
+        display: none !important;
+    }
+
+    .isd-daily-summary-section .isd-summary-group-label {
+        display: inline-block !important;
+        color: #111827 !important;
+    }
+
+    .isd-machinelab-swing,
+    .isd-machinelab-swing span,
+    .isd-machinelab-swing div {
+        color: #7b2cbf !important;
+        font-weight: 900 !important;
+        text-shadow: none !important;
+    }
+
+    .isd-no-machine-data {
+        padding: 12px !important;
+        font-size: 9px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+    }
+    """
