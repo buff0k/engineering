@@ -83,7 +83,7 @@ class DailyAvailabilityDashboardPage {
 
     make_body() {
         this.body = $(`
-            <div class="daily-availability-page">
+            <div class="daily-availability-page eng-dashboard eng-dashboard--daily-availability">
                 <div class="daily-availability-loading text-muted" style="display:none; padding: 12px 0;">
                     Loading dashboard...
                 </div>
@@ -179,14 +179,6 @@ class DailyAvailabilityDashboardPage {
                 }
 
                 this.body.find(".daily-availability-dashboard-body").html(html);
-
-                setTimeout(() => {
-                    this.align_target_lines();
-                }, 100);
-
-                setTimeout(() => {
-                    this.align_target_lines();
-                }, 500);
             },
             error: () => {
                 this.loading = false;

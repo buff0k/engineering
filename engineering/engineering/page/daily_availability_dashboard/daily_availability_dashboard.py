@@ -51,804 +51,40 @@ UI_TITLES = {
     "Loader": "LOADER",
 }
 
-SITE_HEADER_COLOURS = {
-    "Klipfontein": "#EBF9FF",
-    "Gwab": "#F7D8FF",
-    "Kriel Rehabilitation": "#E6D3B1",
-    "Koppie": "#FEFF8D",
-    "Uitgevallen": "#FFD37F",
-    "Bankfontein": "#E3E3E3",
-}
 
 
+def get_site_colour_map():
+    """Return site header colours from Production Dashboard Setup singleton.
 
-DASH_CSS = """
-<style>
-.isd-hourly-dashboard {
-    padding: 8px 6px 24px;
-    font-family: Arial, sans-serif;
-    color: #222;
-}
+    This keeps the Daily Availability Dashboard aligned with the shared
+    dashboard colour setup instead of hardcoding colours in this page.
+    """
+    try:
+        setup = frappe.get_single("Production Dashboard Setup")
+    except Exception:
+        frappe.clear_messages()
+        return {}
 
-.isd-note {
-    margin: 0 0 10px;
-    padding: 8px 10px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background: #fafafa;
-    font-size: 12px;
-    font-weight: 700;
-}
+    colour_map = {}
 
-.isd-site {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    overflow: hidden;
-}
+    for row in setup.get("site_colour_mapping") or []:
+        site = (row.location or "").strip()
+        colour = (row.colour or "").strip()
 
-.isd-site-title {
-    padding: 10px 12px 8px;
-    font-weight: 900;
-    font-size: 13px;
-}
+        if site and colour:
+            colour_map[site] = colour
 
-.isd-band {
-    padding: 10px 12px 12px;
-    background: var(--site-colour);
-    border-top: 1px solid #e8e8e8;
-    border-bottom: 1px solid #e8e8e8;
-}
+    return colour_map
 
-.isd-metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-    gap: 8px;
-}
 
-.isd-metric {
-    background: rgba(255,255,255,0.72);
-    border: 1px solid rgba(0,0,0,0.12);
-    border-radius: 10px;
-    padding: 8px;
-}
+def get_site_header_colour(location):
+    if not location:
+        return "#f7f7f7"
 
-.isd-metric-title {
-    font-size: 11px;
-    font-weight: 900;
-    text-transform: uppercase;
-    text-align: center;
-    margin-bottom: 7px;
-}
+    return get_site_colour_map().get(str(location).strip()) or "#f7f7f7"
 
-.isd-pill-row {
-    display: flex;
-    gap: 7px;
-    justify-content: center;
-}
 
-.isd-mbubble {
-    width: 70px;
-    min-height: 58px;
-    border-radius: 999px;
-    color: #fff;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    padding: 7px;
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.10);
-}
 
-.isd-mbubble-green {
-    background: rgba(30, 142, 62, 0.96);
-}
-
-.isd-mbubble-yellow {
-    background: rgba(245, 166, 35, 0.96);
-}
-
-.isd-mbubble-red {
-    background: rgba(217, 48, 37, 0.96);
-}
-
-.isd-mbubble-label {
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.2px;
-    line-height: 1;
-    white-space: nowrap;
-}
-
-.isd-mbubble-value {
-    font-size: 12px;
-    font-weight: 900;
-    line-height: 1.05;
-    color: #fff;
-}
-
-.isd-contentrow {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 150px;
-    gap: 10px;
-    align-items: start;
-    border-top: 1px solid #e8e8e8;
-}
-
-.isd-chart-stack {
-    display: grid;
-    gap: 16px;
-    padding: 10px;
-    overflow-x: auto;
-    overflow-y: visible;
-}
-
-.isd-chart-section {
-    border: 1px solid #2f2f2f;
-    border-radius: 0;
-    background: linear-gradient(135deg, #2b2b2b 0%, #555 48%, #2b2b2b 100%);
-    overflow-x: auto;
-    overflow-y: hidden;
-    margin-bottom: 16px;
-}
-
-.isd-chart-section-title {
-    padding: 10px;
-    font-size: 22px;
-    font-weight: 900;
-    letter-spacing: 0.8px;
-    text-align: center;
-    color: #f2f2f2;
-    background: transparent;
-    border-bottom: 0;
-    text-transform: uppercase;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.65);
-}
-
-.isd-chart {
-    padding: 18px 18px 16px;
-    position: relative;
-    background: transparent;
-}
-
-.isd-yaxis {
-    position: absolute;
-    left: 16px;
-    top: 18px;
-    bottom: 56px;
-    width: 34px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #ffffff;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    pointer-events: none;
-}
-
-.isd-chart-grid {
-    display: grid;
-    align-items: end;
-    gap: 4px;
-    margin-left: 42px;
-    height: 270px;
-    position: relative;
-    border-bottom: 1px solid rgba(255,255,255,0.65);
-    background:
-        linear-gradient(to top, rgba(255,255,255,0.13) 1px, transparent 1px);
-    background-size: 100% 27px;
-}
-
-.isd-bar {
-    width: 100%;
-    border-radius: 0;
-    min-height: 2px;
-}
-
-.isd-bar.avail {
-    background: #f4b000;
-}
-
-.isd-bar.util {
-    background: #2f75b5;
-}
-
-.isd-bar.nodata {
-    opacity: 0.18;
-}
-
-.isd-avgline {
-    position: absolute;
-    left: 60px;
-    right: 18px;
-    height: 4px;
-    opacity: 1;
-    pointer-events: none;
-    z-index: 5;
-}
-
-.isd-avgline.isd-avg-85 {
-    background: #ff0000;
-    top: calc(18px + 270px * 0.15);
-}
-
-.isd-avgline.isd-avg-80 {
-    background: #92d050;
-    top: calc(18px + 270px * 0.20);
-}
-
-.isd-machinelabels {
-    display: grid;
-    gap: 4px;
-    margin-left: 42px;
-    margin-top: 8px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #ffffff;
-}
-
-.isd-machinelab {
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transform: none;
-    min-height: 16px;
-    padding-top: 0;
-}
-
-.isd-no-machine-data {
-    padding: 18px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.isd-side {
-    display: grid;
-    gap: 8px;
-    padding: 10px 10px 12px;
-    border-left: 1px solid #e8e8e8;
-}
-
-.isd-cards {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-}
-
-.isd-circle {
-    width: 74px;
-    height: 74px;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    font-size: 10.5px;
-    font-weight: 900;
-    text-align: center;
-    line-height: 1.05;
-    padding: 10px 8px;
-    letter-spacing: 0.2px;
-    border: 2px solid rgba(0,0,0,0.22);
-    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35), 0 6px 14px rgba(0,0,0,0.08);
-}
-
-.isd-open-report {
-    text-decoration: none !important;
-    color: #000 !important;
-    cursor: pointer;
-}
-
-.isd-open-report:hover {
-    transform: scale(1.03);
-}
-
-.isd-circle-green {
-    border-color: rgba(30, 142, 62, 0.85);
-    background: rgba(30, 142, 62, 0.18);
-}
-
-.isd-legend {
-    display: grid;
-    gap: 6px;
-    font-size: 10px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    opacity: 0.75;
-}
-
-.isd-legitem {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.isd-legswatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    display: inline-block;
-}
-
-.isd-leg-avail {
-    background: #f4b000;
-}
-
-.isd-leg-util {
-    background: #2f75b5;
-}
-
-
-.isd-targets {
-    display: grid;
-    gap: 10px;
-    margin-top: 6px;
-}
-
-.isd-target-box {
-    width: 100%;
-    background: #ffffff;
-    border: 2px solid #222;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.isd-target-title {
-    background: #f1f1f1;
-    color: #000;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 900;
-    line-height: 1.15;
-    padding: 6px 4px;
-    border-bottom: 2px solid #222;
-}
-
-
-.isd-target-line {
-    width: 58px;
-    height: 5px;
-    margin: 10px auto;
-    border-radius: 2px;
-}
-
-.isd-target-line-red {
-    background: #ff0000;
-}
-
-.isd-target-line-green {
-    background: #92d050;
-}
-
-.isd-target-value {
-    color: #000;
-    text-align: center;
-    font-size: 16px;
-    font-weight: 900;
-    line-height: 1;
-    padding: 8px 4px;
-}
-
-.isd-open-report-wrap {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 8px;
-}
-
-@media (max-width: 900px) {
-    .isd-contentrow {
-        grid-template-columns: 1fr;
-    }
-
-    .isd-side {
-        border-left: none;
-        border-top: 1px solid #e8e8e8;
-    }
-}
-
-
-
-/* Main dashboard graph alignment to match preview */
-.isd-chart-section {
-    width: 100% !important;
-    max-width: none !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    margin: 0 0 10px 0 !important;
-    border: 1px solid #222 !important;
-    background: linear-gradient(135deg, #2b2b2b 0%, #555 48%, #2b2b2b 100%) !important;
-}
-
-.isd-chart-section-title {
-    font-size: 22px !important;
-    font-weight: 900 !important;
-    color: #ffffff !important;
-    text-align: center !important;
-    padding: 12px 8px 8px 8px !important;
-    letter-spacing: 0.5px !important;
-    text-shadow: 1px 1px 2px #000000 !important;
-}
-
-.isd-chart {
-    width: max-content !important;
-    min-width: 100% !important;
-    overflow: visible !important;
-    box-sizing: border-box !important;
-    padding: 14px 14px 24px 14px !important;
-    background: transparent !important;
-}
-
-.isd-yaxis {
-    left: 14px !important;
-    top: 14px !important;
-    bottom: 32px !important;
-    width: 62px !important;
-    height: 260px !important;
-    font-size: 18px !important;
-    font-weight: 900 !important;
-    line-height: 1 !important;
-    text-align: right !important;
-    color: #ffffff !important;
-    text-shadow: 1px 1px 3px #000000 !important;
-    justify-content: space-between !important;
-}
-
-.isd-yaxis div {
-    height: auto !important;
-    line-height: 1 !important;
-}
-
-.isd-yaxis div:first-child {
-    transform: translateY(-1px) !important;
-}
-
-.isd-yaxis div:last-child {
-    transform: translateY(5px) !important;
-}
-
-.isd-chart-grid {
-    margin-left: 84px !important;
-    height: 260px !important;
-    gap: 8px !important;
-    border-bottom: 3px solid rgba(255,255,255,0.95) !important;
-    align-items: end !important;
-    padding-bottom: 0 !important;
-    background:
-        linear-gradient(to top, rgba(255,255,255,0.13) 1px, transparent 1px) !important;
-    background-size: 100% 26px !important;
-}
-
-.isd-bar {
-    border-radius: 0 !important;
-    min-height: 2px !important;
-    margin-bottom: 0 !important;
-    align-self: end !important;
-}
-
-.isd-bar.avail {
-    background: #f4b000 !important;
-}
-
-.isd-bar.util {
-    background: #2f75b5 !important;
-}
-
-.isd-machinelabels {
-    margin-left: 84px !important;
-    margin-top: 9px !important;
-    min-height: 38px !important;
-    align-items: start !important;
-    gap: 8px !important;
-}
-
-.isd-machinelab {
-    font-size: 14px !important;
-    font-weight: 900 !important;
-    line-height: 1.1 !important;
-    min-height: 28px !important;
-    padding-top: 6px !important;
-    color: #ffffff !important;
-    text-shadow: 1px 1px 3px #000000 !important;
-    overflow: visible !important;
-    white-space: nowrap !important;
-    text-overflow: clip !important;
-    transform: none !important;
-}
-
-.isd-avgline {
-    left: 98px !important;
-    right: 14px !important;
-    height: 4px !important;
-    z-index: 5 !important;
-}
-
-.isd-avgline.isd-avg-85 {
-    background: #ff0000 !important;
-    top: calc(14px + 260px * 0.15) !important;
-}
-
-.isd-avgline.isd-avg-80 {
-    background: #92d050 !important;
-    top: calc(14px + 260px * 0.20) !important;
-}
-
-
-.isd-summary-group-label {
-    text-align: center;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 900;
-    text-shadow: 1px 1px 3px #000000;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.28);
-}
-
-.isd-summary-day-label {
-    text-align: center;
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 900;
-    text-shadow: 1px 1px 3px #000000;
-    padding-top: 6px;
-    white-space: nowrap;
-}
-
-.isd-monthly-chart-grid {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-    gap: 0 !important;
-}
-
-.isd-monthly-labels {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
-    gap: 0 !important;
-}
-
-
-
-
-
-
-
-/* Percentage axis freeze support - JS controls horizontal position */
-.isd-chart-section {
-    position: relative !important;
-}
-
-.isd-chart-section-title {
-    position: static !important;
-}
-
-.isd-chart {
-    position: relative !important;
-    padding-top: 14px !important;
-}
-
-.isd-yaxis {
-    position: absolute !important;
-    left: 14px !important;
-    top: 14px !important;
-    bottom: auto !important;
-    width: 62px !important;
-    height: 260px !important;
-    z-index: 35 !important;
-    background: linear-gradient(135deg, #2b2b2b 0%, #444 55%, #2b2b2b 100%) !important;
-    padding-right: 10px !important;
-    box-sizing: border-box !important;
-    pointer-events: none !important;
-    will-change: transform !important;
-}
-
-.isd-chart-grid {
-    margin-left: 92px !important;
-    height: 260px !important;
-    margin-top: 0 !important;
-}
-
-.isd-machinelabels {
-    margin-left: 92px !important;
-}
-
-.isd-avgline {
-    left: 106px !important;
-    z-index: 8 !important;
-}
-
-.isd-avgline.isd-avg-85 {
-    top: calc(14px + 260px * 0.15) !important;
-}
-
-.isd-avgline.isd-avg-80 {
-    top: calc(14px + 260px * 0.20) !important;
-}
-
-
-
-
-
-
-
-/* DAILY AXIS FIX - SHOW SELECTED DATE AND CATEGORY */
-
-/* Graph panel must allow scrolling to other dates/machines */
-.isd-chart-section {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-}
-
-/* Keep chart compact, but leave enough bottom space for 2-line axis labels */
-.isd-chart {
-    position: relative !important;
-    box-sizing: border-box !important;
-    padding-bottom: 72px !important;
-    overflow: visible !important;
-}
-
-/* Plot area: bars start from 0% white baseline */
-.isd-chart-grid {
-    height: 220px !important;
-    min-height: 220px !important;
-    max-height: 220px !important;
-    align-items: flex-end !important;
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-    border-bottom: 3px solid rgba(255,255,255,0.95) !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-}
-
-/* Bars use real percentages and cannot exceed 100% */
-.isd-bar,
-.isd-bar.avail,
-.isd-bar.util {
-    align-self: flex-end !important;
-    margin-bottom: 0 !important;
-    max-height: 100% !important;
-    box-sizing: border-box !important;
-    transform: none !important;
-}
-
-/* Axis labels must show both lines: selected date/day and category */
-.isd-machinelabels {
-    margin-top: 8px !important;
-    min-height: 58px !important;
-    max-height: none !important;
-    overflow: visible !important;
-    align-items: flex-start !important;
-}
-
-/* Allow category name to display below the date */
-.isd-machinelab {
-    font-size: 11px !important;
-    font-weight: 900 !important;
-    line-height: 1.15 !important;
-    padding-top: 4px !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    transform: none !important;
-    text-align: center !important;
-    min-height: 48px !important;
-}
-
-.isd-machinelab-swing {
-    color: #d291ff !important;
-    text-shadow: 1px 1px 3px #000000 !important;
-}
-
-/* If labels contain spans/divs, show them as separate lines */
-.isd-machinelab span,
-.isd-machinelab div {
-    display: block !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-align: center !important;
-}
-
-/* Y-axis aligns with plot height */
-.isd-yaxis {
-    height: 220px !important;
-    min-height: 220px !important;
-    max-height: 220px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-}
-
-/* 0% aligns with white baseline */
-.isd-yaxis div:last-child {
-    transform: translateY(5px) !important;
-}
-
-/* Target lines use same plot height */
-.isd-avgline.isd-avg-85 {
-    top: calc(10px + 220px * 0.15) !important;
-}
-
-.isd-avgline.isd-avg-80 {
-    top: calc(10px + 220px * 0.20) !important;
-}
-
-/* Scrollbar visible for other dates */
-.isd-chart-section::-webkit-scrollbar {
-    height: 10px !important;
-}
-
-.isd-chart-section::-webkit-scrollbar-thumb {
-    background: #999 !important;
-    border-radius: 8px !important;
-}
-
-.isd-chart-section::-webkit-scrollbar-track {
-    background: #333 !important;
-}
-
-@media print {
-    .isd-chart-section {
-        overflow-x: visible !important;
-        overflow-y: hidden !important;
-    }
-
-    .isd-chart {
-        padding-bottom: 72px !important;
-        overflow: visible !important;
-    }
-
-    .isd-chart-grid {
-        height: 220px !important;
-        min-height: 220px !important;
-        max-height: 220px !important;
-        align-items: flex-end !important;
-        overflow: hidden !important;
-    }
-
-    .isd-bar,
-    .isd-bar.avail,
-    .isd-bar.util {
-        align-self: flex-end !important;
-        max-height: 100% !important;
-        margin-bottom: 0 !important;
-        transform: none !important;
-    }
-
-    .isd-machinelabels {
-        min-height: 58px !important;
-        max-height: none !important;
-        overflow: visible !important;
-    }
-
-    .isd-machinelab {
-        white-space: normal !important;
-        overflow: visible !important;
-        min-height: 48px !important;
-    }
-
-    .isd-yaxis {
-        height: 220px !important;
-        min-height: 220px !important;
-        max-height: 220px !important;
-    }
-
-    .isd-avgline.isd-avg-85 {
-        top: calc(10px + 220px * 0.15) !important;
-    }
-
-    .isd-avgline.isd-avg-80 {
-        top: calc(10px + 220px * 0.20) !important;
-    }
-}
-
-
-/* DAILY DASHBOARD SWING SPARE PURPLE AXIS */
-.isd-machinelab-swing,
-.isd-machinelab-swing span,
-.isd-machinelab-swing div {
-    color: #d291ff !important;
-    font-weight: 900 !important;
-    text-shadow: 1px 1px 3px #000000 !important;
-}
-
-</style>
-"""
 
 
 
@@ -1448,7 +684,7 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Daily Summary", machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Daily Summary")
-    header_colour = SITE_HEADER_COLOURS.get(location, "#f7f7f7")
+    header_colour = get_site_header_colour(location)
     adt_dozer_excavator_cards_all_summary_types = get_adt_dozer_excavator_cards_all_summary_types(
         location,
         start_date,
@@ -1521,9 +757,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
     trend_html = build_trend_html(location, start_date, end_date, machine_scope)
 
     return f'''
-{DASH_CSS}
-
-<div class="isd-hourly-dashboard">
+<div class="isd-hourly-dashboard isd-daily-availability-dashboard">
     <div class="isd-note">
         Showing: {summary_type_safe} | {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
     </div>
@@ -2361,11 +1595,14 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
         machine_scope=machine_scope,
     )
 
+    engineering_css = get_engineering_css_for_pdf()
+
     full_html = f"""
     <!doctype html>
     <html>
     <head>
         <meta charset="utf-8">
+
         <style>
             @page {{
                 size: A4 landscape;
@@ -2377,6 +1614,13 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
                 padding: 0;
                 background: #ffffff;
                 font-family: Arial, sans-serif;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }}
+
+            * {{
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }}
 
             .layout-main-section,
@@ -2386,9 +1630,15 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
                 max-width: none !important;
             }}
         </style>
+
+        <style>
+            {engineering_css}
+        </style>
     </head>
     <body>
-        {html}
+        <div class="eng-dashboard eng-dashboard--daily-availability">
+            {html}
+        </div>
     </body>
     </html>
     """
@@ -2420,3 +1670,21 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
     frappe.local.response.filename = filename
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "download"
+    
+
+def get_engineering_css_for_pdf():
+    try:
+        css_path = frappe.get_app_path(
+            "engineering",
+            "public",
+            "css",
+            "engineering.css",
+        )
+
+        with open(css_path, "r", encoding="utf-8") as css_file:
+            return css_file.read()
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Daily Dashboard PDF CSS Load Error")
+        frappe.clear_messages()
+        return ""
