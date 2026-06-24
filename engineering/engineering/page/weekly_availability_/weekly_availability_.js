@@ -10,7 +10,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
   const REPORT_NAME = "Weekly Availability and Utilisation Dashboard";
   const STORAGE_KEY = "weekly_availability_dashboard_filters";
 
-  const UI_CATEGORIES = ["ADT's", "Excavator's", "Dozer's"];
+  const UI_CATEGORIES = ["ADTs", "Excavators", "Dozers"];
 
   const page = frappe.ui.make_app_page({
     parent: wrapper,
@@ -21,9 +21,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
   let _refreshing = false;
   let _auto_load_timer = null;
 
-  // -------------------------
-  // Filters
-  // -------------------------
   const site_group = page.add_field({
     fieldtype: "Select",
     label: __("Complex"),
@@ -63,16 +60,10 @@ function render_weekly_availability_dashboard_page(wrapper) {
     load_and_render(false);
   });
 
-  // -------------------------
-  // Dashboard container
-  // -------------------------
   const $wrap = $(`<div class="eng-dashboard eng-dashboard--weekly-availability"></div>`).appendTo(page.main);
   const $status = $(`<div class="eng-dashboard-status text-muted"></div>`).appendTo($wrap);
   const $dash = $(`<div class="eng-weekly-grid"></div>`).appendTo($wrap);
 
-  // -------------------------
-  // Filter state
-  // -------------------------
   function get_filters() {
     return {
       site_group: site_group.get_value(),
@@ -127,10 +118,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     }, 400);
   }
 
-  // -------------------------
-  // Report runner
-  // Native Promise wrapper avoids Frappe/jQuery Deferred .finally issues
-  // -------------------------
   function run_report(filters) {
     return new Promise((resolve, reject) => {
       frappe.call({
@@ -172,9 +159,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     return [];
   }
 
-  // -------------------------
-  // Parsing helpers
-  // -------------------------
   function parse_json_array(value, fallback) {
     fallback = fallback || [];
 
@@ -216,9 +200,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     }
   }
 
-  // -------------------------
-  // Formatting helpers
-  // -------------------------
   function escape_html(value) {
     return frappe.utils.escape_html(value == null ? "" : String(value));
   }
@@ -293,13 +274,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     return "eng-bubble--red";
   }
 
-  function short_name(category) {
-    return category;
-  }
-
-  // -------------------------
-  // Trend helpers
-  // -------------------------
   function trend_state(seriesMap, metric) {
     const points = [];
 
@@ -389,9 +363,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     return "eng-circle eng-circle--blue";
   }
 
-  // -------------------------
-  // Chart helpers
-  // -------------------------
   function bar_height(value) {
     if (value === null || value === undefined || value === "") {
       return 2;
@@ -415,103 +386,14 @@ function render_weekly_availability_dashboard_page(wrapper) {
       + `&location=${encodeURIComponent(site)}`;
   }
 
-  function normalise_last_7(items) {
+  function normalise_assets(items) {
     items = Array.isArray(items) ? items : [];
 
-    if (items.length < 7) {
-      const padding = Array.from({ length: 7 - items.length }, () => ({
-        date: "",
-        avail: null,
-        util: null
-      }));
-
-      return padding.concat(items);
-    }
-
-    return items.slice(-7);
+    return items.filter((item) => {
+      return item && item.plant_no;
+    });
   }
 
-  function render_bars_for(category, seriesMap) {
-    const items = normalise_last_7(seriesMap[category] || []);
-
-    return items.map((item) => {
-      if (is_sunday(item.date)) {
-        return `<div></div><div></div>`;
-      }
-
-      const availabilityText = fmt_percent(item.avail) || "No Availability Data";
-      const utilisationText = fmt_percent(item.util) || "No Utilisation Data";
-
-      return `
-        <div
-          class="eng-bar eng-bar--availability"
-          title="Availability: ${escape_html(availabilityText)}"
-          style="height:${bar_height(item.avail)}px"
-        ></div>
-        <div
-          class="eng-bar eng-bar--utilisation"
-          title="Utilisation: ${escape_html(utilisationText)}"
-          style="height:${bar_height(item.util)}px"
-        ></div>
-      `;
-    }).join("");
-  }
-
-  function render_day_labels_for(category, seriesMap) {
-    const items = normalise_last_7(seriesMap[category] || []);
-
-    return items.map((item) => {
-      const value = is_sunday(item.date)
-        ? ""
-        : String(item.date || "").slice(-2);
-
-      return `<div class="eng-day-label">${escape_html(value)}</div>`;
-    }).join("");
-  }
-
-  function render_chart(seriesMap) {
-    return `
-      <div class="eng-chart">
-        <div class="eng-yaxis">
-          <div>100%</div>
-          <div>80%</div>
-          <div>60%</div>
-          <div>40%</div>
-          <div>20%</div>
-          <div>0%</div>
-        </div>
-
-        <div class="eng-avgline eng-avgline--availability"></div>
-        <div class="eng-avgline eng-avgline--utilisation"></div>
-
-        <div class="eng-chart-grid">
-          ${render_bars_for("ADT's", seriesMap)}
-          <div class="eng-sep"></div>
-          ${render_bars_for("Excavator's", seriesMap)}
-          <div class="eng-sep"></div>
-          ${render_bars_for("Dozer's", seriesMap)}
-        </div>
-
-        <div class="eng-day-labels">
-          ${render_day_labels_for("ADT's", seriesMap)}
-          <div class="eng-day-sep"></div>
-          ${render_day_labels_for("Excavator's", seriesMap)}
-          <div class="eng-day-sep"></div>
-          ${render_day_labels_for("Dozer's", seriesMap)}
-        </div>
-
-        <div class="eng-chart-x">
-          <div>ADT's</div>
-          <div>Excavator's</div>
-          <div>Dozer's</div>
-        </div>
-      </div>
-    `;
-  }
-
-  // -------------------------
-  // Render blocks
-  // -------------------------
   function render_metric_pills(averages) {
     return UI_CATEGORIES.map((category) => {
       const average = averages[category] || {};
@@ -520,7 +402,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
       return `
         <div class="eng-metric">
-          <div class="eng-metric-title">${escape_html(short_name(category))} (Avg)</div>
+          <div class="eng-metric-title">${escape_html(category)} (Avg)</div>
 
           <div class="eng-pill-row">
             <div class="eng-bubble ${metric_colour_class("avail", avValue)}">
@@ -536,6 +418,95 @@ function render_weekly_availability_dashboard_page(wrapper) {
         </div>
       `;
     }).join("");
+  }
+
+  function render_asset_bars_for(category, assetSeriesMap) {
+    const items = normalise_assets(assetSeriesMap[category] || []);
+
+    if (!items.length) {
+      return `
+        <div class="eng-asset-empty">
+          No asset data
+        </div>
+      `;
+    }
+
+    return items.map((item) => {
+      const availabilityText = fmt_percent(item.avail) || "No Availability Data";
+      const utilisationText = fmt_percent(item.util) || "No Utilisation Data";
+
+      return `
+        <div class="eng-asset-pair">
+          <div
+            class="eng-bar eng-bar--availability"
+            title="${escape_html(item.plant_no)} Availability: ${escape_html(availabilityText)}"
+            style="height:${bar_height(item.avail)}px"
+          ></div>
+          <div
+            class="eng-bar eng-bar--utilisation"
+            title="${escape_html(item.plant_no)} Utilisation: ${escape_html(utilisationText)}"
+            style="height:${bar_height(item.util)}px"
+          ></div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function render_asset_labels_for(category, assetSeriesMap) {
+    const items = normalise_assets(assetSeriesMap[category] || []);
+
+    return items.map((item) => {
+      return `
+        <div
+          class="eng-asset-label"
+          title="${escape_html(item.plant_no)}"
+        >
+          ${escape_html(item.plant_no)}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function render_asset_group(category, assetSeriesMap) {
+    return `
+      <div class="eng-asset-group">
+        <div class="eng-asset-bars">
+          ${render_asset_bars_for(category, assetSeriesMap)}
+        </div>
+
+        <div class="eng-asset-labels">
+          ${render_asset_labels_for(category, assetSeriesMap)}
+        </div>
+
+        <div class="eng-asset-group-title">
+          ${escape_html(category)}
+        </div>
+      </div>
+    `;
+  }
+
+  function render_chart(assetSeriesMap) {
+    return `
+      <div class="eng-chart">
+        <div class="eng-yaxis">
+          <div>100%</div>
+          <div>80%</div>
+          <div>60%</div>
+          <div>40%</div>
+          <div>20%</div>
+          <div>0%</div>
+        </div>
+
+        <div class="eng-avgline eng-avgline--availability"></div>
+        <div class="eng-avgline eng-avgline--utilisation"></div>
+
+        <div class="eng-asset-chart">
+          ${render_asset_group("ADT's", assetSeriesMap)}
+          ${render_asset_group("Excavator's", assetSeriesMap)}
+          ${render_asset_group("Dozer's", assetSeriesMap)}
+        </div>
+      </div>
+    `;
   }
 
   function render_side(site, fromDate, toDate, seriesMap) {
@@ -580,6 +551,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
     const averages = parse_json_object(row.averages_json, {});
     const seriesMap = parse_json_object(row.series_json, {});
+    const assetSeriesMap = parse_json_object(row.asset_series_json, {});
     const dateList = parse_json_array(row.date_list_json, []);
 
     const startLabel = dateList.length ? dateList[0] : fromDate;
@@ -598,7 +570,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
         </div>
 
         <div class="eng-content-row">
-          ${render_chart(seriesMap)}
+          ${render_chart(assetSeriesMap)}
           ${render_side(site, fromDate, toDate, seriesMap)}
         </div>
       </div>
@@ -629,9 +601,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     $dash.html(sorted.map(render_site).join(""));
   }
 
-  // -------------------------
-  // Main loader
-  // -------------------------
   function load_and_render(isAuto) {
     const filters = get_filters();
 
@@ -687,9 +656,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
       });
   }
 
-  // -------------------------
-  // Initial load
-  // -------------------------
   restore_filters();
 
   setTimeout(() => {
@@ -702,9 +668,6 @@ function render_weekly_availability_dashboard_page(wrapper) {
     }
   }, 0);
 
-  // -------------------------
-  // Cleanup
-  // -------------------------
   frappe.pages["weekly-availability-"].on_page_unload = function () {
     if (_auto_load_timer) {
       clearTimeout(_auto_load_timer);

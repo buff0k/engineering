@@ -1,17 +1,20 @@
-# Copyright (c) 2025, BuFf0k and contributors
+# Copyright (c) 2026, BuFf0k and contributors
 # For license information, please see license.txt
 
-import frappe
+
+import re
 from datetime import timedelta
+
+import frappe
 from frappe.utils import getdate
 
 
 DT = "Availability and Utilisation"
 
 CATEGORY_MAP = {
-    "ADT": "ADT's",
-    "Excavator": "Excavator's",
-    "Dozer": "Dozer's",
+    "ADT": "ADTs",
+    "Excavator": "Excavators",
+    "Dozer": "Dozers",
 }
 
 DB_CATEGORIES = list(CATEGORY_MAP.keys())
@@ -38,8 +41,10 @@ def execute(filters=None):
 
     for idx, site in enumerate(sites):
         rows = fetch_site_rows(site, from_date, to_date)
-        series = build_daily_series(rows, date_list)
-        avgs = build_7day_averages(series)
+
+        daily_series = build_daily_series(rows, date_list)
+        asset_series = build_asset_series(rows)
+        avgs = build_7day_averages(daily_series)
 
         data.append({
             "site": site,
@@ -48,7 +53,8 @@ def execute(filters=None):
             "to_date": to_date,
             "date_list_json": frappe.as_json(date_list),
             "averages_json": frappe.as_json(avgs),
-            "series_json": frappe.as_json(series),
+            "series_json": frappe.as_json(daily_series),
+            "asset_series_json": frappe.as_json(asset_series),
         })
 
     return get_columns(), data
@@ -96,8 +102,15 @@ def get_columns():
             "hidden": 1,
         },
         {
-            "label": "Series JSON",
+            "label": "Daily Series JSON",
             "fieldname": "series_json",
+            "fieldtype": "Long Text",
+            "width": 80,
+            "hidden": 1,
+        },
+        {
+            "label": "Asset Series JSON",
+            "fieldname": "asset_series_json",
             "fieldtype": "Long Text",
             "width": 80,
             "hidden": 1,
@@ -148,6 +161,9 @@ def build_daily_series(rows, date_list):
     }
 
     for row in rows:
+        if not isinstance(row, dict):
+            continue
+
         if row.get("indent") != 1:
             continue
 
@@ -181,6 +197,101 @@ def build_daily_series(rows, date_list):
         out[ui_label] = series
 
     return out
+
+
+def build_asset_series(rows):
+    grouped = {
+        ui_label: {}
+        for ui_label in UI_CATEGORIES
+    }
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        shift_date = row.get("shift_date")
+
+        if shift_date and is_sunday(shift_date):
+            continue
+
+        db_cat = row.get("asset_category")
+
+        if db_cat not in CATEGORY_MAP:
+            continue
+
+        ui_label = CATEGORY_MAP[db_cat]
+
+        plant_no = get_plant_no(row)
+
+        if not plant_no:
+            continue
+
+        availability = row.get("plant_shift_availability")
+        utilisation = row.get("plant_shift_utilisation")
+
+        if plant_no not in grouped[ui_label]:
+            grouped[ui_label][plant_no] = {
+                "plant_no": plant_no,
+                "availability_values": [],
+                "utilisation_values": [],
+            }
+
+        if availability is not None:
+            grouped[ui_label][plant_no]["availability_values"].append(float(availability))
+
+        if utilisation is not None:
+            grouped[ui_label][plant_no]["utilisation_values"].append(float(utilisation))
+
+    output = {}
+
+    for ui_label in UI_CATEGORIES:
+        assets = []
+
+        for plant_no, item in grouped.get(ui_label, {}).items():
+            availability_values = item["availability_values"]
+            utilisation_values = item["utilisation_values"]
+
+            assets.append({
+                "plant_no": plant_no,
+                "avail": (
+                    sum(availability_values) / len(availability_values)
+                    if availability_values
+                    else None
+                ),
+                "util": (
+                    sum(utilisation_values) / len(utilisation_values)
+                    if utilisation_values
+                    else None
+                ),
+            })
+
+        assets.sort(key=lambda item: natural_sort_key(item.get("plant_no")))
+
+        output[ui_label] = assets
+
+    return output
+
+
+def get_plant_no(row):
+    possible_keys = [
+        "plant_no",
+        "plant_number",
+        "plant",
+        "asset",
+        "asset_name",
+        "machine",
+        "machine_no",
+        "equipment",
+        "equipment_no",
+    ]
+
+    for key in possible_keys:
+        value = row.get(key)
+
+        if value not in [None, ""]:
+            return str(value).strip()
+
+    return ""
 
 
 def build_7day_averages(series):
@@ -219,3 +330,12 @@ def build_7day_averages(series):
         }
 
     return out
+
+
+def natural_sort_key(value):
+    value = str(value or "")
+
+    return [
+        int(part) if part.isdigit() else part.lower()
+        for part in re.split(r"(\d+)", value)
+    ]
