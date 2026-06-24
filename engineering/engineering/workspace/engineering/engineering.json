@@ -599,7 +599,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-09 15:25:41.265950",
+ "modified": "2026-06-24 10:33:00.691309",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
@@ -624,6 +624,13 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Weekly A & U Dashboard",
+   "link_to": "weekly-availability-",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Weekly Production Dashboard",
    "link_to": "Weekly Production Dashboard",
    "report_ref_doctype": "Hourly Production",
@@ -643,14 +650,6 @@
    "label": "Daily Availability & Utilisation Dashboard",
    "link_to": "daily-availability-dashboard",
    "type": "Page"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Weekly A & U Dashboard",
-   "link_to": "Weekly Availability and Utilisation Dashboard",
-   "report_ref_doctype": "Availability and Utilisation",
-   "type": "Report"
   }
  ],
  "title": "Engineering",

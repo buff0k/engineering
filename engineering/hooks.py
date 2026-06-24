@@ -64,6 +64,10 @@ doctype_js = {
     "Engineering Legals": "engineering/engineering/doctype/engineering_legals/engineering_legals.js",
 }
 
+app_include_css = [
+    "/assets/engineering/css/engineering.css"
+]
+
 # ---------------------------------------------------------------------
 # Scheduled jobs
 # ---------------------------------------------------------------------
