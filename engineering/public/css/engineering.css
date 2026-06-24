@@ -3,6 +3,11 @@
    Global source of truth for Engineering dashboard styling
    ========================================================= */
 
+.eng-dashboard,
+.eng-dashboard * {
+  box-sizing: border-box;
+}
+
 .eng-dashboard {
   --eng-bg: #f7f8fa;
   --eng-card-bg: #ffffff;
@@ -84,6 +89,7 @@
   border-top: 1px solid #e8e8e8;
   padding: 10px;
   background: var(--eng-site-colour, #f7f7f7);
+  min-width: 0;
 }
 
 .eng-site--klipfontein {
@@ -112,9 +118,10 @@
 
 .eng-category-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   align-items: start;
+  min-width: 0;
 }
 
 .eng-category-card {
@@ -126,6 +133,9 @@
   gap: 12px;
   padding: 10px;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
@@ -164,9 +174,12 @@
 
 .eng-category-main {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .eng-asset-visual-row {
@@ -174,6 +187,9 @@
   min-height: 150px;
   padding-left: 38px;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .eng-yaxis {
@@ -200,7 +216,9 @@
 .eng-asset-line-inner {
   position: relative;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .eng-asset-line-inner::before,
@@ -237,7 +255,8 @@
   gap: 8px 10px;
   align-items: end;
   justify-content: start;
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -430,6 +449,16 @@
   color: var(--eng-red);
 }
 
+@media (max-width: 1180px) {
+  .eng-category-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .eng-category-card {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 980px) {
   .eng-weekly-grid {
     grid-template-columns: minmax(0, 1fr) !important;
@@ -447,10 +476,6 @@
 
   .eng-legend--heading {
     white-space: normal;
-  }
-
-  .eng-category-card-grid {
-    grid-template-columns: 1fr;
   }
 
   .eng-category-card {

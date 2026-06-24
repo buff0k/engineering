@@ -11,13 +11,17 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
   const UI_CATEGORIES = ["ADTs", "Excavators", "Dozers"];
 
-  const CATEGORY_CARD_MIN_WIDTH = 520;
   const CATEGORY_GRID_GAP = 14;
   const CATEGORY_LEFT_PANEL_WIDTH = 150;
   const CATEGORY_Y_AXIS_WIDTH = 42;
-  const CATEGORY_INNER_PADDING = 36;
+  const CATEGORY_INNER_PADDING = 46;
   const ASSET_TILE_WIDTH = 50;
   const ASSET_TILE_GAP = 10;
+
+  // Only genuinely small asset groups should sit side-by-side.
+  // Anything above this becomes full-width to avoid overlap and visual crowding.
+  const MAX_ASSETS_FOR_HALF_WIDTH_CARD = 6;
+
   const MIN_ASSETS_PER_VISUAL_ROW = 3;
   const MAX_ASSETS_PER_VISUAL_ROW = 28;
 
@@ -425,26 +429,47 @@ function render_weekly_availability_dashboard_page(wrapper) {
     );
   }
 
-  function can_fit_two_category_cards() {
-    return get_dashboard_width() >= (CATEGORY_CARD_MIN_WIDTH * 2 + CATEGORY_GRID_GAP);
+  function get_half_card_width() {
+    return Math.floor((get_dashboard_width() - CATEGORY_GRID_GAP) / 2);
+  }
+
+  function category_required_width(assetCount) {
+    if (!assetCount) {
+      return 0;
+    }
+
+    return (
+      CATEGORY_LEFT_PANEL_WIDTH
+      + CATEGORY_Y_AXIS_WIDTH
+      + CATEGORY_INNER_PADDING
+      + (assetCount * ASSET_TILE_WIDTH)
+      + (Math.max(assetCount - 1, 0) * ASSET_TILE_GAP)
+      + 28
+    );
+  }
+
+  function can_use_half_width(assetCount) {
+    if (get_dashboard_width() < 1180) {
+      return false;
+    }
+
+    if (assetCount > MAX_ASSETS_FOR_HALF_WIDTH_CARD) {
+      return false;
+    }
+
+    return category_required_width(assetCount) <= get_half_card_width();
   }
 
   function category_should_be_wide(assetCount) {
-    if (!can_fit_two_category_cards()) {
-      return true;
-    }
-
-    return assetCount > 12;
+    return !can_use_half_width(assetCount);
   }
 
   function estimate_category_card_width(assetCount) {
-    const dashboardWidth = get_dashboard_width();
-
     if (category_should_be_wide(assetCount)) {
-      return dashboardWidth;
+      return get_dashboard_width();
     }
 
-    return Math.floor((dashboardWidth - CATEGORY_GRID_GAP) / 2);
+    return get_half_card_width();
   }
 
   function get_assets_per_visual_row(assetCount) {
