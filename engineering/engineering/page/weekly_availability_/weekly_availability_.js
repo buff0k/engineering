@@ -10,7 +10,16 @@ function render_weekly_availability_dashboard_page(wrapper) {
   const STORAGE_KEY = "weekly_availability_dashboard_filters";
 
   const UI_CATEGORIES = ["ADTs", "Excavators", "Dozers"];
-  const ASSETS_PER_VISUAL_ROW = 24;
+
+  const CATEGORY_CARD_MIN_WIDTH = 520;
+  const CATEGORY_GRID_GAP = 14;
+  const CATEGORY_LEFT_PANEL_WIDTH = 150;
+  const CATEGORY_Y_AXIS_WIDTH = 42;
+  const CATEGORY_INNER_PADDING = 36;
+  const ASSET_TILE_WIDTH = 50;
+  const ASSET_TILE_GAP = 10;
+  const MIN_ASSETS_PER_VISUAL_ROW = 3;
+  const MAX_ASSETS_PER_VISUAL_ROW = 28;
 
   const page = frappe.ui.make_app_page({
     parent: wrapper,
@@ -20,6 +29,8 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
   let _refreshing = false;
   let _auto_load_timer = null;
+  let _resize_timer = null;
+  let _last_rows = [];
 
   const site_group = page.add_field({
     fieldtype: "Select",
@@ -242,36 +253,36 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
   function metric_colour_class(metric, value) {
     if (value === null || value === undefined || value === "") {
-      return "";
+      return "eng-circle--blue";
     }
 
     const v = Number(value);
 
     if (!Number.isFinite(v)) {
-      return "";
+      return "eng-circle--blue";
     }
 
     if (metric === "avail") {
       if (v >= 85) {
-        return "eng-bubble--green";
+        return "eng-circle--green";
       }
 
       if (v >= 75) {
-        return "eng-bubble--blue";
+        return "eng-circle--blue";
       }
 
-      return "eng-bubble--red";
+      return "eng-circle--red";
     }
 
     if (v >= 80) {
-      return "eng-bubble--green";
+      return "eng-circle--green";
     }
 
     if (v >= 70) {
-      return "eng-bubble--blue";
+      return "eng-circle--blue";
     }
 
-    return "eng-bubble--red";
+    return "eng-circle--red";
   }
 
   function trend_state(seriesMap, metric) {
@@ -404,30 +415,88 @@ function render_weekly_availability_dashboard_page(wrapper) {
     return chunks;
   }
 
-  function render_metric_pills(averages) {
-    return UI_CATEGORIES.map((category) => {
-      const average = averages[category] || {};
-      const avValue = average.avail;
-      const utValue = average.util;
+  function get_dashboard_width() {
+    return Math.floor(
+      $dash.width()
+      || $wrap.width()
+      || $(wrapper).width()
+      || window.innerWidth
+      || 1200
+    );
+  }
 
-      return `
-        <div class="eng-metric">
-          <div class="eng-metric-title">${escape_html(category)} (Avg)</div>
+  function can_fit_two_category_cards() {
+    return get_dashboard_width() >= (CATEGORY_CARD_MIN_WIDTH * 2 + CATEGORY_GRID_GAP);
+  }
 
-          <div class="eng-pill-row">
-            <div class="eng-bubble ${metric_colour_class("avail", avValue)}">
-              <div class="eng-bubble-label">Availability</div>
-              <div class="eng-bubble-value">${escape_html(fmt_percent(avValue))}</div>
-            </div>
+  function category_should_be_wide(assetCount) {
+    if (!can_fit_two_category_cards()) {
+      return true;
+    }
 
-            <div class="eng-bubble ${metric_colour_class("util", utValue)}">
-              <div class="eng-bubble-label">Utilisation</div>
-              <div class="eng-bubble-value">${escape_html(fmt_percent(utValue))}</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
+    return assetCount > 12;
+  }
+
+  function estimate_category_card_width(assetCount) {
+    const dashboardWidth = get_dashboard_width();
+
+    if (category_should_be_wide(assetCount)) {
+      return dashboardWidth;
+    }
+
+    return Math.floor((dashboardWidth - CATEGORY_GRID_GAP) / 2);
+  }
+
+  function get_assets_per_visual_row(assetCount) {
+    const cardWidth = estimate_category_card_width(assetCount);
+
+    const availableWidth = Math.max(
+      220,
+      cardWidth - CATEGORY_LEFT_PANEL_WIDTH - CATEGORY_Y_AXIS_WIDTH - CATEGORY_INNER_PADDING
+    );
+
+    const calculated = Math.floor(
+      (availableWidth + ASSET_TILE_GAP) / (ASSET_TILE_WIDTH + ASSET_TILE_GAP)
+    );
+
+    return Math.max(
+      MIN_ASSETS_PER_VISUAL_ROW,
+      Math.min(MAX_ASSETS_PER_VISUAL_ROW, calculated)
+    );
+  }
+
+  function schedule_resize_render() {
+    clearTimeout(_resize_timer);
+
+    _resize_timer = setTimeout(() => {
+      if (_last_rows.length) {
+        render_dashboard(_last_rows, false);
+      }
+    }, 180);
+  }
+
+  function render_average_bubble(label, metric, value) {
+    const colourClass = metric_colour_class(metric, value);
+
+    return `
+      <div class="eng-circle eng-circle--metric ${colourClass}">
+        <span class="eng-circle-kicker">${escape_html(label)}</span>
+        <span class="eng-circle-main">${escape_html(fmt_percent(value) || "-")}</span>
+      </div>
+    `;
+  }
+
+  function render_category_averages(category, averages) {
+    const average = averages[category] || {};
+    const avValue = average.avail;
+    const utValue = average.util;
+
+    return `
+      <div class="eng-category-averages">
+        ${render_average_bubble("Availability", "avail", avValue)}
+        ${render_average_bubble("Utilisation", "util", utValue)}
+      </div>
+    `;
   }
 
   function render_asset_tile(item) {
@@ -473,60 +542,50 @@ function render_weekly_availability_dashboard_page(wrapper) {
           <div>0%</div>
         </div>
 
-        <div class="eng-asset-line-scroll">
-          <div class="eng-asset-line-inner" style="--eng-asset-count:${count};">
-            <div class="eng-asset-line-grid">
-              ${items.map(render_asset_tile).join("")}
-            </div>
+        <div class="eng-asset-line-inner">
+          <div
+            class="eng-asset-line-grid"
+            style="grid-template-columns: repeat(${count}, ${ASSET_TILE_WIDTH}px);"
+          >
+            ${items.map(render_asset_tile).join("")}
           </div>
         </div>
       </div>
     `;
   }
 
-  function render_asset_group(category, assetSeriesMap) {
+  function render_category_card(category, averages, assetSeriesMap) {
     const items = normalise_assets(assetSeriesMap[category] || []);
+    const assetsPerVisualRow = get_assets_per_visual_row(items.length);
+    const chunks = chunk_array(items, assetsPerVisualRow);
+    const wideClass = category_should_be_wide(items.length)
+      ? "eng-category-card--wide"
+      : "";
 
-    if (!items.length) {
-      return `
-        <div class="eng-asset-row">
-          <div class="eng-asset-row-head">
-            <div class="eng-asset-row-title">${escape_html(category)}</div>
-            <div class="eng-asset-row-subtitle">Availability / Utilisation by plant no.</div>
-          </div>
-
-          <div class="eng-asset-row-body">
-            <div class="eng-asset-empty">
-              No asset data
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    const chunks = chunk_array(items, ASSETS_PER_VISUAL_ROW);
+    const rowsHtml = items.length
+      ? chunks.map((chunk, index) => render_asset_visual_row(chunk, index)).join("")
+      : `<div class="eng-asset-empty">No asset data</div>`;
 
     return `
-      <div class="eng-asset-row">
-        <div class="eng-asset-row-head">
-          <div class="eng-asset-row-title">${escape_html(category)}</div>
-          <div class="eng-asset-row-subtitle">Availability / Utilisation by plant no.</div>
+      <div class="eng-category-card ${wideClass}">
+        <div class="eng-category-side">
+          <div class="eng-category-title">${escape_html(category)}</div>
+          <div class="eng-category-subtitle">Availability / Utilisation by plant no.</div>
+          ${render_category_averages(category, averages)}
         </div>
 
-        <div class="eng-asset-row-body">
-          ${chunks.map((chunk, index) => {
-            return render_asset_visual_row(chunk, index);
-          }).join("")}
+        <div class="eng-category-main">
+          ${rowsHtml}
         </div>
       </div>
     `;
   }
 
-  function render_chart(assetSeriesMap) {
+  function render_chart(averages, assetSeriesMap) {
     return `
-      <div class="eng-category-chart">
+      <div class="eng-category-card-grid">
         ${UI_CATEGORIES.map((category) => {
-          return render_asset_group(category, assetSeriesMap);
+          return render_category_card(category, averages, assetSeriesMap);
         }).join("")}
       </div>
     `;
@@ -592,20 +651,18 @@ function render_weekly_availability_dashboard_page(wrapper) {
           ${render_trend_summary(site, fromDate, toDate, seriesMap)}
         </div>
 
-        <div class="eng-band">
-          <div class="eng-metrics">
-            ${render_metric_pills(averages)}
-          </div>
-        </div>
-
         <div class="eng-site-main">
-          ${render_chart(assetSeriesMap)}
+          ${render_chart(averages, assetSeriesMap)}
         </div>
       </div>
     `;
   }
 
-  function render_dashboard(rows) {
+  function render_dashboard(rows, rememberRows) {
+    if (rememberRows !== false) {
+      _last_rows = Array.isArray(rows) ? rows : [];
+    }
+
     if (!rows.length) {
       $dash.html(`
         <div class="eng-empty">
@@ -649,7 +706,7 @@ function render_weekly_availability_dashboard_page(wrapper) {
       .then((res) => {
         const rows = extract_rows_from_response(res);
 
-        render_dashboard(rows);
+        render_dashboard(rows, true);
 
         const time = new Date().toLocaleTimeString([], {
           hour: "2-digit",
@@ -696,11 +753,20 @@ function render_weekly_availability_dashboard_page(wrapper) {
     }
   }, 0);
 
+  window.addEventListener("resize", schedule_resize_render);
+
   frappe.pages["weekly-availability-"].on_page_unload = function () {
     if (_auto_load_timer) {
       clearTimeout(_auto_load_timer);
       _auto_load_timer = null;
     }
+
+    if (_resize_timer) {
+      clearTimeout(_resize_timer);
+      _resize_timer = null;
+    }
+
+    window.removeEventListener("resize", schedule_resize_render);
 
     _refreshing = false;
   };
