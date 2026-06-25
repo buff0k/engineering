@@ -1619,14 +1619,7 @@ def get_daily_dashboard_pdf_override_css():
     }
 
     .isd-note {
-        margin: 0 0 8px 0 !important;
-        padding: 6px 8px !important;
-        border: 1px solid #d8dde2 !important;
-        border-radius: 6px !important;
-        background: #ffffff !important;
-        font-size: 9px !important;
-        font-weight: 700 !important;
-        color: #475569 !important;
+        display: none !important;
     }
 
     .isd-site {
@@ -1895,12 +1888,12 @@ def get_daily_dashboard_pdf_override_css():
 
     .isd-avgline.isd-avg-85 {
         background: #ff0000 !important;
-        top: calc(10px + 170px * 0.15) !important;
+        top: 36px !important;
     }
 
     .isd-avgline.isd-avg-80 {
         background: #92d050 !important;
-        top: calc(10px + 170px * 0.20) !important;
+        top: 44px !important;
     }
 
     .isd-machinelabels {
