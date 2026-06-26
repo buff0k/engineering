@@ -32,15 +32,16 @@ def get_columns():
         {"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 110},
         {"label": _("Site"), "fieldname": "site", "fieldtype": "Data", "width": 140},
         {"label": _("Plant No."), "fieldname": "plant_no", "fieldtype": "Data", "width": 120},
-        {"label": _("Open/Closed"), "fieldname": "open_closed", "fieldtype": "Data", "width": 120},
-        {"label": _("Breakdown/Maintenance Hours"), "fieldname": "breakdown_hours", "fieldtype": "Float", "precision": 2, "width": 210},
+        {"label": _("Plant Category"), "fieldname": "asset_category", "fieldtype": "Data", "width": 160},
         {"label": _("Breakdown/Maintenance Reason"), "fieldname": "breakdown_reason", "fieldtype": "Small Text", "width": 260},
         {"label": _("Resolution Summary"), "fieldname": "resolution_summary", "fieldtype": "Small Text", "width": 220},
         {"label": _("Breakdown/Maintenance Start Time"), "fieldname": "breakdown_start_datetime", "fieldtype": "Datetime", "width": 230},
         {"label": _("Datetime back in production"), "fieldname": "resolved_datetime", "fieldtype": "Datetime", "width": 220},
-        {"label": _("Plant Category"), "fieldname": "asset_category", "fieldtype": "Data", "width": 160},
+        {"label": _("Breakdown/Maintenance Hours"), "fieldname": "breakdown_hours", "fieldtype": "Float", "precision": 2, "width": 210},
+        {"label": _("Open/Closed"), "fieldname": "open_closed", "fieldtype": "Data", "width": 120},
         {"label": _("Comment"), "fieldname": "downtime_comment", "fieldtype": "Data", "width": 260},
     ]
+
 
 
 def is_filter_set(value):

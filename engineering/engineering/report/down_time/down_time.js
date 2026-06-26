@@ -226,11 +226,22 @@ function add_mobile_downtime_styles() {
             .query-report .dt-scrollable {
                 border-radius: 8px;
                 border: 1px solid #d9d9d9;
-                overflow: hidden;
+                overflow: auto !important;
+                max-height: calc(100vh - 260px);
             }
 
             .query-report .dt-header {
                 background: #f3f3f3;
+                position: sticky !important;
+                top: 0;
+                z-index: 50;
+            }
+
+            .query-report .dt-header .dt-cell {
+                background: #f3f3f3 !important;
+                position: sticky !important;
+                top: 0;
+                z-index: 51;
             }
 
             .query-report .dt-header .dt-cell__content {
