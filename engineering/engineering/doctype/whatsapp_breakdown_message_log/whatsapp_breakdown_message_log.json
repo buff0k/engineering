@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "message_datetime",
+  "source_whatsapp_message",
+  "source_message_id",
+  "sender_number",
+  "sender_name",
+  "group_name",
+  "target_site",
+  "target_shift",
+  "raw_message",
+  "section_break_detected",
+  "detected_plant_no",
+  "detected_action",
+  "detected_start_time",
+  "detected_book_back_time",
+  "detected_hours",
+  "detected_reason",
+  "detected_resolution",
+  "linked_breakdown",
+  "status",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "message_datetime",
+   "fieldtype": "Datetime",
+   "label": "Message Datetime"
+  },
+  {
+   "fieldname": "source_whatsapp_message",
+   "fieldtype": "Link",
+   "label": "Source WhatsApp Message",
+   "options": "WhatsApp Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_message_id",
+   "fieldtype": "Data",
+   "label": "Source Message ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sender_number",
+   "fieldtype": "Data",
+   "label": "Sender Number"
+  },
+  {
+   "fieldname": "sender_name",
+   "fieldtype": "Data",
+   "label": "Sender Name"
+  },
+  {
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "label": "Group Name"
+  },
+  {
+   "fieldname": "target_site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "target_shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nDay Shift\nNight Shift",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "raw_message",
+   "fieldtype": "Text",
+   "in_list_view": 1,
+   "label": "Raw Message",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_detected",
+   "fieldtype": "Section Break",
+   "label": "Detected Information"
+  },
+  {
+   "fieldname": "detected_plant_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Detected Plant No"
+  },
+  {
+   "fieldname": "detected_action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Detected Action",
+   "options": "\nBook Down\nBook Back\nUnknown"
+  },
+  {
+   "fieldname": "detected_start_time",
+   "fieldtype": "Time",
+   "label": "Detected Start Time"
+  },
+  {
+   "fieldname": "detected_book_back_time",
+   "fieldtype": "Time",
+   "label": "Detected Book Back Time"
+  },
+  {
+   "fieldname": "detected_hours",
+   "fieldtype": "Float",
+   "label": "Detected Hours Breakdown/Maintenance Start"
+  },
+  {
+   "fieldname": "detected_reason",
+   "fieldtype": "Small Text",
+   "label": "Detected Reason"
+  },
+  {
+   "fieldname": "detected_resolution",
+   "fieldtype": "Small Text",
+   "label": "Detected Resolution"
+  },
+  {
+   "fieldname": "linked_breakdown",
+   "fieldtype": "Link",
+   "label": "Linked Plant Breakdown or Maintenance",
+   "options": "Plant Breakdown or Maintenance"
+  },
+  {
+   "default": "New",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "New\nParsed\nCreated Breakdown\nUpdated Breakdown\nNeeds Review\nIgnored\nError"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "WhatsApp Breakdown Message Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

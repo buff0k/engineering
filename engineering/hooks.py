@@ -116,6 +116,9 @@ scheduler_events = {
 # DocType event hooks
 # ---------------------------------------------------------------------
 doc_events = {
+    "WhatsApp Message": {
+        "after_insert": "engineering.controllers.whatsapp_breakdown_import.whatsapp_message_after_insert",
+    },
     "Plant Breakdown or Maintenance": {
         "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update"
     },

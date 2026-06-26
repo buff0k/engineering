@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "import_settings_section",
+  "group_name",
+  "target_site",
+  "chat_file",
+  "only_messages_with_plant",
+  "skip_status_reports",
+  "result_section",
+  "import_status",
+  "total_messages_found",
+  "logs_created",
+  "duplicates_skipped",
+  "ignored_messages",
+  "needs_review_messages",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "import_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Import Settings"
+  },
+  {
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "label": "Group Name",
+   "default": "KE Breakdown report"
+  },
+  {
+   "fieldname": "target_site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "chat_file",
+   "fieldtype": "Attach",
+   "label": "WhatsApp Chat File",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "only_messages_with_plant",
+   "fieldtype": "Check",
+   "label": "Only Import Messages With Plant Number"
+  },
+  {
+   "default": "1",
+   "fieldname": "skip_status_reports",
+   "fieldtype": "Check",
+   "label": "Skip Full Status Reports"
+  },
+  {
+   "fieldname": "result_section",
+   "fieldtype": "Section Break",
+   "label": "Import Results"
+  },
+  {
+   "fieldname": "import_status",
+   "fieldtype": "Data",
+   "label": "Import Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_messages_found",
+   "fieldtype": "Int",
+   "label": "Total Messages Found",
+   "read_only": 1
+  },
+  {
+   "fieldname": "logs_created",
+   "fieldtype": "Int",
+   "label": "Logs Created",
+   "read_only": 1
+  },
+  {
+   "fieldname": "duplicates_skipped",
+   "fieldtype": "Int",
+   "label": "Duplicates Skipped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ignored_messages",
+   "fieldtype": "Int",
+   "label": "Ignored Messages",
+   "read_only": 1
+  },
+  {
+   "fieldname": "needs_review_messages",
+   "fieldtype": "Int",
+   "label": "Needs Review Messages",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "WhatsApp Breakdown Chat Import",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
