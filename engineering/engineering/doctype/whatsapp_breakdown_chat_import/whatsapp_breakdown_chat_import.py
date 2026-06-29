@@ -2,10 +2,15 @@ import os
 import re
 import zipfile
 import tempfile
+
 import frappe
 from frappe.model.document import Document
 from frappe.utils import get_datetime
-from engineering.engineering.doctype.whatsapp_breakdown_message_log.whatsapp_breakdown_message_log import parse_whatsapp_breakdown_message
+
+from engineering.engineering.doctype.whatsapp_breakdown_message_log.whatsapp_breakdown_message_log import (
+    parse_whatsapp_breakdown_message,
+    create_or_update_breakdown,
+)
 
 
 class WhatsAppBreakdownChatImport(Document):
@@ -14,22 +19,22 @@ class WhatsAppBreakdownChatImport(Document):
 
 
 def delete_linked_message_logs(import_name):
-    logs = frappe.get_all(
+    count = frappe.db.count(
         "WhatsApp Breakdown Message Log",
         filters={"source_chat_import": import_name},
-        pluck="name",
     )
 
-    for log_name in logs:
-        frappe.delete_doc(
-            "WhatsApp Breakdown Message Log",
-            log_name,
-            ignore_permissions=True,
-            force=True,
-        )
+    if not count:
+        return
 
-    if logs:
-        frappe.msgprint(f"Deleted {len(logs)} linked WhatsApp Breakdown Message Log records.")
+    frappe.db.delete(
+        "WhatsApp Breakdown Message Log",
+        {
+            "source_chat_import": import_name,
+        },
+    )
+
+    frappe.msgprint(f"Deleted {count} linked WhatsApp Breakdown Message Log records.")
 
 
 def get_file_path(file_url):
@@ -55,7 +60,6 @@ def read_chat_text(file_path):
 
                 with open(extracted_path, "rb") as f:
                     raw = f.read()
-
     else:
         with open(file_path, "rb") as f:
             raw = f.read()
@@ -80,17 +84,12 @@ def normalize_message_text(text):
 def parse_whatsapp_datetime(date_text, time_text, ampm):
     date_text = date_text.strip()
     time_text = time_text.strip()
-    ampm = (ampm or "").strip().lower()
-
-    # Supports:
-    # 2025/11/25, 3:14 pm
-    # 25/11/2025, 15:14
-    candidates = []
+    ampm = (ampm or "").strip().lower().replace(".", "")
 
     if ampm:
-        candidates.append(f"{date_text} {time_text} {ampm}")
+        candidate = f"{date_text} {time_text} {ampm}"
     else:
-        candidates.append(f"{date_text} {time_text}")
+        candidate = f"{date_text} {time_text}"
 
     formats = [
         "%Y/%m/%d %I:%M %p",
@@ -101,13 +100,13 @@ def parse_whatsapp_datetime(date_text, time_text, ampm):
         "%Y-%m-%d %H:%M",
     ]
 
-    for candidate in candidates:
-        for fmt in formats:
-            try:
-                from datetime import datetime
-                return datetime.strptime(candidate, fmt)
-            except Exception:
-                pass
+    from datetime import datetime
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(candidate, fmt)
+        except Exception:
+            pass
 
     return get_datetime()
 
@@ -115,8 +114,6 @@ def parse_whatsapp_datetime(date_text, time_text, ampm):
 def parse_exported_chat(chat_text):
     chat_text = normalize_message_text(chat_text)
 
-    # Example:
-    # 2025/11/25, 3:14 pm - KLP Control Control: IS0316 Hydraulic system failure
     pattern = re.compile(
         r"^(?P<date>\d{4}[/-]\d{1,2}[/-]\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{4}),\s*"
         r"(?P<time>\d{1,2}:\d{2})\s*(?P<ampm>[ap]\.?m\.?)?\s*-\s*"
@@ -140,8 +137,6 @@ def parse_exported_chat(chat_text):
             sender = ""
             message = body
 
-            # System messages may not have sender:
-            # "Messages and calls are encrypted..."
             if ": " in body:
                 sender, message = body.split(": ", 1)
 
@@ -176,6 +171,7 @@ def is_full_status_report(text):
         "breakdown reports",
         "available adt",
         "available adt's",
+        "available adts",
         "excavators",
         "dozers",
         "water bowsers",
@@ -184,11 +180,29 @@ def is_full_status_report(text):
 
     marker_count = sum(1 for marker in status_markers if marker in text_lower)
 
-    # Full reports normally contain many tick/cross lines and categories.
     if marker_count >= 2:
         return True
 
     if "available" in text_lower and ("✅" in text_lower or "❌" in text_lower):
+        return True
+
+    return False
+
+
+def is_system_or_blank_message(message_text):
+    if not message_text or not message_text.strip():
+        return True
+
+    message_text_lower = message_text.strip().lower()
+
+    if message_text_lower in [
+        "<media omitted>",
+        "this message was deleted",
+        "you deleted this message",
+    ]:
+        return True
+
+    if "messages and calls are end-to-end encrypted" in message_text_lower:
         return True
 
     return False
@@ -212,6 +226,8 @@ def import_chat(import_name):
     duplicates = 0
     ignored = 0
     needs_review = 0
+    skipped_by_action = 0
+    skipped_status_reports = 0
 
     for msg in messages:
         total += 1
@@ -244,18 +260,16 @@ def import_chat(import_name):
             duplicates += 1
             continue
 
-        force_ignored = False
-        ignore_reason = ""
-
+        # Full status reports must be skipped when this box is ticked.
+        # They must not become Book Down or Needs Review.
         if doc.skip_status_reports and is_full_status_report(message_text):
-            force_ignored = True
-            ignore_reason = "Ignored because this looks like a full WhatsApp status report."
+            skipped_status_reports += 1
+            ignored += 1
+            continue
 
-        elif doc.only_messages_with_plant and not contains_plant_number(message_text):
-            force_ignored = True
-            ignore_reason = "Ignored because no plant number was found."
-
-        if force_ignored:
+        # If only plant messages is ticked, messages without plant number are ignored.
+        # They must only create logs if Skip Ignored Messages is unticked.
+        if doc.only_messages_with_plant and not contains_plant_number(message_text):
             ignored += 1
 
             if doc.skip_ignored_messages:
@@ -269,8 +283,9 @@ def import_chat(import_name):
             log.raw_message = message_text
             log.source_message_id = source_id
             log.source_chat_import = doc.name
+            log.detected_action = "Unknown"
             log.status = "Ignored"
-            log.error_message = ignore_reason
+            log.error_message = "Ignored because no plant number was found."
             log.insert(ignore_permissions=True)
 
             created += 1
@@ -293,11 +308,22 @@ def import_chat(import_name):
             if doc.skip_needs_review_messages:
                 continue
 
-        log.insert(ignore_permissions=True)
-        created += 1
-
         if log.status == "Ignored":
             ignored += 1
+
+            if doc.skip_ignored_messages:
+                continue
+
+        if log.detected_action == "Book Down" and not doc.import_book_down_messages:
+            skipped_by_action += 1
+            continue
+
+        if log.detected_action == "Book Back" and not doc.import_book_back_messages:
+            skipped_by_action += 1
+            continue
+
+        log.insert(ignore_permissions=True)
+        created += 1
 
     doc.total_messages_found = total
     doc.logs_created = created
@@ -305,7 +331,16 @@ def import_chat(import_name):
     doc.ignored_messages = ignored
     doc.needs_review_messages = needs_review
     doc.import_status = "Completed"
-    doc.error_message = None
+
+    messages = []
+
+    if skipped_status_reports:
+        messages.append(f"Skipped full status reports: {skipped_status_reports}")
+
+    if skipped_by_action:
+        messages.append(f"Skipped by Book Down/Book Back filter: {skipped_by_action}")
+
+    doc.error_message = "\n".join(messages) if messages else None
     doc.save(ignore_permissions=True)
 
     frappe.db.commit()
@@ -316,5 +351,7 @@ def import_chat(import_name):
         "duplicates_skipped": duplicates,
         "ignored_messages": ignored,
         "needs_review_messages": needs_review,
+        "skipped_status_reports": skipped_status_reports,
+        "skipped_by_action": skipped_by_action,
     }
 

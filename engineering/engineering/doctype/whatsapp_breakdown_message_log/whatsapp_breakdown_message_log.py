@@ -79,6 +79,87 @@ def infer_site_from_group(group_name):
     return None
 
 
+
+def is_review_only_message(text):
+    text = text or ""
+    lower = text.lower().strip()
+
+    # These are proper Book Back messages. Do not send them to review.
+    if any(x in lower for x in [
+        "book back",
+        "bookback",
+        "booked back",
+        "please book back",
+    ]):
+        return False
+
+    # These are proper Book Down messages. Do not send them to review.
+    if any(x in lower for x in [
+        "book down",
+        "bookdown",
+        "booked down",
+        "stop:",
+        "stopped",
+    ]):
+        return False
+
+    review_phrases = [
+        "incident report",
+        "waiting for the incident report",
+        "need an incident report",
+        "write the incident report",
+        "standing till tomorrow",
+        "will be standing",
+        "please remove",
+        "pls remove",
+        "remove the comment",
+        "change the comment",
+        "please add",
+        "pls add",
+        "from gwab list",
+        "from the list",
+        "to our list",
+        "please share km",
+        "share km",
+        "km readings",
+        "can we please have hours",
+        "please have hours",
+        "which one",
+        "feedback",
+        "who is attending",
+        "who's attending",
+        "offsite change",
+        "off site change",
+        "no breakdowns",
+        "back to production",
+        "power off",
+        "electricity",
+        "please note",
+        "pls note",
+        "please arrange",
+        "arrange a diesel bowser",
+        "must go to hino",
+        "hino for service",
+        "yes all",
+        "moved this morning",
+        "not on the report",
+    ]
+
+    if any(phrase in lower for phrase in review_phrases):
+        return True
+
+    if "?" in lower:
+        return True
+
+    if lower in ["yes", "no", "nope", "thanks", "ps"]:
+        return True
+
+    if re.match(r"^[✅❌🚫]\s*(is|ex)\s*0*\d{2,4}", lower, re.IGNORECASE):
+        return True
+
+    return False
+
+
 def parse_whatsapp_breakdown_message(doc):
     raw_message = clean_line(doc.raw_message)
 
@@ -129,6 +210,12 @@ def parse_whatsapp_breakdown_message(doc):
         doc.detected_action = "Unknown"
         doc.status = "Needs Review"
         doc.error_message = "Could not detect plant number like IS570 or EX230."
+        return
+
+    if is_review_only_message(text):
+        doc.detected_action = "Unknown"
+        doc.status = "Needs Review"
+        doc.error_message = "Message mentions a machine, but is not a clear Book Down or Book Back message."
         return
 
     start_match = re.search(

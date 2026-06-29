@@ -11,6 +11,10 @@
   "chat_file",
   "only_messages_with_plant",
   "skip_status_reports",
+  "skip_ignored_messages",
+  "skip_needs_review_messages",
+  "import_book_down_messages",
+  "import_book_back_messages",
   "result_section",
   "import_status",
   "total_messages_found",
@@ -48,13 +52,49 @@
    "default": "1",
    "fieldname": "only_messages_with_plant",
    "fieldtype": "Check",
-   "label": "Only Import Messages With Plant Number"
+   "label": "Only Import Messages With Plant Number",
+   "hidden": 0,
+   "read_only": 0
   },
   {
    "default": "1",
    "fieldname": "skip_status_reports",
    "fieldtype": "Check",
-   "label": "Skip Full Status Reports"
+   "label": "Skip Full Status Reports",
+   "hidden": 0,
+   "read_only": 0
+  },
+  {
+   "fieldname": "skip_ignored_messages",
+   "fieldtype": "Check",
+   "label": "Skip Ignored Messages",
+   "default": "0",
+   "hidden": 0,
+   "read_only": 0
+  },
+  {
+   "fieldname": "skip_needs_review_messages",
+   "fieldtype": "Check",
+   "label": "Skip Needs Review Messages",
+   "default": "0",
+   "hidden": 0,
+   "read_only": 0
+  },
+  {
+   "default": "1",
+   "fieldname": "import_book_down_messages",
+   "fieldtype": "Check",
+   "label": "Import Book Down Messages",
+   "hidden": 0,
+   "read_only": 0
+  },
+  {
+   "default": "1",
+   "fieldname": "import_book_back_messages",
+   "fieldtype": "Check",
+   "label": "Import Book Back Messages",
+   "hidden": 0,
+   "read_only": 0
   },
   {
    "fieldname": "result_section",
