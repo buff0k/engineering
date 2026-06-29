@@ -9,6 +9,8 @@
   "group_name",
   "target_site",
   "chat_file",
+  "import_from_date",
+  "import_to_date",
   "only_messages_with_plant",
   "skip_status_reports",
   "skip_ignored_messages",
@@ -47,6 +49,21 @@
    "fieldtype": "Attach",
    "label": "WhatsApp Chat File",
    "reqd": 1
+  },
+  {
+   "fieldname": "import_from_date",
+   "fieldtype": "Date",
+   "label": "Import From Date",
+   "hidden": 0,
+   "read_only": 0,
+   "default": "2026-06-01"
+  },
+  {
+   "fieldname": "import_to_date",
+   "fieldtype": "Date",
+   "label": "Import To Date",
+   "hidden": 0,
+   "read_only": 0
   },
   {
    "default": "1",

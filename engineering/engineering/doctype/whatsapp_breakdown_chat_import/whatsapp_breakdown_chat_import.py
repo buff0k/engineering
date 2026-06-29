@@ -5,7 +5,7 @@ import tempfile
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import get_datetime
+from frappe.utils import get_datetime, getdate, today
 
 from engineering.engineering.doctype.whatsapp_breakdown_message_log.whatsapp_breakdown_message_log import (
     parse_whatsapp_breakdown_message,
@@ -14,6 +14,24 @@ from engineering.engineering.doctype.whatsapp_breakdown_message_log.whatsapp_bre
 
 
 class WhatsAppBreakdownChatImport(Document):
+    def autoname(self):
+        site = self.target_site or self.group_name or "WhatsApp Import"
+        site = str(site).strip().replace("/", "-")
+
+        dt = self.creation or frappe.utils.now_datetime()
+        dt = frappe.utils.get_datetime(dt)
+
+        base_name = f"{site}-{dt.strftime('%Y-%m-%d')}-Time-{dt.strftime('%H-%M')}"
+
+        name = base_name
+        counter = 1
+
+        while frappe.db.exists("WhatsApp Breakdown Chat Import", name):
+            name = f"{base_name}-{counter}"
+            counter += 1
+
+        self.name = name
+
     def on_trash(self):
         delete_linked_message_logs(self.name)
 
@@ -227,6 +245,10 @@ def import_chat(import_name):
     ignored = 0
     needs_review = 0
     skipped_by_action = 0
+    skipped_by_date = 0
+
+    import_from_date = getdate(doc.import_from_date or "2026-06-01")
+    import_to_date = getdate(doc.import_to_date or today())
     skipped_status_reports = 0
 
     for msg in messages:
@@ -235,6 +257,11 @@ def import_chat(import_name):
         message_text = normalize_message_text(msg.get("message"))
         sender = msg.get("sender") or ""
         message_datetime = msg.get("datetime")
+
+        message_date = getdate(message_datetime)
+        if message_date < import_from_date or message_date > import_to_date:
+            skipped_by_date += 1
+            continue
 
         if not message_text or not message_text.strip():
             ignored += 1
@@ -337,6 +364,9 @@ def import_chat(import_name):
     if skipped_status_reports:
         messages.append(f"Skipped full status reports: {skipped_status_reports}")
 
+    if skipped_by_date:
+        messages.append(f"Skipped outside import date range: {skipped_by_date}")
+
     if skipped_by_action:
         messages.append(f"Skipped by Book Down/Book Back filter: {skipped_by_action}")
 
@@ -353,5 +383,6 @@ def import_chat(import_name):
         "needs_review_messages": needs_review,
         "skipped_status_reports": skipped_status_reports,
         "skipped_by_action": skipped_by_action,
+        "skipped_by_date": skipped_by_date,
     }
 
