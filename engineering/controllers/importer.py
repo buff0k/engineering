@@ -91,8 +91,27 @@ def _to_int(value):
         return None
 
 
+def _json_default(value):
+    """
+    Makes checksum generation safe for rows coming from both:
+      - raw WearCheck API JSON
+      - existing Frappe documents during retry
+
+    Frappe Date fields return datetime.date objects, while the API usually
+    returns date strings. str(date) gives the same ISO-style value:
+      2026-05-21
+    """
+    return str(value)
+
+
 def _checksum(row):
-    raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    raw = json.dumps(
+        row,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        default=_json_default,
+    )
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
 
