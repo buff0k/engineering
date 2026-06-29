@@ -7,6 +7,7 @@
  "field_order": [
   "message_datetime",
   "source_whatsapp_message",
+  "source_chat_import",
   "source_message_id",
   "sender_number",
   "sender_name",
@@ -38,6 +39,14 @@
    "label": "Source WhatsApp Message",
    "options": "WhatsApp Message",
    "read_only": 1
+  },
+  {
+   "fieldname": "source_chat_import",
+   "fieldtype": "Link",
+   "label": "Source Chat Import",
+   "options": "WhatsApp Breakdown Chat Import",
+   "read_only": 1,
+   "in_list_view": 0
   },
   {
    "fieldname": "source_message_id",

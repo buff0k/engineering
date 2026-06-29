@@ -5,10 +5,31 @@ import tempfile
 import frappe
 from frappe.model.document import Document
 from frappe.utils import get_datetime
+from engineering.engineering.doctype.whatsapp_breakdown_message_log.whatsapp_breakdown_message_log import parse_whatsapp_breakdown_message
 
 
 class WhatsAppBreakdownChatImport(Document):
-    pass
+    def on_trash(self):
+        delete_linked_message_logs(self.name)
+
+
+def delete_linked_message_logs(import_name):
+    logs = frappe.get_all(
+        "WhatsApp Breakdown Message Log",
+        filters={"source_chat_import": import_name},
+        pluck="name",
+    )
+
+    for log_name in logs:
+        frappe.delete_doc(
+            "WhatsApp Breakdown Message Log",
+            log_name,
+            ignore_permissions=True,
+            force=True,
+        )
+
+    if logs:
+        frappe.msgprint(f"Deleted {len(logs)} linked WhatsApp Breakdown Message Log records.")
 
 
 def get_file_path(file_url):
@@ -199,15 +220,21 @@ def import_chat(import_name):
         sender = msg.get("sender") or ""
         message_datetime = msg.get("datetime")
 
-        if not message_text:
+        if not message_text or not message_text.strip():
             ignored += 1
             continue
 
-        if doc.skip_status_reports and is_full_status_report(message_text):
+        message_text_lower = message_text.strip().lower()
+
+        if message_text_lower in [
+            "<media omitted>",
+            "this message was deleted",
+            "you deleted this message",
+        ]:
             ignored += 1
             continue
 
-        if doc.only_messages_with_plant and not contains_plant_number(message_text):
+        if "messages and calls are end-to-end encrypted" in message_text_lower:
             ignored += 1
             continue
 
@@ -217,6 +244,38 @@ def import_chat(import_name):
             duplicates += 1
             continue
 
+        force_ignored = False
+        ignore_reason = ""
+
+        if doc.skip_status_reports and is_full_status_report(message_text):
+            force_ignored = True
+            ignore_reason = "Ignored because this looks like a full WhatsApp status report."
+
+        elif doc.only_messages_with_plant and not contains_plant_number(message_text):
+            force_ignored = True
+            ignore_reason = "Ignored because no plant number was found."
+
+        if force_ignored:
+            ignored += 1
+
+            if doc.skip_ignored_messages:
+                continue
+
+            log = frappe.new_doc("WhatsApp Breakdown Message Log")
+            log.message_datetime = message_datetime
+            log.sender_name = sender
+            log.group_name = doc.group_name
+            log.target_site = doc.target_site
+            log.raw_message = message_text
+            log.source_message_id = source_id
+            log.source_chat_import = doc.name
+            log.status = "Ignored"
+            log.error_message = ignore_reason
+            log.insert(ignore_permissions=True)
+
+            created += 1
+            continue
+
         log = frappe.new_doc("WhatsApp Breakdown Message Log")
         log.message_datetime = message_datetime
         log.sender_name = sender
@@ -224,13 +283,20 @@ def import_chat(import_name):
         log.target_site = doc.target_site
         log.raw_message = message_text
         log.source_message_id = source_id
+        log.source_chat_import = doc.name
+
+        parse_whatsapp_breakdown_message(log)
+
+        if log.status == "Needs Review":
+            needs_review += 1
+
+            if doc.skip_needs_review_messages:
+                continue
 
         log.insert(ignore_permissions=True)
         created += 1
 
-        if log.status == "Needs Review":
-            needs_review += 1
-        elif log.status == "Ignored":
+        if log.status == "Ignored":
             ignored += 1
 
     doc.total_messages_found = total
@@ -251,3 +317,4 @@ def import_chat(import_name):
         "ignored_messages": ignored,
         "needs_review_messages": needs_review,
     }
+
