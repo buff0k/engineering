@@ -1,145 +1,233 @@
-import requests
-import frappe
-from frappe.utils import now
-import json
+# Copyright (c) 2026, BuFf0k and contributors
+# For license information, please see license.txt
+
 import hashlib
 import hmac
+import json
 
-# WearCheck critical recipients per Site/Location
-# NOTE: msani@isambane.co.za must always be included
-WEARCHECK_SITE_RECIPIENTS = {
-    "Koppie": ["wimpie@isambane.co.za", "dian@isambane.co.za", "msani@isambane.co.za", "juan@isambane.co.za"],
-    "Klipfontein": ["kobus@isambane.co.za", "richard@isambane.co.za", "werner.french@isambane.co.za", "msani@isambane.co.za"],
-    "Uitgevallen": ["charles@excavo.co.za", "saul@isambane.co.za", "msani@isambane.co.za"],
-    "Gwab": ["shawn@isambane.co.za", "matimba@isambane.co.za", "msani@isambane.co.za"],
-    "Bankfontein": ["noel@isambane.co.za", "j.semelane@excavo.co.za", "msani@isambane.co.za"],
-    "Kriel Rehabilitation": ["carel@isambane.co.za", "xolani@isambane.co.za", "ishmael@isambane.co.za", "msani@isambane.co.za"],
-}
-WEARCHECK_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
+import frappe
+import requests
+from frappe.utils import add_to_date, get_datetime, now, now_datetime
 
-def _recipients_for_location(location_name: str):
-    location_name = (location_name or "").strip()
-    recipients = WEARCHECK_SITE_RECIPIENTS.get(location_name) or WEARCHECK_DEFAULT_RECIPIENTS
-    # ensure msani always present
-    if "msani@isambane.co.za" not in recipients:
-        recipients = list(recipients) + ["msani@isambane.co.za"]
-    # de-dupe keep order
-    seen = set()
-    out = []
-    for r in recipients:
-        if r and r not in seen:
-            out.append(r)
-            seen.add(r)
-    return out
 
-def _to_float(v):
-    if v in (None, "", "null"):
+RESULT_ROW_FIELDS = (
+    "sampno",
+    "bottleno",
+    "customer",
+    "site",
+    "machine",
+    "component",
+    "profileid",
+    "status",
+    "sampledate",
+    "registerdate",
+    "machread",
+    "oilread",
+    "perwater",
+    "fueldilution",
+    "oilsupplier",
+    "oilbrand",
+    "samp_taker",
+    "commentstext",
+    "actiontext",
+    "feedbacktext",
+    "tan",
+    "tbn",
+    "fe",
+    "ag",
+    "al",
+    "ca",
+    "cr",
+    "cu",
+    "mg",
+    "na",
+    "ni",
+    "pb",
+    "si",
+    "sn",
+    "p",
+    "b",
+    "ba",
+    "mo",
+    "v",
+    "zn",
+    "ti",
+    "v40",
+    "v100",
+    "oxi",
+    "soot",
+    "iso4",
+    "iso6",
+    "iso14",
+    "pq",
+)
+
+
+def _norm(value):
+    return (value or "").strip()
+
+
+def _key(value):
+    return (value or "").strip().lower()
+
+
+def _to_float(value):
+    if value in (None, "", "null"):
         return None
+
     try:
-        return float(v)
+        return float(value)
     except Exception:
         return None
 
 
-def _to_int(v):
-    if v in (None, "", "null"):
+def _to_int(value):
+    if value in (None, "", "null"):
         return None
+
     try:
-        return int(float(v))
+        return int(float(value))
     except Exception:
         return None
 
 
-def _checksum(row: dict) -> str:
-    # stable JSON => stable SHA1
+def _checksum(row):
     raw = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
-def _safe_link(doctype: str, value):
-    value = (value or "").strip()
+
+def _safe_link(doctype, value):
+    value = _norm(value)
+
     if not value:
         return None
+
     return value if frappe.db.exists(doctype, value) else None
 
 
-def _queue_critical_email(doc):
-    subject, message = _build_critical_email(doc)
-
-    recipients = _recipients_for_location(getattr(doc, "location", None))
-
-    eq = frappe.get_doc({
-        "doctype": "Email Queue",
-        "message": message,
-        "send_now": 0,
-        "recipients": [{"recipient": r} for r in recipients],
-    })
-    eq.insert(ignore_permissions=True)
-    return eq.name
+def _row_from_wearcheck_result(doc):
+    return {fieldname: getattr(doc, fieldname, None) for fieldname in RESULT_ROW_FIELDS}
 
 
-def _build_critical_email(doc):
-    asset = (getattr(doc, "asset", None) or "").strip() or "Unknown Asset"
-    sampno = getattr(doc, "sampno", None)
-    machine = (getattr(doc, "machine", None) or "").strip()
-    site = (getattr(doc, "location", None) or "").strip()
+def _get_settings():
+    return frappe.get_single("API Wearcheck Settings")
 
-    subject = f"‼️ CRITICAL oil sample — {asset} !!"
-    message = f"""
-    <h2>{frappe.utils.escape_html(asset)}</h2>
-    <p>‼️‼️ The machine oil sample is flagged critical, and it requires immediate attention! !!</p>
-    <p><b>Sample:</b> {frappe.utils.escape_html(str(sampno) if sampno is not None else "")}
-       | <b>Machine:</b> {frappe.utils.escape_html(machine)}
-       | <b>Site:</b> {frappe.utils.escape_html(site)}</p>
+
+def _get_mapping(settings=None):
+    settings = settings or _get_settings()
+
+    mapping = {
+        "Company": {},
+        "Location": {},
+        "Asset": {},
+    }
+
+    for row in settings.get("table_jqnq") or []:
+        item_type = _norm(getattr(row, "item_type", ""))
+        json_value = _key(getattr(row, "json_value", ""))
+        frappe_value = _norm(getattr(row, "frappe_value", ""))
+
+        if item_type and json_value and frappe_value:
+            mapping.setdefault(item_type, {})[json_value] = frappe_value
+
+    return mapping
+
+
+def _schedule_interval_kwargs(schedule):
+    schedule = _norm(schedule) or "Hourly"
+
+    if schedule == "Hourly":
+        return {"hours": 1}
+
+    if schedule == "Daily":
+        return {"days": 1}
+
+    if schedule == "Weekly":
+        return {"days": 7}
+
+    return {"hours": 1}
+
+
+def _is_sync_due(settings=None):
+    settings = settings or _get_settings()
+
+    if not getattr(settings, "enabled", 1):
+        return False, "disabled"
+
+    schedule = _norm(getattr(settings, "wearcheck_sync_schedule", "")) or "Hourly"
+    last_attempt = getattr(settings, "last_wearcheck_sync_attempt", None)
+
+    if not last_attempt:
+        return True, "no previous sync attempt"
+
+    last_attempt_dt = get_datetime(last_attempt)
+    next_due = add_to_date(last_attempt_dt, **_schedule_interval_kwargs(schedule))
+
+    if now_datetime() >= next_due:
+        return True, f"{schedule} sync due"
+
+    return False, f"{schedule} sync not due until {next_due}"
+
+
+def _set_settings_sync_attempt(success=False, error=None):
+    settings = _get_settings()
+    meta = frappe.get_meta("API Wearcheck Settings")
+
+    updates = {
+        "last_wearcheck_sync_attempt": now(),
+    }
+
+    if success:
+        updates["last_wearcheck_sync_success"] = now()
+        updates["last_wearcheck_sync_error"] = ""
+    elif error:
+        updates["last_wearcheck_sync_error"] = str(error)
+
+    for fieldname, value in updates.items():
+        if meta.has_field(fieldname):
+            settings.set(fieldname, value)
+
+    settings.save(ignore_permissions=True)
+    frappe.db.commit()
+
+
+def sync_wearcheck_rows(rows, force=False):
     """
-    return subject, message
+    Normal scheduled/API import:
+        force=False
+        checksum skip is respected.
 
-
-def _send_critical_email(doc):
-    subject, message = _build_critical_email(doc)
-    frappe.sendmail(
-        recipients=["juan@isambane.co.za"],
-        subject=subject,
-        message=message,
-    )
-
-def sync_wearcheck_rows(rows):
-    settings = frappe.get_single("API Wearcheck Settings")
-
-    def _norm(s):
-        return (s or "").strip()
-
-    def _key(s):
-        return (s or "").strip().lower()
-
-    mapping = {"Company": {}, "Location": {}, "Asset": {}}
-    for m in (settings.get("table_jqnq") or []):
-        it = _norm(getattr(m, "item_type", ""))
-        jv = _key(getattr(m, "json_value", ""))
-        fv = _norm(getattr(m, "frappe_value", ""))
-        if it and jv and fv:
-            mapping.setdefault(it, {})[jv] = fv
+    Manual retry/bulk failed retry:
+        force=True
+        checksum skip is bypassed so corrected mappings are reapplied.
+    """
+    settings = _get_settings()
+    mapping = _get_mapping(settings)
 
     created = 0
     updated = 0
     skipped = 0
+    successful = 0
+    failed = 0
 
-    BATCH = 200
-    n = 0
+    batch_size = 200
+    processed_since_commit = 0
 
-    for r in rows:
-        if not isinstance(r, dict):
+    for row in rows:
+        if not isinstance(row, dict):
             continue
 
-        sampno = _to_int(r.get("sampno"))
+        sampno = _to_int(row.get("sampno"))
+
         if not sampno:
             continue
 
         name = str(sampno)
 
-        new_cs = _checksum(r)
-        old_cs = frappe.db.get_value("WearCheck Results", name, "checksum")
+        new_checksum = _checksum(row)
+        old_checksum = frappe.db.get_value("WearCheck Results", name, "checksum")
 
-        if old_cs and old_cs == new_cs:
+        if old_checksum and old_checksum == new_checksum and not force:
             skipped += 1
             continue
 
@@ -147,15 +235,15 @@ def sync_wearcheck_rows(rows):
         doc = frappe.get_doc("WearCheck Results", name) if exists else frappe.new_doc("WearCheck Results")
 
         doc.sampno = sampno
-        doc.bottleno = _to_int(r.get("bottleno"))
+        doc.bottleno = _to_int(row.get("bottleno"))
 
-        raw_customer = r.get("customer") or ""
-        raw_site = r.get("site") or ""
-        raw_machine = r.get("machine") or ""
+        raw_customer = row.get("customer") or ""
+        raw_site = row.get("site") or ""
+        raw_machine = row.get("machine") or ""
 
-        raw_customer_s = raw_customer.strip()
-        raw_site_s = raw_site.strip()
-        raw_machine_s = raw_machine.strip()
+        raw_customer_s = _norm(raw_customer)
+        raw_site_s = _norm(raw_site)
+        raw_machine_s = _norm(raw_machine)
 
         mapped_company = mapping.get("Company", {}).get(_key(raw_customer)) or (raw_customer_s or None)
         mapped_location = mapping.get("Location", {}).get(_key(raw_site)) or (raw_site_s or None)
@@ -174,42 +262,70 @@ def sync_wearcheck_rows(rows):
         doc.location = _safe_link("Location", mapped_location)
         doc.asset = _safe_link("Asset", mapped_asset)
 
-        doc.component = r.get("component") or ""
-        doc.profileid = _to_int(r.get("profileid"))
-        doc.status = _to_int(r.get("status"))
+        doc.component = row.get("component") or ""
+        doc.profileid = _to_int(row.get("profileid"))
+        doc.status = _to_int(row.get("status"))
 
-        doc.sampledate = r.get("sampledate") or None
-        doc.registerdate = r.get("registerdate") or None
+        doc.sampledate = row.get("sampledate") or None
+        doc.registerdate = row.get("registerdate") or None
 
-        doc.machread = _to_int(r.get("machread"))
-        doc.oilread = _to_float(r.get("oilread"))
-        doc.perwater = _to_float(r.get("perwater"))
-        doc.fueldilution = _to_float(r.get("fueldilution"))
+        doc.machread = _to_int(row.get("machread"))
+        doc.oilread = _to_float(row.get("oilread"))
+        doc.perwater = _to_float(row.get("perwater"))
+        doc.fueldilution = _to_float(row.get("fueldilution"))
 
-        doc.oilsupplier = r.get("oilsupplier") or ""
-        doc.oilbrand = r.get("oilbrand") or ""
-        doc.samp_taker = r.get("samp_taker") or ""
+        doc.oilsupplier = row.get("oilsupplier") or ""
+        doc.oilbrand = row.get("oilbrand") or ""
+        doc.samp_taker = row.get("samp_taker") or ""
 
-        doc.commentstext = r.get("commentstext") or ""
-        doc.actiontext = r.get("actiontext") or ""
-        doc.feedbacktext = r.get("feedbacktext") or ""
+        doc.commentstext = row.get("commentstext") or ""
+        doc.actiontext = row.get("actiontext") or ""
+        doc.feedbacktext = row.get("feedbacktext") or ""
 
-        doc.tan = _to_float(r.get("tan"))
-        doc.tbn = _to_float(r.get("tbn"))
+        doc.tan = _to_float(row.get("tan"))
+        doc.tbn = _to_float(row.get("tbn"))
 
-        for k in ("fe", "ag", "al", "ca", "cr", "cu", "mg", "na", "ni", "pb", "si", "sn", "p", "b", "ba", "mo", "v", "zn", "ti"):
-            setattr(doc, k, _to_int(r.get(k)))
+        for fieldname in (
+            "fe",
+            "ag",
+            "al",
+            "ca",
+            "cr",
+            "cu",
+            "mg",
+            "na",
+            "ni",
+            "pb",
+            "si",
+            "sn",
+            "p",
+            "b",
+            "ba",
+            "mo",
+            "v",
+            "zn",
+            "ti",
+        ):
+            setattr(doc, fieldname, _to_int(row.get(fieldname)))
 
-        doc.iso4 = _to_int(r.get("iso4"))
-        doc.iso6 = _to_int(r.get("iso6"))
-        doc.iso14 = _to_int(r.get("iso14"))
-        doc.pq = _to_int(r.get("pq"))
+        doc.v40 = _to_float(row.get("v40"))
+        doc.v100 = _to_float(row.get("v100"))
+        doc.oxi = _to_float(row.get("oxi"))
+        doc.soot = _to_float(row.get("soot"))
+
+        doc.iso4 = _to_int(row.get("iso4"))
+        doc.iso6 = _to_int(row.get("iso6"))
+        doc.iso14 = _to_int(row.get("iso14"))
+        doc.pq = _to_int(row.get("pq"))
 
         link_errors = []
+
         if mapped_company and not doc.company:
             link_errors.append(f"Could not find Company: {mapped_company}")
+
         if mapped_location and not doc.location:
             link_errors.append(f"Could not find Location: {mapped_location}")
+
         if mapped_asset and not doc.asset:
             link_errors.append(f"Could not find Asset: {mapped_asset}")
 
@@ -218,13 +334,15 @@ def sync_wearcheck_rows(rows):
             doc.import_status = "Failed"
             doc.import_error = " | ".join(link_errors)[:140]
             doc.import_error_details = "\n".join(link_errors)
+            failed += 1
         else:
             doc.import_failed = 0
             doc.import_status = "Success"
             doc.import_error = ""
             doc.import_error_details = ""
+            successful += 1
 
-        doc.checksum = new_cs
+        doc.checksum = new_checksum
 
         if exists:
             doc.save(ignore_permissions=True)
@@ -233,39 +351,195 @@ def sync_wearcheck_rows(rows):
             doc.insert(ignore_permissions=True)
             created += 1
 
-        n += 1
-        if n % BATCH == 0:
+        processed_since_commit += 1
+
+        if processed_since_commit % batch_size == 0:
             frappe.db.commit()
 
     frappe.db.commit()
-    return {"ok": True, "count": len(rows), "created": created, "updated": updated, "skipped": skipped, "ts": now()}
+
+    return {
+        "ok": True,
+        "count": len(rows),
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "successful": successful,
+        "failed": failed,
+        "force": force,
+        "ts": now(),
+    }
 
 
 @frappe.whitelist()
 def fetch_and_sync():
-    settings = frappe.get_single("API Wearcheck Settings")
-    if not getattr(settings, "enabled", 1):
-        return {"ok": True, "skipped": "disabled"}
+    settings = _get_settings()
 
-    url = getattr(settings, "endpoint_url", None)
-    if not url:
+    if not getattr(settings, "enabled", 1):
+        return {
+            "ok": True,
+            "skipped": "disabled",
+        }
+
+    endpoint_url = getattr(settings, "endpoint_url", None)
+
+    if not endpoint_url:
         frappe.throw("API Wearcheck Settings: endpoint_url is required")
 
     api_key = settings.get_password("api_key") or ""
     headers = {"X-API-Key": api_key} if api_key else {}
 
-    res = requests.get(url, headers=headers, timeout=90)
-    res.raise_for_status()
-    rows = res.json() or []
+    response = requests.get(endpoint_url, headers=headers, timeout=90)
+    response.raise_for_status()
 
-    return sync_wearcheck_rows(rows)
+    rows = response.json() or []
+
+    if isinstance(rows, dict):
+        rows = rows.get("data") or rows.get("results") or [rows]
+
+    if not isinstance(rows, list):
+        frappe.throw("WearCheck API response must be a list of result rows")
+
+    return sync_wearcheck_rows(rows, force=False)
+
+
+def run_scheduled_wearcheck_sync():
+    """
+    Called hourly by Frappe scheduler.
+
+    API Wearcheck Settings.wearcheck_sync_schedule controls whether this
+    hourly scheduler execution actually runs an import.
+
+    Important:
+        Existing failed rows are retried first with force=True.
+        Then the API fetch runs normally with force=False.
+    """
+    settings = _get_settings()
+    due, reason = _is_sync_due(settings)
+
+    if not due:
+        return {
+            "ok": True,
+            "skipped": reason,
+        }
+
+    try:
+        retry_result = retry_failed_imports()
+        sync_result = fetch_and_sync()
+
+        _set_settings_sync_attempt(success=True)
+
+        return {
+            "ok": True,
+            "scheduler_reason": reason,
+            "retry_failed_result": retry_result,
+            "sync_result": sync_result,
+        }
+
+    except Exception:
+        error = frappe.get_traceback()
+
+        _set_settings_sync_attempt(success=False, error=error)
+
+        frappe.log_error(
+            title="WearCheck Scheduled Sync Failed",
+            message=error,
+        )
+
+        raise
+
+
+@frappe.whitelist()
+def retry_import(name):
+    frappe.has_permission("WearCheck Results", "write", throw=True)
+
+    doc = frappe.get_doc("WearCheck Results", name)
+
+    row = _row_from_wearcheck_result(doc)
+    result = sync_wearcheck_rows([row], force=True)
+
+    doc.reload()
+
+    return {
+        "ok": True,
+        "name": doc.name,
+        "result": result,
+        "import_failed": doc.import_failed,
+        "import_status": doc.import_status,
+        "import_error": doc.import_error,
+    }
+
+
+@frappe.whitelist()
+def enqueue_retry_failed_imports():
+    frappe.has_permission("WearCheck Results", "write", throw=True)
+
+    job = frappe.enqueue(
+        "engineering.controllers.importer.retry_failed_imports",
+        queue="long",
+        timeout=1800,
+        now=False,
+    )
+
+    return {
+        "ok": True,
+        "job_id": getattr(job, "id", None),
+    }
+
+
+def retry_failed_imports(limit=None):
+    names = frappe.get_all(
+        "WearCheck Results",
+        filters={
+            "import_status": "Failed",
+        },
+        pluck="name",
+        limit=limit,
+        order_by="modified asc",
+    )
+
+    retried = 0
+    fixed = 0
+    still_failed = 0
+
+    for name in names:
+        doc = frappe.get_doc("WearCheck Results", name)
+        row = _row_from_wearcheck_result(doc)
+
+        sync_wearcheck_rows([row], force=True)
+
+        doc.reload()
+
+        retried += 1
+
+        if doc.import_failed:
+            still_failed += 1
+        else:
+            fixed += 1
+
+        if retried % 50 == 0:
+            frappe.db.commit()
+
+    frappe.db.commit()
+
+    return {
+        "ok": True,
+        "retried": retried,
+        "fixed": fixed,
+        "still_failed": still_failed,
+        "ts": now(),
+    }
 
 
 @frappe.whitelist(allow_guest=True)
 def receive_results():
-    settings = frappe.get_single("API Wearcheck Settings")
+    settings = _get_settings()
+
     if not getattr(settings, "enabled", 1):
-        return {"ok": True, "skipped": "disabled"}
+        return {
+            "ok": True,
+            "skipped": "disabled",
+        }
 
     expected_key = settings.get_password("api_key") or ""
     received_key = frappe.get_request_header("X-API-Key") or ""
@@ -285,4 +559,4 @@ def receive_results():
     if not isinstance(rows, list):
         frappe.throw("JSON body must be a list of result rows")
 
-    return sync_wearcheck_rows(rows)
+    return sync_wearcheck_rows(rows, force=False)

@@ -1,14 +1,24 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "allow_rename": 1,
  "creation": "2026-02-03 15:14:22.820176",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "api_configuration_tab",
   "enabled",
   "endpoint_url",
+  "api_key",
+  "wearcheck_sync_schedule",
+  "last_wearcheck_sync_attempt",
+  "last_wearcheck_sync_success",
+  "last_wearcheck_sync_error",
+  "plant_mapping_tab",
   "table_jqnq",
-  "api_key"
+  "manage_recipients_tab",
+  "recipients_per_site",
+  "global_recipients"
  ],
  "fields": [
   {
@@ -26,19 +36,74 @@
   {
    "fieldname": "table_jqnq",
    "fieldtype": "Table",
+   "label": "Map WearCheck Item with Asset or Location",
    "options": "Wearcheck Unmapped"
   },
   {
    "fieldname": "api_key",
    "fieldtype": "Password",
    "label": "API Key"
+  },
+  {
+   "fieldname": "manage_recipients_tab",
+   "fieldtype": "Tab Break",
+   "label": "Manage Recipients"
+  },
+  {
+   "fieldname": "recipients_per_site",
+   "fieldtype": "Table",
+   "label": "Recipients Per Site",
+   "options": "WearCheck Users"
+  },
+  {
+   "fieldname": "global_recipients",
+   "fieldtype": "Table",
+   "label": "Global Recipients (Receive All)",
+   "options": "Wearcheck Global Users"
+  },
+  {
+   "fieldname": "api_configuration_tab",
+   "fieldtype": "Tab Break",
+   "label": "API Configuration"
+  },
+  {
+   "fieldname": "plant_mapping_tab",
+   "fieldtype": "Tab Break",
+   "label": "Plant Mapping"
+  },
+  {
+   "default": "Hourly",
+   "fieldname": "wearcheck_sync_schedule",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "WearCheck Sync. Schedule",
+   "options": "Hourly\nDaily\nWeekly",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_wearcheck_sync_attempt",
+   "fieldtype": "Datetime",
+   "label": "Last WearCheck Sync Attempt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_wearcheck_sync_success",
+   "fieldtype": "Datetime",
+   "label": "Last WearCheck Sync Success",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_wearcheck_sync_error",
+   "fieldtype": "Long Text",
+   "label": "Last WearCheck Sync Error",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-12 12:02:08.482610",
+ "modified": "2026-06-29 12:50:13.821317",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "API Wearcheck Settings",

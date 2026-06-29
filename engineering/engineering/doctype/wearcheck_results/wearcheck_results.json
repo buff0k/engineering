@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "allow_rename": 1,
  "autoname": "field:sampno",
  "creation": "2026-02-03 14:22:55.338654",
@@ -65,6 +66,9 @@
   "raw_company_value",
   "last_import_attempt",
   "import_status",
+  "critical_notification_sent",
+  "critical_notification_sent_on",
+  "critical_notification_recipients",
   "section_break_aptg",
   "checksum",
   "asset",
@@ -368,7 +372,7 @@
   {
    "fieldname": "error_records_not_synced_column",
    "fieldtype": "Column Break",
-   "label": "Error Records Not Synced"
+   "label": "Sync Data"
   },
   {
    "default": "0",
@@ -423,12 +427,32 @@
    "label": "Import Status",
    "options": "Success\nFailed\nPending",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "critical_notification_sent",
+   "fieldtype": "Check",
+   "label": "Critical Notification Sent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "critical_notification_sent_on",
+   "fieldtype": "Datetime",
+   "label": "Critical Notification Sent On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "critical_notification_recipients",
+   "fieldtype": "Table",
+   "label": "Critical Notification Recipients",
+   "options": "Wearcheck Global Users",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-21 09:37:58.775431",
+ "modified": "2026-06-29 12:47:14.594953",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "WearCheck Results",

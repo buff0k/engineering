@@ -77,11 +77,9 @@ scheduler_events = {
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
+        "engineering.controllers.importer.run_scheduled_wearcheck_sync",
     ],
     "cron": {
-        "*/5 * * * *": [
-            "engineering.controllers.importer.fetch_and_sync"
-        ],
         "0 6 * * *": [
             "engineering.api.deviation_email.send_open_deviation_emails"
         ],
@@ -98,7 +96,6 @@ scheduler_events = {
         ],
         "5 0 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
-            "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily"
         ],
         # ==========================================================
         # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
