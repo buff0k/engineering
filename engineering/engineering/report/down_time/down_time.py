@@ -377,6 +377,7 @@ def get_data(filters):
     rows = frappe.db.sql(
         f"""
         select
+            pbm.name,
             pbm.location as site,
             pbm.asset_name as plant_no,
             pbm.open_closed as open_closed,
@@ -402,25 +403,23 @@ def get_data(filters):
 
     data = []
     hours_cache = {}
-    seen_machines = set()
-
     for row in rows:
-        machine_key = (row.site, row.plant_no)
 
-        if machine_key in seen_machines:
-            continue
-
-        seen_machines.add(machine_key)
-
-        cache_key = (row.site, row.plant_no)
+        cache_key = row.name
 
         if cache_key not in hours_cache:
-            hours_cache[cache_key] = get_availability_engine_hours(
-                row.site,
-                row.plant_no,
-                report_date,
-                filters.get("shift"),
-            )
+            if row.breakdown_start_datetime and row.resolved_datetime:
+                hours_cache[cache_key] = round(
+                    float(time_diff_in_hours(row.resolved_datetime, row.breakdown_start_datetime)),
+                    2
+                )
+            else:
+                hours_cache[cache_key] = get_availability_engine_hours(
+                    row.site,
+                    row.plant_no,
+                    report_date,
+                    filters.get("shift"),
+                )
 
         data.append({
             "date": report_date,
