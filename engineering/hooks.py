@@ -73,9 +73,6 @@ app_include_css = [
 # ---------------------------------------------------------------------
 scheduler_events = {
     "hourly": [
-        "engineering.integrations.raven_breakdown_notifications.send_long_open_breakdown_alerts",
-    ],
-    "hourly": [
         # Runs hourly, but function only executes at 06:00 and 18:00
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
@@ -120,11 +117,7 @@ doc_events = {
         "after_insert": "engineering.controllers.whatsapp_breakdown_import.whatsapp_message_after_insert",
     },
     "Plant Breakdown or Maintenance": {
-        "after_insert": "engineering.integrations.raven_breakdown_notifications.send_new_breakdown_message",
-        "on_update": [
-            "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update",
-            "engineering.integrations.raven_breakdown_notifications.send_closed_breakdown_message",
-        ],
+        "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update",
     },
     "Engineering Legals": {
         "after_insert": "engineering.engineering.doctype.engineering_legals.engineering_legals.sync_engineering_legals_from_doc",
