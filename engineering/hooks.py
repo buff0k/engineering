@@ -73,7 +73,6 @@ app_include_css = [
 # ---------------------------------------------------------------------
 scheduler_events = {
     "hourly": [
-        # Runs hourly, but function only executes at 06:00 and 18:00
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
