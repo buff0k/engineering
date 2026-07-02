@@ -5,25 +5,25 @@ from frappe.utils import get_url_to_form, format_datetime, now_datetime, get_dat
 DEFAULT_RAVEN_CHANNEL = "Isambane Mining-all-site-fallback-channel"
 
 SITE_CHANNELS = {
-    "Gwab": "Isambane Mining-eng-downtime-gwab",
-    "GWAB": "Isambane Mining-eng-downtime-gwab",
+    "Gwab": "Isambane Mining-raven-engineering-downtime-gwab",
+    "GWAB": "Isambane Mining-raven-engineering-downtime-gwab",
 
-    "Klipfontein": "Isambane Mining-eng-downtime-klipfontein",
-    "KLP": "Isambane Mining-eng-downtime-klipfontein",
+    "Klipfontein": "Isambane Mining-raven-engineering-downtime-klipfontein",
+    "KLP": "Isambane Mining-raven-engineering-downtime-klipfontein",
 
-    "Koppie": "Isambane Mining-eng-downtime-koppie",
+    "Koppie": "Isambane Mining-raven-engineering-downtime-koppie",
 
-    "Kriel Rehabilitation": "Isambane Mining-eng-downtime-kriel",
-    "KRR": "Isambane Mining-eng-downtime-kriel",
+    "Kriel Rehabilitation": "Isambane Mining-raven-engineering-downtime-kriel",
+    "KRR": "Isambane Mining-raven-engineering-downtime-kriel",
 
-    "Uitgevallen": "Isambane Mining-eng-downtime-uitgevallen",
-    "UIT": "Isambane Mining-eng-downtime-uitgevallen",
+    "Uitgevallen": "Isambane Mining-raven-engineering-downtime-uitgevallen",
+    "UIT": "Isambane Mining-raven-engineering-downtime-uitgevallen",
 
-    "Bankfontein": "Isambane Mining-eng-downtime-bankfontein",
-    "BFT": "Isambane Mining-eng-downtime-bankfontein",
+    "Bankfontein": "Isambane Mining-raven-engineering-downtime-bankfontein",
+    "BFT": "Isambane Mining-raven-engineering-downtime-bankfontein",
 
-    "Grinaker": "Isambane Mining-eng-downtime-grinaker",
-    "Mimosa": "Isambane Mining-eng-downtime-grinaker",
+    "Grinaker": "Isambane Mining-raven-engineering-downtime-grinaker",
+    "Mimosa": "Isambane Mining-raven-engineering-downtime-grinaker",
 }
 
 
