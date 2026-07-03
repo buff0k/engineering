@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+import json
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 from datetime import timedelta
@@ -66,6 +67,7 @@ def create_hourly_downtime_summary(site):
         "hour_slot": hour_slot,
         "channel_id": channel_id,
         "summary_message": summary_message,
+        "report_data_json": json.dumps(data, default=str),
         "sent_to_raven": 0,
     })
 

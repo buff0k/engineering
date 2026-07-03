@@ -75,8 +75,8 @@ scheduler_events = {
     "hourly": [
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
-        "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.controllers.importer.run_scheduled_wearcheck_sync",
+        "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_koppie_hourly_downtime_summary",
     ],
     "cron": {
         "0 6 * * *": [

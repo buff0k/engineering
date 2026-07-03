@@ -7,12 +7,15 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "downtime_status_html",
+  "section_break_bsui",
   "site",
   "report_date",
   "hour_slot",
   "channel_id",
   "summary_message",
-  "sent_to_raven"
+  "sent_to_raven",
+  "report_data_json"
  ],
  "fields": [
   {
@@ -39,19 +42,36 @@
   {
    "fieldname": "summary_message",
    "fieldtype": "Long Text",
-   "label": "Summary Message "
+   "label": "Summary Message"
   },
   {
    "default": "0",
    "fieldname": "sent_to_raven",
    "fieldtype": "Check",
    "label": "Send to Raven"
+  },
+  {
+   "fieldname": "downtime_status_html",
+   "fieldtype": "HTML",
+   "label": "Downtime Status"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_bsui",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "report_data_json",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Report Data JSON",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-03 13:36:34.003196",
+ "modified": "2026-07-03 15:29:31.540989",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Hourly Downtime Summary",
