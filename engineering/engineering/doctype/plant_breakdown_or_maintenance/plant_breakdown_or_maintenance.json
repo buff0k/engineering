@@ -19,13 +19,31 @@
   "site_breakdown_situation_section",
   "hours_breakdown_starts",
   "breakdown_start_datetime",
+  "mechanic_breakdown_maintenance_start_time",
   "breakdown_reason",
   "column_break_zygn",
   "resolution_summary",
   "resolved_datetime",
   "breakdown_situation",
   "breakdown_start_key",
-  "open_closed"
+  "open_closed",
+  "section_break_eyak",
+  "mechanic_downtime_approval",
+  "information_officer_approval_section",
+  "information_officer_date_and_time",
+  "information_officer_shift",
+  "information_officer_user",
+  "information_officer_signature",
+  "production_approval_section",
+  "production_manager_date_and_time",
+  "production_manager_shift",
+  "production_manager_user",
+  "production_manager_signature",
+  "engineering_approval_section",
+  "engineering_manager_date_and_time",
+  "engineering_manager_shift",
+  "engineering_manager_user",
+  "engineering_manager_signature"
  ],
  "fields": [
   {
@@ -89,6 +107,99 @@
    "label": "Site Breakdown/Maintenance Situation"
   },
   {
+   "default": "0",
+   "fieldname": "mechanic_downtime_approval",
+   "fieldtype": "Check",
+   "label": "Mechanic downtime approval"
+  },
+  {
+   "fieldname": "information_officer_approval_section",
+   "fieldtype": "Section Break",
+   "label": "Information Officer"
+  },
+  {
+   "fieldname": "information_officer_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "information_officer_shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nDay Shift\nNight Shift",
+   "read_only": 1
+  },
+  {
+   "fieldname": "information_officer_user",
+   "fieldtype": "Data",
+   "label": "Information Officer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "information_officer_signature",
+   "fieldtype": "Signature",
+   "label": "Information Officer Signature"
+  },
+  {
+   "fieldname": "production_approval_section",
+   "fieldtype": "Section Break",
+   "label": "Production"
+  },
+  {
+   "fieldname": "production_manager_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "production_manager_shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nDay Shift\nNight Shift",
+   "read_only": 1
+  },
+  {
+   "fieldname": "production_manager_user",
+   "fieldtype": "Data",
+   "label": "Production Manager / Foreman",
+   "read_only": 1
+  },
+  {
+   "fieldname": "production_manager_signature",
+   "fieldtype": "Signature",
+   "label": "Production Manager Signature"
+  },
+  {
+   "fieldname": "engineering_approval_section",
+   "fieldtype": "Section Break",
+   "label": "Engineering"
+  },
+  {
+   "fieldname": "engineering_manager_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Date and Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engineering_manager_shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nDay Shift\nNight Shift",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engineering_manager_user",
+   "fieldtype": "Data",
+   "label": "Engineering Manager / Foreman",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engineering_manager_signature",
+   "fieldtype": "Signature",
+   "label": "Engineering Manager Signature"
+  },
+  {
    "fieldname": "hours_breakdown_starts",
    "fieldtype": "Float",
    "label": "Hours Breakdown/Maintenance Start",
@@ -148,12 +259,22 @@
    "label": "Shift",
    "options": "Day Shift\nNight Shift",
    "reqd": 1
+  },
+  {
+   "fieldname": "mechanic_breakdown_maintenance_start_time",
+   "fieldtype": "Datetime",
+   "label": "Mechanic Breakdown/Maintenance Start Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_eyak",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-29 08:19:35.253189",
+ "modified": "2026-07-03 13:29:47.101611",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",

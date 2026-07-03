@@ -10,6 +10,11 @@ from datetime import timedelta
 
 SITE_CHANNELS = {
     "Koppie": "Isambane Mining-kop-hourly-downtime-reporting",
+    "Kriel Rehabilitation": "Isambane Mining-krl-hourly-downtime-reporting",
+    "Klipfontein": "Isambane Mining-klp-hourly-downtime-reporting",
+    "Gwab": "Isambane Mining-gwb-hourly-downtime-reporting",
+    "Bankfontein": "Isambane Mining-bnk-hourly-downtime-reporting",
+    "Uitgevallen": "Isambane Mining-uit-hourly-downtime-reporting",
 }
 
 
@@ -35,6 +40,20 @@ def get_completed_hour_slot():
 def create_koppie_hourly_downtime_summary():
     return create_hourly_downtime_summary("Koppie")
 
+
+def create_all_hourly_downtime_summaries():
+    created = []
+
+    for site in SITE_CHANNELS:
+        try:
+            created.append(create_hourly_downtime_summary(site))
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Hourly Downtime Summary failed for {site}"
+            )
+
+    return created
 
 def create_hourly_downtime_summary(site):
     report_date, hour_slot = get_completed_hour_slot()

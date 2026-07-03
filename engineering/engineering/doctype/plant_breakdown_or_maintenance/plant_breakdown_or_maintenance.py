@@ -9,6 +9,51 @@ from frappe.utils import get_datetime
 
 class PlantBreakdownorMaintenance(Document):
 
+    # --- PBOM SIGNATURE ROLE PERMISSION START ---
+    SIGNATURE_FIELD_ROLES = {
+        "information_officer_signature": ["Information Officer", "System Manager"],
+        "production_manager_signature": ["Production Manager", "Production Foreman"],
+        "engineering_manager_signature": ["Engineering Manager", "Engineering Foreman"],
+    }
+
+    SIGNATURE_FIELD_LABELS = {
+        "information_officer_signature": "Information Officer Signature",
+        "production_manager_signature": "Production Manager Signature",
+        "engineering_manager_signature": "Engineering Manager Signature",
+    }
+
+    def enforce_signature_role_permissions(self):
+        if self.is_new():
+            old_values = {}
+        else:
+            old_values = frappe.db.get_value(
+                self.doctype,
+                self.name,
+                list(self.SIGNATURE_FIELD_ROLES.keys()),
+                as_dict=True
+            ) or {}
+
+        user_roles = frappe.get_roles(frappe.session.user)
+
+        for fieldname, allowed_roles in self.SIGNATURE_FIELD_ROLES.items():
+            old_value = old_values.get(fieldname) or ""
+            new_value = self.get(fieldname) or ""
+
+            if old_value == new_value:
+                continue
+
+            if not any(role in user_roles for role in allowed_roles):
+                label = self.SIGNATURE_FIELD_LABELS.get(fieldname, fieldname)
+                frappe.throw(
+                    f"You don't have permission to sign {label}. "
+                    f"Allowed roles: {', '.join(allowed_roles)}"
+                )
+    # --- PBOM SIGNATURE ROLE PERMISSION END ---
+
+    def validate(self):
+        self.enforce_signature_role_permissions()
+
+
     def before_insert(self):
         self._enforce_previous_closed()
 
