@@ -172,6 +172,35 @@ function add_hourly_downtime_styles() {
                 border-color: #52c41a;
             }
 
+            .hourly-available-by-category {
+                background: #e6f7e6;
+                color: #237804;
+                border: 1px solid #52c41a;
+                border-radius: 10px;
+                padding: 10px;
+                margin-bottom: 14px;
+            }
+
+            .hourly-available-title {
+                font-size: 13px;
+                font-weight: 900;
+                margin-bottom: 8px;
+            }
+
+            .hourly-available-line {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 4px 0;
+                border-bottom: 1px solid rgba(82, 196, 26, 0.25);
+                font-size: 13px;
+                font-weight: 800;
+            }
+
+            .hourly-available-line:last-child {
+                border-bottom: none;
+            }
+
             .hourly-category-section {
                 margin-top: 12px;
                 border: 1px solid #e5e7eb;
@@ -224,6 +253,15 @@ function add_hourly_downtime_styles() {
                 line-height: 1.35;
             }
 
+            .hourly-plant-clickable {
+                cursor: pointer;
+            }
+
+            .hourly-plant-clickable:hover {
+                outline: 2px solid rgba(168, 7, 26, 0.35);
+                outline-offset: -2px;
+            }
+
             .hourly-status-open {
                 color: #a8071a;
                 font-weight: 900;
@@ -259,7 +297,6 @@ function render_hourly_downtime_html() {
 
     const total = data.length;
     const open = data.filter(row => row.status_key === "open").length;
-    const available = total - open;
 
     const category_order = [
         "ADT",
@@ -284,6 +321,24 @@ function render_hourly_downtime_html() {
         grouped[category].push(row);
     });
 
+    const available_by_category = {};
+
+    category_order.forEach(function (category) {
+        const rows = grouped[category] || [];
+        const category_total = rows.length;
+        const category_open = rows.filter(function (row) {
+            return row.status_key === "open";
+        }).length;
+        const category_available = category_total - category_open;
+
+        if (category_total > 0) {
+            available_by_category[category] = {
+                total: category_total,
+                available: category_available
+            };
+        }
+    });
+
     let html = `
         <div class="hourly-downtime-wrapper">
             <div class="hourly-downtime-title">${frappe.utils.escape_html(site)} Fleet Downtime Status</div>
@@ -294,7 +349,24 @@ function render_hourly_downtime_html() {
             <div class="hourly-downtime-summary">
                 <div class="hourly-summary-box">Total Machines<strong>${total}</strong></div>
                 <div class="hourly-summary-box hourly-summary-open">Open Downtime<strong>${open}</strong></div>
-                <div class="hourly-summary-box hourly-summary-available">Available<strong>${available}</strong></div>
+            </div>
+
+            <div class="hourly-available-by-category">
+                <div class="hourly-available-title">Available by Type</div>
+                ${category_order.map(function (category) {
+                    const item = available_by_category[category];
+
+                    if (!item) {
+                        return "";
+                    }
+
+                    return `
+                        <div class="hourly-available-line">
+                            <span>${frappe.utils.escape_html(category)}</span>
+                            <strong>${item.available} / ${item.total}</strong>
+                        </div>
+                    `;
+                }).join("")}
             </div>
     `;
 
@@ -314,6 +386,9 @@ function render_hourly_downtime_html() {
             const is_open = row.status_key === "open";
             const icon = is_open ? "❌" : "✅";
             const row_class = is_open ? "hourly-plant-open" : "hourly-plant-available";
+            const is_clickable = is_open && row.breakdown_docname;
+            const clickable_class = is_clickable ? "hourly-plant-clickable" : "";
+            const clickable_attr = is_clickable ? `data-breakdown-docname="${frappe.utils.escape_html(row.breakdown_docname)}"` : "";
 
             let detail = "";
 
@@ -331,7 +406,7 @@ function render_hourly_downtime_html() {
             }
 
             html += `
-                <div class="hourly-plant-row ${row_class}">
+                <div class="hourly-plant-row ${row_class} ${clickable_class}" ${clickable_attr}>
                     <div class="hourly-plant-status">${icon}</div>
                     <div class="hourly-plant-no">${frappe.utils.escape_html(row.plant_no || "")}</div>
                     <div class="hourly-plant-detail">${detail}</div>
@@ -345,4 +420,12 @@ function render_hourly_downtime_html() {
     html += `</div>`;
 
     $(".report-wrapper").prepend(html);
+
+    $(".hourly-plant-clickable").off("click").on("click", function () {
+        const breakdown_docname = $(this).attr("data-breakdown-docname");
+
+        if (breakdown_docname) {
+            frappe.set_route("Form", "Plant Breakdown or Maintenance", breakdown_docname);
+        }
+    });
 }

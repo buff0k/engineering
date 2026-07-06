@@ -263,8 +263,7 @@
   {
    "fieldname": "mechanic_breakdown_maintenance_start_time",
    "fieldtype": "Datetime",
-   "label": "Mechanic Breakdown/Maintenance Start Time",
-   "reqd": 1
+   "label": "Mechanic Breakdown/Maintenance Start Time"
   },
   {
    "fieldname": "section_break_eyak",
@@ -274,7 +273,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-03 13:29:47.101611",
+ "modified": "2026-07-03 16:24:58.046577",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",

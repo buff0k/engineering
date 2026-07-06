@@ -38,6 +38,7 @@ def get_columns():
         {"label": _("Start Time"), "fieldname": "start_time", "fieldtype": "Datetime", "width": 190},
         {"label": _("Resolved Time"), "fieldname": "resolved_time", "fieldtype": "Datetime", "width": 190},
         {"label": _("Open Hours at Hour End"), "fieldname": "open_hours", "fieldtype": "Float", "precision": 2, "width": 170},
+        {"label": _("Breakdown Document"), "fieldname": "breakdown_docname", "fieldtype": "Data", "width": 180, "hidden": 1},
     ]
 
 
@@ -157,6 +158,7 @@ def get_data(filters):
                 "start_time": breakdown.breakdown_start_datetime,
                 "resolved_time": breakdown.resolved_datetime,
                 "open_hours": open_hours,
+                "breakdown_docname": breakdown.name,
             })
         else:
             data.append({
@@ -172,6 +174,7 @@ def get_data(filters):
                 "start_time": "",
                 "resolved_time": "",
                 "open_hours": 0,
+                "breakdown_docname": "",
             })
 
     data.sort(key=lambda row: (
