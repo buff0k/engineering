@@ -339,7 +339,6 @@ def sync_open_downtime_thread_for_site(site, channel_id):
         "Raven Message",
         filters={
             "channel_id": channel_id,
-            "is_thread": 1,
             "notification": f"open-downtime-{site}",
         },
         fields=["name"],
@@ -378,7 +377,7 @@ def build_open_downtime_text(site, rows):
         lines.append("No open downtime.")
         lines.append("")
         lines.append("Open: 0")
-        return "\n".join(lines)
+        return "<br>".join(lines)
 
     grouped = {}
 
