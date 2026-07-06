@@ -358,7 +358,7 @@ def sync_open_downtime_thread_for_site(site, channel_id):
             "text": text,
             "content": text,
             "message_type": "Text",
-            "is_thread": 1,
+            "is_thread": 0,
             "is_bot_message": 1,
             "notification": f"open-downtime-{site}",
         }).insert(ignore_permissions=True)
@@ -409,4 +409,4 @@ def build_open_downtime_text(site, rows):
 
     lines.append(f"Open: {len(rows)}")
 
-    return "\n".join(lines)
+    return "<br>".join(lines)
