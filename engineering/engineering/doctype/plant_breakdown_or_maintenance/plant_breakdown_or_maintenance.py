@@ -295,8 +295,8 @@ def get_submitted_assets_by_location(doctype, txt, searchfield, start, page_len,
 OPEN_DOWNTIME_CHANNELS = {
     "Koppie": "Isambane Mining-kop-downtime",
     "Kriel Rehabilitation": "Isambane Mining-krl-downtime",
-    "Klipfontein": "Isambane Mining-klp-downtime",
-    "Gwab": "Isambane Mining-gwb-downtime",
+    "Klipfontein": "Isambane Mining-klp-breakdowns",
+    "Gwab": "Isambane Mining-gwb-hourly-downtime-reporting",
     "Bankfontein": "Isambane Mining-bnk-downtime",
     "Uitgevallen": "Isambane Mining-uit-downtime",
 }
