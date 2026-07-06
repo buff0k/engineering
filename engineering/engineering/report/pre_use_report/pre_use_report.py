@@ -10,12 +10,14 @@ def execute(filters=None):
     end = getdate(filters.get("end_date"))
     site = filters.get("site")
     shift = filters.get("shift")
+    asset_category = filters.get("asset_category")
+    asset = filters.get("asset")
 
     columns = [
-        {"label": "Asset Category", "fieldname": "asset_category", "fieldtype": "Data", "width": 120},
+        {"label": "Asset Category", "fieldname": "asset_category", "fieldtype": "Data", "width": 140},
         {"label": "Date", "fieldname": "shift_date", "fieldtype": "Date", "width": 120},
-        {"label": "Machine No.", "fieldname": "asset_name", "fieldtype": "Data", "width": 120},
-        {"label": "Make/Model", "fieldname": "item_name", "fieldtype": "Data", "width": 150},
+        {"label": "Machine No.", "fieldname": "asset_name", "fieldtype": "Data", "width": 130},
+        {"label": "Make/Model", "fieldname": "item_name", "fieldtype": "Data", "width": 170},
         {"label": "Start Hours", "fieldname": "start_hours", "fieldtype": "Float", "width": 120},
         {"label": "End Hours", "fieldname": "end_hours", "fieldtype": "Float", "width": 120},
         {"label": "Working Hours", "fieldname": "working_hours", "fieldtype": "Float", "width": 140},
@@ -28,6 +30,12 @@ def execute(filters=None):
 
     if shift:
         conditions.append("p.shift = %(shift)s")
+
+    if asset_category:
+        conditions.append("a.asset_category = %(asset_category)s")
+
+    if asset:
+        conditions.append("a.asset_name = %(asset)s")
 
     query = f"""
         SELECT
@@ -50,43 +58,28 @@ def execute(filters=None):
             p.shift
     """
 
-    rows = frappe.db.sql(
-        query,
-        {
-            "start": start,
-            "end": end,
-            "site": site,
-            "shift": shift
-        },
-        as_dict=True
-    )
+    rows = frappe.db.sql(query, {
+        "start": start,
+        "end": end,
+        "site": site,
+        "shift": shift,
+        "asset_category": asset_category,
+        "asset": asset
+    }, as_dict=True)
 
     data = []
 
-    # ---------------------------------------------------
-    # Specific Shift Selected
-    # ---------------------------------------------------
-
     if shift:
-
         for r in rows:
+            working_hours = None
 
             if r.eng_hrs_start is not None and r.eng_hrs_end is not None:
-
-                # Treat End Hours = 0 as machine did not work
                 if float(r.eng_hrs_end) == 0:
                     working_hours = 0
-
                 else:
-                    working_hours = round(
-                        float(r.eng_hrs_end) - float(r.eng_hrs_start), 1
-                    )
-
+                    working_hours = round(float(r.eng_hrs_end) - float(r.eng_hrs_start), 1)
             elif r.working_hours is not None:
                 working_hours = r.working_hours
-
-            else:
-                working_hours = None
 
             data.append({
                 "asset_category": r.asset_category,
@@ -98,21 +91,11 @@ def execute(filters=None):
                 "working_hours": working_hours
             })
 
-    # ---------------------------------------------------
-    # Combine Day + Night
-    # ---------------------------------------------------
-
     else:
-
         combo_map = {}
 
         for r in rows:
-
-            key = (
-                r.asset_category,
-                r.asset_name,
-                r.shift_date
-            )
+            key = (r.asset_category, r.asset_name, r.shift_date)
 
             if key not in combo_map:
                 combo_map[key] = {
@@ -126,27 +109,19 @@ def execute(filters=None):
 
             if r.shift in ["Day", "Morning"]:
                 combo_map[key]["start_hours"] = r.eng_hrs_start
-
             elif r.shift in ["Night", "Afternoon"]:
                 combo_map[key]["end_hours"] = r.eng_hrs_end
 
         for val in combo_map.values():
-
             start_hours = val["start_hours"]
             end_hours = val["end_hours"]
-
             working_hours = None
 
             if start_hours is not None and end_hours is not None:
-
-                # Treat End Hours = 0 as machine did not work
                 if float(end_hours) == 0:
                     working_hours = 0
-
                 else:
-                    working_hours = round(
-                        float(end_hours) - float(start_hours), 1
-                    )
+                    working_hours = round(float(end_hours) - float(start_hours), 1)
 
             data.append({
                 "asset_category": val["asset_category"],
