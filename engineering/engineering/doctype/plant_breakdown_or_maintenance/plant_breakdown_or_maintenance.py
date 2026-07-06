@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import get_datetime
+from frappe.utils import get_datetime, now_datetime, time_diff_in_hours
 
 
 class PlantBreakdownorMaintenance(Document):
@@ -289,3 +289,125 @@ def get_submitted_assets_by_location(doctype, txt, searchfield, start, page_len,
             "page_len": page_len
         }
     )
+
+
+
+OPEN_DOWNTIME_CHANNELS = {
+    "Koppie": "Isambane Mining-kop-downtime",
+    "Kriel Rehabilitation": "Isambane Mining-krl-downtime",
+    "Klipfontein": "Isambane Mining-klp-downtime",
+    "Gwab": "Isambane Mining-gwb-downtime",
+    "Bankfontein": "Isambane Mining-bnk-downtime",
+    "Uitgevallen": "Isambane Mining-uit-downtime",
+}
+
+
+def sync_open_downtime_threads():
+    for site, channel_id in OPEN_DOWNTIME_CHANNELS.items():
+        try:
+            sync_open_downtime_thread_for_site(site, channel_id)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Open Downtime Thread Sync failed for {site}"
+            )
+
+
+def sync_open_downtime_thread_for_site(site, channel_id):
+    rows = frappe.get_all(
+        "Plant Breakdown or Maintenance",
+        filters={
+            "location": site,
+            "resolved_datetime": ["is", "not set"],
+        },
+        fields=[
+            "name",
+            "asset_name",
+            "asset_category",
+            "item_name",
+            "breakdown_reason",
+            "breakdown_start_datetime",
+            "open_closed",
+        ],
+        order_by="asset_category asc, asset_name asc",
+        limit=500,
+    )
+
+    text = build_open_downtime_text(site, rows)
+
+    existing = frappe.get_all(
+        "Raven Message",
+        filters={
+            "channel_id": channel_id,
+            "is_thread": 1,
+            "notification": f"open-downtime-{site}",
+        },
+        fields=["name"],
+        limit=1,
+    )
+
+    if existing:
+        msg = frappe.get_doc("Raven Message", existing[0].name)
+        msg.text = text
+        msg.content = text
+        msg.is_edited = 1
+        msg.save(ignore_permissions=True)
+    else:
+        frappe.get_doc({
+            "doctype": "Raven Message",
+            "channel_id": channel_id,
+            "text": text,
+            "content": text,
+            "message_type": "Text",
+            "is_thread": 1,
+            "is_bot_message": 1,
+            "notification": f"open-downtime-{site}",
+        }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+
+def build_open_downtime_text(site, rows):
+    lines = []
+    lines.append(f"{site.upper()} OPEN DOWNTIME")
+    lines.append("")
+    lines.append(f"Last updated: {now_datetime().strftime('%Y-%m-%d %H:%M')}")
+    lines.append("")
+
+    if not rows:
+        lines.append("No open downtime.")
+        lines.append("")
+        lines.append("Open: 0")
+        return "\n".join(lines)
+
+    grouped = {}
+
+    for row in rows:
+        category = row.asset_category or "Other"
+
+        if category not in grouped:
+            grouped[category] = []
+
+        grouped[category].append(row)
+
+    for category in sorted(grouped.keys()):
+        lines.append(str(category).upper())
+
+        for row in grouped[category]:
+            open_hours = 0
+
+            if row.breakdown_start_datetime:
+                open_hours = round(
+                    float(time_diff_in_hours(now_datetime(), row.breakdown_start_datetime)),
+                    2
+                )
+
+            lines.append(f"{row.asset_name or '-'} - {str(row.breakdown_reason or '-').upper()}")
+            lines.append(f"Record: {row.name}")
+            lines.append(f"Started: {row.breakdown_start_datetime or '-'}")
+            lines.append(f"Open for: {open_hours} hrs")
+            lines.append("")
+
+    lines.append(f"Open: {len(rows)}")
+
+    return "\n".join(lines)
