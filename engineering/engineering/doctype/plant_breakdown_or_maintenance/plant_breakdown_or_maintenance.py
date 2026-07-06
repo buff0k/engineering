@@ -367,46 +367,52 @@ def sync_open_downtime_thread_for_site(site, channel_id):
 
 
 def build_open_downtime_text(site, rows):
+    now = now_datetime()
+
     lines = []
-    lines.append(f"{site.upper()} OPEN DOWNTIME")
+    lines.append(f"## {site.upper()} OPEN DOWNTIME")
     lines.append("")
-    lines.append(f"Last updated: {now_datetime().strftime('%Y-%m-%d %H:%M')}")
+    lines.append(f"**Last updated:** {now.strftime('%Y-%m-%d %H:%M')}")
     lines.append("")
 
     if not rows:
-        lines.append("No open downtime.")
+        lines.append("✅ **No open downtime.**")
         lines.append("")
-        lines.append("Open: 0")
-        return "<br>".join(lines)
+        lines.append("**Open:** 0")
+        return "\n".join(lines)
 
     grouped = {}
 
     for row in rows:
         category = row.asset_category or "Other"
-
-        if category not in grouped:
-            grouped[category] = []
-
-        grouped[category].append(row)
+        grouped.setdefault(category, []).append(row)
 
     for category in sorted(grouped.keys()):
-        lines.append(str(category).upper())
+        lines.append(f"### {str(category).upper()}")
+        lines.append("")
 
         for row in grouped[category]:
             open_hours = 0
 
             if row.breakdown_start_datetime:
                 open_hours = round(
-                    float(time_diff_in_hours(now_datetime(), row.breakdown_start_datetime)),
+                    float(time_diff_in_hours(now, row.breakdown_start_datetime)),
                     2
                 )
 
-            lines.append(f"{row.asset_name or '-'} - {str(row.breakdown_reason or '-').upper()}")
-            lines.append(f"Record: {row.name}")
-            lines.append(f"Started: {row.breakdown_start_datetime or '-'}")
-            lines.append(f"Open for: {open_hours} hrs")
+            record_url = f"/app/plant-breakdown-or-maintenance/{row.name}"
+
+            lines.append(f"**Plant No.:** {row.asset_name or '-'}")
+            lines.append(f"**Model:** {row.item_name or '-'}")
+            lines.append(f"**Reason:** {row.breakdown_reason or '-'}")
+            lines.append(f"**Started:** {row.breakdown_start_datetime or '-'}")
+            lines.append(f"**Open for:** {open_hours} hrs")
+            lines.append(f"**Open/Closed:** {row.open_closed or 'Open'}")
+            lines.append(f"[Open Record]({record_url})")
+            lines.append("")
+            lines.append("---")
             lines.append("")
 
-    lines.append(f"Open: {len(rows)}")
+    lines.append(f"**Open:** {len(rows)}")
 
-    return "<br>".join(lines)
+    return "\n".join(lines)
