@@ -79,9 +79,6 @@ scheduler_events = {
         "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries",
     ],
     "cron": {
-        "*/5 * * * *": [
-            "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.sync_open_downtime_threads"
-        ],
         "0 6 * * *": [
             "engineering.api.deviation_email.send_open_deviation_emails"
         ],
