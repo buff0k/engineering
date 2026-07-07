@@ -1167,3 +1167,156 @@ def get_signature_html(signature):
         return '<img class="signature-img" src="{0}">'.format(signature)
 
     return '<img class="signature-img" src="{0}">'.format(frappe.utils.escape_html(signature))
+
+
+
+
+
+
+DAILY_DOWNTIME_SITE_CHANNELS = {
+    "Koppie": "kop-dt-reporting",
+    "Kriel Rehabilitation": "krl-dt-reporting",
+    "Klipfontein": "klp-dt-reporting",
+    "Gwab": "gwb-dt-reporting",
+    "Bankfontein": "bnk-dt-reporting",
+    "Uitgevallen": "uit-dt-reporting",
+}
+
+def build_daily_downtime_message(report_date, site, shift):
+    data = get_data(frappe._dict({
+        "report_date": report_date,
+        "site": site,
+        "asset_category": "",
+        "shift": shift,
+    }))
+
+    total_records = len(data)
+    total_hours = round(sum(float(row.get("breakdown_hours") or 0) for row in data), 2)
+    open_records = len([row for row in data if str(row.get("open_closed") or "").lower() == "open"])
+    closed_records = total_records - open_records
+
+    shift_period = "06:00 TO 18:00" if shift == "Day Shift" else "18:00 TO 06:00"
+
+    lines = [
+        f"{site.upper()} DAILY DOWNTIME REPORT",
+        str(report_date),
+        shift.upper(),
+        shift_period,
+        "",
+        f"Records: {total_records}",
+        f"Total Hours: {total_hours}",
+        f"Open: {open_records}",
+        f"Closed: {closed_records}",
+        "",
+    ]
+
+    if not data:
+        lines.append("No downtime records found for this shift.")
+        return "\n".join(lines), data
+
+    for row in data:
+        plant_no = row.get("plant_no") or "-"
+        asset_category = row.get("asset_category") or "-"
+        hours = row.get("breakdown_hours") or 0
+        status = row.get("open_closed") or "-"
+        reason = row.get("breakdown_reason") or "-"
+        start = row.get("breakdown_start_datetime") or "-"
+        resolved = row.get("resolved_datetime") or "OPEN"
+        resolution = row.get("resolution_summary") or "-"
+
+        lines.extend([
+            f"{plant_no} - {asset_category} - {hours} HRS - {status}",
+            f"Reason: {str(reason).upper()}",
+            f"Start: {start}",
+            f"Back in Production: {resolved}",
+            f"Resolution: {resolution}",
+            "",
+        ])
+
+    return "\n".join(lines), data
+
+
+def create_daily_downtime_summary(site, report_date, shift):
+    import json
+
+    channel_id = DAILY_DOWNTIME_SITE_CHANNELS.get(site)
+
+    if not channel_id:
+        frappe.throw(f"No Raven channel configured for site: {site}")
+
+    summary_message, data = build_daily_downtime_message(report_date, site, shift)
+
+    existing = frappe.db.exists("Daily Downtime Summary", {
+        "site": site,
+        "report_date": report_date,
+        "shift": shift,
+    })
+
+    if existing:
+        return existing
+
+    doc = frappe.get_doc({
+        "doctype": "Daily Downtime Summary",
+        "site": site,
+        "report_date": report_date,
+        "day": report_date,
+        "shift": shift,
+        "channel_id": channel_id,
+        "summary_message": summary_message,
+        "report_data_json": json.dumps(data, default=str),
+        "sent_to_raven": 0,
+    })
+
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return doc.name
+
+
+def create_daily_downtime_summaries(shift):
+    today = getdate(now_datetime())
+
+    if shift == "Night Shift":
+        report_date = today - timedelta(days=1)
+    else:
+        report_date = today
+
+    created = []
+
+    for site in DAILY_DOWNTIME_SITE_CHANNELS:
+        try:
+            created.append(create_daily_downtime_summary(site, report_date, shift))
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Daily Downtime Summary failed for {site} {shift}"
+            )
+
+    return created
+
+
+@frappe.whitelist()
+def send_daily_downtime_day_shift():
+    return create_daily_downtime_summaries("Day Shift")
+
+
+@frappe.whitelist()
+def send_daily_downtime_night_shift():
+    return create_daily_downtime_summaries("Night Shift")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

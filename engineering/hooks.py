@@ -62,6 +62,7 @@ doctype_js = {
     "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js",
     "Service Schedule": "engineering/engineering/doctype/service_schedule/service_schedule.js",
     "Engineering Legals": "engineering/engineering/doctype/engineering_legals/engineering_legals.js",
+    "Daily Downtime Summary": "engineering/engineering/doctype/daily_downtime_summary/daily_downtime_summary.js",
 }
 
 app_include_css = [
@@ -80,7 +81,11 @@ scheduler_events = {
     ],
     "cron": {
         "0 6 * * *": [
-            "engineering.api.deviation_email.send_open_deviation_emails"
+            "engineering.api.deviation_email.send_open_deviation_emails",
+            "engineering.engineering.report.down_time.down_time.send_daily_downtime_night_shift"
+        ],
+        "0 18 * * *": [
+            "engineering.engineering.report.down_time.down_time.send_daily_downtime_day_shift"
         ],
         # ==========================================================
         # OPEN BREAKDOWN DIGEST + A&U DAILY RUN

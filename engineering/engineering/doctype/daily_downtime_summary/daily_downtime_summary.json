@@ -1,0 +1,209 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:DDS-{site}-{report_date}-{#####}",
+ "creation": "2026-07-07 10:40:58.480623",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "daily_downtime",
+  "section_break_lfhm",
+  "engineering_manager_signature",
+  "status",
+  "section_break_hqcq",
+  "site",
+  "report_date",
+  "day",
+  "shift",
+  "channel_id",
+  "summary_message",
+  "sent_to_raven",
+  "report_data_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location"
+  },
+  {
+   "fieldname": "report_date",
+   "fieldtype": "Date",
+   "label": "Report Date"
+  },
+  {
+   "fieldname": "day",
+   "fieldtype": "Date",
+   "label": "Day of Report"
+  },
+  {
+   "fieldname": "channel_id",
+   "fieldtype": "Data",
+   "label": "Channel ID"
+  },
+  {
+   "fieldname": "summary_message",
+   "fieldtype": "Long Text",
+   "label": "Summary Message"
+  },
+  {
+   "default": "0",
+   "fieldname": "sent_to_raven",
+   "fieldtype": "Check",
+   "label": "Send to Raven"
+  },
+  {
+   "fieldname": "report_data_json",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Report Data JSON",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_hqcq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "engineering_manager_signature",
+   "fieldtype": "Signature",
+   "label": "Engineering Manager Signature"
+  },
+  {
+   "default": "Not Signed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Not Signed\nSigned"
+  },
+  {
+   "fieldname": "daily_downtime",
+   "fieldtype": "HTML",
+   "label": "Daily Downtime "
+  },
+  {
+   "fieldname": "section_break_lfhm",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "Day Shift\nNight Shift"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-07 12:07:07.903606",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Daily Downtime Summary",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Area Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Foreman",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Plant Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Supervisor",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
