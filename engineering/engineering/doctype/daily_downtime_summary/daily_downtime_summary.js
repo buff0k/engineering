@@ -214,7 +214,7 @@ function render_daily_downtime(frm) {
 
             <div class="dds-summary">
                 <div class="dds-box">Records<strong>${total}</strong></div>
-                <div class="dds-box dds-hours-box">Total Hours<strong>${total_hours.toFixed(2)}</strong></div>
+                <div class="dds-box dds-hours-box">Total Hours<strong>${format_daily_hours(total_hours)}</strong></div>
                 <div class="dds-box dds-open-box">Open<strong>${open}</strong></div>
                 <div class="dds-box dds-closed-box">Closed<strong>${closed}</strong></div>
             </div>
@@ -249,7 +249,7 @@ function render_daily_downtime(frm) {
                 <div class="dds-row ${row_class}">
                     <div>${icon}</div>
                     <div class="dds-plant">${frappe.utils.escape_html(row.plant_no || "")}</div>
-                    <div class="dds-hours">${frappe.utils.escape_html(row.breakdown_hours || 0)} hrs</div>
+                    <div class="dds-hours">${frappe.utils.escape_html(format_daily_hours(row.breakdown_hours || 0))}</div>
                     <div class="dds-detail">
                         <span class="dds-label">Status:</span> ${frappe.utils.escape_html(row.open_closed || "-")}
                         <br>
@@ -313,4 +313,21 @@ function get_daily_category_group(asset_category) {
     }
 
     return asset_category || "Uncategorised";
+}
+
+
+function format_daily_hours(value) {
+    const total_minutes = Math.round(flt(value || 0) * 60);
+    const hours = Math.floor(total_minutes / 60);
+    const minutes = total_minutes % 60;
+
+    if (hours && minutes) {
+        return `${hours} Hour ${minutes} Min`;
+    }
+
+    if (hours) {
+        return `${hours} Hour`;
+    }
+
+    return `${minutes} Min`;
 }
