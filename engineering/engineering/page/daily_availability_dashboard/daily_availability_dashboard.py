@@ -1141,7 +1141,11 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
             return 2
 
         value = max(0.0, min(100.0, float(value)))
-        return max(2, int(round(value * 2.7)))
+
+        if value <= 0:
+            return 2
+
+        return max(2, int(round((value / 100.0) * 220)))
 
     def chart_section(category):
         title = UI_TITLES.get(category, category)
