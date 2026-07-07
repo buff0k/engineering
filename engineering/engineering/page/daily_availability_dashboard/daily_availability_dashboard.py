@@ -213,7 +213,8 @@ def get_spare_swing_asset_map(filters):
 def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asset_map):
     filters = filters or {}
     machine_scope = filters.get("machine_scope") or "Include Swing/Spare"
-
+    frappe.local.daily_dashboard_au_target_filter = filters.get("au_target_filter") or "100% A & U"
+    
     if machine_scope == "Include Swing/Spare":
         return rows
 
@@ -730,6 +731,18 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         end_date,
         machine_scope or "Production Machines"
     )
+
+
+    target_multiplier = get_au_target_multiplier(frappe._dict({
+        "au_target_filter": getattr(frappe.local, "daily_dashboard_au_target_filter", "100% A & U")
+    }))
+
+    if target_multiplier != 1.0:
+        for _cat, _vals in adt_dozer_excavator_cards_all_summary_types.items():
+            for _field in ("avail", "util"):
+                if _vals.get(_field) is not None:
+                    _vals[_field] = round(float(_vals.get(_field) or 0) * target_multiplier, 1)
+
 
     # IMPORTANT:
     # Build the graph from the same ADT / Dozer / Excavator values as the cards.
