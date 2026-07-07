@@ -9,12 +9,12 @@ from datetime import timedelta
 
 
 SITE_CHANNELS = {
-    "Koppie": "kop-dt-reporting",
-    "Kriel Rehabilitation": "krl-dt-reporting",
-    "Klipfontein": "klp-dt-reporting",
-    "Gwab": "gwb-dt-reporting",
-    "Bankfontein": "bnk-dt-reporting",
-    "Uitgevallen": "uit-dt-reporting",
+    "Koppie": "Isambane Mining-kop-hourly-downtime-reporting",
+    "Kriel Rehabilitation": "Isambane Mining-krl-hourly-downtime-reporting",
+    "Klipfontein": "Isambane Mining-klp-hourly-downtime-reporting",
+    "Gwab": "Isambane Mining-gwb-hourly-downtime-reporting",
+    "Bankfontein": "Isambane Mining-bnk-hourly-downtime-reporting",
+    "Uitgevallen": "Isambane Mining-uit-hourly-downtime-reporting",
 }
 
 
