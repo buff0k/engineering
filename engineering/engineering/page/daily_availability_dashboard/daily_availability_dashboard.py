@@ -265,6 +265,43 @@ def build_summary_averages_from_machine_series(machine_series):
 
     return out
 
+
+def get_au_target_multiplier(filters):
+    au_target_filter = (filters or {}).get("au_target_filter") or "100% A & U"
+
+    if au_target_filter == "85% A & U":
+        return 0.85
+
+    return 1.0
+
+
+def apply_au_target_to_values(avgs, machine_series, filters):
+    multiplier = get_au_target_multiplier(filters)
+
+    if multiplier == 1.0:
+        return avgs, machine_series
+
+    for category, values in (avgs or {}).items():
+        if not isinstance(values, dict):
+            continue
+
+        for field in ("avail", "util"):
+            if values.get(field) is not None:
+                values[field] = round(float(values.get(field) or 0) * multiplier, 1)
+
+    for category, machines in (machine_series or {}).items():
+        for machine in machines or []:
+            if not isinstance(machine, dict):
+                continue
+
+            for field in ("avail", "util"):
+                if machine.get(field) is not None:
+                    machine[field] = round(float(machine.get(field) or 0) * multiplier, 1)
+
+    return avgs, machine_series
+
+
+
 def execute(filters=None):
     filters = frappe._dict(filters or {})
 
@@ -296,6 +333,8 @@ def execute(filters=None):
 
     machine_series = build_machine_series_from_source_rows(source_rows)
     avgs = build_summary_averages_from_source_rows(source_rows)
+
+    avgs, machine_series = apply_au_target_to_values(avgs, machine_series, filters)
 
 
     dashboard_html = build_dashboard_html(
@@ -1200,7 +1239,7 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
 
 
 @frappe.whitelist()
-def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
     from frappe.utils.pdf import get_pdf
     from frappe.utils import now_datetime
 
@@ -1215,6 +1254,7 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
         site=site,
         summary_type=summary_type,
         machine_scope=machine_scope,
+        au_target_filter=au_target_filter or "100% A & U",
     )
 
     engineering_css = get_engineering_css_for_pdf()
@@ -1518,7 +1558,7 @@ def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=Non
     frappe.local.response.type = "download"
 
 @frappe.whitelist()
-def get_daily_availability_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+def get_daily_availability_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
     location = location or site
     summary_type = summary_type or "Daily Summary"
     machine_scope = machine_scope or "Include Swing/Spare"
@@ -1542,6 +1582,7 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
             "site": location,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
+            "au_target_filter": au_target_filter or "100% A & U",
         })
     )
 
@@ -1550,7 +1591,7 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
 
 
 @frappe.whitelist()
-def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None):
+def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
     location = location or site
     summary_type = summary_type or "Daily Summary"
     machine_scope = machine_scope or "Include Swing/Spare"
@@ -1574,6 +1615,7 @@ def get_dashboard_html(start_date=None, end_date=None, location=None, site=None,
             "site": location,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
+            "au_target_filter": au_target_filter or "100% A & U",
         })
     )
 

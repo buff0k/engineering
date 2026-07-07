@@ -79,6 +79,21 @@ class DailyAvailabilityDashboardPage {
             reqd: 1,
             change: () => this.load_dashboard()
         });
+
+        this.au_target_filter = this.page.add_field({
+            fieldname: "au_target_filter",
+            label: __("A & U Target"),
+            fieldtype: "Select",
+            options: [
+                "100% A & U",
+                "85% A & U"
+            ].join("\n"),
+            default: "100% A & U",
+            reqd: 1,
+            change: () => this.load_dashboard()
+        });
+
+
     }
 
     make_body() {
@@ -111,6 +126,7 @@ class DailyAvailabilityDashboardPage {
         this.end_date.set_value(yesterday);
         this.summary_type.set_value("Daily Summary");
         this.machine_scope.set_value("Include Swing/Spare");
+        this.au_target_filter.set_value("100% A & U");
 
         this.body.find(".daily-availability-dashboard-body").html(`
             <div class="frappe-card" style="padding: 18px;">
@@ -126,7 +142,8 @@ class DailyAvailabilityDashboardPage {
             location: this.location.get_value(),
             site: this.location.get_value(),
             summary_type: this.summary_type.get_value() || "Daily Summary",
-            machine_scope: this.machine_scope.get_value() || "Include Swing/Spare"
+            machine_scope: this.machine_scope.get_value() || "Include Swing/Spare",
+            au_target_filter: this.au_target_filter.get_value() || "100% A & U"
         };
     }
 
@@ -200,6 +217,7 @@ class DailyAvailabilityDashboardPage {
 
         values.summary_type = this.summary_type.get_value() || "Daily Summary";
         values.machine_scope = this.machine_scope.get_value() || "Include Swing/Spare";
+        values.au_target_filter = this.au_target_filter.get_value() || "100% A & U";
         values.location = this.location.get_value();
         values.site = this.location.get_value();
 
@@ -213,7 +231,8 @@ class DailyAvailabilityDashboardPage {
             location: values.location,
             site: values.site,
             summary_type: values.summary_type,
-            machine_scope: values.machine_scope
+            machine_scope: values.machine_scope,
+            au_target_filter: values.au_target_filter
         });
 
         const url = "/api/method/" + this.pdf_method + "?" + query;
