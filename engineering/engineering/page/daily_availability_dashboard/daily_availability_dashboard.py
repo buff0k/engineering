@@ -804,7 +804,8 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         start_date,
         end_date,
         machine_scope,
-        spare_swing_asset_map
+        spare_swing_asset_map,
+        getattr(frappe.local, "daily_dashboard_au_target_filter", "100% A & U")
     )
     trend_html = build_trend_html(location, start_date, end_date, machine_scope)
 
@@ -902,11 +903,11 @@ def dashboard_bar_height(value):
 
     return max(2, int(round((value / 100.0) * 220)))
 
-def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date, machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
+def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date, machine_scope="Include Swing/Spare", spare_swing_asset_map=None, au_target_filter="100% A & U"):
     summary_type = summary_type or "Daily Summary"
 
     if summary_type == "Daily Summary":
-        return build_daily_summary_chart_html(location, start_date, end_date, machine_scope)
+        return build_daily_summary_chart_html(location, start_date, end_date, machine_scope, au_target_filter)
 
     if summary_type == "Weekly Summary":
         return build_weekly_summary_chart_html(avgs, machine_scope)
@@ -917,7 +918,7 @@ def build_selected_summary_chart_html(summary_type, location, source_rows, avgs,
     return build_chart_html(machine_series, machine_scope, spare_swing_asset_map)
 
 
-def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Include Swing/Spare"):
+def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Include Swing/Spare", au_target_filter="100% A & U"):
     all_dates = []
 
     try:
@@ -945,6 +946,12 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
     for date_value in all_dates:
         day_rows = fetch_grouped_data(location, date_value, date_value, machine_scope)
         day_avgs = build_summary_averages_from_source_rows(day_rows)
+
+        day_avgs, _unused_machine_series = apply_au_target_to_values(
+            day_avgs,
+            {},
+            frappe._dict({"au_target_filter": au_target_filter or "100% A & U"})
+        )
 
         for category in UI_CATEGORIES:
             values = day_avgs.get(category) or {}
