@@ -9,10 +9,10 @@ SITE_MANAGER_EMAILS = {
         "dian@isambane.co.za",
     ],
     "Klipfontein": [
+        "grant@isambane.co.za",
         "kobus@isambane.co.za",
         "richard@isambane.co.za",
         "werner.french@isambane.co.za",
-        "petrus@isambane.co.za",
         "lara@isambane.co.za",
     ],
     "Uitgevallen": [
@@ -20,9 +20,8 @@ SITE_MANAGER_EMAILS = {
         "saul@isambane.co.za",
     ],
     "Gwab": [
-        "shawn@isambane.co.za",
+        "grant@isambane.co.za",
         "mandla@isambane.co.za",
-        "petrus@isambane.co.za",
         "richard@isambane.co.za",
         "lara@isambane.co.za",
     ],
