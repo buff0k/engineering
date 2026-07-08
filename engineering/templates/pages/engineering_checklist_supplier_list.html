@@ -1,0 +1,40 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    <h2>Engineering Checklist Register</h2>
+
+    <table class="table table-bordered table-sm mt-3">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Site</th>
+                <th>Month</th>
+                <th>Year</th>
+                <th>Supplier Machines</th>
+                <th>Checklist Average</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in registers %}
+            <tr>
+                <td>{{ row.name }}</td>
+                <td>{{ row.site }}</td>
+                <td>{{ row.month }}</td>
+                <td>{{ row.year }}</td>
+                <td>{{ row.supplier_row_count }}</td>
+                <td>{{ row.checklist_submission_average or "" }}</td>
+                <td>
+                    <a class="btn btn-sm btn-dark" href="/engineering_checklist_supplier?name={{ row.name | urlencode }}">Open</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-muted">No supplier checklist registers found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

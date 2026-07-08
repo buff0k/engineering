@@ -1,0 +1,201 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<style>
+    .checklist-wrap {
+        overflow-x: auto;
+        border: 1px solid #ddd;
+        margin-top: 15px;
+    }
+
+    .checklist-table {
+        min-width: 1200px;
+        font-size: 12px;
+    }
+
+    .checklist-table th {
+        background: #f5f5f5;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        white-space: nowrap;
+    }
+
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 1;
+        min-width: 120px;
+    }
+
+    .sticky-col-2 {
+        position: sticky;
+        left: 120px;
+        background: white;
+        z-index: 1;
+        min-width: 130px;
+    }
+
+    .checklist-table select {
+        min-width: 95px;
+        font-size: 12px;
+        padding: 3px;
+    }
+
+    .status-select {
+        font-weight: 600;
+        border-radius: 6px;
+    }
+
+    .status-submitted {
+        background: #d4edda !important;
+        color: #155724 !important;
+        border: 1px solid #b7dfc3 !important;
+    }
+
+    .status-offsite {
+        background: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border: 1px solid #b8dfe8 !important;
+    }
+
+    .status-breakdown {
+        background: #f8d7da !important;
+        color: #721c24 !important;
+        border: 1px solid #efc1c7 !important;
+    }
+
+    .status-service {
+        background: #ffe8cc !important;
+        color: #8a4b08 !important;
+        border: 1px solid #f7d2a8 !important;
+    }
+
+    .status-late-submission {
+        background: #fff3cd !important;
+        color: #856404 !important;
+        border: 1px solid #eed98c !important;
+    }
+
+    .status-default {
+        background: #ffffff !important;
+        color: #333 !important;
+        border: 1px solid #ced4da !important;
+    }
+</style>
+
+<script>
+function checklistStatusClass(value) {
+    const v = (value || "").trim().toLowerCase();
+    if (v === "submitted") return "status-submitted";
+    if (v === "offsite") return "status-offsite";
+    if (v === "breakdown") return "status-breakdown";
+    if (v === "service") return "status-service";
+    if (v === "late submission") return "status-late-submission";
+    return "status-default";
+}
+
+function applyChecklistStatusColor(selectEl) {
+    if (!selectEl) return;
+    selectEl.classList.remove(
+        "status-submitted",
+        "status-offsite",
+        "status-breakdown",
+        "status-service",
+        "status-late-submission",
+        "status-default"
+    );
+    selectEl.classList.add(checklistStatusClass(selectEl.value));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".status-select").forEach(function (el) {
+        applyChecklistStatusColor(el);
+        el.addEventListener("change", function () {
+            applyChecklistStatusColor(el);
+        });
+    });
+});
+</script>
+
+<div class="container-fluid my-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2>Engineering Checklist Register</h2>
+            <p class="text-muted mb-0">
+                <strong>{{ doc.name }}</strong> |
+                {{ doc.site }} |
+                {{ doc.month }} {{ doc.year }}
+            </p>
+        </div>
+        <a href="/engineering_checklist_supplier_list" class="btn btn-secondary btn-sm">Back to List</a>
+    </div>
+
+    
+    {% if saved_message %}
+    <div class="alert alert-success">
+        {{ saved_message }}
+    </div>
+    {% endif %}
+
+    {% if save_error %}
+    <div class="alert alert-danger">
+        <strong>Save Error:</strong>
+        <pre style="white-space: pre-wrap;">{{ save_error }}</pre>
+    </div>
+    {% endif %}
+
+    <form method="post" class="mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="name" value="{{ doc.name }}">
+
+        <div class="checklist-wrap">
+            <table class="table table-bordered table-sm checklist-table">
+                <thead>
+                    <tr>
+                        <th class="sticky-col">Fleet No</th>
+                        <th class="sticky-col-2">Machine Type</th>
+                        <th>Machine Model</th>
+                        <th>Target</th>
+                        <th>Submission</th>
+                        {% for field in status_fields %}
+                        <th>{{ field.label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="sticky-col">{{ row.fleet_no }}</td>
+                        <td class="sticky-col-2">{{ row.machine_type }}</td>
+                        <td>{{ row.item_name }}</td>
+                        <td class="text-center">{{ row.formatted_target }}</td>
+                        <td class="text-center"><strong>{{ row.formatted_submission }}</strong></td>
+
+                        {% for field in status_fields %}
+                        <td>
+                            <select class="form-control status-select" name="{{ row.name }}__{{ field.fieldname }}">
+                                <option value=""></option>
+                                {% for option in field.options %}
+                                <option value="{{ option }}" {% if row.status_values.get(field.fieldname) == option %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 5 + status_fields|length }}" class="text-muted">
+                            No supplier machines found on this checklist register.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Save Checklist</button>
+    </form>
+</div>
+{% endblock %}
