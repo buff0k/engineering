@@ -81,10 +81,12 @@ scheduler_events = {
     ],
     "cron": {
         "0 6 * * *": [
-            "engineering.api.deviation_email.send_open_deviation_emails",
+            "engineering.api.deviation_email.send_open_deviation_emails"
+        ],
+        "5 6 * * *": [
             "engineering.engineering.report.down_time.down_time.send_daily_downtime_night_shift"
         ],
-        "0 18 * * *": [
+        "5 18 * * *": [
             "engineering.engineering.report.down_time.down_time.send_daily_downtime_day_shift"
         ],
         # ==========================================================
