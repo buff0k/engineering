@@ -380,7 +380,7 @@ def get_data(filters):
         select
             pbm.name,
             pbm.location as site,
-            pbm.location1 as breakdown_location,
+            pbm.location as breakdown_location,
             pbm.asset_name as plant_no,
             pbm.open_closed as open_closed,
             pbm.breakdown_reason as breakdown_reason,
