@@ -202,6 +202,15 @@ function render_daily_downtime(frm) {
                 padding: 12px;
                 font-weight: 800;
             }
+
+            .dds-row-clickable {
+                cursor: pointer;
+            }
+
+            .dds-row-clickable:hover {
+                outline: 2px solid rgba(168, 7, 26, 0.35);
+                outline-offset: -2px;
+            }
         </style>
 
         <div class="dds-wrapper">
@@ -244,9 +253,12 @@ function render_daily_downtime(frm) {
             const is_open = String(row.open_closed || "").toLowerCase() === "open";
             const icon = is_open ? "❌" : "✅";
             const row_class = is_open ? "dds-row-open" : "dds-row-closed";
+            const is_clickable = is_open && row.breakdown_docname;
+            const clickable_class = is_clickable ? "dds-row-clickable" : "";
+            const clickable_attr = is_clickable ? `data-breakdown-docname="${frappe.utils.escape_html(row.breakdown_docname)}"` : "";
 
             html += `
-                <div class="dds-row ${row_class}">
+                <div class="dds-row ${row_class} ${clickable_class}" ${clickable_attr}>
                     <div>${icon}</div>
                     <div class="dds-plant">${frappe.utils.escape_html(row.plant_no || "")}</div>
                     <div class="dds-hours">${frappe.utils.escape_html(format_daily_hours(row.breakdown_hours || 0))}</div>
@@ -273,7 +285,19 @@ function render_daily_downtime(frm) {
 
     html += `</div>`;
 
+
     frm.fields_dict.daily_downtime.$wrapper.html(html);
+
+    frm.fields_dict.daily_downtime.$wrapper
+        .find(".dds-row-clickable")
+        .off("click")
+        .on("click", function () {
+            const breakdown_docname = $(this).attr("data-breakdown-docname");
+
+            if (breakdown_docname) {
+                frappe.set_route("Form", "Plant Breakdown or Maintenance", breakdown_docname);
+            }
+        });
 }
 
 

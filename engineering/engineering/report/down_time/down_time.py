@@ -39,6 +39,7 @@ def get_columns():
         {"label": _("Datetime back in production"), "fieldname": "resolved_datetime", "fieldtype": "Datetime", "width": 220},
         {"label": _("Breakdown/Maintenance Hours"), "fieldname": "breakdown_hours", "fieldtype": "Float", "precision": 2, "width": 210},
         {"label": _("Open/Closed"), "fieldname": "open_closed", "fieldtype": "Data", "width": 120},
+        {"label": _("Location"), "fieldname": "breakdown_location", "fieldtype": "Data", "width": 160},
         {"label": _("Comment"), "fieldname": "downtime_comment", "fieldtype": "Data", "width": 260},
     ]
 
@@ -379,6 +380,7 @@ def get_data(filters):
         select
             pbm.name,
             pbm.location as site,
+            pbm.location1 as breakdown_location,
             pbm.asset_name as plant_no,
             pbm.open_closed as open_closed,
             pbm.breakdown_reason as breakdown_reason,
@@ -426,12 +428,14 @@ def get_data(filters):
             "site": row.site,
             "plant_no": row.plant_no,
             "open_closed": get_open_closed_value(row),
+            "breakdown_location": row.get("breakdown_location"),
             "breakdown_reason": row.breakdown_reason,
             "resolution_summary": row.resolution_summary,
             "breakdown_start_datetime": row.breakdown_start_datetime,
             "resolved_datetime": row.resolved_datetime,
             "asset_category": row.asset_category,
             "breakdown_hours": hours_cache[cache_key],
+            "breakdown_docname": row.name,
         })
 
     return data
@@ -1167,6 +1171,7 @@ def get_signature_html(signature):
         return '<img class="signature-img" src="{0}">'.format(signature)
 
     return '<img class="signature-img" src="{0}">'.format(frappe.utils.escape_html(signature))
+
 
 
 
