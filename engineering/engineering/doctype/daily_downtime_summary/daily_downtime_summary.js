@@ -167,6 +167,58 @@ function render_daily_downtime(frm) {
                 align-items: start;
             }
 
+            @media (max-width: 768px) {
+                .dds-wrapper {
+                    padding: 10px;
+                    margin: 0;
+                    border-radius: 10px;
+                }
+
+                .dds-title {
+                    font-size: 15px;
+                }
+
+                .dds-subtitle {
+                    font-size: 12px;
+                    line-height: 1.4;
+                }
+
+                .dds-summary {
+                    grid-template-columns: 1fr 1fr;
+                    gap: 6px;
+                }
+
+                .dds-box {
+                    padding: 8px;
+                    font-size: 11px;
+                }
+
+                .dds-box strong {
+                    font-size: 17px;
+                }
+
+                .dds-row {
+                    grid-template-columns: 28px 1fr;
+                    gap: 6px;
+                    padding: 10px;
+                }
+
+                .dds-plant {
+                    font-size: 14px;
+                }
+
+                .dds-hours {
+                    grid-column: 2;
+                    font-size: 13px;
+                }
+
+                .dds-detail {
+                    grid-column: 1 / -1;
+                    font-size: 12px;
+                    padding-left: 34px;
+                }
+            }
+
             .dds-row-open {
                 background: #fff1f0;
                 color: #a8071a;
@@ -253,7 +305,7 @@ function render_daily_downtime(frm) {
             const is_open = String(row.open_closed || "").toLowerCase() === "open";
             const icon = is_open ? "❌" : "✅";
             const row_class = is_open ? "dds-row-open" : "dds-row-closed";
-            const is_clickable = is_open && row.breakdown_docname;
+            const is_clickable = !!row.breakdown_docname;
             const clickable_class = is_clickable ? "dds-row-clickable" : "";
             const clickable_attr = is_clickable ? `data-breakdown-docname="${frappe.utils.escape_html(row.breakdown_docname)}"` : "";
 
