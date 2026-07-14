@@ -1,0 +1,1062 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<style>
+    #tyre-survey-portal .survey-card {
+        background: #ffffff;
+        border: 1px solid #dfe3e8;
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 18px;
+    }
+
+    #tyre-survey-portal .tyre-row-card {
+        background: #fafbfc;
+        border: 1px solid #dfe3e8;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    #tyre-survey-portal .tyre-row-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    #tyre-survey-portal label {
+        font-weight: 600;
+    }
+
+    #tyre-survey-portal .calculated-field {
+        background-color: #eef2f5;
+    }
+
+    #tyre-survey-portal .button-space {
+        margin-right: 8px;
+    }
+</style>
+
+<div class="container my-4" id="tyre-survey-portal">
+    <h2>Tyre Survey</h2>
+    <p>Supplier tyre inspection capture portal</p>
+
+    <form
+        id="tyre-survey-form"
+        method="post"
+        enctype="multipart/form-data"
+    >
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ frappe.session.csrf_token or '' }}"
+        >
+
+        <input
+            type="hidden"
+            name="draft_name"
+            value="{{ form_values.draft_name or '' }}"
+        >
+
+        <input
+            type="hidden"
+            name="survey_attachment"
+            id="survey_attachment"
+            value="{{ form_values.survey_attachment or '' }}"
+        >
+
+        <input
+            type="hidden"
+            name="tyres_json"
+            id="tyres_json"
+        >
+
+        <script
+            type="application/json"
+            id="tyre_rows_json"
+        >
+            {{ tyre_rows | tojson }}
+        </script>
+
+        <div class="survey-card">
+            <h4>Machine Information</h4>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="site">
+                        Site
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <select
+                        class="form-control"
+                        name="site"
+                        id="site"
+                        required
+                    >
+                        <option value="">
+                            Select Site
+                        </option>
+
+                        {% for site in site_options %}
+                        <option
+                            value="{{ site }}"
+                            {% if form_values.site == site %}
+                            selected
+                            {% endif %}
+                        >
+                            {{ site }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="fleet_number">
+                        Fleet Number
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <select
+                        class="form-control"
+                        name="fleet_number"
+                        id="fleet_number"
+                        required
+                    >
+                        <option value="">
+                            Select Fleet Number
+                        </option>
+
+                        {% for asset in asset_options %}
+                        <option
+                            value="{{ asset }}"
+                            {% if form_values.fleet_number == asset %}
+                            selected
+                            {% endif %}
+                        >
+                            {{ asset }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <small
+                        id="asset-lookup-status"
+                        class="form-text text-muted"
+                    ></small>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="survey_date">
+                        Survey Date
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <input
+                        type="date"
+                        class="form-control"
+                        name="survey_date"
+                        id="survey_date"
+                        value="{{ form_values.survey_date or '' }}"
+                        required
+                    >
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="vehicle_make">
+                        Vehicle Make
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control calculated-field"
+                        id="vehicle_make"
+                        readonly
+                        placeholder="Loaded from Fleet Number"
+                    >
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="vehicle_model">
+                        Model
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control calculated-field"
+                        id="vehicle_model"
+                        readonly
+                        placeholder="Loaded from Fleet Number"
+                    >
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="machine_type">
+                        Machine Type
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control calculated-field"
+                        id="machine_type"
+                        readonly
+                        placeholder="Loaded from Fleet Number"
+                    >
+                </div>
+            </div>
+        </div>
+
+        <div class="survey-card">
+            <div
+                class="d-flex justify-content-between align-items-center mb-3"
+            >
+                <h4 class="mb-0">Tyre Information</h4>
+
+                <button
+                    type="button"
+                    class="btn btn-sm btn-secondary"
+                    id="add-tyre-btn"
+                >
+                    Add Tyre
+                </button>
+            </div>
+
+            <div id="tyre-rows-container"></div>
+        </div>
+
+        <div class="survey-card">
+            <h4>Attachment and Remarks</h4>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>
+                        Attach Original Survey Report
+                    </label>
+
+                    <div>
+                        <label
+                            for="survey-file-input"
+                            class="btn btn-default btn-sm"
+                        >
+                            Attach File
+                        </label>
+
+                        <span
+                            id="selected-file-name"
+                            class="text-muted small ml-2"
+                        >
+                            No file chosen
+                        </span>
+                    </div>
+
+                    <input
+                        type="file"
+                        id="survey-file-input"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        style="
+                            position: absolute;
+                            left: -9999px;
+                            width: 1px;
+                            height: 1px;
+                            opacity: 0;
+                        "
+                    >
+
+                    <small
+                        id="upload-status"
+                        class="form-text text-muted"
+                    ></small>
+
+                    <div
+                        id="uploaded-file-link"
+                        class="mt-2"
+                    ></div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="general_remarks">
+                        General Remarks
+                    </label>
+
+                    <textarea
+                        class="form-control"
+                        name="general_remarks"
+                        id="general_remarks"
+                        rows="4"
+                    >{{ form_values.general_remarks or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <button
+            type="submit"
+            class="btn btn-primary button-space"
+            id="save-btn"
+        >
+            Save Draft
+        </button>
+
+        <a
+            href="/tyre_survey_list"
+            class="btn btn-danger"
+        >
+            See List
+        </a>
+    </form>
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById(
+        "tyre-survey-form"
+    );
+
+    const rowsContainer = document.getElementById(
+        "tyre-rows-container"
+    );
+
+    const addTyreButton = document.getElementById(
+        "add-tyre-btn"
+    );
+
+    const tyresJsonInput = document.getElementById(
+        "tyres_json"
+    );
+
+    const saveButton = document.getElementById(
+        "save-btn"
+    );
+
+    const fileInput = document.getElementById(
+        "survey-file-input"
+    );
+
+    const attachmentInput = document.getElementById(
+        "survey_attachment"
+    );
+
+    const uploadStatus = document.getElementById(
+        "upload-status"
+    );
+
+    const selectedFileName = document.getElementById(
+        "selected-file-name"
+    );
+
+    const uploadedFileLink = document.getElementById(
+        "uploaded-file-link"
+    );
+
+    const fleetNumberInput = document.getElementById(
+        "fleet_number"
+    );
+
+    const vehicleMakeInput = document.getElementById(
+        "vehicle_make"
+    );
+
+    const vehicleModelInput = document.getElementById(
+        "vehicle_model"
+    );
+
+    const machineTypeInput = document.getElementById(
+        "machine_type"
+    );
+
+    const assetLookupStatus = document.getElementById(
+        "asset-lookup-status"
+    );
+
+    let lastLoadedFleetNumber = "";
+
+    let tyreRows = JSON.parse(
+        document.getElementById(
+            "tyre_rows_json"
+        ).textContent || "[]"
+    );
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function numberValue(value) {
+        const parsed = parseFloat(value);
+
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+
+        return 0;
+    }
+
+    function calculateRow(row) {
+        const otd = numberValue(row.otd);
+        const rtd1 = numberValue(row.rtd_1);
+        const rtd2 = numberValue(row.rtd_2);
+
+        const recommended = numberValue(
+            row.recommended_pressure
+        );
+
+        const actual = numberValue(
+            row.actual_pressure
+        );
+
+        const averageRtd = rtd2 > 0
+            ? (rtd1 + rtd2) / 2
+            : rtd1;
+
+        row.rtd_percent = otd > 0
+            ? ((averageRtd / otd) * 100).toFixed(1)
+            : "0.0";
+
+        row.pressure_variance =
+            recommended > 0 && actual > 0
+                ? (
+                    (
+                        (actual - recommended)
+                        / recommended
+                    ) * 100
+                ).toFixed(1)
+                : "0.0";
+    }
+
+    function inputField(
+        index,
+        fieldname,
+        label,
+        value,
+        type,
+        required,
+        readonly
+    ) {
+        const inputType = type || "text";
+        const requiredText = required ? "required" : "";
+        const readonlyText = readonly ? "readonly" : "";
+        const requiredMark = required
+            ? '<span class="text-danger">*</span>'
+            : "";
+
+        const calculatedClass = readonly
+            ? "calculated-field"
+            : "";
+
+        const stepText = inputType === "number"
+            ? 'step="0.01"'
+            : "";
+
+        const minText =
+            inputType === "number" && !readonly
+                ? 'min="0"'
+                : "";
+
+        return `
+            <div class="col-md-3 mb-3">
+                <label>
+                    ${escapeHtml(label)}
+                    ${requiredMark}
+                </label>
+
+                <input
+                    type="${inputType}"
+                    ${stepText}
+                    ${minText}
+                    class="form-control tyre-field
+                        ${calculatedClass}"
+                    data-index="${index}"
+                    data-field="${escapeHtml(fieldname)}"
+                    value="${escapeHtml(value)}"
+                    ${requiredText}
+                    ${readonlyText}
+                >
+            </div>
+        `;
+    }
+
+    function textareaField(
+        index,
+        fieldname,
+        label,
+        value
+    ) {
+        return `
+            <div class="col-md-6 mb-3">
+                <label>${escapeHtml(label)}</label>
+
+                <textarea
+                    class="form-control tyre-field"
+                    data-index="${index}"
+                    data-field="${escapeHtml(fieldname)}"
+                    rows="2"
+                >${escapeHtml(value)}</textarea>
+            </div>
+        `;
+    }
+
+    function renderRows() {
+        rowsContainer.innerHTML = tyreRows.map(
+            function (row, index) {
+                calculateRow(row);
+
+                return `
+                    <div class="tyre-row-card">
+                        <div class="tyre-row-heading">
+                            <strong>
+                                Tyre ${index + 1}
+                            </strong>
+
+                            <button
+                                type="button"
+                                class="btn btn-sm
+                                    btn-outline-danger
+                                    remove-tyre-btn"
+                                data-index="${index}"
+                            >
+                                Remove
+                            </button>
+                        </div>
+
+                        <div class="row">
+                            ${inputField(
+                                index,
+                                "position",
+                                "Position",
+                                row.position,
+                                "text",
+                                true,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "tyre_make",
+                                "Tyre Make",
+                                row.tyre_make,
+                                "text",
+                                true,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "serial_number",
+                                "Serial Number",
+                                row.serial_number,
+                                "text",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "brand_number",
+                                "Brand Number",
+                                row.brand_number,
+                                "text",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "tyre_size",
+                                "Tyre Size",
+                                row.tyre_size,
+                                "text",
+                                true,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "tread_pattern",
+                                "Tread Pattern",
+                                row.tread_pattern,
+                                "text",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "star_ply_rating",
+                                "Star/Ply Rating",
+                                row.star_ply_rating,
+                                "text",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "tra_code",
+                                "TRA Code",
+                                row.tra_code,
+                                "text",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "compound_code",
+                                "Compound Code",
+                                row.compound_code,
+                                "text",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "overall_diameter",
+                                "Overall Diameter / ROD",
+                                row.overall_diameter,
+                                "number",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "otd",
+                                "Original Tread Depth",
+                                row.otd,
+                                "number",
+                                true,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "rtd_1",
+                                "Remaining Tread Depth 1",
+                                row.rtd_1,
+                                "number",
+                                true,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "rtd_2",
+                                "Remaining Tread Depth 2",
+                                row.rtd_2,
+                                "number",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "rtd_percent",
+                                "Remaining Tread %",
+                                row.rtd_percent,
+                                "number",
+                                false,
+                                true
+                            )}
+
+                            ${inputField(
+                                index,
+                                "recommended_pressure",
+                                "Recommended Pressure",
+                                row.recommended_pressure,
+                                "number",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "actual_pressure",
+                                "Actual Pressure",
+                                row.actual_pressure,
+                                "number",
+                                false,
+                                false
+                            )}
+
+                            ${inputField(
+                                index,
+                                "pressure_variance",
+                                "Pressure Variance %",
+                                row.pressure_variance,
+                                "number",
+                                false,
+                                true
+                            )}
+
+                            ${textareaField(
+                                index,
+                                "condition_notes",
+                                "Condition Notes",
+                                row.condition_notes
+                            )}
+
+                            ${textareaField(
+                                index,
+                                "required_action",
+                                "Required Action",
+                                row.required_action
+                            )}
+                        </div>
+                    </div>
+                `;
+            }
+        ).join("");
+    }
+
+    function readRowsFromForm() {
+        document.querySelectorAll(
+            ".tyre-field"
+        ).forEach(function (element) {
+            const index = Number(
+                element.dataset.index
+            );
+
+            const fieldname =
+                element.dataset.field;
+
+            if (!tyreRows[index]) {
+                return;
+            }
+
+            tyreRows[index][fieldname] =
+                element.value;
+        });
+
+        tyreRows.forEach(calculateRow);
+    }
+
+    rowsContainer.addEventListener(
+        "input",
+        function (event) {
+            const element = event.target.closest(
+                ".tyre-field"
+            );
+
+            if (!element) {
+                return;
+            }
+
+            const index = Number(
+                element.dataset.index
+            );
+
+            const fieldname =
+                element.dataset.field;
+
+            tyreRows[index][fieldname] =
+                element.value;
+
+            const calculationFields = [
+                "otd",
+                "rtd_1",
+                "rtd_2",
+                "recommended_pressure",
+                "actual_pressure"
+            ];
+
+            if (!calculationFields.includes(fieldname)) {
+                return;
+            }
+
+            calculateRow(tyreRows[index]);
+
+            const rtdField =
+                rowsContainer.querySelector(
+                    `[data-index="${index}"]`
+                    + `[data-field="rtd_percent"]`
+                );
+
+            const varianceField =
+                rowsContainer.querySelector(
+                    `[data-index="${index}"]`
+                    + `[data-field="pressure_variance"]`
+                );
+
+            if (rtdField) {
+                rtdField.value =
+                    tyreRows[index].rtd_percent;
+            }
+
+            if (varianceField) {
+                varianceField.value =
+                    tyreRows[index]
+                        .pressure_variance;
+            }
+        }
+    );
+
+    rowsContainer.addEventListener(
+        "click",
+        function (event) {
+            const button = event.target.closest(
+                ".remove-tyre-btn"
+            );
+
+            if (!button) {
+                return;
+            }
+
+            readRowsFromForm();
+
+            const index = Number(
+                button.dataset.index
+            );
+
+            tyreRows.splice(index, 1);
+            renderRows();
+        }
+    );
+
+    addTyreButton.addEventListener(
+        "click",
+        function () {
+            readRowsFromForm();
+
+            tyreRows.push({
+                position: "",
+                tyre_make: "",
+                serial_number: "",
+                brand_number: "",
+                tyre_size: "",
+                tread_pattern: "",
+                star_ply_rating: "",
+                tra_code: "",
+                compound_code: "",
+                overall_diameter: "",
+                otd: "",
+                rtd_1: "",
+                rtd_2: "",
+                rtd_percent: "",
+                recommended_pressure: "",
+                actual_pressure: "",
+                pressure_variance: "",
+                condition_notes: "",
+                required_action: ""
+            });
+
+            renderRows();
+        }
+    );
+
+    function clearAssetInformation() {
+        vehicleMakeInput.value = "";
+        vehicleModelInput.value = "";
+        machineTypeInput.value = "";
+    }
+
+    function loadAssetInformation() {
+        const assetName =
+            fleetNumberInput.value.trim();
+
+        if (!assetName) {
+            clearAssetInformation();
+            assetLookupStatus.textContent = "";
+            lastLoadedFleetNumber = "";
+            return;
+        }
+
+        if (assetName === lastLoadedFleetNumber) {
+            return;
+        }
+
+        clearAssetInformation();
+
+        assetLookupStatus.textContent =
+            "Loading vehicle information...";
+
+        frappe.call({
+            method:
+                "engineering.templates.pages."
+                + "tyre_survey_sup."
+                + "get_asset_information",
+
+            args: {
+                asset_name: assetName
+            },
+
+            callback: function (response) {
+                const information =
+                    response.message || {};
+
+                vehicleMakeInput.value =
+                    information.vehicle_make || "";
+
+                vehicleModelInput.value =
+                    information.model || "";
+
+                machineTypeInput.value =
+                    information.machine_type || "";
+
+                lastLoadedFleetNumber = assetName;
+
+                if (
+                    !information.vehicle_make
+                    && !information.model
+                    && !information.machine_type
+                ) {
+                    assetLookupStatus.textContent =
+                        "The Asset was found, but no "
+                        + "Make, Model or Machine Type "
+                        + "is recorded.";
+                } else {
+                    assetLookupStatus.textContent =
+                        "Vehicle information loaded.";
+                }
+            },
+
+            error: function () {
+                clearAssetInformation();
+                lastLoadedFleetNumber = "";
+
+                assetLookupStatus.textContent =
+                    "Could not load vehicle information.";
+            }
+        });
+    }
+
+    fleetNumberInput.addEventListener(
+        "change",
+        loadAssetInformation
+    );
+
+    async function uploadFile(file) {
+        const formData = new FormData();
+
+        formData.append("file", file);
+        formData.append("is_private", "0");
+
+        const csrfToken =
+            (
+                window.frappe
+                && frappe.csrf_token
+            )
+            || window.csrf_token
+            || document.querySelector(
+                'input[name="csrf_token"]'
+            ).value;
+
+        const response = await fetch(
+            "/api/method/upload_file",
+            {
+                method: "POST",
+                headers: {
+                    "X-Frappe-CSRF-Token":
+                        csrfToken
+                },
+                body: formData,
+                credentials: "same-origin"
+            }
+        );
+
+        const data = await response.json();
+
+        if (
+            !response.ok
+            || data.exc
+            || !data.message
+            || !data.message.file_url
+        ) {
+            throw new Error("Upload failed");
+        }
+
+        return data.message.file_url;
+    }
+
+    fileInput.addEventListener(
+        "change",
+        async function () {
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            selectedFileName.textContent =
+                file.name;
+
+            uploadStatus.textContent =
+                "Uploading...";
+
+            uploadedFileLink.innerHTML = "";
+            attachmentInput.value = "";
+            saveButton.disabled = true;
+
+            try {
+                const fileUrl =
+                    await uploadFile(file);
+
+                attachmentInput.value = fileUrl;
+
+                uploadStatus.textContent =
+                    "Upload complete.";
+
+                uploadedFileLink.innerHTML =
+                    '<a href="'
+                    + escapeHtml(fileUrl)
+                    + '" target="_blank">'
+                    + 'View uploaded file'
+                    + '</a>';
+            } catch (error) {
+                attachmentInput.value = "";
+
+                uploadStatus.textContent =
+                    "Upload failed. Please try again.";
+
+                selectedFileName.textContent =
+                    "No file chosen";
+            } finally {
+                saveButton.disabled = false;
+            }
+        }
+    );
+
+    form.addEventListener(
+        "submit",
+        function () {
+            readRowsFromForm();
+
+            tyresJsonInput.value =
+                JSON.stringify(tyreRows);
+
+            saveButton.disabled = true;
+            saveButton.textContent = "Saving...";
+        }
+    );
+
+    if (attachmentInput.value) {
+        const existingFileName =
+            attachmentInput.value
+                .split("/")
+                .pop();
+
+        selectedFileName.textContent =
+            existingFileName || "Uploaded file";
+
+        uploadedFileLink.innerHTML =
+            '<a href="'
+            + escapeHtml(attachmentInput.value)
+            + '" target="_blank">'
+            + 'View uploaded file'
+            + '</a>';
+
+        uploadStatus.textContent =
+            "Existing attachment loaded.";
+    }
+
+    renderRows();
+
+    if (fleetNumberInput.value.trim()) {
+        loadAssetInformation();
+    }
+})();
+</script>
+{% endblock %}

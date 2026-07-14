@@ -2,25 +2,111 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
+ "autoname": "field:serial_number",
  "creation": "2026-07-14 06:02:12.024968",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_o82d"
+  "serial_number",
+  "brand_number",
+  "tyre_make",
+  "tyre_size",
+  "tread_pattern",
+  "star_ply_rating",
+  "tra_code",
+  "compound_code",
+  "overall_diameter",
+  "otd",
+  "recommended_pressure",
+  "supplier",
+  "active"
  ],
  "fields": [
   {
-   "fieldname": "section_break_o82d",
-   "fieldtype": "Section Break"
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Serial Number",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "brand_number",
+   "fieldtype": "Data",
+   "label": "Brand Number"
+  },
+  {
+   "fieldname": "tyre_make",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tyre Make",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tyre_size",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tyre Size",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tread_pattern",
+   "fieldtype": "Data",
+   "label": "Tread Pattern"
+  },
+  {
+   "fieldname": "star_ply_rating",
+   "fieldtype": "Data",
+   "label": "Star/Ply Rating"
+  },
+  {
+   "fieldname": "tra_code",
+   "fieldtype": "Data",
+   "label": "TRA Code"
+  },
+  {
+   "fieldname": "compound_code",
+   "fieldtype": "Data",
+   "label": "Compound Code"
+  },
+  {
+   "fieldname": "overall_diameter",
+   "fieldtype": "Float",
+   "label": "Overall Diameter"
+  },
+  {
+   "fieldname": "otd",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Original Tread Depth",
+   "reqd": 1
+  },
+  {
+   "fieldname": "recommended_pressure",
+   "fieldtype": "Float",
+   "label": "Recommended Pressure"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 06:02:12.024968",
+ "modified": "2026-07-14 06:27:41.421499",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Tyre Master",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -40,5 +126,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

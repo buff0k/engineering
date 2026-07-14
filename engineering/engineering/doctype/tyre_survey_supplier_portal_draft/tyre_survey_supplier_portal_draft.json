@@ -2,17 +2,22 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
+ "autoname": "format:TSD-{YYYY}-{#####}",
  "creation": "2026-07-12 21:17:56.403297",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "survey_information",
   "supplier",
   "site",
   "fleet_number",
   "survey_date",
+  "attachment_section",
   "survey_attachment",
   "general_remarks",
+  "tyre_section",
   "tyres",
+  "portal_information",
   "portal_user",
   "sent_to_erp",
   "sent_on",
@@ -22,10 +27,8 @@
   {
    "fieldname": "portal_user",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Portal User",
-   "options": "User",
-   "reqd": 1
+   "options": "User"
   },
   {
    "default": "0",
@@ -36,28 +39,27 @@
   {
    "fieldname": "sent_on",
    "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "Sent On",
-   "reqd": 1
+   "label": "Sent On"
   },
   {
    "fieldname": "erp_document",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "ERP Document",
-   "options": "Tyre Survey",
-   "reqd": 1
+   "options": "Tyre Survey"
   },
   {
    "fieldname": "supplier",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Supplier",
    "options": "Supplier",
+   "read_only": 1,
    "reqd": 1
   },
   {
    "fieldname": "site",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Site",
    "options": "Location",
    "reqd": 1
@@ -65,6 +67,7 @@
   {
    "fieldname": "fleet_number",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Fleet Number",
    "options": "Asset",
    "reqd": 1
@@ -72,6 +75,7 @@
   {
    "fieldname": "survey_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Survey Date",
    "reqd": 1
   },
@@ -89,17 +93,37 @@
    "fieldname": "tyres",
    "fieldtype": "Table",
    "label": "Tyres",
-   "options": "Tyre survey item",
-   "reqd": 1
+   "options": "Tyre survey item"
+  },
+  {
+   "fieldname": "survey_information",
+   "fieldtype": "Section Break",
+   "label": "Survey Information"
+  },
+  {
+   "fieldname": "attachment_section",
+   "fieldtype": "Section Break",
+   "label": "Attachments"
+  },
+  {
+   "fieldname": "tyre_section",
+   "fieldtype": "Section Break",
+   "label": "Tyres"
+  },
+  {
+   "fieldname": "portal_information",
+   "fieldtype": "Section Break",
+   "label": "Portal Information"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 05:30:34.116494",
+ "modified": "2026-07-14 06:54:03.571220",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Tyre Survey Supplier Portal Draft",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -118,5 +142,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

@@ -1,0 +1,240 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    <h2>My Tyre Surveys</h2>
+    <p>Saved drafts and submitted tyre surveys</p>
+
+    <div class="mb-3">
+        <a
+            class="btn btn-primary mr-2"
+            href="/tyre_survey_sup"
+        >
+            New Tyre Survey
+        </a>
+
+        <button
+            type="button"
+            class="btn btn-danger"
+            id="send-selected-btn"
+        >
+            Send Selected
+        </button>
+    </div>
+
+    {% if records %}
+    <div class="table-responsive">
+        <table
+            class="table table-bordered table-hover"
+        >
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input
+                            type="checkbox"
+                            id="select-all-records"
+                        >
+                    </th>
+
+                    <th>ID</th>
+                    <th>Site</th>
+                    <th>Fleet Number</th>
+                    <th>Survey Date</th>
+                    <th>Status</th>
+                    <th style="width: 190px;"></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in records %}
+                <tr>
+                    <td>
+                        {% if not row.sent_to_erp %}
+                        <input
+                            type="checkbox"
+                            class="record-checkbox"
+                            value="{{ row.name }}"
+                        >
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if not row.sent_to_erp %}
+                        <a
+                            href="/tyre_survey_sup?draft_name={{ row.name }}"
+                        >
+                            {{ row.name }}
+                        </a>
+                        {% else %}
+                            {{ row.name }}
+                        {% endif %}
+                    </td>
+
+                    <td>{{ row.site or "" }}</td>
+
+                    <td>
+                        {{ row.fleet_number or "" }}
+                    </td>
+
+                    <td>
+                        {{ row.survey_date or "" }}
+                    </td>
+
+                    <td>
+                        {% if row.sent_to_erp %}
+                        <span class="badge badge-success">
+                            Submitted
+                        </span>
+                        {% else %}
+                        <span class="badge badge-warning">
+                            Draft
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td style="white-space: nowrap;">
+                        {% if row.erp_document %}
+                        <div
+                            class="text-muted small mb-1"
+                        >
+                            ERP: {{ row.erp_document }}
+                        </div>
+                        {% endif %}
+
+                        {% if not row.sent_to_erp %}
+                        <a
+                            href="/tyre_survey_sup?draft_name={{ row.name }}"
+                            class="btn btn-sm btn-primary mr-1"
+                        >
+                            Edit
+                        </a>
+
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-danger send-one-btn"
+                            data-name="{{ row.name }}"
+                        >
+                            Send
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No Tyre Survey records found.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const selectAll = document.getElementById(
+        "select-all-records"
+    );
+
+    const sendSelectedButton =
+        document.getElementById(
+            "send-selected-btn"
+        );
+
+    function getCheckedNames() {
+        return Array.from(
+            document.querySelectorAll(
+                ".record-checkbox:checked"
+            )
+        ).map(function (checkbox) {
+            return checkbox.value;
+        });
+    }
+
+    function sendRecords(names) {
+        if (!names.length) {
+            alert(
+                "Please select at least one draft record."
+            );
+            return;
+        }
+
+        const confirmed = window.confirm(
+            "Send the selected Tyre Survey "
+            + "records to ERP?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        frappe.call({
+            method:
+                "engineering.templates.pages."
+                + "tyre_survey_list."
+                + "send_tyre_surveys",
+
+            args: {
+                names: names
+            },
+
+            freeze: true,
+
+            freeze_message:
+                "Sending Tyre Surveys...",
+
+            callback: function (response) {
+                if (response.exc) {
+                    alert("Send failed.");
+                    return;
+                }
+
+                window.location.reload();
+            },
+
+            error: function () {
+                alert("Send failed.");
+            }
+        });
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener(
+            "change",
+            function () {
+                document.querySelectorAll(
+                    ".record-checkbox"
+                ).forEach(function (checkbox) {
+                    checkbox.checked =
+                        selectAll.checked;
+                });
+            }
+        );
+    }
+
+    if (sendSelectedButton) {
+        sendSelectedButton.addEventListener(
+            "click",
+            function () {
+                sendRecords(
+                    getCheckedNames()
+                );
+            }
+        );
+    }
+
+    document.querySelectorAll(
+        ".send-one-btn"
+    ).forEach(function (button) {
+        button.addEventListener(
+            "click",
+            function () {
+                sendRecords([
+                    button.dataset.name
+                ]);
+            }
+        );
+    });
+})();
+</script>
+{% endblock %}
