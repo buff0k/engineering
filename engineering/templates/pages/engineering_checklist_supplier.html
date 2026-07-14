@@ -3,7 +3,9 @@
 {% block page_content %}
 <style>
     .checklist-wrap {
+        max-height: 700px;
         overflow-x: auto;
+        overflow-y: auto;
         border: 1px solid #ddd;
         margin-top: 15px;
     }
@@ -17,7 +19,7 @@
         background: #f5f5f5;
         position: sticky;
         top: 0;
-        z-index: 2;
+        z-index: 20;
         white-space: nowrap;
     }
 
@@ -83,6 +85,30 @@
         color: #333 !important;
         border: 1px solid #ced4da !important;
     }
+
+
+/* Keep header above horizontal scrolling */
+.checklist-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f5f5f5;
+    z-index: 20;
+}
+
+.sticky-col {
+    position: sticky !important;
+    left: 0;
+    background: white;
+    z-index: 30 !important;
+}
+
+.sticky-col-2 {
+    position: sticky !important;
+    left: 120px;
+    background: white;
+    z-index: 30 !important;
+}
+
 </style>
 
 <script>
