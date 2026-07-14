@@ -21,6 +21,7 @@
   "breakdown_start_datetime",
   "mechanic_breakdown_maintenance_start_time",
   "breakdown_reason",
+  "location1",
   "column_break_zygn",
   "resolution_summary",
   "resolved_datetime",
@@ -268,12 +269,17 @@
   {
    "fieldname": "section_break_eyak",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "location1",
+   "fieldtype": "Data",
+   "label": "Location"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-03 16:24:58.046577",
+ "modified": "2026-07-14 06:01:51.599291",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
@@ -300,7 +306,8 @@
    "report": 1,
    "role": "Production Manager",
    "select": 1,
-   "share": 1
+   "share": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -315,6 +322,7 @@
    "write": 1
   },
   {
+   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -322,7 +330,8 @@
    "report": 1,
    "role": "Engineering Manager",
    "select": 1,
-   "share": 1
+   "share": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -333,6 +342,61 @@
    "report": 1,
    "role": "Engineering User",
    "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Foreman",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Area Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Supervisor",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Foreman",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Supervisor",
    "share": 1,
    "write": 1
   }

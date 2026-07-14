@@ -1,0 +1,122 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-12 21:17:56.403297",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier",
+  "site",
+  "fleet_number",
+  "survey_date",
+  "survey_attachment",
+  "general_remarks",
+  "tyres",
+  "portal_user",
+  "sent_to_erp",
+  "sent_on",
+  "erp_document"
+ ],
+ "fields": [
+  {
+   "fieldname": "portal_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Portal User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sent_to_erp",
+   "fieldtype": "Check",
+   "label": "Sent To ERP"
+  },
+  {
+   "fieldname": "sent_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Sent On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "erp_document",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "ERP Document",
+   "options": "Tyre Survey",
+   "reqd": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "reqd": 1
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "label": "Fleet Number",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "survey_date",
+   "fieldtype": "Date",
+   "label": "Survey Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "survey_attachment",
+   "fieldtype": "Attach",
+   "label": "Survey Attachment"
+  },
+  {
+   "fieldname": "general_remarks",
+   "fieldtype": "Small Text",
+   "label": "General Remarks"
+  },
+  {
+   "fieldname": "tyres",
+   "fieldtype": "Table",
+   "label": "Tyres",
+   "options": "Tyre survey item",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-14 05:30:34.116494",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Tyre Survey Supplier Portal Draft",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
