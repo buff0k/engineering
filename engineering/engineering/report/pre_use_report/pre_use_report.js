@@ -71,15 +71,14 @@ frappe.query_reports["Pre-Use Report"] = {
                     }
 
                     .pre-use-legend {
-                        position: absolute;
-                        top: 58px;
-                        right: 20px;
+                        display: inline-block;
+                        float: right;
+                        margin: 12px 20px 14px 0;
                         background: #ffffff;
                         border-radius: 14px;
                         padding: 14px 16px;
                         box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
                         font-size: 13px;
-                        z-index: 20;
                         min-width: 275px;
                         border: 1px solid #e5e7eb;
                     }
@@ -137,13 +136,15 @@ frappe.query_reports["Pre-Use Report"] = {
         }
 
         if (!report.page.wrapper.find(".pre-use-legend").length) {
-            report.page.wrapper.prepend(`
-                <div class="pre-use-legend">
-                    <div class="pre-use-legend-title">Pre-Use Report Legend</div>
-                    <div>🟠 End Hours = 0</div>
-                    <div>🔴 Working Hours = 0</div>
-                    <div>🔴 Working Hours > 24</div>
-                    <div>🟢 Normal Working Hours</div>
+            report.page.wrapper.find(".report-wrapper").before(`
+                <div style="display:flex;justify-content:flex-end;clear:both;">
+                    <div class="pre-use-legend">
+                        <div class="pre-use-legend-title">Pre-Use Report Legend</div>
+                        <div>🟠 End Hours = 0</div>
+                        <div>🔴 Working Hours = 0</div>
+                        <div>🔴 Working Hours > 24</div>
+                        <div>🟢 Normal Working Hours</div>
+                    </div>
                 </div>
             `);
         }
