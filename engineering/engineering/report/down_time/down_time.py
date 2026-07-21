@@ -315,8 +315,8 @@ def get_avail_util_scope_summary(previous_date, site, machine_scope):
         if not key:
             continue
 
-        summary[key]["availability"] = row.get("plant_shift_availability")
-        summary[key]["utilisation"] = row.get("plant_shift_utilisation")
+        summary[key]["availability"] = row.get("avail_target_percent")
+        summary[key]["utilisation"] = row.get("util_target_percent")
 
     return summary
 
