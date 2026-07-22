@@ -114,6 +114,30 @@
    "read_only": 0
   },
   {
+   "default": "0",
+   "fieldname": "skip_needs_review_messages",
+   "fieldtype": "Check",
+   "label": "Skip Needs Review Messages"
+  },
+  {
+   "default": "1",
+   "fieldname": "import_book_down_messages",
+   "fieldtype": "Check",
+   "label": "Import Book Down Messages"
+  },
+  {
+   "default": "1",
+   "fieldname": "import_book_back_messages",
+   "fieldtype": "Check",
+   "label": "Import Book Back Messages"
+  },
+  {
+   "default": "0",
+   "fieldname": "skip_ignored_messages",
+   "fieldtype": "Check",
+   "label": "Skip Ignored Messages"
+  },
+  {
    "fieldname": "result_section",
    "fieldtype": "Section Break",
    "label": "Import Results"

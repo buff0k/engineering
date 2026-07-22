@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:serial_number",
  "creation": "2026-07-14 06:02:12.024968",
@@ -102,7 +103,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 06:27:41.421499",
+ "modified": "2026-07-16 10:46:06.882406",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Tyre Master",

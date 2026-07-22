@@ -237,7 +237,7 @@ def import_chat(import_name):
 
     file_path = get_file_path(doc.chat_file)
     chat_text = read_chat_text(file_path)
-    messages = parse_exported_chat(chat_text)
+    parsed_messages = parse_exported_chat(chat_text)
 
     total = 0
     created = 0
@@ -246,56 +246,51 @@ def import_chat(import_name):
     needs_review = 0
     skipped_by_action = 0
     skipped_by_date = 0
+    skipped_status_reports = 0
 
     import_from_date = getdate(doc.import_from_date or "2026-06-01")
     import_to_date = getdate(doc.import_to_date or today())
-    skipped_status_reports = 0
 
-    for msg in messages:
+    for msg in parsed_messages:
         total += 1
 
         message_text = normalize_message_text(msg.get("message"))
         sender = msg.get("sender") or ""
         message_datetime = msg.get("datetime")
-
         message_date = getdate(message_datetime)
+
         if message_date < import_from_date or message_date > import_to_date:
             skipped_by_date += 1
             continue
 
-        if not message_text or not message_text.strip():
+        if is_system_or_blank_message(message_text):
             ignored += 1
             continue
 
-        message_text_lower = message_text.strip().lower()
+        source_id = make_unique_source_id(
+            doc.name,
+            message_datetime,
+            sender,
+            message_text,
+        )
 
-        if message_text_lower in [
-            "<media omitted>",
-            "this message was deleted",
-            "you deleted this message",
-        ]:
-            ignored += 1
-            continue
-
-        if "messages and calls are end-to-end encrypted" in message_text_lower:
-            ignored += 1
-            continue
-
-        source_id = make_unique_source_id(doc.name, message_datetime, sender, message_text)
-
-        if frappe.db.exists("WhatsApp Breakdown Message Log", {"source_message_id": source_id}):
+        if frappe.db.exists(
+            "WhatsApp Breakdown Message Log",
+            {"source_message_id": source_id},
+        ):
             duplicates += 1
             continue
 
-        # Full status reports must be skipped when this box is ticked.
-        # They must not become Book Down or Needs Review.
+        # Status reports are ignored outright when requested. They must not be
+        # parsed into Book Down / Book Back actions or Needs Review records.
         if doc.skip_status_reports and is_full_status_report(message_text):
             skipped_status_reports += 1
             ignored += 1
             continue
 
-        # If only plant messages is ticked, messages without plant number are ignored.
-        # They must only create logs if Skip Ignored Messages is unticked.
+        # When only plant-related messages are requested, a message without a
+        # plant number is an ignored message. Create an Ignored log only when
+        # the user has not asked to skip ignored messages.
         if doc.only_messages_with_plant and not contains_plant_number(message_text):
             ignored += 1
 
@@ -359,18 +354,24 @@ def import_chat(import_name):
     doc.needs_review_messages = needs_review
     doc.import_status = "Completed"
 
-    messages = []
+    result_messages = []
 
     if skipped_status_reports:
-        messages.append(f"Skipped full status reports: {skipped_status_reports}")
+        result_messages.append(
+            f"Skipped full status reports: {skipped_status_reports}"
+        )
 
     if skipped_by_date:
-        messages.append(f"Skipped outside import date range: {skipped_by_date}")
+        result_messages.append(
+            f"Skipped outside import date range: {skipped_by_date}"
+        )
 
     if skipped_by_action:
-        messages.append(f"Skipped by Book Down/Book Back filter: {skipped_by_action}")
+        result_messages.append(
+            f"Skipped by Book Down/Book Back filter: {skipped_by_action}"
+        )
 
-    doc.error_message = "\n".join(messages) if messages else None
+    doc.error_message = "\n".join(result_messages) if result_messages else None
     doc.save(ignore_permissions=True)
 
     frappe.db.commit()
@@ -385,4 +386,3 @@ def import_chat(import_name):
         "skipped_by_action": skipped_by_action,
         "skipped_by_date": skipped_by_date,
     }
-

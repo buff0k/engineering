@@ -8,6 +8,7 @@
  "field_order": [
   "supplier",
   "site",
+  "inspector_name",
   "fleet_number",
   "survey_date",
   "tyres",
@@ -58,12 +59,18 @@
    "label": "Portal User",
    "options": "User",
    "reqd": 1
+  },
+  {
+   "fieldname": "inspector_name",
+   "fieldtype": "Data",
+   "label": "Inspector Name",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-12 21:16:58.038352",
+ "modified": "2026-07-15 15:45:39.492223",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Tyre Survey",

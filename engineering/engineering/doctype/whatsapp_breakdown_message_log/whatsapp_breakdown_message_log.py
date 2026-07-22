@@ -36,6 +36,79 @@ def clean_line(line):
     return str(line or "").strip()
 
 
+def is_review_only_message(text):
+    text_lower = (text or "").lower().strip()
+
+    if not text_lower:
+        return True
+
+    # Clear book-back messages must still be processed.
+    if re.search(r"\b(book\s*back|bookback|booked back)\b", text_lower):
+        return False
+
+    # Clear book-down messages must still be processed.
+    if re.search(r"\b(book\s*down|bookdown|booked down)\b", text_lower):
+        return False
+
+    review_phrases = [
+        "incident report",
+        "waiting for the incident report",
+        "need an incident report",
+        "standing till tomorrow",
+        "will be standing",
+        "remove",
+        "add",
+        "add is",
+        "add machine",
+        "add dozer",
+        "from gwab list",
+        "from the list",
+        "to our list",
+        "change the comment",
+        "remove the comment",
+        "please share km",
+        "share km",
+        "km readings",
+        "can we please have hours",
+        "please have hours",
+        "which one",
+        "working ?",
+        "working?",
+        "fixed?",
+        "feedback",
+        "who is attending",
+        "who's attending",
+        "offsite change",
+        "off site change",
+        "no breakdowns",
+        "back to production",
+        "power off",
+        "electricity",
+        "please note",
+        "pls note",
+        "please arrange",
+        "arrange a diesel bowser",
+        "must go to hino",
+        "hino for service",
+    ]
+
+    for phrase in review_phrases:
+        if phrase in text_lower:
+            return True
+
+    # Questions about a machine are review unless they are clear book-back/book-down.
+    if "?" in text_lower:
+        return True
+
+    # Status report style line, for example:
+    # ❌IS0611 *LHS No side mirror*
+    # This is a status/list item, not necessarily a new breakdown booking.
+    if re.search(r"^[✅❌🚫]\s*(is|ex)\s*\d{2,4}", text_lower, re.IGNORECASE):
+        return True
+
+    return False
+
+
 def get_shift_from_datetime(dt):
     dt = get_datetime(dt or now_datetime())
     hour = dt.hour

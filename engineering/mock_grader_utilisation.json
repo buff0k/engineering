@@ -1,0 +1,12 @@
+{
+  "dataset": "MOCK ONLY - GRADER UTILISATION 2026 H1",
+  "description": "Synthetic development data. Never combine with actual Availability and Utilisation records.",
+  "months": [
+    {"month": "2026-01", "grader_utilisation": 38, "damage_target": 17},
+    {"month": "2026-02", "grader_utilisation": 52, "damage_target": 14},
+    {"month": "2026-03", "grader_utilisation": 47, "damage_target": 16},
+    {"month": "2026-04", "grader_utilisation": 65, "damage_target": 11},
+    {"month": "2026-05", "grader_utilisation": 72, "damage_target": 10},
+    {"month": "2026-06", "grader_utilisation": 81, "damage_target": 7}
+  ]
+}
