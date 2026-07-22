@@ -1,6 +1,6 @@
 import frappe
 from urllib.parse import quote
-from frappe.utils import flt, getdate, add_days, date_diff
+from frappe.utils import flt, getdate, get_datetime, add_days, date_diff
 
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
     availability_and_utilisation_month_end_report as month_end,
@@ -212,10 +212,10 @@ def get_spare_swing_asset_map(filters):
 
 def apply_machine_scope_filter_to_dashboard_rows(rows, filters, spare_swing_asset_map):
     filters = filters or {}
-    machine_scope = filters.get("machine_scope") or "Include Swing/Spare"
+    machine_scope = filters.get("machine_scope") or "Production + Swing/Spare Machines"
     frappe.local.daily_dashboard_au_target_filter = filters.get("au_target_filter") or "100% A & U"
     
-    if machine_scope == "Include Swing/Spare":
+    if machine_scope == "Production + Swing/Spare Machines":
         return rows
 
     filtered_rows = []
@@ -312,11 +312,11 @@ def execute(filters=None):
     if filters.get("location") and not filters.get("site"):
         filters["site"] = filters.get("location")
 
-    summary_type = filters.get("summary_type") or "Daily Summary"
+    summary_type = filters.get("summary_type") or "Average Per Machine"
     start_date = filters.get("start_date") or filters.get("from_date")
     end_date = filters.get("end_date") or filters.get("to_date")
     location = filters.get("location") or filters.get("site")
-    machine_scope = filters.get("machine_scope") or "Include Swing/Spare"
+    machine_scope = filters.get("machine_scope") or "Production + Swing/Spare Machines"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -365,7 +365,7 @@ def fetch_grouped_data(location, start_date, end_date, machine_scope=None):
             "end_date": end_date,
             "location": location,
             "site": location,
-            "machine_scope": machine_scope or "Include Swing/Spare",
+            "machine_scope": machine_scope or "Production + Swing/Spare Machines",
             "include_excluded_asset_categories": 1,
         })
     )
@@ -721,9 +721,9 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 
 
 
-def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Daily Summary", machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
+def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Average Per Machine", machine_scope="Production + Swing/Spare Machines", spare_swing_asset_map=None):
     site_safe = esc(location)
-    summary_type_safe = esc(summary_type or "Daily Summary")
+    summary_type_safe = esc(summary_type or "Average Per Machine")
     header_colour = get_site_header_colour(location)
     adt_dozer_excavator_cards_all_summary_types = get_adt_dozer_excavator_cards_all_summary_types(
         location,
@@ -765,7 +765,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         f"?from_date={quote(str(start_date or ''))}"
         f"&to_date={quote(str(end_date or ''))}"
         f"&location={quote(str(location or ''))}"
-        f"&machine_scope={quote(str(machine_scope or 'Include Swing/Spare'))}"
+        f"&machine_scope={quote(str(machine_scope or 'Production + Swing/Spare Machines'))}"
     )
 
     for category in UI_CATEGORIES:
@@ -903,8 +903,8 @@ def dashboard_bar_height(value):
 
     return max(2, int(round((value / 100.0) * 220)))
 
-def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date, machine_scope="Include Swing/Spare", spare_swing_asset_map=None, au_target_filter="100% A & U"):
-    summary_type = summary_type or "Daily Summary"
+def build_selected_summary_chart_html(summary_type, location, source_rows, avgs, machine_series, start_date, end_date, machine_scope="Production + Swing/Spare Machines", spare_swing_asset_map=None, au_target_filter="100% A & U"):
+    summary_type = summary_type or "Average Per Machine"
 
     if summary_type == "Daily Summary":
         return build_daily_summary_chart_html(location, start_date, end_date, machine_scope, au_target_filter)
@@ -918,7 +918,7 @@ def build_selected_summary_chart_html(summary_type, location, source_rows, avgs,
     return build_chart_html(machine_series, machine_scope, spare_swing_asset_map)
 
 
-def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Include Swing/Spare", au_target_filter="100% A & U"):
+def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Production + Swing/Spare Machines", au_target_filter="100% A & U"):
     all_dates = []
 
     try:
@@ -935,7 +935,7 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
         return f'''
 <div class="isd-chart-stack">
     <div class="isd-chart-section isd-daily-summary-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare").upper()}</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Production + Swing/Spare Machines").upper()}</div>
         <div class="isd-no-machine-data">No daily summary data found for the selected date range.</div>
     </div>
 </div>
@@ -950,7 +950,7 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
         day_avgs, _unused_machine_series = apply_au_target_to_values(
             day_avgs,
             {},
-            frappe._dict({"au_target_filter": au_target_filter or "100% A & U"})
+            frappe._dict({"au_target_filter": au_target_filter or "85% A & U"})
         )
 
         for category in UI_CATEGORIES:
@@ -981,11 +981,15 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
                 ut = 0.0
 
             bars.append(
-                f"<div class='isd-bar avail' title='{esc(category)} {day} Availability: {fmt_percent(av)}' style='height:{daily_height(av)}px'></div>"
+                f"<div class='isd-bar avail' title='{esc(category)} {day} Availability: {fmt_percent(av)}' style='height:{daily_height(av)}px;position:relative;overflow:visible;'>"
+                f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(av)}</span>"
+                f"</div>"
             )
 
             bars.append(
-                f"<div class='isd-bar util' title='{esc(category)} {day} Utilisation: {fmt_percent(ut)}' style='height:{daily_height(ut)}px'></div>"
+                f"<div class='isd-bar util' title='{esc(category)} {day} Utilisation: {fmt_percent(ut)}' style='height:{daily_height(ut)}px;position:relative;overflow:visible;'>"
+                f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(ut)}</span>"
+                f"</div>"
             )
 
             day_labels.append(f"<div class='isd-machinelab'>{esc(day)}</div>")
@@ -1003,7 +1007,7 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
     return f'''
 <div class="isd-chart-stack">
     <div class="isd-chart-section isd-daily-summary-section">
-        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare").upper()}</div>
+        <div class="isd-chart-section-title">FULL DAY AVERAGE AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Production + Swing/Spare Machines").upper()}</div>
 
         <div class="isd-chart" style="min-width:{min_width}px;">
             <div class="isd-yaxis">
@@ -1020,8 +1024,7 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
                 <div>0%</div>
             </div>
 
-            <div class="isd-avgline isd-avg-85"></div>
-            <div class="isd-avgline isd-avg-80"></div>
+
 
             <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
                 {''.join(bars)}
@@ -1038,11 +1041,11 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
 
 
 
-def build_weekly_summary_chart_html(avgs, machine_scope="Include Swing/Spare"):
+def build_weekly_summary_chart_html(avgs, machine_scope="Production + Swing/Spare Machines"):
     top_categories = ["ADT", "Excavator", "Dozer"]
     bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
 
-    machine_scope_safe = esc(machine_scope or "Include Swing/Spare")
+    machine_scope_safe = esc(machine_scope or "Production + Swing/Spare Machines")
 
     top_title = f"Weekly Summary- ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
     bottom_title = f"Weekly Summary- SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
@@ -1054,11 +1057,11 @@ def build_weekly_summary_chart_html(avgs, machine_scope="Include Swing/Spare"):
 </div>
 '''
 
-def build_monthly_summary_chart_html(avgs, machine_scope="Include Swing/Spare"):
+def build_monthly_summary_chart_html(avgs, machine_scope="Production + Swing/Spare Machines"):
     top_categories = ["ADT", "Excavator", "Dozer"]
     bottom_categories = ["Grader", "Service Truck", "TLB", "Water Bowser", "Diesel Bowsers", "Drills", "Loader"]
 
-    machine_scope_safe = esc(machine_scope or "Include Swing/Spare")
+    machine_scope_safe = esc(machine_scope or "Production + Swing/Spare Machines")
 
     top_title = f"Monthly Summary - ADT / EXCAVATOR / DOZER- {machine_scope_safe}"
     bottom_title = f"Monthly Summary - SUPPORT EQUIPMENT & DRILLS- {machine_scope_safe}"
@@ -1082,8 +1085,17 @@ def build_monthly_summary_section(title, categories, avgs):
         av_class = "isd-bar avail" + (" nodata" if av is None else "")
         ut_class = "isd-bar util" + (" nodata" if ut is None else "")
 
-        bars.append(f"<div class='{av_class}' title='{esc(category)} Availability: {fmt_percent(av)}' style='height:{daily_height(av)}px'></div>")
-        bars.append(f"<div class='{ut_class}' title='{esc(category)} Utilisation: {fmt_percent(ut)}' style='height:{daily_height(ut)}px'></div>")
+        bars.append(
+            f"<div class='{av_class}' title='{esc(category)} Availability: {fmt_percent(av)}' style='height:{daily_height(av)}px;position:relative;overflow:visible;'>"
+            f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(av)}</span>"
+            f"</div>"
+        )
+
+        bars.append(
+            f"<div class='{ut_class}' title='{esc(category)} Utilisation: {fmt_percent(ut)}' style='height:{daily_height(ut)}px;position:relative;overflow:visible;'>"
+            f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(ut)}</span>"
+            f"</div>"
+        )
 
         labels.append(f"<div class='isd-machinelab'>{esc(UI_TITLES.get(category, category))}</div>")
 
@@ -1100,8 +1112,7 @@ def build_monthly_summary_section(title, categories, avgs):
             <div>50%</div><div>40%</div><div>30%</div><div>20%</div><div>10%</div><div>0%</div>
         </div>
 
-        <div class="isd-avgline isd-avg-85"></div>
-        <div class="isd-avgline isd-avg-80"></div>
+
 
         <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
             {''.join(bars)}
@@ -1115,33 +1126,24 @@ def build_monthly_summary_section(title, categories, avgs):
 '''
 
 
-def build_trend_html(location, start_date, end_date, machine_scope="Include Swing/Spare"):
+def build_trend_html(location, start_date, end_date, machine_scope="Production + Swing/Spare Machines"):
 
     avail_util_url = (
         "/app/query-report/Avail%20and%20Util%20report"
         f"?start_date={quote(str(start_date or ''))}"
         f"&end_date={quote(str(end_date or ''))}"
         f"&location={quote(str(location or ''))}"
-        f"&machine_scope={quote(str(machine_scope or 'Include Swing/Spare'))}"
+        f"&machine_scope={quote(str(machine_scope or 'Production + Swing/Spare Machines'))}"
     )
 
     return f'''
 <div class="isd-side">
-
-    <div class="isd-targets">
-        <div class="isd-target-box">
-
-
-            <div id="open-avail-util-only-button" onclick="window.open('{avail_util_url}', '_blank')" style="width:120px;min-height:34px;border:2px solid #0d6efd;border-radius:6px;background:#dbeafe;color:#000000;font-size:12px;font-weight:800;line-height:1.05;text-align:center;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:4px;box-sizing:border-box;">Open Avail Util</div>
-
-<div class="isd-target-title">Availability<br>Target</div>
-            <div class="isd-target-line isd-target-line-red"></div>
-        </div>
-
-        <div class="isd-target-box">
-            <div class="isd-target-title">Utilization<br>Target</div>
-            <div class="isd-target-line isd-target-line-green"></div>
-        </div>
+    <div
+        id="open-avail-util-only-button"
+        onclick="window.open('{avail_util_url}', '_blank')"
+        style="width:140px;min-height:38px;border:2px solid #0d6efd;border-radius:8px;background:#dbeafe;color:#000000;font-size:12px;font-weight:800;text-align:center;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;box-sizing:border-box;"
+    >
+        Open Avail Util
     </div>
 
     <div class="isd-legend">
@@ -1152,9 +1154,9 @@ def build_trend_html(location, start_date, end_date, machine_scope="Include Swin
 '''
 
 
-def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_swing_asset_map=None):
+def build_chart_html(machine_series, machine_scope="Production + Swing/Spare Machines", spare_swing_asset_map=None):
     spare_swing_asset_map = spare_swing_asset_map or {}
-    machine_scope = machine_scope or "Include Swing/Spare"
+    machine_scope = machine_scope or "Production + Swing/Spare Machines"
 
     def height(value):
         if value is None:
@@ -1174,7 +1176,7 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
         if not items:
             return f'''
 <div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare")}</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Production + Swing/Spare Machines")}</div>
     <div class="isd-no-machine-data">No machines found for {esc(title)} in the selected date range.</div>
 </div>
 '''
@@ -1194,7 +1196,7 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
             ut = item.get("util")
 
             # If user selects Swing/Spare Machines, all shown machines are swing/spare.
-            # If user selects Include Swing/Spare, only machines found in Monthly Planning spare map are purple.
+            # If user selects Production + Swing/Spare Machines, only machines found in Monthly Planning spare map are purple.
             is_spare_swing = (
                 machine_scope == "Swing/Spare Machines"
                 or bool(machine_raw and machine_raw in spare_swing_asset_map)
@@ -1211,11 +1213,21 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
                 label_style = "color:#d291ff !important;font-weight:900 !important;text-shadow:1px 1px 3px #000000 !important;"
 
             bars.append(
-                f"<div class='{av_class}' title='{machine} Availability: {fmt_percent(av)}' style='height:{height(av)}px'></div>"
+                f"<div class='{av_class} daily-availability-clickable-bar' "
+                f"data-machine='{machine}' "
+                f"title='Click to view {machine} downtime details' "
+                f"style='height:{height(av)}px;position:relative;overflow:visible;'>"
+                f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(av)}</span>"
+                f"</div>"
             )
 
             bars.append(
-                f"<div class='{ut_class}' title='{machine} Utilisation: {fmt_percent(ut)}' style='height:{height(ut)}px'></div>"
+                f"<div class='{ut_class} daily-availability-clickable-bar' "
+                f"data-machine='{machine}' "
+                f"title='Click to view {machine} downtime details' "
+                f"style='height:{height(ut)}px;position:relative;overflow:visible;'>"
+                f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(ut)}</span>"
+                f"</div>"
             )
 
             labels.append(
@@ -1224,7 +1236,7 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
 
         return f'''
 <div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Include Swing/Spare")}</div>
+    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Production + Swing/Spare Machines")}</div>
 
     <div class="isd-chart" style="min-width:{min_width}px;">
         <div class="isd-yaxis">
@@ -1241,8 +1253,7 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
             <div>0%</div>
         </div>
 
-        <div class="isd-avgline isd-avg-85"></div>
-        <div class="isd-avgline isd-avg-80"></div>
+
 
         <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
             {''.join(bars)}
@@ -1261,6 +1272,78 @@ def build_chart_html(machine_series, machine_scope="Include Swing/Spare", spare_
 </div>
 '''
 
+@frappe.whitelist()
+def get_machine_downtime_details(machine=None, location=None, start_date=None, end_date=None):
+    if not machine:
+        frappe.throw("Machine is required.")
+
+    if not location:
+        frappe.throw("Site is required.")
+
+    if not start_date or not end_date:
+        frappe.throw("Start Date and End Date are required.")
+
+    window_start = get_datetime(f"{start_date} 00:00:00")
+    window_end = get_datetime(f"{add_days(end_date, 1)} 00:00:00")
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            pbm.name,
+            pbm.asset_name,
+            pbm.location,
+            pbm.downtime_type,
+            pbm.breakdown_reason,
+            pbm.resolution_summary,
+            pbm.breakdown_start_datetime,
+            pbm.resolved_datetime,
+            pbm.breakdown_hours,
+            pbm.open_closed
+        FROM `tabPlant Breakdown or Maintenance` pbm
+        WHERE pbm.docstatus < 2
+          AND pbm.asset_name = %(machine)s
+          AND pbm.location = %(location)s
+          AND COALESCE(
+                NULLIF(pbm.breakdown_start_datetime, ''),
+                pbm.creation
+              ) < %(window_end)s
+          AND (
+                pbm.resolved_datetime IS NULL
+                OR pbm.resolved_datetime = ''
+                OR pbm.resolved_datetime >= %(window_start)s
+              )
+        ORDER BY
+            COALESCE(
+                NULLIF(pbm.breakdown_start_datetime, ''),
+                pbm.creation
+            ) DESC
+        """,
+        {
+            "machine": machine,
+            "location": location,
+            "window_start": window_start,
+            "window_end": window_end,
+        },
+        as_dict=True,
+    )
+
+    return [
+        {
+            "name": row.get("name") or "",
+            "machine": row.get("asset_name") or "",
+            "location": row.get("location") or "",
+            "downtime_type": row.get("downtime_type") or "",
+            "reason": row.get("breakdown_reason") or "",
+            "resolution": row.get("resolution_summary") or "",
+            "start": row.get("breakdown_start_datetime") or "",
+            "resolved": row.get("resolved_datetime") or "",
+            "hours": flt(row.get("breakdown_hours"), 2),
+            "status": row.get("open_closed")
+                or ("Closed" if row.get("resolved_datetime") else "Open"),
+        }
+        for row in rows
+    ]
+
 
 @frappe.whitelist()
 def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
@@ -1268,8 +1351,8 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
     from frappe.utils import now_datetime
 
     location = location or site
-    summary_type = summary_type or "Daily Summary"
-    machine_scope = machine_scope or "Include Swing/Spare"
+    summary_type = summary_type or "Average Per Machine"
+    machine_scope = machine_scope or "Production + Swing/Spare Machines"
 
     html = get_dashboard_html(
         start_date=start_date,
@@ -1278,7 +1361,7 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
         site=site,
         summary_type=summary_type,
         machine_scope=machine_scope,
-        au_target_filter=au_target_filter or "100% A & U",
+        au_target_filter=au_target_filter or "85% A & U",
     )
 
     engineering_css = get_engineering_css_for_pdf()
@@ -1554,7 +1637,7 @@ h2 {{
 @frappe.whitelist()
 def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=None, site=None, machine_scope=None):
     location = location or site
-    machine_scope = machine_scope or "Include Swing/Spare"
+    machine_scope = machine_scope or "Production + Swing/Spare Machines"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -1584,8 +1667,8 @@ def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=Non
 @frappe.whitelist()
 def get_daily_availability_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
     location = location or site
-    summary_type = summary_type or "Daily Summary"
-    machine_scope = machine_scope or "Include Swing/Spare"
+    summary_type = summary_type or "Average Per Machine"
+    machine_scope = machine_scope or "Production + Swing/Spare Machines"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -1606,7 +1689,7 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
             "site": location,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
-            "au_target_filter": au_target_filter or "100% A & U",
+            "au_target_filter": au_target_filter or "85% A & U",
         })
     )
 
@@ -1617,8 +1700,8 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
 @frappe.whitelist()
 def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
     location = location or site
-    summary_type = summary_type or "Daily Summary"
-    machine_scope = machine_scope or "Include Swing/Spare"
+    summary_type = summary_type or "Average Per Machine"
+    machine_scope = machine_scope or "Production + Swing/Spare Machines"
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -1639,7 +1722,7 @@ def get_dashboard_html(start_date=None, end_date=None, location=None, site=None,
             "site": location,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
-            "au_target_filter": au_target_filter or "100% A & U",
+            "au_target_filter": au_target_filter or "85% A & U",
         })
     )
 
