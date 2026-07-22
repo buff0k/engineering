@@ -108,7 +108,12 @@ function add_signoff_button(report) {
         }
 
         if (!all_downtime_records_verified()) {
-            frappe.throw(__("Please verify Downtime first before signing off."));
+            frappe.throw(__("Please verify all Downtime records before signing off."));
+            return;
+        }
+
+        if (!$(".downtime-au-verify-checkbox").is(":checked")) {
+            frappe.throw(__("Please verify the previous day Availability and Utilisation before signing off."));
             return;
         }
 
@@ -473,6 +478,35 @@ function add_mobile_downtime_styles() {
                 color: #1e3a8a !important;
             }
 
+            .downtime-au-verify-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .downtime-au-verify-label {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                margin: 0;
+                padding: 7px 10px;
+                background: #fff7e6;
+                border: 1px solid #ffd591;
+                border-radius: 8px;
+                color: #7a4f01;
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+
+            .downtime-au-verify-label input {
+                width: 17px;
+                height: 17px;
+                margin: 0;
+            }
+
             .downtime-prev-breakdown-list {
                 display: grid;
                 grid-template-columns: repeat(6, minmax(160px, 1fr));
@@ -658,6 +692,15 @@ function add_mobile_downtime_styles() {
                 .downtime-prev-breakdown-button {
                     width: 100%;
                     white-space: normal;
+                }
+
+                .downtime-au-verify-wrapper {
+                    width: 100%;
+                }
+
+                .downtime-au-verify-label {
+                    width: 100%;
+                    justify-content: center;
                 }
 
                 .downtime-signoff-action-wrapper {
@@ -890,17 +933,27 @@ function render_previous_day_avail_util_summary(summary) {
             <div class="downtime-prev-breakdown-section">
                 <div class="downtime-prev-breakdown-header">
                     <div class="downtime-prev-breakdown-title">
-                        Previous Day Breakdown Summary ${previous_date ? "(" + frappe.utils.escape_html(previous_date) + ")" : ""}
+                        Previous Day Downtime Summary ${previous_date ? "(" + frappe.utils.escape_html(previous_date) + ")" : ""}
                     </div>
 
-                    <button
-                        type="button"
-                        class="btn btn-default downtime-prev-breakdown-button"
-                        data-previous-date="${frappe.utils.escape_html(previous_date)}"
-                        data-site="${frappe.utils.escape_html(site)}"
-                    >
-                        Click the Button to see more detail on previous day Breakdowns
-                    </button>
+                    <div class="downtime-au-verify-wrapper">
+                        <label class="downtime-au-verify-label">
+                            <input
+                                type="checkbox"
+                                class="downtime-au-verify-checkbox"
+                            >
+                            <span>Verify Previous Day A&amp;U</span>
+                        </label>
+
+                        <button
+                            type="button"
+                            class="btn btn-default downtime-prev-breakdown-button"
+                            data-previous-date="${frappe.utils.escape_html(previous_date)}"
+                            data-site="${frappe.utils.escape_html(site)}"
+                        >
+                            Click the Button to see more detail on previous day Downtimes
+                        </button>
+                    </div>
                 </div>
 
                 ${get_previous_day_breakdown_summary_html(previous_day_breakdowns)}
@@ -933,12 +986,12 @@ function get_previous_day_breakdown_summary_html(rows) {
     if (!rows.length) {
         return `
             <div class="downtime-prev-breakdown-empty">
-                No previous day breakdowns found.
+                No previous day downtimes found.
             </div>
         `;
     }
 
-    const visible_rows = rows.slice(0, 6);
+    const visible_rows = rows;
 
     let html = `<div class="downtime-prev-breakdown-list">`;
 
@@ -985,14 +1038,6 @@ function get_previous_day_breakdown_summary_html(rows) {
     });
 
     html += `</div>`;
-
-    if (rows.length > visible_rows.length) {
-        html += `
-            <div class="downtime-prev-breakdown-more">
-                + ${rows.length - visible_rows.length} more breakdowns...
-            </div>
-        `;
-    }
 
     return html;
 }
