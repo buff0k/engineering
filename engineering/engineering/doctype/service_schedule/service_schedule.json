@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "allow_rename": 1,
  "autoname": "format:{site}-{month}",
  "creation": "2025-11-25 20:31:48.862727",
@@ -11,9 +12,10 @@
   "site",
   "notes",
   "service_schedule_child",
-  "column_break_rqjd",
-  "create_ss_dashboard",
   "service_schedule_dashboard",
+  "increase",
+  "create_ss_dashboard",
+  "section_break_mdnm",
   "service_schedule",
   "assets_almost_due_for_service_50_hours_tab",
   "dashboard_summary"
@@ -31,10 +33,6 @@
    "label": "Month"
   },
   {
-   "fieldname": "column_break_rqjd",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
@@ -47,6 +45,7 @@
   {
    "fieldname": "service_schedule_child",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Service Schedule child",
    "options": "Service Schedule Child"
   },
@@ -56,6 +55,7 @@
    "label": "Service Schedule Dashboard"
   },
   {
+   "default": "0",
    "fieldname": "create_ss_dashboard",
    "fieldtype": "Button",
    "label": "Create Service Schedule Dashboard"
@@ -74,16 +74,24 @@
    "fieldname": "month_picker",
    "fieldtype": "HTML",
    "label": "Month Picker"
+  },
+  {
+   "fieldname": "section_break_mdnm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "increase",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-22 15:49:47.501636",
+ "modified": "2026-07-22 15:28:29.437051",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Service Schedule",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -131,6 +139,18 @@
    "read": 1,
    "report": 1,
    "role": "Fleet Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Area Manager",
    "share": 1,
    "write": 1
   }

@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"lKxVpGPEZa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Availability & Utilisation Dashboard\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"7fnJchMR8X\",\"type\":\"card\",\"data\":{\"card_name\":\"Diesel\",\"col\":6}}]",
+ "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"lKxVpGPEZa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Availability & Utilisation Dashboard\",\"col\":6}},{\"id\":\"ngshvtiyUP\",\"type\":\"card\",\"data\":{\"card_name\":\"Downtime Verification\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"7fnJchMR8X\",\"type\":\"card\",\"data\":{\"card_name\":\"Diesel\",\"col\":6}}]",
  "creation": "2024-12-11 11:58:53.866876",
  "custom_blocks": [],
  "docstatus": 0,
@@ -9,7 +9,7 @@
  "for_user": "",
  "hide_custom": 0,
  "icon": "tool",
- "idx": 2,
+ "idx": 3,
  "indicator_color": "",
  "is_hidden": 0,
  "label": "Engineering",
@@ -626,9 +626,40 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "description": "Engineering and Site Manager Verification",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Downtime Verification",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Downtime Verification",
+   "link_count": 0,
+   "link_to": "Down Time",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Control Room Correction Dashboard",
+   "link_count": 0,
+   "link_to": "Downtime Correction Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Mechanical Downtime sign-off",
+   "type": "Link"
   }
  ],
- "modified": "2026-07-20 15:53:44.080672",
+ "modified": "2026-07-22 13:03:16.782883",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",

@@ -27,13 +27,14 @@
   {
    "fieldname": "storage",
    "fieldtype": "Long Text",
+   "hidden": 1,
    "label": "Storage"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-22 16:18:33.187694",
+ "modified": "2026-07-22 17:06:28.803555",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Define Production date",

@@ -664,16 +664,18 @@ intervalByFleetDate[`${fleet}__${prevDay}`] = ivNum;
    ============================= */
 
 .board-container {
-    max-height: 650px;
+    width: 100%;
+    max-height: calc(100vh - 260px);
+    overflow-x: auto;
+    overflow-y: auto;
 }
 
 /* THIS makes the grid exist */
 .service-grid {
     display: grid;
     grid-template-columns: 180px repeat(${assets.length}, 160px);
-    overflow-x: auto;
-    overflow-y: auto;
-    max-height: 650px;
+    width: max-content;
+    min-width: 100%;
 }
 
 /* Every dashboard cell */
@@ -1141,6 +1143,46 @@ html += `
     }
 
     dashField.$wrapper.html(html);
+
+    // Make the complete section containing the dashboard full width
+    const $dashboardControl = dashField.$wrapper.closest(".frappe-control");
+    const $dashboardColumn = $dashboardControl.closest(".form-column");
+    const $dashboardSection = $dashboardControl.closest(".form-section");
+
+    $dashboardSection.addClass("ss-full-width-section");
+    $dashboardColumn.addClass("ss-full-width-column");
+
+    if (!document.getElementById("ss-full-width-style")) {
+        $("head").append(`
+            <style id="ss-full-width-style">
+                .ss-full-width-section .section-body {
+                    display: block !important;
+                    width: 100% !important;
+                }
+
+                .ss-full-width-section .ss-full-width-column {
+                    flex: 0 0 100% !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    padding-left: 15px !important;
+                    padding-right: 15px !important;
+                }
+
+                .ss-full-width-section
+                .frappe-control[data-fieldname="service_schedule"] {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+
+                .ss-full-width-section
+                .frappe-control[data-fieldname="service_schedule"]
+                .control-input-wrapper {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+            </style>
+        `);
+    }
     dashField.$wrapper
         .find(".ss-run-daily-update")
         .off("click.ss")
