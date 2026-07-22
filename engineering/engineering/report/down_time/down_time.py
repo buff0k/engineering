@@ -474,51 +474,35 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
     roles = frappe.get_roles(user)
     full_name = frappe.db.get_value("User", user, "full_name") or user
 
-    production_roles = ["Production Supervisor", "Production Foreman"]
-    engineering_roles = ["Engineering Supervisor", "Engineering Foreman"]
+    engineering_roles = [
+        "Engineering Area Manager",
+        "Engineering Foreman",
+        "Engineering Manager",
+        "Engineering Plant Manager",
+        "Engineering Supervisor",
+        "Engineering User",
+    ]
 
-    is_information_officer = "Information Officer" in roles
-    is_production_user = any(role in roles for role in production_roles)
     is_engineering_user = any(role in roles for role in engineering_roles)
 
-    if not is_information_officer and is_production_user and is_engineering_user:
-        frappe.throw(_("You cannot sign both Production and Engineering sections."))
-
-    if not is_information_officer and not is_production_user and not is_engineering_user:
-        frappe.throw(_("Only Information Officer, Production Supervisor, Production Foreman, Engineering Supervisor, or Engineering Foreman can sign this report."))
+    if not is_engineering_user:
+        frappe.throw(_(
+            "Only an authorised Engineering user can sign this report."
+        ))
 
     parent = get_or_create_signoff_parent(report_date, signoff_shift)
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
-    if is_information_officer:
-        row.date_time_io = now_datetime()
-        row.shift_io = signoff_shift
-        row.information_officer = full_name
-        row.information_officer_signature = signature
-
-    elif is_production_user:
-        row.data_date_p = report_date
-        row.date_time_p = now_datetime()
-        row.shift_p = signoff_shift
-        row.production_user = full_name
-        row.production_signature = signature
-
-    elif is_engineering_user:
-        row.data_date_e = report_date
-        row.date_time_e = now_datetime()
-        row.shift_e = signoff_shift
-        row.engineering_user = full_name
-        row.engineering_signature = signature
+    row.data_date_e = report_date
+    row.date_time_e = now_datetime()
+    row.shift_e = signoff_shift
+    row.engineering_user = full_name
+    row.engineering_signature = signature
 
     formatted_downtime_comments = format_downtime_comments_for_signoff(downtime_comments)
 
     if formatted_downtime_comments:
-        if is_information_officer:
-            row.comments1 = formatted_downtime_comments
-        elif is_production_user:
-            row.comments2 = formatted_downtime_comments
-        elif is_engineering_user:
-            row.comments3 = formatted_downtime_comments
+        row.comments3 = formatted_downtime_comments
 
     parent.site = site
     parent.status = get_signoff_status(row)
@@ -580,31 +564,27 @@ def get_or_create_signoff_row(parent, report_date, shift):
             return row
 
     row = parent.append("signoff_information", {})
-    row.data_date_p = report_date
     row.data_date_e = report_date
-    row.shift_p = shift
     row.shift_e = shift
 
     return row
 
 
 def get_signoff_status(row):
-    if row.production_signature and row.engineering_signature:
+    if row.engineering_signature:
         return "Closed"
 
     return "Open"
 
 
 def make_signoff_name(row, report_date, shift, site):
-    production_user = row.production_user or "Pending Production"
     engineering_user = row.engineering_user or "Pending Engineering"
-    data_date = row.data_date_p or row.data_date_e or report_date
-    shift = row.shift_p or row.shift_e or shift or "All Shifts"
+    data_date = row.data_date_e or report_date
+    shift = row.shift_e or shift or "All Shifts"
     site = site or "All Sites"
 
-    return clean_docname("{0}-{1}-{2}-{3}-{4}".format(
+    return clean_docname("{0}-{1}-{2}-{3}".format(
         site,
-        production_user,
         engineering_user,
         data_date,
         shift,
