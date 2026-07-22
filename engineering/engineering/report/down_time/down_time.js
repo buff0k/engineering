@@ -117,9 +117,58 @@ function add_signoff_button(report) {
             return;
         }
 
+        const engineering_roles = [
+            "Engineering Area Manager",
+            "Engineering Foreman",
+            "Engineering Manager",
+            "Engineering Plant Manager",
+            "Engineering Supervisor",
+            "Engineering User"
+        ];
+
+        const production_roles = [
+            "Production Manager",
+            "Production Supervisor",
+            "Production Foreman",
+            "Production User"
+        ];
+
+        const can_sign_engineering = engineering_roles.some(function (role) {
+            return frappe.user_roles.includes(role);
+        });
+
+        const can_sign_production = production_roles.some(function (role) {
+            return frappe.user_roles.includes(role);
+        });
+
+        const signoff_options = [];
+
+        if (can_sign_engineering) {
+            signoff_options.push("Engineering");
+        }
+
+        if (can_sign_production) {
+            signoff_options.push("Production");
+        }
+
+        if (!signoff_options.length) {
+            frappe.throw(__(
+                "You do not have permission to sign this downtime report."
+            ));
+            return;
+        }
+
         const dialog = new frappe.ui.Dialog({
             title: __("Save Downtime Sign-off"),
             fields: [
+                {
+                    fieldname: "signoff_section",
+                    label: __("Sign-off Section"),
+                    fieldtype: "Select",
+                    options: signoff_options.join("\n"),
+                    default: signoff_options[0],
+                    reqd: 1
+                },
                 {
                     fieldname: "signature",
                     label: __("Signature"),
@@ -136,6 +185,7 @@ function add_signoff_button(report) {
                         site: frappe.query_report.get_filter_value("site") || "",
                         asset_category: frappe.query_report.get_filter_value("asset_category") || "",
                         shift: frappe.query_report.get_filter_value("shift") || "",
+                        signoff_section: values.signoff_section,
                         signature: values.signature,
                         downtime_comments: get_mobile_downtime_comments()
                     },
@@ -717,6 +767,23 @@ function add_mobile_downtime_styles() {
     `);
 }
 
+function format_downtime_duration(value) {
+    const total_minutes = Math.round(flt(value || 0) * 60);
+    const hours = Math.floor(total_minutes / 60);
+    const minutes = total_minutes % 60;
+
+    const parts = [];
+
+    if (hours > 0) {
+        parts.push(hours + (hours === 1 ? " hour" : " hours"));
+    }
+
+    if (minutes > 0 || hours === 0) {
+        parts.push(minutes + (minutes === 1 ? " min" : " mins"));
+    }
+
+    return parts.join(" ");
+}
 
 function render_downtime_cards(report) {
     const data =
@@ -752,8 +819,8 @@ function render_downtime_cards(report) {
                 </div>
 
                 <div class="mobile-downtime-summary-box">
-                    Total Hours
-                    <strong>${total_hours.toFixed(2)}</strong>
+                    Total Downtime
+                    <strong>${format_downtime_duration(total_hours)}</strong>
                 </div>
 
                 <div class="mobile-downtime-summary-box">
@@ -810,7 +877,9 @@ function render_downtime_cards(report) {
                     </span>
 
                     <span class="mobile-downtime-badge">
-                        ${frappe.utils.escape_html(row.breakdown_hours || 0)} hrs
+                        ${frappe.utils.escape_html(
+                            format_downtime_duration(row.breakdown_hours)
+                        )}
                     </span>
 
                     <span class="mobile-downtime-badge">
@@ -1002,7 +1071,9 @@ function get_previous_day_breakdown_summary_html(rows) {
         const status = frappe.utils.escape_html(row.status || "");
         const start = frappe.utils.escape_html(row.start || "");
         const resolved = frappe.utils.escape_html(row.resolved || "Still Open");
-        const hours = frappe.utils.escape_html(row.hours || 0);
+        const hours = frappe.utils.escape_html(
+            format_downtime_duration(row.hours)
+        );
 
         html += `
             <div class="downtime-prev-breakdown-item">
@@ -1022,7 +1093,7 @@ function get_previous_day_breakdown_summary_html(rows) {
                     </div>
 
                     <div class="downtime-prev-breakdown-tooltip-row">
-                        <strong>Hours:</strong> ${hours}
+                        <strong>Downtime:</strong> ${hours}
                     </div>
 
                     <div class="downtime-prev-breakdown-tooltip-row">

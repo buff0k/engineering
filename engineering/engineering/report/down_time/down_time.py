@@ -466,7 +466,15 @@ def get_data(filters):
 
 
 @frappe.whitelist()
-def save_downtime_signoff(report_date, site, asset_category, shift, signature, downtime_comments=None):
+def save_downtime_signoff(
+    report_date,
+    site,
+    asset_category,
+    shift,
+    signoff_section,
+    signature,
+    downtime_comments=None,
+):
     report_date = getdate(report_date)
     signoff_shift = shift or ""
     report_shift = shift or "All Shifts"
@@ -483,25 +491,60 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
         "Engineering User",
     ]
 
-    is_engineering_user = any(role in roles for role in engineering_roles)
+    production_roles = [
+        "Production Manager",
+        "Production Supervisor",
+        "Production Foreman",
+        "Production User",
+    ]
 
-    if not is_engineering_user:
+    is_engineering_user = any(
+        role in roles for role in engineering_roles
+    )
+
+    is_production_user = any(
+        role in roles for role in production_roles
+    )
+
+    signoff_section = str(signoff_section or "").strip()
+
+    if signoff_section not in ("Engineering", "Production"):
+        frappe.throw(_("Please select a valid sign-off section."))
+
+    if signoff_section == "Engineering" and not is_engineering_user:
         frappe.throw(_(
-            "Only an authorised Engineering user can sign this report."
+            "You do not have permission to complete the Engineering sign-off."
+        ))
+
+    if signoff_section == "Production" and not is_production_user:
+        frappe.throw(_(
+            "You do not have permission to complete the Production sign-off."
         ))
 
     parent = get_or_create_signoff_parent(report_date, signoff_shift)
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
-    row.date_time_e = now_datetime()
-    row.shift_e = signoff_shift
-    row.engineering_user = full_name
-    row.engineering_signature = signature
+    formatted_downtime_comments = format_downtime_comments_for_signoff(
+        downtime_comments
+    )
 
-    formatted_downtime_comments = format_downtime_comments_for_signoff(downtime_comments)
+    if signoff_section == "Engineering":
+        row.date_time_e = now_datetime()
+        row.shift_e = signoff_shift
+        row.engineering_user = full_name
+        row.engineering_signature = signature
 
-    if formatted_downtime_comments:
-        row.comments3 = formatted_downtime_comments
+        if formatted_downtime_comments:
+            row.comments3 = formatted_downtime_comments
+
+    elif signoff_section == "Production":
+        row.date_time_p = now_datetime()
+        row.shift_p = signoff_shift
+        row.production_user = full_name
+        row.production_signature = signature
+
+        if formatted_downtime_comments:
+            row.comments2 = formatted_downtime_comments
 
     parent.site = site
     parent.status = get_signoff_status(row)
@@ -524,11 +567,20 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
 def get_or_create_signoff_parent(report_date, shift):
     existing_parent = frappe.db.sql(
         """
-        select parent
+        select distinct parent
         from `tabMechanical Downtime sign-off child`
         where parenttype = 'Mechanical Downtime sign-off'
-            and date(date_time_e) = %(report_date)s
-            and ifnull(shift_e, '') in (%(shift)s, '')
+            and (
+                (
+                    date(date_time_e) = %(report_date)s
+                    and ifnull(shift_e, '') in (%(shift)s, '')
+                )
+                or
+                (
+                    date(date_time_p) = %(report_date)s
+                    and ifnull(shift_p, '') in (%(shift)s, '')
+                )
+            )
         order by modified desc
         limit 1
         """,
@@ -539,7 +591,10 @@ def get_or_create_signoff_parent(report_date, shift):
     )
 
     if existing_parent:
-        return frappe.get_doc("Mechanical Downtime sign-off", existing_parent[0][0])
+        return frappe.get_doc(
+            "Mechanical Downtime sign-off",
+            existing_parent[0][0],
+        )
 
     parent = frappe.new_doc("Mechanical Downtime sign-off")
     parent.status = "Open"
@@ -556,32 +611,40 @@ def get_or_create_signoff_row(parent, report_date, shift):
             and row.shift_e in (shift, None, "")
         )
 
-        if same_engineering:
+        same_production = (
+            row.date_time_p
+            and getdate(row.date_time_p) == report_date
+            and row.shift_p in (shift, None, "")
+        )
+
+        if same_engineering or same_production:
             return row
 
     row = parent.append("signoff_information", {})
     row.shift_e = shift
+    row.shift_p = shift
 
     return row
 
 
 def get_signoff_status(row):
-    if row.engineering_signature:
+    if row.engineering_signature and row.production_signature:
         return "Closed"
 
     return "Open"
 
 
 def make_signoff_name(row, report_date, shift, site):
+    production_user = row.production_user or "Pending Production"
     engineering_user = row.engineering_user or "Pending Engineering"
-    data_date = getdate(row.date_time_e) if row.date_time_e else report_date
-    shift = row.shift_e or shift or "All Shifts"
+    shift = row.shift_e or row.shift_p or shift or "All Shifts"
     site = site or "All Sites"
 
-    return clean_docname("{0}-{1}-{2}-{3}".format(
+    return clean_docname("{0}-{1}-{2}-{3}-{4}".format(
         site,
+        production_user,
         engineering_user,
-        data_date,
+        report_date,
         shift,
     ))
 
