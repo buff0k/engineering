@@ -493,7 +493,6 @@ def save_downtime_signoff(report_date, site, asset_category, shift, signature, d
     parent = get_or_create_signoff_parent(report_date, signoff_shift)
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
-    row.data_date_e = report_date
     row.date_time_e = now_datetime()
     row.shift_e = signoff_shift
     row.engineering_user = full_name
@@ -528,7 +527,7 @@ def get_or_create_signoff_parent(report_date, shift):
         select parent
         from `tabMechanical Downtime sign-off child`
         where parenttype = 'Mechanical Downtime sign-off'
-            and data_date_e = %(report_date)s
+            and date(date_time_e) = %(report_date)s
             and ifnull(shift_e, '') in (%(shift)s, '')
         order by modified desc
         limit 1
@@ -552,8 +551,8 @@ def get_or_create_signoff_parent(report_date, shift):
 def get_or_create_signoff_row(parent, report_date, shift):
     for row in parent.signoff_information:
         same_engineering = (
-            row.data_date_e
-            and getdate(row.data_date_e) == report_date
+            row.date_time_e
+            and getdate(row.date_time_e) == report_date
             and row.shift_e in (shift, None, "")
         )
 
@@ -561,7 +560,6 @@ def get_or_create_signoff_row(parent, report_date, shift):
             return row
 
     row = parent.append("signoff_information", {})
-    row.data_date_e = report_date
     row.shift_e = shift
 
     return row
@@ -576,7 +574,7 @@ def get_signoff_status(row):
 
 def make_signoff_name(row, report_date, shift, site):
     engineering_user = row.engineering_user or "Pending Engineering"
-    data_date = row.data_date_e or report_date
+    data_date = getdate(row.date_time_e) if row.date_time_e else report_date
     shift = row.shift_e or shift or "All Shifts"
     site = site or "All Sites"
 
