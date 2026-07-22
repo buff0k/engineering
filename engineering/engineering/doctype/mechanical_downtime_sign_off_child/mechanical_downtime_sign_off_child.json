@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "information_officer_section",
+  "column_break_lswz",
   "date_time_io",
   "shift_io",
   "information_officer",
@@ -92,31 +93,32 @@
   {
    "fieldname": "information_officer_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Information Officer"
   },
   {
    "fieldname": "date_time_io",
    "fieldtype": "Datetime",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Date and Time"
   },
   {
    "fieldname": "shift_io",
    "fieldtype": "Select",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Shift",
    "options": "Day Shift\nNight Shift"
   },
   {
    "fieldname": "information_officer",
    "fieldtype": "Data",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Information Officer"
   },
   {
    "fieldname": "information_officer_signature",
    "fieldtype": "Signature",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Information Officer Signature"
   },
   {
@@ -126,6 +128,7 @@
   {
    "fieldname": "comments1",
    "fieldtype": "Long Text",
+   "hidden": 1,
    "label": "Comments"
   },
   {
@@ -140,19 +143,25 @@
   },
   {
    "fieldname": "section_break_hnno",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Control Room need to review these comments on their dashboard"
   },
   {
    "fieldname": "fixes",
    "fieldtype": "Long Text",
    "label": "Control Room Fixes"
+  },
+  {
+   "fieldname": "column_break_lswz",
+   "fieldtype": "Column Break",
+   "hidden": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-18 08:13:45.903887",
+ "modified": "2026-07-22 14:06:18.300036",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Mechanical Downtime sign-off child",
