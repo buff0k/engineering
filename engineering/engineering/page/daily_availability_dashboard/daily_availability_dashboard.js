@@ -250,7 +250,7 @@ class DailyAvailabilityDashboardPage {
 
         this.body.find(".daily-availability-dashboard-body").html(`
             <div class="frappe-card" style="padding: 18px;">
-                Please select Site. The saved production dates will load automatically.
+                Please select Site. The latest Monthly Production Planning dates will load automatically.
             </div>
         `);
     }
@@ -258,45 +258,53 @@ class DailyAvailabilityDashboardPage {
     async set_production_dates_from_site() {
         const site = this.location.get_value();
 
+        await this.start_date.set_value(null);
+        await this.end_date.set_value(null);
+
         if (!site) {
             return;
         }
 
-        const records = await frappe.db.get_list("Define Production date", {
+        const records = await frappe.db.get_list("Monthly Production Planning", {
             filters: {
-                site: site
+                location: site
             },
             fields: [
                 "name",
-                "storage"
+                "location",
+                "prod_month_start_date",
+                "prod_month_end_date"
             ],
-            order_by: "modified desc",
+            order_by: "prod_month_end_date desc",
             limit: 1
         });
 
-        if (!records.length || !records[0].storage) {
+        if (!records.length) {
             frappe.msgprint(
-                __("No production dates have been configured for {0}.", [site])
+                __("No Monthly Production Planning record was found for {0}.", [site])
             );
             return;
         }
 
-        let saved_dates;
+        const production_plan = records[0];
 
-        try {
-            saved_dates = JSON.parse(records[0].storage);
-        } catch (error) {
-            frappe.msgprint(__("The saved production dates are invalid."));
+        if (
+            !production_plan.prod_month_start_date ||
+            !production_plan.prod_month_end_date
+        ) {
+            frappe.msgprint(
+                __("The latest Monthly Production Planning record does not have both production dates.")
+            );
             return;
         }
 
-        if (!saved_dates.start_date || !saved_dates.end_date) {
-            frappe.msgprint(__("Both production dates must be configured."));
-            return;
-        }
+        await this.start_date.set_value(
+            production_plan.prod_month_start_date
+        );
 
-        await this.start_date.set_value(saved_dates.start_date);
-        await this.end_date.set_value(saved_dates.end_date);
+        await this.end_date.set_value(
+            production_plan.prod_month_end_date
+        );
 
         this.load_dashboard();
     }
