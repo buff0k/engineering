@@ -458,29 +458,88 @@ function add_mobile_downtime_styles() {
             }
 
             .downtime-prev-breakdown-button {
+                border: 1px solid #1d4ed8 !important;
+                background: #dbeafe !important;
+                color: #1e3a8a !important;
                 border-radius: 8px;
                 font-size: 12px;
                 font-weight: 700;
                 white-space: nowrap;
             }
 
+            .downtime-prev-breakdown-button:hover {
+                border-color: #1e40af !important;
+                background: #bfdbfe !important;
+                color: #1e3a8a !important;
+            }
+
             .downtime-prev-breakdown-list {
                 display: grid;
-                gap: 6px;
+                grid-template-columns: repeat(6, minmax(160px, 1fr));
+                gap: 8px;
             }
 
             .downtime-prev-breakdown-item {
-                background: #fafafa;
-                border: 1px solid #e5e7eb;
+                position: relative;
+                background: #ffffff;
+                border: 1px solid #d1d5db;
                 border-radius: 8px;
-                padding: 8px 10px;
+                padding: 9px 10px;
                 font-size: 12px;
                 color: #374151;
                 line-height: 1.4;
+                cursor: pointer;
+                overflow: visible;
             }
 
             .downtime-prev-breakdown-item strong {
                 color: #111827;
+            }
+
+            .downtime-prev-breakdown-item:hover {
+                background: #dbeafe;
+                border-color: #1d4ed8;
+                color: #1e3a8a;
+            }
+
+            .downtime-prev-breakdown-item:hover strong {
+                color: #1e3a8a;
+            }
+
+            .downtime-prev-breakdown-tooltip {
+                display: none;
+                position: absolute;
+                left: 50%;
+                top: calc(100% + 8px);
+                transform: translateX(-50%);
+                width: 300px;
+                background: #ffffff;
+                border: 1px solid #93c5fd;
+                border-radius: 10px;
+                padding: 12px;
+                color: #1f2937;
+                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+                z-index: 500;
+                font-size: 12px;
+                line-height: 1.5;
+            }
+
+            .downtime-prev-breakdown-item:hover .downtime-prev-breakdown-tooltip {
+                display: block;
+            }
+
+            .downtime-prev-breakdown-tooltip-row {
+                margin-bottom: 6px;
+            }
+
+            .downtime-prev-breakdown-tooltip-row:last-child {
+                margin-bottom: 0;
+            }
+
+            @media (max-width: 1400px) {
+                .downtime-prev-breakdown-list {
+                    grid-template-columns: repeat(3, minmax(160px, 1fr));
+                }
             }
 
             .downtime-prev-breakdown-empty {
@@ -586,6 +645,19 @@ function add_mobile_downtime_styles() {
 
                 .downtime-avail-util-grid {
                     grid-template-columns: 1fr;
+                }
+
+                .downtime-prev-breakdown-list {
+                    grid-template-columns: repeat(2, minmax(140px, 1fr));
+                }
+
+                .downtime-prev-breakdown-tooltip {
+                    display: none !important;
+                }
+
+                .downtime-prev-breakdown-button {
+                    width: 100%;
+                    white-space: normal;
                 }
 
                 .downtime-signoff-action-wrapper {
@@ -872,11 +944,42 @@ function get_previous_day_breakdown_summary_html(rows) {
 
     visible_rows.forEach(function (row) {
         const plant_no = frappe.utils.escape_html(row.plant_no || "");
-        const reason = truncate_previous_day_breakdown_reason(row.reason || "", 55);
+        const reason = truncate_previous_day_breakdown_reason(row.reason || "", 28);
+        const full_reason = frappe.utils.escape_html(row.reason || "");
+        const status = frappe.utils.escape_html(row.status || "");
+        const start = frappe.utils.escape_html(row.start || "");
+        const resolved = frappe.utils.escape_html(row.resolved || "Still Open");
+        const hours = frappe.utils.escape_html(row.hours || 0);
 
         html += `
             <div class="downtime-prev-breakdown-item">
                 <strong>${plant_no}</strong> - ${reason}
+
+                <div class="downtime-prev-breakdown-tooltip">
+                    <div class="downtime-prev-breakdown-tooltip-row">
+                        <strong>Fleet No:</strong> ${plant_no}
+                    </div>
+
+                    <div class="downtime-prev-breakdown-tooltip-row">
+                        <strong>Reason:</strong> ${full_reason}
+                    </div>
+
+                    <div class="downtime-prev-breakdown-tooltip-row">
+                        <strong>Status:</strong> ${status}
+                    </div>
+
+                    <div class="downtime-prev-breakdown-tooltip-row">
+                        <strong>Hours:</strong> ${hours}
+                    </div>
+
+                    <div class="downtime-prev-breakdown-tooltip-row">
+                        <strong>Start:</strong> ${start}
+                    </div>
+
+                    <div class="downtime-prev-breakdown-tooltip-row">
+                        <strong>Back in Production:</strong> ${resolved}
+                    </div>
+                </div>
             </div>
         `;
     });

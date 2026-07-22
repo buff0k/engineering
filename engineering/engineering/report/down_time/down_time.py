@@ -335,6 +335,10 @@ def get_previous_day_breakdown_summary(previous_date, site=None):
         summary.append({
             "plant_no": row.get("plant_no") or "",
             "reason": row.get("breakdown_reason") or "",
+            "status": row.get("open_closed") or "",
+            "start": row.get("breakdown_start_datetime") or "",
+            "resolved": row.get("resolved_datetime") or "",
+            "hours": row.get("breakdown_hours") or 0,
         })
 
     return summary
