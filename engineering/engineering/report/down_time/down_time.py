@@ -321,6 +321,25 @@ def get_avail_util_scope_summary(previous_date, site, machine_scope):
     return summary
 
 
+def get_previous_day_breakdown_summary(previous_date, site=None):
+    rows = get_data(frappe._dict({
+        "report_date": previous_date,
+        "site": site or "",
+        "asset_category": "",
+        "shift": "",
+    })) or []
+
+    summary = []
+
+    for row in rows:
+        summary.append({
+            "plant_no": row.get("plant_no") or "",
+            "reason": row.get("breakdown_reason") or "",
+        })
+
+    return summary
+
+
 @frappe.whitelist()
 def get_previous_day_avail_util_summary(report_date, site=None):
     previous_date = getdate(report_date) - timedelta(days=1)
@@ -329,6 +348,7 @@ def get_previous_day_avail_util_summary(report_date, site=None):
         "previous_date": previous_date,
         "production": get_avail_util_scope_summary(previous_date, site, "Production Machines"),
         "spare": get_avail_util_scope_summary(previous_date, site, "Swing/Spare Machines"),
+        "previous_day_breakdowns": get_previous_day_breakdown_summary(previous_date, site),
     }
 
 

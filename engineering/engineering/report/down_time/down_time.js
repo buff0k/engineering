@@ -436,6 +436,69 @@ function add_mobile_downtime_styles() {
                 margin-bottom: 8px;
             }
 
+            .downtime-prev-breakdown-section {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid #e5e7eb;
+            }
+
+            .downtime-prev-breakdown-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+                margin-bottom: 8px;
+            }
+
+            .downtime-prev-breakdown-title {
+                font-size: 13px;
+                font-weight: 800;
+                color: #374151;
+            }
+
+            .downtime-prev-breakdown-button {
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            .downtime-prev-breakdown-list {
+                display: grid;
+                gap: 6px;
+            }
+
+            .downtime-prev-breakdown-item {
+                background: #fafafa;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 8px 10px;
+                font-size: 12px;
+                color: #374151;
+                line-height: 1.4;
+            }
+
+            .downtime-prev-breakdown-item strong {
+                color: #111827;
+            }
+
+            .downtime-prev-breakdown-empty {
+                background: #fafafa;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 8px 10px;
+                font-size: 12px;
+                color: #6b7280;
+            }
+
+            .downtime-prev-breakdown-more {
+                font-size: 12px;
+                font-weight: 700;
+                color: #6b7280;
+                margin-top: 2px;
+            }
+
             .downtime-avail-util-bubble {
                 background: #f7f7f7;
                 border: 1px solid #e5e5e5;
@@ -729,6 +792,8 @@ function render_previous_day_avail_util_summary(summary) {
     const production = summary.production || {};
     const spare = summary.spare || {};
     const previous_date = summary.previous_date || "";
+    const previous_day_breakdowns = summary.previous_day_breakdowns || [];
+    const site = frappe.query_report.get_filter_value("site") || "";
 
     let html = `
         <div class="downtime-avail-util-wrapper">
@@ -749,6 +814,25 @@ function render_previous_day_avail_util_summary(summary) {
                 ${get_avail_util_bubble_html(spare.excavators)}
                 ${get_avail_util_bubble_html(spare.dozers)}
             </div>
+
+            <div class="downtime-prev-breakdown-section">
+                <div class="downtime-prev-breakdown-header">
+                    <div class="downtime-prev-breakdown-title">
+                        Previous Day Breakdown Summary ${previous_date ? "(" + frappe.utils.escape_html(previous_date) + ")" : ""}
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-default downtime-prev-breakdown-button"
+                        data-previous-date="${frappe.utils.escape_html(previous_date)}"
+                        data-site="${frappe.utils.escape_html(site)}"
+                    >
+                        Click the Button to see more detail on previous day Breakdowns
+                    </button>
+                </div>
+
+                ${get_previous_day_breakdown_summary_html(previous_day_breakdowns)}
+            </div>
         </div>
     `;
 
@@ -761,7 +845,77 @@ function render_previous_day_avail_util_summary(summary) {
             TMM EQUIPMENT DOWNTIME
         </div>
     `);
+
+    $(".downtime-prev-breakdown-button").off("click").on("click", function () {
+        const previous_date = $(this).data("previous-date") || "";
+        const site = $(this).data("site") || "";
+        const url = get_previous_day_breakdown_report_url(previous_date, site);
+        window.open(url, "_blank");
+    });
 }
+
+
+function get_previous_day_breakdown_summary_html(rows) {
+    rows = rows || [];
+
+    if (!rows.length) {
+        return `
+            <div class="downtime-prev-breakdown-empty">
+                No previous day breakdowns found.
+            </div>
+        `;
+    }
+
+    const visible_rows = rows.slice(0, 6);
+
+    let html = `<div class="downtime-prev-breakdown-list">`;
+
+    visible_rows.forEach(function (row) {
+        const plant_no = frappe.utils.escape_html(row.plant_no || "");
+        const reason = truncate_previous_day_breakdown_reason(row.reason || "", 55);
+
+        html += `
+            <div class="downtime-prev-breakdown-item">
+                <strong>${plant_no}</strong> - ${reason}
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+
+    if (rows.length > visible_rows.length) {
+        html += `
+            <div class="downtime-prev-breakdown-more">
+                + ${rows.length - visible_rows.length} more breakdowns...
+            </div>
+        `;
+    }
+
+    return html;
+}
+
+function truncate_previous_day_breakdown_reason(reason, max_length) {
+    reason = String(reason || "");
+
+    if (reason.length <= max_length) {
+        return frappe.utils.escape_html(reason);
+    }
+
+    return frappe.utils.escape_html(reason.slice(0, max_length).trim()) + "......";
+}
+
+function get_previous_day_breakdown_report_url(previous_date, site) {
+    const params = new URLSearchParams({
+        from_date: previous_date || "",
+        to_date: previous_date || "",
+        location: site || "",
+        machine_scope: "Include Swing/Spare"
+    });
+
+    return window.location.origin + "/desk/query-report/Availability%20and%20Utilisation%20Month%20End%20Report?" + params.toString();
+}
+
+
 
 function get_avail_util_bubble_html(row) {
     row = row || {};
