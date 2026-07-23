@@ -1,3 +1,27 @@
+function format_dashboard_hours(value) {
+    const total_minutes = Math.round(
+        Number(value || 0) * 60
+    );
+
+    const hours = Math.floor(
+        total_minutes / 60
+    );
+
+    const minutes = total_minutes % 60;
+
+    if (hours > 0 && minutes > 0) {
+        return `${hours}H ${minutes}Min`;
+    }
+
+    if (hours > 0) {
+        return `${hours}H`;
+    }
+
+    return `${minutes}Min`;
+}
+
+
+
 frappe.pages["daily-availability-dashboard"].on_page_load = function(wrapper) {
     const page = frappe.ui.make_app_page({
         parent: wrapper,
@@ -510,9 +534,10 @@ class DailyAvailabilityDashboardPage {
                         const resolved = frappe.utils.escape_html(
                             row.resolved || "Still Open"
                         );
-                        const hours = frappe.utils.escape_html(
-                            String(row.hours || 0)
+                        const hours = format_dashboard_hours(
+                            row.hours || 0
                         );
+
                         const downtime_type = frappe.utils.escape_html(
                             row.downtime_type || ""
                         );
@@ -523,33 +548,61 @@ class DailyAvailabilityDashboardPage {
                             calculation.shift || ""
                         );
 
-                        const required_hours = Number(
+                        const required_hours_value = Number(
                             calculation.required_hours || 9
-                        ).toFixed(2);
+                        );
 
-                        const available_hours = Number(
+                        const available_hours_value = Number(
                             calculation.available_hours || 0
-                        ).toFixed(2);
+                        );
 
-                        const raw_downtime = Number(
+                        const raw_downtime_value = Number(
                             calculation.raw_downtime || 0
-                        ).toFixed(2);
+                        );
 
-                        const startup_excluded = Number(
+                        const startup_excluded_value = Number(
                             calculation.startup_excluded || 0
-                        ).toFixed(2);
+                        );
 
-                        const fatigue_excluded = Number(
+                        const fatigue_excluded_value = Number(
                             calculation.fatigue_excluded || 0
-                        ).toFixed(2);
+                        );
 
-                        const total_excluded = Number(
+                        const total_excluded_value = Number(
                             calculation.total_excluded || 0
-                        ).toFixed(2);
+                        );
 
-                        const total_downtime = Number(
+                        const total_downtime_value = Number(
                             calculation.total_downtime || 0
-                        ).toFixed(2);
+                        );
+
+                        const required_hours = format_dashboard_hours(
+                            required_hours_value
+                        );
+
+                        const available_hours = format_dashboard_hours(
+                            available_hours_value
+                        );
+
+                        const raw_downtime = format_dashboard_hours(
+                            raw_downtime_value
+                        );
+
+                        const startup_excluded = format_dashboard_hours(
+                            startup_excluded_value
+                        );
+
+                        const fatigue_excluded = format_dashboard_hours(
+                            fatigue_excluded_value
+                        );
+
+                        const total_excluded = format_dashboard_hours(
+                            total_excluded_value
+                        );
+
+                        const total_downtime = format_dashboard_hours(
+                            total_downtime_value
+                        );
 
                         const actual_availability = Number(
                             calculation.actual_availability || 0
@@ -568,7 +621,7 @@ class DailyAvailabilityDashboardPage {
                                 <div class="daily-downtime-summary">
                                     <strong>${status}</strong><br>
                                     ${reason || "No reason captured"}<br>
-                                    <strong>${hours} hours</strong>
+                                    <strong>${hours}</strong>
                                 </div>
 
                                 <div class="daily-downtime-details">
@@ -604,42 +657,45 @@ class DailyAvailabilityDashboardPage {
 
                                             <div>
                                                 <strong>Required Hours:</strong>
-                                                ${required_hours} hrs
+                                                ${required_hours}
                                             </div>
 
                                             <div>
                                                 <strong>Raw Downtime:</strong>
-                                                ${raw_downtime} hrs
+                                                ${raw_downtime}
                                             </div>
 
                                             <div>
                                                 <strong>Startup Excluded:</strong>
-                                                ${startup_excluded} hrs
+                                                ${startup_excluded}
                                             </div>
 
                                             <div>
                                                 <strong>Fatigue Excluded:</strong>
-                                                ${fatigue_excluded} hrs
+                                                ${fatigue_excluded}
                                             </div>
 
                                             <div>
                                                 <strong>Total Excluded:</strong>
-                                                ${total_excluded} hrs
+                                                ${total_excluded}
                                             </div>
 
                                             <div>
                                                 <strong>Counted Downtime:</strong>
-                                                ${total_downtime} hrs
+                                                ${total_downtime}
                                             </div>
 
                                             <div>
                                                 <strong>Available Hours:</strong>
                                                 ${required_hours} - ${total_downtime} =
-                                                ${available_hours} hrs
+                                                ${available_hours}
                                             </div>
 
                                             <div style="margin-top:5px;">
-                                                ${available_hours} ÷ ${required_hours} × 100 =
+                                                ${available_hours_value.toFixed(2)}
+                                                ÷
+                                                ${required_hours_value.toFixed(2)}
+                                                × 100 =
                                                 <strong>${actual_availability}%</strong>
                                             </div>
 
