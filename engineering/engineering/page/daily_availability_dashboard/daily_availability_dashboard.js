@@ -16,15 +16,17 @@ class DailyAvailabilityDashboardPage {
         this.pdf_method = "engineering.engineering.page.daily_availability_dashboard.daily_availability_dashboard.download_dashboard_pdf";
         this.downtime_method = "engineering.engineering.page.daily_availability_dashboard.daily_availability_dashboard.get_machine_downtime_details";
         this.loading = false;
+        this.initializing = true;
+        this.last_site_storage_key = `daily_availability_dashboard_last_site:${frappe.session.user || "Guest"}`;
         this.make();
     }
 
-    make() {
+    async make() {
         this.add_mobile_styles();
         this.make_filters();
         this.make_body();
         this.make_buttons();
-        this.set_defaults();
+        await this.set_defaults();
     }
 
     add_mobile_styles() {
@@ -171,7 +173,13 @@ class DailyAvailabilityDashboardPage {
             fieldtype: "Link",
             options: "Location",
             reqd: 1,
-            change: () => this.set_production_dates_from_site()
+            change: () => {
+                if (this.initializing) {
+                    return;
+                }
+
+                this.set_production_dates_from_site();
+            }
         });
 
         this.summary_type = this.page.add_field({
@@ -241,18 +249,49 @@ class DailyAvailabilityDashboardPage {
         });
     }
 
-    set_defaults() {
-        this.start_date.set_value(null);
-        this.end_date.set_value(null);
-        this.summary_type.set_value("Average Per Machine");
-        this.machine_scope.set_value("Production + Swing/Spare Machines");
-        this.au_target_filter.set_value("85% A & U");
+    async set_defaults() {
+        this.initializing = true;
 
-        this.body.find(".daily-availability-dashboard-body").html(`
-            <div class="frappe-card" style="padding: 18px;">
-                Please select Site. The latest Monthly Production Planning dates will load automatically.
-            </div>
-        `);
+        await this.start_date.set_value(null);
+        await this.end_date.set_value(null);
+        await this.summary_type.set_value("Average Per Machine");
+        await this.machine_scope.set_value(
+            "Production + Swing/Spare Machines"
+        );
+        await this.au_target_filter.set_value("85% A & U");
+
+        let saved_site = "";
+
+        try {
+            saved_site = localStorage.getItem(
+                this.last_site_storage_key
+            ) || "";
+        } catch (error) {
+            saved_site = "";
+        }
+
+        if (saved_site) {
+            await this.location.set_value(saved_site);
+            await this.set_production_dates_from_site();
+        } else {
+            this.body.find(
+                ".daily-availability-dashboard-body"
+            ).html(`
+                <div class="frappe-card" style="padding: 18px;">
+                    Please select Site. The latest Monthly Production Planning dates will load automatically.
+                </div>
+            `);
+        }
+
+        this.initializing = false;
+
+        if (
+            this.location.get_value() &&
+            this.start_date.get_value() &&
+            this.end_date.get_value()
+        ) {
+            this.load_dashboard();
+        }
     }
 
     async set_production_dates_from_site() {
@@ -265,19 +304,31 @@ class DailyAvailabilityDashboardPage {
             return;
         }
 
-        const records = await frappe.db.get_list("Monthly Production Planning", {
-            filters: {
-                location: site
-            },
-            fields: [
-                "name",
-                "location",
-                "prod_month_start_date",
-                "prod_month_end_date"
-            ],
-            order_by: "prod_month_end_date desc",
-            limit: 1
-        });
+        try {
+            localStorage.setItem(
+                this.last_site_storage_key,
+                site
+            );
+        } catch (error) {
+            // Continue even if browser storage is unavailable.
+        }
+
+        const records = await frappe.db.get_list(
+            "Monthly Production Planning",
+            {
+                filters: {
+                    location: site
+                },
+                fields: [
+                    "name",
+                    "location",
+                    "prod_month_start_date",
+                    "prod_month_end_date"
+                ],
+                order_by: "prod_month_end_date desc",
+                limit: 1
+            }
+        );
 
         if (!records.length) {
             frappe.msgprint(
@@ -306,7 +357,9 @@ class DailyAvailabilityDashboardPage {
             production_plan.prod_month_end_date
         );
 
-        this.load_dashboard();
+        if (!this.initializing) {
+            this.load_dashboard();
+        }
     }
 
     get_values() {
@@ -335,6 +388,10 @@ class DailyAvailabilityDashboardPage {
     }
 
     load_dashboard() {
+        if (this.initializing) {
+            return;
+        }
+
         const values = this.get_values();
 
         if (!this.validate(values)) {
