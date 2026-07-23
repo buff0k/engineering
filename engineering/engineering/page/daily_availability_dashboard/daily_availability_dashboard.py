@@ -327,15 +327,24 @@ def execute(filters=None):
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_grouped_data(location, start_date, end_date, machine_scope)
+    source_rows = fetch_grouped_data(
+        location,
+        start_date,
+        end_date,
+        machine_scope,
+        filters.get("au_target_filter") or "85% A & U",
+    )
 
     spare_swing_asset_map = get_spare_swing_asset_map(filters)
-    source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, filters, spare_swing_asset_map)
+
+    source_rows = apply_machine_scope_filter_to_dashboard_rows(
+        source_rows,
+        filters,
+        spare_swing_asset_map,
+    )
 
     machine_series = build_machine_series_from_source_rows(source_rows)
-    avgs = build_summary_averages_from_source_rows(source_rows)
-
-    avgs, machine_series = apply_au_target_to_values(avgs, machine_series, filters)
+    avgs = build_summary_averages_from_machine_series(machine_series)
 
 
     dashboard_html = build_dashboard_html(
@@ -356,7 +365,13 @@ def execute(filters=None):
     return columns, data, dashboard_html
 
 
-def fetch_grouped_data(location, start_date, end_date, machine_scope=None):
+def fetch_grouped_data(
+    location,
+    start_date,
+    end_date,
+    machine_scope=None,
+    au_target_filter=None,
+):
     result = month_end.execute(
         frappe._dict({
             "from_date": start_date,
@@ -365,7 +380,11 @@ def fetch_grouped_data(location, start_date, end_date, machine_scope=None):
             "end_date": end_date,
             "location": location,
             "site": location,
-            "machine_scope": machine_scope or "Production + Swing/Spare Machines",
+            "machine_scope": (
+                machine_scope
+                or "Production + Swing/Spare Machines"
+            ),
+            "au_target_filter": au_target_filter or "85% A & U",
             "include_excluded_asset_categories": 1,
         })
     )
@@ -910,13 +929,20 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
     daily_category_values = {}
 
     for date_value in all_dates:
-        day_rows = fetch_grouped_data(location, date_value, date_value, machine_scope)
-        day_avgs = build_summary_averages_from_source_rows(day_rows)
+        day_rows = fetch_grouped_data(
+            location,
+            date_value,
+            date_value,
+            machine_scope,
+            au_target_filter or "85% A & U",
+        )
 
-        day_avgs, _unused_machine_series = apply_au_target_to_values(
-            day_avgs,
-            {},
-            frappe._dict({"au_target_filter": au_target_filter or "85% A & U"})
+        day_machine_series = build_machine_series_from_source_rows(
+            day_rows
+        )
+
+        day_avgs = build_summary_averages_from_machine_series(
+            day_machine_series
         )
 
         for category in UI_CATEGORIES:
@@ -1614,7 +1640,13 @@ def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=Non
     if not location:
         frappe.throw("Please select Site.")
 
-    source_rows = fetch_grouped_data(location, start_date, end_date, machine_scope)
+    source_rows = fetch_grouped_data(
+        location,
+        start_date,
+        end_date,
+        machine_scope,
+        "100% A & U",
+    )
     spare_swing_asset_map = get_spare_swing_asset_map(frappe._dict({"start_date": start_date, "end_date": end_date, "location": location, "site": location, "machine_scope": machine_scope}))
     source_rows = apply_machine_scope_filter_to_dashboard_rows(source_rows, frappe._dict({"machine_scope": machine_scope}), spare_swing_asset_map)
     avgs = build_summary_averages_from_source_rows(source_rows)
