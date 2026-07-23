@@ -1149,92 +1149,188 @@ def build_trend_html(location, start_date, end_date, machine_scope="Production +
 </div>
 '''
 
-
-def build_chart_html(machine_series, machine_scope="Production + Swing/Spare Machines", spare_swing_asset_map=None):
+def build_chart_html(
+    machine_series,
+    machine_scope="Production + Swing/Spare Machines",
+    spare_swing_asset_map=None,
+):
     spare_swing_asset_map = spare_swing_asset_map or {}
-    machine_scope = machine_scope or "Production + Swing/Spare Machines"
+    machine_scope = (
+        machine_scope
+        or "Production + Swing/Spare Machines"
+    )
 
     def height(value):
         if value is None:
             return 2
 
-        value = max(0.0, min(100.0, float(value)))
+        value = max(
+            0.0,
+            min(100.0, float(value)),
+        )
 
         if value <= 0:
             return 2
 
-        return max(2, int(round((value / 100.0) * 220)))
+        return max(
+            2,
+            int(round((value / 100.0) * 220)),
+        )
 
-    def chart_section(category):
+    def chart_section(
+        category,
+        items,
+        section_scope,
+        spare_section=False,
+    ):
         title = UI_TITLES.get(category, category)
-        items = machine_series.get(category) or []
+        items = items or []
+
+        section_class = "isd-chart-section"
+        section_style = ""
+        title_style = ""
+
+        if spare_section:
+            section_class += " isd-chart-section-spare"
+            section_style = (
+                "border:2px solid #a855f7;"
+            )
+            title_style = (
+                "color:#7e22ce;"
+            )
 
         if not items:
             return f'''
-<div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Production + Swing/Spare Machines")}</div>
-    <div class="isd-no-machine-data">No machines found for {esc(title)} in the selected date range.</div>
+<div class="{section_class}" style="{section_style}">
+    <div
+        class="isd-chart-section-title"
+        style="{title_style}"
+    >
+        {esc(title)} AVAILABILITY &amp; UTILISATION
+        - {esc(section_scope)}
+    </div>
+
+    <div class="isd-no-machine-data">
+        No machines found for {esc(title)}
+        in {esc(section_scope)}.
+    </div>
 </div>
 '''
 
         count = max(len(items), 1)
-        grid_template = f"repeat({count * 2}, minmax(18px, 1fr))"
-        label_template = f"repeat({count}, minmax(54px, 2fr))"
+
+        grid_template = (
+            f"repeat({count * 2}, minmax(18px, 1fr))"
+        )
+
+        label_template = (
+            f"repeat({count}, minmax(54px, 2fr))"
+        )
+
         min_width = max(820, count * 70)
 
         bars = []
         labels = []
 
         for item in items:
-            machine_raw = str(item.get("machine") or "").strip()
+            machine_raw = str(
+                item.get("machine") or ""
+            ).strip()
+
             machine = esc(machine_raw)
             av = item.get("avail")
             ut = item.get("util")
 
-            # If user selects Swing/Spare Machines, all shown machines are swing/spare.
-            # If user selects Production + Swing/Spare Machines, only machines found in Monthly Planning spare map are purple.
-            is_spare_swing = (
-                machine_scope == "Swing/Spare Machines"
-                or bool(machine_raw and machine_raw in spare_swing_asset_map)
+            av_class = (
+                "isd-bar avail"
+                + (" nodata" if av is None else "")
             )
 
-            av_class = "isd-bar avail" + (" nodata" if av is None else "")
-            ut_class = "isd-bar util" + (" nodata" if ut is None else "")
+            ut_class = (
+                "isd-bar util"
+                + (" nodata" if ut is None else "")
+            )
 
-            label_style = ""
             label_class = "isd-machinelab"
+            label_style = ""
 
-            if is_spare_swing:
-                label_class = "isd-machinelab isd-machinelab-swing"
-                label_style = "color:#d291ff !important;font-weight:900 !important;text-shadow:1px 1px 3px #000000 !important;"
+            if spare_section:
+                label_class += " isd-machinelab-swing"
+                label_style = (
+                    "color:#d291ff !important;"
+                    "font-weight:900 !important;"
+                    "text-shadow:1px 1px 3px "
+                    "#000000 !important;"
+                )
 
             bars.append(
-                f"<div class='{av_class} daily-availability-clickable-bar' "
+                f"<div class='{av_class} "
+                f"daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='Click to view {machine} downtime details' "
-                f"style='height:{height(av)}px;position:relative;overflow:visible;'>"
-                f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(av)}</span>"
+                f"title='Click to view {machine} "
+                f"downtime details' "
+                f"style='height:{height(av)}px;"
+                f"position:relative;"
+                f"overflow:visible;'>"
+                f"<span style='position:absolute;"
+                f"top:-16px;"
+                f"left:50%;"
+                f"transform:translateX(-50%);"
+                f"font-size:9px;"
+                f"font-weight:800;"
+                f"color:#111827;"
+                f"white-space:nowrap;'>"
+                f"{fmt_percent(av)}"
+                f"</span>"
                 f"</div>"
             )
 
             bars.append(
-                f"<div class='{ut_class} daily-availability-clickable-bar' "
+                f"<div class='{ut_class} "
+                f"daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='Click to view {machine} downtime details' "
-                f"style='height:{height(ut)}px;position:relative;overflow:visible;'>"
-                f"<span style='position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#111827;white-space:nowrap;'>{fmt_percent(ut)}</span>"
+                f"title='Click to view {machine} "
+                f"downtime details' "
+                f"style='height:{height(ut)}px;"
+                f"position:relative;"
+                f"overflow:visible;'>"
+                f"<span style='position:absolute;"
+                f"top:-16px;"
+                f"left:50%;"
+                f"transform:translateX(-50%);"
+                f"font-size:9px;"
+                f"font-weight:800;"
+                f"color:#111827;"
+                f"white-space:nowrap;'>"
+                f"{fmt_percent(ut)}"
+                f"</span>"
                 f"</div>"
             )
 
             labels.append(
-                f"<div class='{label_class}' title='{machine}' style='{label_style}'><span style='{label_style}'>{machine}</span></div>"
+                f"<div class='{label_class}' "
+                f"title='{machine}' "
+                f"style='{label_style}'>"
+                f"<span style='{label_style}'>"
+                f"{machine}"
+                f"</span>"
+                f"</div>"
             )
 
         return f'''
-<div class="isd-chart-section">
-    <div class="isd-chart-section-title">{esc(title)} AVAILABILITY &amp; UTILISATION - {esc(machine_scope or "Production + Swing/Spare Machines")}</div>
+<div class="{section_class}" style="{section_style}">
+    <div
+        class="isd-chart-section-title"
+        style="{title_style}"
+    >
+        {esc(title)} AVAILABILITY &amp; UTILISATION
+        - {esc(section_scope)}
+    </div>
 
-    <div class="isd-chart" style="min-width:{min_width}px;">
+    <div
+        class="isd-chart"
+        style="min-width:{min_width}px;"
+    >
         <div class="isd-yaxis">
             <div>100%</div>
             <div>90%</div>
@@ -1249,22 +1345,92 @@ def build_chart_html(machine_series, machine_scope="Production + Swing/Spare Mac
             <div>0%</div>
         </div>
 
-
-
-        <div class="isd-chart-grid" style="grid-template-columns:{grid_template};">
+        <div
+            class="isd-chart-grid"
+            style="grid-template-columns:{grid_template};"
+        >
             {''.join(bars)}
         </div>
 
-        <div class="isd-machinelabels" style="grid-template-columns:{label_template};">
+        <div
+            class="isd-machinelabels"
+            style="grid-template-columns:{label_template};"
+        >
             {''.join(labels)}
         </div>
     </div>
 </div>
 '''
 
+    sections = []
+
+    for category in UI_CATEGORIES:
+        category_items = (
+            machine_series.get(category) or []
+        )
+
+        if (
+            machine_scope
+            == "Production + Swing/Spare Machines"
+        ):
+            production_items = []
+            spare_items = []
+
+            for item in category_items:
+                machine_name = str(
+                    item.get("machine") or ""
+                ).strip()
+
+                if (
+                    machine_name
+                    and machine_name
+                    in spare_swing_asset_map
+                ):
+                    spare_items.append(item)
+                else:
+                    production_items.append(item)
+
+            sections.append(
+                chart_section(
+                    category,
+                    production_items,
+                    "PRODUCTION MACHINES",
+                    spare_section=False,
+                )
+            )
+
+            sections.append(
+                chart_section(
+                    category,
+                    spare_items,
+                    "SWING/SPARE MACHINES",
+                    spare_section=True,
+                )
+            )
+
+        elif machine_scope == "Swing/Spare Machines":
+            sections.append(
+                chart_section(
+                    category,
+                    category_items,
+                    "SWING/SPARE MACHINES",
+                    spare_section=True,
+                )
+            )
+
+        else:
+            sections.append(
+                chart_section(
+                    category,
+                    category_items,
+                    "PRODUCTION MACHINES",
+                    spare_section=False,
+                )
+            )
+
     return f'''
 <div class="isd-chart-stack">
-    {''.join(chart_section(category) for category in UI_CATEGORIES)}
+    {''.join(sections)}
 </div>
 '''
 
