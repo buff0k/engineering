@@ -1072,7 +1072,25 @@ def _month_end_direct_rows(filters):
         total_work = sum(flt(row.get("work_hrs")) for row in machine_rows)
         total_down = sum(flt(row.get("mechanical_downtime")) for row in machine_rows)
 
-        output.append(_month_end_calc_row(category, "", total_required, total_work, total_down))
+        category_row = _month_end_calc_row(
+            category,
+            "",
+            total_required,
+            total_work,
+            total_down,
+        )
+
+        category_row["avail_percent"] = average_percent([
+            row.get("avail_percent")
+            for row in machine_rows
+        ])
+
+        category_row["util_percent"] = average_percent([
+            row.get("util_percent")
+            for row in machine_rows
+        ])
+
+        output.append(category_row)
         output.extend(machine_rows)
 
     for row in output:
