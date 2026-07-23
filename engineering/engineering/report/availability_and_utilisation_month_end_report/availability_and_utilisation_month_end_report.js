@@ -69,10 +69,13 @@ Drills`
 			options: [
 				"Production Machines",
 				"Swing/Spare Machines",
-				"Include Swing/Spare"
+				"Production + Swing/Spare Machines"
 			].join("\n"),
-			default: "Include Swing/Spare",
-			reqd: 1
+			default: "Production + Swing/Spare Machines",
+			reqd: 1,
+			on_change: function() {
+				frappe.query_report.refresh();
+			}
 		},
 		{
 			fieldname: "au_target_filter",
@@ -83,7 +86,10 @@ Drills`
 				"85% A & U"
 			].join("\n"),
 			default: "85% A & U",
-			reqd: 1
+			reqd: 1,
+			on_change: function() {
+				frappe.query_report.refresh();
+			}
 		}
 	],
 

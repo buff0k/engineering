@@ -150,10 +150,21 @@ def get_columns():
 
 
 def get_data(filters):
+	machine_scope = (
+		filters.get("machine_scope")
+		or "Production + Swing/Spare Machines"
+	)
+
+	source_machine_scope = machine_scope
+
+	if machine_scope == "Production + Swing/Spare Machines":
+		source_machine_scope = "Include Swing/Spare"
+
 	summary_filters = {
 		"start_date": filters.get("from_date"),
 		"end_date": filters.get("to_date"),
 		"location": filters.get("location"),
+		"machine_scope": source_machine_scope,
 	}
 
 	summary_rows = summary.get_grouped_data(summary_filters)
@@ -1063,6 +1074,16 @@ def _month_end_direct_rows(filters):
 
         output.append(_month_end_calc_row(category, "", total_required, total_work, total_down))
         output.extend(machine_rows)
+
+    for row in output:
+        row["avail_percent"] = apply_au_target(
+            row.get("avail_percent"),
+            filters,
+        )
+        row["util_percent"] = apply_au_target(
+            row.get("util_percent"),
+            filters,
+        )
 
     return output
 
