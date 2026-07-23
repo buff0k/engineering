@@ -477,7 +477,6 @@ class DailyAvailabilityDashboardPage {
             callback: (r) => {
                 const response = r.message || {};
                 const rows = response.rows || [];
-                const calculation = response.calculation || {};
 
                 const dialog = new frappe.ui.Dialog({
                     title: __("{0} Downtime Details", [machine]),
@@ -518,12 +517,34 @@ class DailyAvailabilityDashboardPage {
                             row.downtime_type || ""
                         );
 
+                        const calculation = row.calculation || {};
+
+                        const shift = frappe.utils.escape_html(
+                            calculation.shift || ""
+                        );
+
                         const required_hours = Number(
-                            calculation.required_hours || 0
+                            calculation.required_hours || 9
                         ).toFixed(2);
 
                         const available_hours = Number(
                             calculation.available_hours || 0
+                        ).toFixed(2);
+
+                        const raw_downtime = Number(
+                            calculation.raw_downtime || 0
+                        ).toFixed(2);
+
+                        const startup_excluded = Number(
+                            calculation.startup_excluded || 0
+                        ).toFixed(2);
+
+                        const fatigue_excluded = Number(
+                            calculation.fatigue_excluded || 0
+                        ).toFixed(2);
+
+                        const total_excluded = Number(
+                            calculation.total_excluded || 0
                         ).toFixed(2);
 
                         const total_downtime = Number(
@@ -577,17 +598,43 @@ class DailyAvailabilityDashboardPage {
                                             </div>
 
                                             <div>
+                                                <strong>Shift:</strong>
+                                                ${shift}
+                                            </div>
+
+                                            <div>
                                                 <strong>Required Hours:</strong>
                                                 ${required_hours} hrs
                                             </div>
 
                                             <div>
-                                                <strong>Total Downtime:</strong>
+                                                <strong>Raw Downtime:</strong>
+                                                ${raw_downtime} hrs
+                                            </div>
+
+                                            <div>
+                                                <strong>Startup Excluded:</strong>
+                                                ${startup_excluded} hrs
+                                            </div>
+
+                                            <div>
+                                                <strong>Fatigue Excluded:</strong>
+                                                ${fatigue_excluded} hrs
+                                            </div>
+
+                                            <div>
+                                                <strong>Total Excluded:</strong>
+                                                ${total_excluded} hrs
+                                            </div>
+
+                                            <div>
+                                                <strong>Counted Downtime:</strong>
                                                 ${total_downtime} hrs
                                             </div>
 
                                             <div>
                                                 <strong>Available Hours:</strong>
+                                                ${required_hours} - ${total_downtime} =
                                                 ${available_hours} hrs
                                             </div>
 

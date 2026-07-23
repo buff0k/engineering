@@ -1,7 +1,7 @@
 import frappe
 from urllib.parse import quote
-from frappe.utils import flt, getdate, get_datetime, add_days, date_diff
-
+from frappe.utils import flt, getdate, get_datetime, add_days, date_diff, now_datetime, time_diff_in_hours
+from datetime import timedelta
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
     availability_and_utilisation_month_end_report as month_end,
 )
@@ -615,13 +615,277 @@ def fmt_percent(value):
         return "0.0%"
     return f"{float(value):.1f}%"
 
-
 def esc(value):
     return frappe.utils.escape_html(str(value or ""))
 
 
+def get_popup_shift_window(breakdown_start):
+    breakdown_start = get_datetime(breakdown_start)
+    breakdown_time = breakdown_start.time()
+
+    if breakdown_time >= get_datetime("2000-01-01 06:00:00").time() and breakdown_time < get_datetime("2000-01-01 18:00:00").time():
+        shift_name = "Day Shift"
+        window_start = get_datetime(
+            f"{getdate(breakdown_start)} 06:00:00"
+        )
+        window_end = get_datetime(
+            f"{getdate(breakdown_start)} 18:00:00"
+        )
+
+        excluded_windows = [
+            (
+                get_datetime(
+                    f"{getdate(breakdown_start)} 06:00:00"
+                ),
+                get_datetime(
+                    f"{getdate(breakdown_start)} 08:00:00"
+                ),
+                "Startup",
+            ),
+            (
+                get_datetime(
+                    f"{getdate(breakdown_start)} 13:00:00"
+                ),
+                get_datetime(
+                    f"{getdate(breakdown_start)} 14:00:00"
+                ),
+                "Fatigue",
+            ),
+        ]
+
+        return (
+            shift_name,
+            window_start,
+            window_end,
+            excluded_windows,
+        )
+
+    if breakdown_time >= get_datetime("2000-01-01 18:00:00").time():
+        shift_date = getdate(breakdown_start)
+    else:
+        shift_date = add_days(
+            getdate(breakdown_start),
+            -1,
+        )
+
+    next_date = add_days(shift_date, 1)
+
+    shift_name = "Night Shift"
+    window_start = get_datetime(
+        f"{shift_date} 18:00:00"
+    )
+    window_end = get_datetime(
+        f"{next_date} 06:00:00"
+    )
+
+    excluded_windows = [
+        (
+            get_datetime(
+                f"{shift_date} 18:00:00"
+            ),
+            get_datetime(
+                f"{shift_date} 20:00:00"
+            ),
+            "Startup",
+        ),
+        (
+            get_datetime(
+                f"{next_date} 01:00:00"
+            ),
+            get_datetime(
+                f"{next_date} 02:00:00"
+            ),
+            "Fatigue",
+        ),
+    ]
+
+    return (
+        shift_name,
+        window_start,
+        window_end,
+        excluded_windows,
+    )
 
 
+def get_popup_overlap_hours(
+    first_start,
+    first_end,
+    second_start,
+    second_end,
+):
+    overlap_start = max(
+        first_start,
+        second_start,
+    )
+
+    overlap_end = min(
+        first_end,
+        second_end,
+    )
+
+    if overlap_end <= overlap_start:
+        return 0.0
+
+    return float(
+        time_diff_in_hours(
+            overlap_end,
+            overlap_start,
+        )
+    )
+
+
+def calculate_popup_availability(
+    breakdown_start,
+    resolved_datetime=None,
+    au_target_filter=None,
+):
+    required_hours = 9.0
+
+    if not breakdown_start:
+        return {
+            "shift": "",
+            "required_hours": required_hours,
+            "raw_downtime": 0.0,
+            "startup_excluded": 0.0,
+            "fatigue_excluded": 0.0,
+            "total_excluded": 0.0,
+            "total_downtime": 0.0,
+            "available_hours": required_hours,
+            "actual_availability": 100.0,
+            "displayed_availability": (
+                85.0
+                if au_target_filter == "85% A & U"
+                else 100.0
+            ),
+            "target_label": (
+                au_target_filter
+                or "100% A & U"
+            ),
+        }
+
+    (
+        shift_name,
+        shift_start,
+        shift_end,
+        excluded_windows,
+    ) = get_popup_shift_window(
+        breakdown_start
+    )
+
+    actual_start = max(
+        get_datetime(breakdown_start),
+        shift_start,
+    )
+
+    actual_end = min(
+        get_datetime(
+            resolved_datetime
+            or now_datetime()
+        ),
+        shift_end,
+    )
+
+    if actual_end <= actual_start:
+        raw_downtime = 0.0
+    else:
+        raw_downtime = float(
+            time_diff_in_hours(
+                actual_end,
+                actual_start,
+            )
+        )
+
+    startup_excluded = 0.0
+    fatigue_excluded = 0.0
+
+    for (
+        excluded_start,
+        excluded_end,
+        excluded_type,
+    ) in excluded_windows:
+        excluded_hours = get_popup_overlap_hours(
+            actual_start,
+            actual_end,
+            excluded_start,
+            excluded_end,
+        )
+
+        if excluded_type == "Startup":
+            startup_excluded += excluded_hours
+        else:
+            fatigue_excluded += excluded_hours
+
+    total_excluded = min(
+        startup_excluded + fatigue_excluded,
+        raw_downtime,
+    )
+
+    effective_downtime = max(
+        raw_downtime - total_excluded,
+        0.0,
+    )
+
+    effective_downtime = min(
+        effective_downtime,
+        required_hours,
+    )
+
+    available_hours = max(
+        required_hours - effective_downtime,
+        0.0,
+    )
+
+    actual_availability = round(
+        (
+            available_hours
+            / required_hours
+        ) * 100,
+        1,
+    )
+
+    multiplier = (
+        0.85
+        if au_target_filter == "85% A & U"
+        else 1.0
+    )
+
+    return {
+        "shift": shift_name,
+        "required_hours": required_hours,
+        "raw_downtime": round(
+            raw_downtime,
+            2,
+        ),
+        "startup_excluded": round(
+            startup_excluded,
+            2,
+        ),
+        "fatigue_excluded": round(
+            fatigue_excluded,
+            2,
+        ),
+        "total_excluded": round(
+            total_excluded,
+            2,
+        ),
+        "total_downtime": round(
+            effective_downtime,
+            2,
+        ),
+        "available_hours": round(
+            available_hours,
+            2,
+        ),
+        "actual_availability": actual_availability,
+        "displayed_availability": round(
+            actual_availability * multiplier,
+            1,
+        ),
+        "target_label": (
+            au_target_filter
+            or "100% A & U"
+        ),
+    }
 
 
 
@@ -1425,6 +1689,7 @@ def build_chart_html(
 </div>
 '''
 
+
 @frappe.whitelist()
 def get_machine_downtime_details(
     machine=None,
@@ -1440,9 +1705,14 @@ def get_machine_downtime_details(
         frappe.throw("Site is required.")
 
     if not start_date or not end_date:
-        frappe.throw("Start Date and End Date are required.")
+        frappe.throw(
+            "Start Date and End Date are required."
+        )
 
-    au_target_filter = au_target_filter or "100% A & U"
+    au_target_filter = (
+        au_target_filter
+        or "100% A & U"
+    )
 
     window_start = get_datetime(
         f"{start_date} 00:00:00"
@@ -1470,7 +1740,10 @@ def get_machine_downtime_details(
           AND pbm.asset_name = %(machine)s
           AND pbm.location = %(location)s
           AND COALESCE(
-                NULLIF(pbm.breakdown_start_datetime, ''),
+                NULLIF(
+                    pbm.breakdown_start_datetime,
+                    ''
+                ),
                 pbm.creation
               ) < %(window_end)s
           AND (
@@ -1480,7 +1753,10 @@ def get_machine_downtime_details(
               )
         ORDER BY
             COALESCE(
-                NULLIF(pbm.breakdown_start_datetime, ''),
+                NULLIF(
+                    pbm.breakdown_start_datetime,
+                    ''
+                ),
                 pbm.creation
             ) DESC
         """,
@@ -1493,118 +1769,75 @@ def get_machine_downtime_details(
         as_dict=True,
     )
 
-    availability_rows = frappe.db.sql(
-        """
-        SELECT
-            COALESCE(
-                SUM(shift_required_hours),
-                0
-            ) AS required_hours,
-            COALESCE(
-                SUM(shift_available_hours),
-                0
-            ) AS available_hours,
-            COALESCE(
-                SUM(shift_breakdown_hours),
-                0
-            ) AS total_downtime
-        FROM `tabAvailability and Utilisation`
-        WHERE asset_name = %(machine)s
-          AND location = %(location)s
-          AND shift_date BETWEEN %(start_date)s
-                             AND %(end_date)s
-        """,
-        {
-            "machine": machine,
-            "location": location,
-            "start_date": start_date,
-            "end_date": end_date,
-        },
-        as_dict=True,
-    )
+    rows = []
 
-    totals = availability_rows[0] if availability_rows else {}
-
-    required_hours = flt(
-        totals.get("required_hours"),
-        2,
-    )
-
-    available_hours = flt(
-        totals.get("available_hours"),
-        2,
-    )
-
-    total_downtime = flt(
-        totals.get("total_downtime"),
-        2,
-    )
-
-    actual_availability = 0.0
-
-    if required_hours > 0:
-        actual_availability = round(
-            min(
-                100.0,
-                max(
-                    0.0,
-                    (
-                        available_hours
-                        / required_hours
-                    ) * 100,
-                ),
+    for row in downtime_rows:
+        calculation = calculate_popup_availability(
+            row.get(
+                "breakdown_start_datetime"
             ),
-            1,
+            row.get(
+                "resolved_datetime"
+            ),
+            au_target_filter,
         )
 
-    multiplier = (
-        0.85
-        if au_target_filter == "85% A & U"
-        else 1.0
-    )
-
-    displayed_availability = round(
-        actual_availability * multiplier,
-        1,
-    )
-
-    rows = [
-        {
+        rows.append({
             "name": row.get("name") or "",
-            "machine": row.get("asset_name") or "",
-            "location": row.get("location") or "",
-            "downtime_type": row.get("downtime_type") or "",
-            "reason": row.get("breakdown_reason") or "",
-            "resolution": row.get("resolution_summary") or "",
-            "start": row.get("breakdown_start_datetime") or "",
-            "resolved": row.get("resolved_datetime") or "",
+            "machine": (
+                row.get("asset_name")
+                or ""
+            ),
+            "location": (
+                row.get("location")
+                or ""
+            ),
+            "downtime_type": (
+                row.get("downtime_type")
+                or ""
+            ),
+            "reason": (
+                row.get("breakdown_reason")
+                or ""
+            ),
+            "resolution": (
+                row.get("resolution_summary")
+                or ""
+            ),
+            "start": (
+                row.get(
+                    "breakdown_start_datetime"
+                )
+                or ""
+            ),
+            "resolved": (
+                row.get("resolved_datetime")
+                or ""
+            ),
             "hours": flt(
-                row.get("breakdown_hours"),
+                calculation.get(
+                    "total_downtime"
+                ),
                 2,
             ),
             "status": (
                 row.get("open_closed")
                 or (
                     "Closed"
-                    if row.get("resolved_datetime")
+                    if row.get(
+                        "resolved_datetime"
+                    )
                     else "Open"
                 )
             ),
-        }
-        for row in downtime_rows
-    ]
+            "calculation": calculation,
+        })
 
     return {
         "rows": rows,
-        "calculation": {
-            "required_hours": required_hours,
-            "available_hours": available_hours,
-            "total_downtime": total_downtime,
-            "actual_availability": actual_availability,
-            "displayed_availability": displayed_availability,
-            "target_label": au_target_filter,
-        },
     }
+
+
 
 
 @frappe.whitelist()
