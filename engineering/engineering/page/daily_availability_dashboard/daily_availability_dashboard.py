@@ -725,38 +725,7 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Average Per Machine")
     header_colour = get_site_header_colour(location)
-    adt_dozer_excavator_cards_all_summary_types = get_adt_dozer_excavator_cards_all_summary_types(
-        location,
-        start_date,
-        end_date,
-        machine_scope or "Production Machines"
-    )
 
-
-    target_multiplier = get_au_target_multiplier(frappe._dict({
-        "au_target_filter": getattr(frappe.local, "daily_dashboard_au_target_filter", "100% A & U")
-    }))
-
-    if target_multiplier != 1.0:
-        for _cat, _vals in adt_dozer_excavator_cards_all_summary_types.items():
-            for _field in ("avail", "util"):
-                if _vals.get(_field) is not None:
-                    _vals[_field] = round(float(_vals.get(_field) or 0) * target_multiplier, 1)
-
-
-    # IMPORTANT:
-    # Build the graph from the same ADT / Dozer / Excavator values as the cards.
-    # This must happen BEFORE chart_html is created.
-    avgs = dict(avgs or {})
-
-    for _cat in ("ADT", "Dozer", "Excavator"):
-        _forced_vals = adt_dozer_excavator_cards_all_summary_types.get(_cat)
-
-        if _forced_vals:
-            _current_vals = dict(avgs.get(_cat) or {})
-            _current_vals["avail"] = _forced_vals.get("avail", _current_vals.get("avail"))
-            _current_vals["util"] = _forced_vals.get("util", _current_vals.get("util"))
-            avgs[_cat] = _current_vals
 
     metric_cards = []
 
@@ -770,9 +739,6 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
 
     for category in UI_CATEGORIES:
         values = avgs.get(category) or {}
-
-        if category in ("ADT", "Dozer", "Excavator"):
-            values = adt_dozer_excavator_cards_all_summary_types.get(category) or values
 
         av = values.get("avail")
         ut = values.get("util")
