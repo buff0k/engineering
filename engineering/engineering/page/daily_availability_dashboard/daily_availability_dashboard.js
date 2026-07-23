@@ -469,12 +469,16 @@ class DailyAvailabilityDashboardPage {
                 machine: machine,
                 location: values.location,
                 start_date: values.start_date,
-                end_date: values.end_date
+                end_date: values.end_date,
+                au_target_filter: values.au_target_filter
             },
             freeze: true,
             freeze_message: __("Loading downtime details..."),
             callback: (r) => {
-                const rows = r.message || [];
+                const response = r.message || {};
+                const rows = response.rows || [];
+                const calculation = response.calculation || {};
+
                 const dialog = new frappe.ui.Dialog({
                     title: __("{0} Downtime Details", [machine]),
                     size: "extra-large"
@@ -514,6 +518,30 @@ class DailyAvailabilityDashboardPage {
                             row.downtime_type || ""
                         );
 
+                        const required_hours = Number(
+                            calculation.required_hours || 0
+                        ).toFixed(2);
+
+                        const available_hours = Number(
+                            calculation.available_hours || 0
+                        ).toFixed(2);
+
+                        const total_downtime = Number(
+                            calculation.total_downtime || 0
+                        ).toFixed(2);
+
+                        const actual_availability = Number(
+                            calculation.actual_availability || 0
+                        ).toFixed(1);
+
+                        const displayed_availability = Number(
+                            calculation.displayed_availability || 0
+                        ).toFixed(1);
+
+                        const target_label = frappe.utils.escape_html(
+                            calculation.target_label || "100% A & U"
+                        );
+
                         html += `
                             <div class="daily-downtime-item">
                                 <div class="daily-downtime-summary">
@@ -523,11 +551,57 @@ class DailyAvailabilityDashboardPage {
                                 </div>
 
                                 <div class="daily-downtime-details">
-                                    <div><strong>Type:</strong> ${downtime_type}</div>
-                                    <div><strong>Start:</strong> ${start}</div>
-                                    <div><strong>Back in Production:</strong> ${resolved}</div>
-                                    <div><strong>Reason:</strong> ${reason}</div>
-                                    <div><strong>Resolution:</strong> ${resolution || "Not captured"}</div>
+                                    <div style="
+                                        display:grid;
+                                        grid-template-columns:minmax(260px, 1fr) minmax(240px, 0.8fr);
+                                        gap:20px;
+                                    ">
+                                        <div>
+                                            <div><strong>Type:</strong> ${downtime_type}</div>
+                                            <div><strong>Start:</strong> ${start}</div>
+                                            <div><strong>Back in Production:</strong> ${resolved}</div>
+                                            <div><strong>Reason:</strong> ${reason}</div>
+                                            <div><strong>Resolution:</strong> ${resolution || "Not captured"}</div>
+                                        </div>
+
+                                        <div style="
+                                            border-left:1px solid #bfdbfe;
+                                            padding-left:18px;
+                                        ">
+                                            <div style="
+                                                font-weight:800;
+                                                margin-bottom:5px;
+                                                color:#111827;
+                                            ">
+                                                Availability Calculation
+                                            </div>
+
+                                            <div>
+                                                <strong>Required Hours:</strong>
+                                                ${required_hours} hrs
+                                            </div>
+
+                                            <div>
+                                                <strong>Total Downtime:</strong>
+                                                ${total_downtime} hrs
+                                            </div>
+
+                                            <div>
+                                                <strong>Available Hours:</strong>
+                                                ${available_hours} hrs
+                                            </div>
+
+                                            <div style="margin-top:5px;">
+                                                ${available_hours} ÷ ${required_hours} × 100 =
+                                                <strong>${actual_availability}%</strong>
+                                            </div>
+
+                                            <div style="margin-top:5px;">
+                                                <strong>${target_label}:</strong>
+                                                ${displayed_availability}%
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         `;

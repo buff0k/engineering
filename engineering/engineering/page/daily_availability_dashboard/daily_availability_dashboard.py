@@ -1254,15 +1254,6 @@ def build_chart_html(
             label_class = "isd-machinelab"
             label_style = ""
 
-            if spare_section:
-                label_class += " isd-machinelab-swing"
-                label_style = (
-                    "color:#d291ff !important;"
-                    "font-weight:900 !important;"
-                    "text-shadow:1px 1px 3px "
-                    "#000000 !important;"
-                )
-
             bars.append(
                 f"<div class='{av_class} "
                 f"daily-availability-clickable-bar' "
@@ -1435,7 +1426,13 @@ def build_chart_html(
 '''
 
 @frappe.whitelist()
-def get_machine_downtime_details(machine=None, location=None, start_date=None, end_date=None):
+def get_machine_downtime_details(
+    machine=None,
+    location=None,
+    start_date=None,
+    end_date=None,
+    au_target_filter=None,
+):
     if not machine:
         frappe.throw("Machine is required.")
 
@@ -1445,10 +1442,17 @@ def get_machine_downtime_details(machine=None, location=None, start_date=None, e
     if not start_date or not end_date:
         frappe.throw("Start Date and End Date are required.")
 
-    window_start = get_datetime(f"{start_date} 00:00:00")
-    window_end = get_datetime(f"{add_days(end_date, 1)} 00:00:00")
+    au_target_filter = au_target_filter or "100% A & U"
 
-    rows = frappe.db.sql(
+    window_start = get_datetime(
+        f"{start_date} 00:00:00"
+    )
+
+    window_end = get_datetime(
+        f"{add_days(end_date, 1)} 00:00:00"
+    )
+
+    downtime_rows = frappe.db.sql(
         """
         SELECT
             pbm.name,
@@ -1489,7 +1493,82 @@ def get_machine_downtime_details(machine=None, location=None, start_date=None, e
         as_dict=True,
     )
 
-    return [
+    availability_rows = frappe.db.sql(
+        """
+        SELECT
+            COALESCE(
+                SUM(shift_required_hours),
+                0
+            ) AS required_hours,
+            COALESCE(
+                SUM(shift_available_hours),
+                0
+            ) AS available_hours,
+            COALESCE(
+                SUM(shift_breakdown_hours),
+                0
+            ) AS total_downtime
+        FROM `tabAvailability and Utilisation`
+        WHERE asset_name = %(machine)s
+          AND location = %(location)s
+          AND shift_date BETWEEN %(start_date)s
+                             AND %(end_date)s
+        """,
+        {
+            "machine": machine,
+            "location": location,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+        as_dict=True,
+    )
+
+    totals = availability_rows[0] if availability_rows else {}
+
+    required_hours = flt(
+        totals.get("required_hours"),
+        2,
+    )
+
+    available_hours = flt(
+        totals.get("available_hours"),
+        2,
+    )
+
+    total_downtime = flt(
+        totals.get("total_downtime"),
+        2,
+    )
+
+    actual_availability = 0.0
+
+    if required_hours > 0:
+        actual_availability = round(
+            min(
+                100.0,
+                max(
+                    0.0,
+                    (
+                        available_hours
+                        / required_hours
+                    ) * 100,
+                ),
+            ),
+            1,
+        )
+
+    multiplier = (
+        0.85
+        if au_target_filter == "85% A & U"
+        else 1.0
+    )
+
+    displayed_availability = round(
+        actual_availability * multiplier,
+        1,
+    )
+
+    rows = [
         {
             "name": row.get("name") or "",
             "machine": row.get("asset_name") or "",
@@ -1499,12 +1578,33 @@ def get_machine_downtime_details(machine=None, location=None, start_date=None, e
             "resolution": row.get("resolution_summary") or "",
             "start": row.get("breakdown_start_datetime") or "",
             "resolved": row.get("resolved_datetime") or "",
-            "hours": flt(row.get("breakdown_hours"), 2),
-            "status": row.get("open_closed")
-                or ("Closed" if row.get("resolved_datetime") else "Open"),
+            "hours": flt(
+                row.get("breakdown_hours"),
+                2,
+            ),
+            "status": (
+                row.get("open_closed")
+                or (
+                    "Closed"
+                    if row.get("resolved_datetime")
+                    else "Open"
+                )
+            ),
         }
-        for row in rows
+        for row in downtime_rows
     ]
+
+    return {
+        "rows": rows,
+        "calculation": {
+            "required_hours": required_hours,
+            "available_hours": available_hours,
+            "total_downtime": total_downtime,
+            "actual_availability": actual_availability,
+            "displayed_availability": displayed_availability,
+            "target_label": au_target_filter,
+        },
+    }
 
 
 @frappe.whitelist()
@@ -2260,13 +2360,7 @@ def get_daily_dashboard_pdf_override_css():
         color: #111827 !important;
     }
 
-    .isd-machinelab-swing,
-    .isd-machinelab-swing span,
-    .isd-machinelab-swing div {
-        color: #7b2cbf !important;
-        font-weight: 900 !important;
-        text-shadow: none !important;
-    }
+
 
     .isd-no-machine-data {
         padding: 12px !important;
