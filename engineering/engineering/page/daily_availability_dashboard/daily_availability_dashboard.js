@@ -10,14 +10,14 @@ function format_dashboard_hours(value) {
     const minutes = total_minutes % 60;
 
     if (hours > 0 && minutes > 0) {
-        return `${hours}H ${minutes}Min`;
+        return `${hours}h ${minutes}m`;
     }
 
     if (hours > 0) {
-        return `${hours}H`;
+        return `${hours}h`;
     }
 
-    return `${minutes}Min`;
+    return `${minutes}m`;
 }
 
 
