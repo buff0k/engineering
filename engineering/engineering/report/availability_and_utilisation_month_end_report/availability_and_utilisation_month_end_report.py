@@ -103,7 +103,23 @@ def safe_getdate(value):
     except Exception:
         return None
 
+def get_au_target_multiplier(filters):
+	filters = filters or {}
+	au_target_filter = filters.get("au_target_filter") or "85% A & U"
 
+	if au_target_filter == "85% A & U":
+		return 0.85
+
+	return 1.0
+
+
+def apply_au_target(value, filters):
+	if value in (None, ""):
+		return value
+
+	multiplier = get_au_target_multiplier(filters)
+
+	return summary.r1(flt(value) * multiplier)
 
 def execute(filters=None):
 	filters = filters or {}
@@ -217,9 +233,17 @@ def get_data(filters):
 			"required_hrs": summary.r1(row.get("shift_required_hours")),
 			"work_hrs": summary.r1(row.get("shift_working_hours")),
 			"mechanical_downtime": summary.r1(row.get("shift_breakdown_hours")),
-			"avail_percent": summary.r1(row.get("plant_shift_availability")),
-			"util_percent": summary.r1(row.get("plant_shift_utilisation")),
-			"emp_avail_percent": summary.r1(row.get("employee_availability")),
+			"avail_percent": apply_au_target(
+				row.get("plant_shift_availability"),
+				filters,
+			),
+			"util_percent": apply_au_target(
+				row.get("plant_shift_utilisation"),
+				filters,
+			),
+			"emp_avail_percent": summary.r1(
+				row.get("employee_availability")
+			),
 			"breakdown_reason": "",
 			"other_delay_reason": "",
 			"is_category_total": 1,
@@ -250,9 +274,17 @@ def get_data(filters):
 			"required_hrs": summary.r1(required_hrs),
 			"work_hrs": summary.r1(work_hrs),
 			"mechanical_downtime": summary.r1(mechanical_downtime),
-			"avail_percent": average_percent(row["avail_percentages"]),
-			"util_percent": average_percent(row["util_percentages"]),
-			"emp_avail_percent": average_percent(row["emp_avail_percentages"]),
+			"avail_percent": apply_au_target(
+				average_percent(row["avail_percentages"]),
+				filters,
+			),
+			"util_percent": apply_au_target(
+				average_percent(row["util_percentages"]),
+				filters,
+			),
+			"emp_avail_percent": average_percent(
+				row["emp_avail_percentages"]
+			),
 			"breakdown_reason": clean_join(row["breakdown_reason"]),
 			"other_delay_reason": clean_join(row["other_delay_reason"]),
 		})

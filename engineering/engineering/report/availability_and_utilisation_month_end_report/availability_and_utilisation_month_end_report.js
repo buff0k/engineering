@@ -73,6 +73,17 @@ Drills`
 			].join("\n"),
 			default: "Include Swing/Spare",
 			reqd: 1
+		},
+		{
+			fieldname: "au_target_filter",
+			label: __("A & U Target"),
+			fieldtype: "Select",
+			options: [
+				"100% A & U",
+				"85% A & U"
+			].join("\n"),
+			default: "85% A & U",
+			reqd: 1
 		}
 	],
 
