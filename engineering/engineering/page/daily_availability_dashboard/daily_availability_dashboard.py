@@ -372,6 +372,8 @@ def fetch_grouped_data(
     machine_scope=None,
     au_target_filter=None,
 ):
+    frappe.clear_messages()
+
     result = month_end.execute(
         frappe._dict({
             "from_date": start_date,
@@ -388,6 +390,8 @@ def fetch_grouped_data(
             "include_excluded_asset_categories": 1,
         })
     )
+
+    frappe.clear_messages()
 
     columns = []
     rows = []
