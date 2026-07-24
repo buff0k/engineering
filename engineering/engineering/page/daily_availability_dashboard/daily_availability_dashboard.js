@@ -492,6 +492,20 @@ class DailyAvailabilityDashboardPage {
             return `${Number(value || 0).toFixed(1)}%`;
         };
 
+        const format_popup_datetime = (value) => {
+            if (!value) {
+                return "Still Open";
+            }
+
+            if (typeof moment !== "undefined") {
+                return moment(value).format(
+                    "D MMMM YYYY HH:mm"
+                );
+            }
+
+            return String(value);
+        };
+
         frappe.call({
             method: this.downtime_method,
             args: {
@@ -636,6 +650,20 @@ class DailyAvailabilityDashboardPage {
                         "100% A & U"
                     );
 
+                    const affected_shift_count = Number(
+                        calculation.affected_shift_count || 0
+                    );
+
+                    const calculation_start =
+                        frappe.utils.escape_html(
+                            format_popup_datetime(row.start)
+                        );
+
+                    const calculation_end =
+                        frappe.utils.escape_html(
+                            format_popup_datetime(row.resolved)
+                        );
+
                     event_cards += `
                         <div class="daily-downtime-item">
                             <div class="daily-downtime-summary">
@@ -684,10 +712,15 @@ class DailyAvailabilityDashboardPage {
                                     color:#475569;
                                     margin-bottom:8px;
                                 ">
-                                    <div>
-                                        <strong>Duration:</strong>
+                                <div>
+                                    <strong>Duration:</strong>
+                                    <span style="
+                                        color:#dc2626;
+                                        font-weight:800;
+                                    ">
                                         ${raw_time}
-                                    </div>
+                                    </span>
+                                </div>
 
                                     <div>
                                         <strong>Type:</strong>
@@ -734,6 +767,28 @@ class DailyAvailabilityDashboardPage {
                             </div>
 
                             <div class="daily-downtime-details">
+                                <div style="
+                                    margin-bottom:10px;
+                                    padding:8px 10px;
+                                    border:1px solid #bfdbfe;
+                                    border-radius:7px;
+                                    background:#eff6ff;
+                                    color:#1d4ed8;
+                                    font-size:11px;
+                                    font-weight:800;
+                                ">
+                                    A&amp;U calculation for
+                                    ${affected_shift_count}
+                                    affected
+                                    ${affected_shift_count === 1
+                                        ? "shift"
+                                        : "shifts"}
+                                    from
+                                    ${calculation_start}
+                                    to
+                                    ${calculation_end}
+                                </div>
+
                                 <div style="
                                     display:grid;
                                     grid-template-columns:
