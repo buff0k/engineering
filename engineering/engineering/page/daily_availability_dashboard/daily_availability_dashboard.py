@@ -1702,63 +1702,16 @@ def get_popup_au_rows(
     window_start,
     window_end,
 ):
-    meta = frappe.get_meta(
-        "Availability and Utilisation"
-    )
-
-    required_field = next(
-        (
-            fieldname
-            for fieldname in (
-                "required_hours",
-                "required_hrs",
-                "required_hour",
-            )
-            if meta.has_field(fieldname)
-        ),
-        None,
-    )
-
-    working_field = next(
-        (
-            fieldname
-            for fieldname in (
-                "working_hours",
-                "work_hrs",
-                "working_hrs",
-                "work_hours",
-            )
-            if meta.has_field(fieldname)
-        ),
-        None,
-    )
-
-    if not required_field:
-        frappe.throw(
-            "Required-hours field was not found on "
-            "Availability and Utilisation."
-        )
-
-    required_sql = (
-        f"`{required_field}` AS required_hours"
-    )
-
-    working_sql = (
-        f"`{working_field}` AS working_hours"
-        if working_field
-        else "0 AS working_hours"
-    )
-
     return frappe.db.sql(
-        f"""
+        """
         SELECT
             name,
             shift_date,
             shift,
             shift_system,
             location,
-            {required_sql},
-            {working_sql}
+            9.0 AS required_hours,
+            0.0 AS working_hours
         FROM `tabAvailability and Utilisation`
         WHERE asset_name = %(machine)s
           AND location = %(location)s
