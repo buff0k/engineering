@@ -5,9 +5,7 @@ from datetime import timedelta
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
     availability_and_utilisation_month_end_report as month_end,
 )
-from is_production.production.report.avail_and_util_summary import (
-    avail_and_util_summary as au_summary,
-)
+
 
 _ = frappe._
 
@@ -1702,7 +1700,7 @@ def get_popup_au_rows(
     window_start,
     window_end,
 ):
-    au_rows = frappe.db.sql(
+    return frappe.db.sql(
         """
         SELECT
             name,
@@ -1712,17 +1710,24 @@ def get_popup_au_rows(
             shift_system,
             location,
             9.0 AS required_hours,
-            COALESCE(shift_working_hours, 0) AS working_hours
+            COALESCE(
+                shift_working_hours,
+                0
+            ) AS working_hours
         FROM `tabAvailability and Utilisation`
         WHERE asset_name = %(machine)s
           AND location = %(location)s
           AND shift_date >=
               DATE(%(window_start)s) - INTERVAL 1 DAY
           AND shift_date <=
-              DATE(%(window_end)s) + INTERVAL 1 DAY
+              DATE(%(window_end)s)
         ORDER BY
             shift_date ASC,
-            FIELD(shift, 'Day', 'Night') ASC
+            FIELD(
+                shift,
+                'Day',
+                'Night'
+            ) ASC
         """,
         {
             "machine": machine,
@@ -1732,90 +1737,6 @@ def get_popup_au_rows(
         },
         as_dict=True,
     )
-
-    summary_rows = au_summary.get_grouped_data({
-        "start_date": str(
-            getdate(window_start)
-        ),
-        "end_date": str(
-            add_days(
-                getdate(window_end),
-                -1,
-            )
-        ),
-        "location": location,
-        "machine_scope": "Include Swing/Spare",
-    })
-
-    working_hours_by_shift = {}
-
-    for summary_row in summary_rows or []:
-        if not isinstance(summary_row, dict):
-            continue
-
-        if summary_row.get("asset_name") != machine:
-            continue
-
-        if (
-            summary_row.get("location")
-            and summary_row.get("location") != location
-        ):
-            continue
-
-        try:
-            indent = int(
-                summary_row.get("indent") or 0
-            )
-        except Exception:
-            indent = 0
-
-        if indent != 3:
-            continue
-
-        shift_date = summary_row.get(
-            "shift_date"
-        )
-
-        shift = str(
-            summary_row.get("shift") or ""
-        ).strip()
-
-        if not shift_date or not shift:
-            continue
-
-        key = (
-            str(getdate(shift_date)),
-            shift,
-        )
-
-        working_hours_by_shift[key] = (
-            working_hours_by_shift.get(key, 0.0)
-            + flt(
-                summary_row.get(
-                    "shift_working_hours"
-                )
-            )
-        )
-
-    for au_row in au_rows:
-        key = (
-            str(getdate(au_row.shift_date)),
-            str(au_row.shift or "").strip(),
-        )
-
-        au_row.working_hours = round(
-            flt(
-                working_hours_by_shift.get(
-                    key,
-                    0.0,
-                )
-            ),
-            2,
-        )
-
-    frappe.clear_messages()
-
-    return au_rows
 
 
 def calculate_breakdown_au(
