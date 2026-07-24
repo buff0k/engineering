@@ -2121,27 +2121,77 @@ def get_machine_downtime_details(
         else 0
     )
 
-    machine_calculation = {
-        "required_hours": required_hours,
-        "work_hours": work_hours,
-        "mechanical_downtime": mechanical_downtime,
-        "available_hours": available_hours,
-        "raw_availability": round(raw_availability, 1),
-        "raw_utilisation": round(raw_utilisation, 1),
-        "displayed_availability": flt(
-            machine_summary.get("avail_percent"),
+    target_multiplier = (
+        0.85
+        if au_target_filter == "85% A & U"
+        else 1.0
+    )
+
+    for event_row in rows:
+        calculation = event_row.get("calculation") or {}
+
+        event_downtime = flt(
+            calculation.get("total_downtime")
+        )
+
+        event_available_hours = max(
+            required_hours - event_downtime,
+            0,
+        )
+
+        event_raw_availability = (
+            event_available_hours / required_hours * 100
+            if required_hours
+            else 0
+        )
+
+        event_raw_utilisation = (
+            work_hours / event_available_hours * 100
+            if event_available_hours
+            else 0
+        )
+
+        calculation["required_hours"] = round(
+            required_hours,
+            2,
+        )
+
+        calculation["work_hours"] = round(
+            work_hours,
+            2,
+        )
+
+        calculation["available_hours"] = round(
+            event_available_hours,
+            2,
+        )
+
+        calculation["raw_availability"] = round(
+            event_raw_availability,
             1,
-        ),
-        "displayed_utilisation": flt(
-            machine_summary.get("util_percent"),
+        )
+
+        calculation["raw_utilisation"] = round(
+            event_raw_utilisation,
             1,
-        ),
-        "target_label": au_target_filter,
-    }
+        )
+
+        calculation["displayed_availability"] = round(
+            event_raw_availability * target_multiplier,
+            1,
+        )
+
+        calculation["displayed_utilisation"] = round(
+            event_raw_utilisation * target_multiplier,
+            1,
+        )
+
+        calculation["target_label"] = au_target_filter
+
+        event_row["calculation"] = calculation
 
     return {
         "rows": rows,
-        "machine_summary": machine_calculation,
         "effective_end_date": end_date,
     }
 
