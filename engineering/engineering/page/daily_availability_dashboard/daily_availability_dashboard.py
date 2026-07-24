@@ -1695,6 +1695,104 @@ def build_chart_html(
 </div>
 '''
 
+def get_popup_exclusion_breakdown(
+    machine,
+    location,
+    start_datetime,
+    end_datetime,
+):
+    if not start_datetime or not end_datetime:
+        return {
+            "startup_hours": 0.0,
+            "fatigue_hours": 0.0,
+            "total_hours": 0.0,
+        }
+
+    from engineering.engineering.doctype.availability_and_utilisation import (
+        availability_and_utilisation as au,
+    )
+
+    start_dt = get_datetime(start_datetime)
+    end_dt = get_datetime(end_datetime)
+
+    if end_dt <= start_dt:
+        return {
+            "startup_hours": 0.0,
+            "fatigue_hours": 0.0,
+            "total_hours": 0.0,
+        }
+
+    au_rows = frappe.db.sql(
+        """
+        SELECT
+            shift_date,
+            shift,
+            shift_system,
+            location
+        FROM `tabAvailability and Utilisation`
+        WHERE asset_name = %(machine)s
+          AND location = %(location)s
+          AND shift_date >= DATE(%(start_datetime)s) - INTERVAL 1 DAY
+          AND shift_date <= DATE(%(end_datetime)s) + INTERVAL 1 DAY
+        ORDER BY
+            shift_date ASC,
+            FIELD(shift, 'Day', 'Night') ASC
+        """,
+        {
+            "machine": machine,
+            "location": location,
+            "start_datetime": start_dt,
+            "end_datetime": end_dt,
+        },
+        as_dict=True,
+    )
+
+    startup_hours = 0.0
+    fatigue_hours = 0.0
+
+    for au_row in au_rows:
+        try:
+            shift_start, shift_end = au.get_shift_timings(
+                au_row.shift_system,
+                au_row.shift,
+                str(au_row.shift_date),
+            )
+
+            excluded_windows = au._exclusion_windows(
+                au_row.location,
+                au_row.shift,
+                shift_start,
+                shift_end,
+            )
+
+            for index, (
+                excluded_start,
+                excluded_end,
+            ) in enumerate(excluded_windows):
+                overlap_hours = au._overlap_hours(
+                    start_dt,
+                    end_dt,
+                    excluded_start,
+                    excluded_end,
+                )
+
+                if index == 0:
+                    startup_hours += overlap_hours
+                else:
+                    fatigue_hours += overlap_hours
+
+        except Exception:
+            continue
+
+    return {
+        "startup_hours": round(startup_hours, 2),
+        "fatigue_hours": round(fatigue_hours, 2),
+        "total_hours": round(
+            startup_hours + fatigue_hours,
+            2,
+        ),
+    }
+
 
 @frappe.whitelist()
 def get_machine_downtime_details(
@@ -1719,6 +1817,13 @@ def get_machine_downtime_details(
         au_target_filter
         or "100% A & U"
     )
+
+    effective_end_date = min(
+        getdate(end_date),
+        getdate(nowdate()),
+    )
+
+    end_date = str(effective_end_date)
 
     window_start = get_datetime(
         f"{start_date} 00:00:00"
@@ -1777,16 +1882,134 @@ def get_machine_downtime_details(
 
     rows = []
 
+    calculation_filters = frappe._dict({
+        "from_date": start_date,
+        "to_date": end_date,
+        "start_date": start_date,
+        "end_date": end_date,
+        "location": location,
+        "site": location,
+    })
+
     for row in downtime_rows:
-        calculation = calculate_popup_availability(
-            row.get(
-                "breakdown_start_datetime"
-            ),
-            row.get(
-                "resolved_datetime"
-            ),
-            au_target_filter,
+        breakdown_start = row.get(
+            "breakdown_start_datetime"
         )
+
+        resolved_datetime = row.get(
+            "resolved_datetime"
+        )
+
+        raw_start = (
+            get_datetime(breakdown_start)
+            if breakdown_start
+            else window_start
+        )
+
+        raw_end = (
+            get_datetime(resolved_datetime)
+            if resolved_datetime
+            else window_end
+        )
+
+        clipped_start = max(
+            raw_start,
+            window_start,
+        )
+
+        clipped_end = min(
+            raw_end,
+            window_end,
+        )
+
+        if clipped_end > clipped_start:
+            raw_downtime = time_diff_in_hours(
+                clipped_end,
+                clipped_start,
+            )
+        else:
+            raw_downtime = 0
+
+        exclusion = (
+            get_popup_exclusion_breakdown(
+                machine,
+                location,
+                clipped_start,
+                clipped_end,
+            )
+            if clipped_end > clipped_start
+            else {
+                "startup_hours": 0.0,
+                "fatigue_hours": 0.0,
+                "total_hours": 0.0,
+            }
+        )
+
+        startup_excluded = flt(
+            exclusion.get("startup_hours")
+        )
+
+        fatigue_excluded = flt(
+            exclusion.get("fatigue_hours")
+        )
+
+        excluded_hours = flt(
+            exclusion.get("total_hours")
+        )
+
+        counted_downtime = max(
+            flt(raw_downtime) - excluded_hours,
+            0,
+        )
+
+        shift_names = frappe.get_all(
+            "Availability and Utilisation",
+            filters={
+                "asset_name": machine,
+                "location": location,
+                "shift_date": [
+                    "between",
+                    [
+                        getdate(clipped_start),
+                        getdate(clipped_end),
+                    ],
+                ],
+            },
+            pluck="shift",
+        )
+
+        shift_label = ", ".join(
+            dict.fromkeys(
+                str(shift or "").strip()
+                for shift in shift_names
+                if shift
+            )
+        )
+
+        calculation = {
+            "shift": shift_label or "Not available",
+            "raw_downtime": round(
+                flt(raw_downtime),
+                2,
+            ),
+            "startup_excluded": round(
+                startup_excluded,
+                2,
+            ),
+            "fatigue_excluded": round(
+                fatigue_excluded,
+                2,
+            ),
+            "total_excluded": round(
+                excluded_hours,
+                2,
+            ),
+            "total_downtime": round(
+                counted_downtime,
+                2,
+            ),
+            "target_label": au_target_filter,
+        }
 
         rows.append({
             "name": row.get("name") or "",
@@ -1839,8 +2062,87 @@ def get_machine_downtime_details(
             "calculation": calculation,
         })
 
+    month_end_result = month_end.execute(
+        frappe._dict({
+            "from_date": start_date,
+            "to_date": end_date,
+            "start_date": start_date,
+            "end_date": end_date,
+            "location": location,
+            "site": location,
+            "machine_scope": "Production + Swing/Spare Machines",
+            "au_target_filter": au_target_filter,
+        })
+    )
+
+    month_end_rows = []
+
+    if isinstance(month_end_result, (list, tuple)) and len(month_end_result) > 1:
+        month_end_rows = month_end_result[1] or []
+
+    machine_summary = next(
+        (
+            row
+            for row in month_end_rows
+            if row.get("asset_name") == machine
+        ),
+        {},
+    )
+
+    required_hours = flt(
+        machine_summary.get("required_hrs"),
+        2,
+    )
+
+    work_hours = flt(
+        machine_summary.get("work_hrs"),
+        2,
+    )
+
+    mechanical_downtime = flt(
+        machine_summary.get("mechanical_downtime"),
+        2,
+    )
+
+    available_hours = max(
+        required_hours - mechanical_downtime,
+        0,
+    )
+
+    raw_availability = (
+        available_hours / required_hours * 100
+        if required_hours
+        else 0
+    )
+
+    raw_utilisation = (
+        work_hours / available_hours * 100
+        if available_hours
+        else 0
+    )
+
+    machine_calculation = {
+        "required_hours": required_hours,
+        "work_hours": work_hours,
+        "mechanical_downtime": mechanical_downtime,
+        "available_hours": available_hours,
+        "raw_availability": round(raw_availability, 1),
+        "raw_utilisation": round(raw_utilisation, 1),
+        "displayed_availability": flt(
+            machine_summary.get("avail_percent"),
+            1,
+        ),
+        "displayed_utilisation": flt(
+            machine_summary.get("util_percent"),
+            1,
+        ),
+        "target_label": au_target_filter,
+    }
+
     return {
         "rows": rows,
+        "machine_summary": machine_calculation,
+        "effective_end_date": end_date,
     }
 
 

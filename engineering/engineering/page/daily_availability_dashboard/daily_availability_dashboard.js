@@ -484,8 +484,13 @@ class DailyAvailabilityDashboardPage {
             );
     }
 
+
     open_machine_downtime_popup(machine) {
         const values = this.get_values();
+
+        const format_percent = (value) => {
+            return `${Number(value || 0).toFixed(1)}%`;
+        };
 
         frappe.call({
             method: this.downtime_method,
@@ -497,237 +502,494 @@ class DailyAvailabilityDashboardPage {
                 au_target_filter: values.au_target_filter
             },
             freeze: true,
-            freeze_message: __("Loading downtime details..."),
+            freeze_message: __("Loading availability details..."),
             callback: (r) => {
                 const response = r.message || {};
                 const rows = response.rows || [];
+                const summary = response.machine_summary || {};
+
+                const effective_end_date =
+                    response.effective_end_date ||
+                    values.end_date;
+
+                const required_value = Number(
+                    summary.required_hours || 0
+                );
+
+                const work_value = Number(
+                    summary.work_hours || 0
+                );
+
+                const downtime_value = Number(
+                    summary.mechanical_downtime || 0
+                );
+
+                const available_value = Number(
+                    summary.available_hours || 0
+                );
+
+                const required = format_dashboard_hours(required_value);
+                const work = format_dashboard_hours(work_value);
+                const downtime = format_dashboard_hours(downtime_value);
+                const available = format_dashboard_hours(available_value);
+
+                const displayed_availability = format_percent(
+                    summary.displayed_availability
+                );
+
+                const displayed_utilisation = format_percent(
+                    summary.displayed_utilisation
+                );
+
+                const raw_availability = format_percent(
+                    summary.raw_availability
+                );
+
+                const raw_utilisation = format_percent(
+                    summary.raw_utilisation
+                );
+
+                const target_label = frappe.utils.escape_html(
+                    summary.target_label || "100% A & U"
+                );
 
                 const dialog = new frappe.ui.Dialog({
-                    title: __("{0} Downtime Details", [machine]),
+                    title: __(
+                        "{0} Availability & Utilisation Details",
+                        [machine]
+                    ),
                     size: "extra-large"
                 });
 
-                let html = `
-                    <div style="margin-bottom:12px;font-size:13px;color:#475569;">
+                let event_cards = "";
+
+                if (!rows.length) {
+                    event_cards = `
+                        <div style="
+                            padding:18px;
+                            border:1px solid #dbe3ee;
+                            border-radius:10px;
+                            background:#ffffff;
+                            color:#64748b;
+                        ">
+                            No breakdown records found.
+                        </div>
+                    `;
+                }
+
+                rows.forEach((row) => {
+                    const calculation = row.calculation || {};
+
+                    const status = frappe.utils.escape_html(
+                        row.status || ""
+                    );
+
+                    const reason = frappe.utils.escape_html(
+                        row.reason || "No reason captured"
+                    );
+
+                    const resolution = frappe.utils.escape_html(
+                        row.resolution || "Not captured"
+                    );
+
+                    const downtime_type = frappe.utils.escape_html(
+                        row.downtime_type || ""
+                    );
+
+                    const start = frappe.utils.escape_html(
+                        row.start || ""
+                    );
+
+                    const resolved = frappe.utils.escape_html(
+                        row.resolved || "Still Open"
+                    );
+
+                    const shift = frappe.utils.escape_html(
+                        calculation.shift || ""
+                    );
+
+                    const raw_time = format_dashboard_hours(
+                        calculation.raw_downtime || 0
+                    );
+
+                    const startup_time = format_dashboard_hours(
+                        calculation.startup_excluded || 0
+                    );
+
+                    const fatigue_time = format_dashboard_hours(
+                        calculation.fatigue_excluded || 0
+                    );
+
+                    const excluded_time = format_dashboard_hours(
+                        calculation.total_excluded || 0
+                    );
+
+                    const au_time = format_dashboard_hours(
+                        calculation.total_downtime || 0
+                    );
+
+                    event_cards += `
+                        <div style="
+                            border:1px solid #d8e0ea;
+                            border-radius:10px;
+                            padding:12px;
+                            background:#ffffff;
+                            margin-bottom:10px;
+                        ">
+                            <div style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:center;
+                                gap:10px;
+                                margin-bottom:8px;
+                            ">
+                                <span style="
+                                    background:#dbeafe;
+                                    border:1px solid #60a5fa;
+                                    color:#1d4ed8;
+                                    border-radius:5px;
+                                    padding:3px 8px;
+                                    font-weight:800;
+                                    font-size:11px;
+                                ">
+                                    ${status}
+                                </span>
+
+                                <span style="
+                                    color:#475569;
+                                    font-size:11px;
+                                ">
+                                    ${downtime_type}
+                                </span>
+                            </div>
+
+                            <div style="
+                                font-weight:800;
+                                color:#172033;
+                                margin-bottom:8px;
+                            ">
+                                ${reason}
+                            </div>
+
+                            <div style="
+                                display:grid;
+                                grid-template-columns:repeat(3, minmax(0, 1fr));
+                                gap:6px;
+                                font-size:11px;
+                                color:#475569;
+                                margin-bottom:8px;
+                            ">
+                                <div><strong>Duration:</strong> ${raw_time}</div>
+                                <div><strong>Type:</strong> ${downtime_type}</div>
+                                <div><strong>Shift:</strong> ${shift}</div>
+                            </div>
+
+                            <div style="
+                                font-size:11px;
+                                line-height:1.7;
+                                color:#334155;
+                                margin-bottom:10px;
+                            ">
+                                <div><strong>Start:</strong> ${start}</div>
+                                <div><strong>Back in Production:</strong> ${resolved}</div>
+                                <div><strong>Resolution:</strong> ${resolution}</div>
+                            </div>
+
+                            <div style="
+                                display:grid;
+                                grid-template-columns:repeat(3, minmax(0, 1fr));
+                                border:1px solid #dbe3ee;
+                                border-radius:7px;
+                                overflow:hidden;
+                                text-align:center;
+                                font-size:11px;
+                            ">
+                                <div style="
+                                    padding:7px;
+                                    background:#fff7ed;
+                                    color:#c2410c;
+                                ">
+                                    <strong>Total Time</strong><br>
+                                    ${raw_time}
+                                </div>
+
+                                <div style="
+                                    padding:7px;
+                                    background:#fff1f2;
+                                    color:#dc2626;
+                                    border-left:1px solid #dbe3ee;
+                                    border-right:1px solid #dbe3ee;
+                                ">
+                                    <strong>Start-up + Fatigue</strong><br>
+                                    ${excluded_time}
+                                    <div style="
+                                        font-size:9px;
+                                        margin-top:2px;
+                                    ">
+                                        ${startup_time} + ${fatigue_time}
+                                    </div>
+                                </div>
+
+                                <div style="
+                                    padding:7px;
+                                    background:#f0fdf4;
+                                    color:#15803d;
+                                ">
+                                    <strong>A&amp;U Time</strong><br>
+                                    ${au_time}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const html = `
+                    <div style="
+                        margin-bottom:12px;
+                        color:#475569;
+                        font-size:13px;
+                    ">
                         ${frappe.utils.escape_html(values.location || "")}
                         |
                         ${frappe.utils.escape_html(values.start_date || "")}
                         to
-                        ${frappe.utils.escape_html(values.end_date || "")}
+                        ${frappe.utils.escape_html(effective_end_date || "")}
+                    </div>
+
+                    <div style="
+                        display:flex;
+                        gap:22px;
+                        align-items:center;
+                        margin-bottom:14px;
+                        font-size:12px;
+                        color:#475569;
+                    ">
+                        <span>
+                            <i style="
+                                display:inline-block;
+                                width:11px;
+                                height:11px;
+                                border-radius:50%;
+                                background:#ea8a00;
+                                margin-right:5px;
+                            "></i>
+                            Total Time
+                        </span>
+
+                        <span>
+                            <i style="
+                                display:inline-block;
+                                width:11px;
+                                height:11px;
+                                border-radius:50%;
+                                background:#ef5b2a;
+                                margin-right:5px;
+                            "></i>
+                            Start-up + Fatigue
+                        </span>
+
+                        <span>
+                            <i style="
+                                display:inline-block;
+                                width:11px;
+                                height:11px;
+                                border-radius:50%;
+                                background:#15803d;
+                                margin-right:5px;
+                            "></i>
+                            A&amp;U Time
+                        </span>
+                    </div>
+
+                    <div style="
+                        display:grid;
+                        grid-template-columns:minmax(0, 1.05fr) minmax(360px, 0.95fr);
+                        gap:14px;
+                    ">
+                        <div style="
+                            border:1px solid #d8e0ea;
+                            border-radius:10px;
+                            padding:12px;
+                            background:#fbfdff;
+                            max-height:65vh;
+                            overflow-y:auto;
+                        ">
+                            <div style="
+                                color:#1d4ed8;
+                                font-weight:800;
+                                margin-bottom:10px;
+                            ">
+                                Breakdown Event Summary
+                            </div>
+
+                            ${event_cards}
+                        </div>
+
+                        <div style="
+                            border:1px solid #d8e0ea;
+                            border-radius:10px;
+                            padding:12px;
+                            background:#fbfdff;
+                        ">
+                            <div style="
+                                color:#1d4ed8;
+                                font-weight:800;
+                                margin-bottom:10px;
+                            ">
+                                Availability &amp; Utilisation Calculation
+                            </div>
+
+                            <div style="
+                                border:1px solid #dbe3ee;
+                                border-radius:8px;
+                                overflow:hidden;
+                                background:#ffffff;
+                            ">
+                                ${this.build_popup_calculation_row(
+                                    "Required Hours",
+                                    required
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Working Hours",
+                                    work
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Mechanical Downtime",
+                                    downtime,
+                                    "#c2410c"
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Available Hours",
+                                    available,
+                                    "#15803d"
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Raw Availability",
+                                    raw_availability
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Raw Utilisation",
+                                    raw_utilisation
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Report Availability",
+                                    displayed_availability,
+                                    "#15803d"
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Report Utilisation",
+                                    displayed_utilisation,
+                                    "#15803d"
+                                )}
+
+                                ${this.build_popup_calculation_row(
+                                    "Target Mode",
+                                    target_label,
+                                    "#1d4ed8"
+                                )}
+                            </div>
+
+                            <div style="
+                                margin-top:12px;
+                                border:1px solid #bfdbfe;
+                                background:#eff6ff;
+                                border-radius:8px;
+                                padding:12px;
+                                line-height:1.8;
+                                color:#172033;
+                                font-size:12px;
+                            ">
+                                <div>
+                                    <strong>Available Hours</strong>
+                                    =
+                                    ${required}
+                                    -
+                                    ${downtime}
+                                    =
+                                    <strong>${available}</strong>
+                                </div>
+
+                                <div>
+                                    <strong>Availability</strong>
+                                    =
+                                    ${available_value.toFixed(2)}
+                                    ÷
+                                    ${required_value.toFixed(2)}
+                                    × 100
+                                    =
+                                    <strong style="color:#15803d;">
+                                        ${raw_availability}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <strong>Utilisation</strong>
+                                    =
+                                    ${work_value.toFixed(2)}
+                                    ÷
+                                    ${available_value.toFixed(2)}
+                                    × 100
+                                    =
+                                    <strong style="color:#15803d;">
+                                        ${raw_utilisation}
+                                    </strong>
+                                </div>
+
+                                <div style="
+                                    margin-top:5px;
+                                    color:#1d4ed8;
+                                    font-weight:800;
+                                ">
+                                    ${target_label}:
+                                    ${displayed_availability}
+                                    availability /
+                                    ${displayed_utilisation}
+                                    utilisation
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
 
-                if (!rows.length) {
-                    html += `
-                        <div class="frappe-card" style="padding:16px;">
-                            No downtime records found for this machine.
-                        </div>
-                    `;
-                } else {
-                    html += `<div class="daily-downtime-list">`;
-
-                    rows.forEach((row) => {
-                        const status = frappe.utils.escape_html(row.status || "");
-                        const reason = frappe.utils.escape_html(row.reason || "");
-                        const resolution = frappe.utils.escape_html(row.resolution || "");
-                        const start = frappe.utils.escape_html(row.start || "");
-                        const resolved = frappe.utils.escape_html(
-                            row.resolved || "Still Open"
-                        );
-                        const hours = format_dashboard_hours(
-                            row.hours || 0
-                        );
-
-                        const downtime_type = frappe.utils.escape_html(
-                            row.downtime_type || ""
-                        );
-
-                        const calculation = row.calculation || {};
-
-                        const shift = frappe.utils.escape_html(
-                            calculation.shift || ""
-                        );
-
-                        const required_hours_value = Number(
-                            calculation.required_hours || 9
-                        );
-
-                        const available_hours_value = Number(
-                            calculation.available_hours || 0
-                        );
-
-                        const raw_downtime_value = Number(
-                            calculation.raw_downtime || 0
-                        );
-
-                        const startup_excluded_value = Number(
-                            calculation.startup_excluded || 0
-                        );
-
-                        const fatigue_excluded_value = Number(
-                            calculation.fatigue_excluded || 0
-                        );
-
-                        const total_excluded_value = Number(
-                            calculation.total_excluded || 0
-                        );
-
-                        const total_downtime_value = Number(
-                            calculation.total_downtime || 0
-                        );
-
-                        const required_hours = format_dashboard_hours(
-                            required_hours_value
-                        );
-
-                        const available_hours = format_dashboard_hours(
-                            available_hours_value
-                        );
-
-                        const raw_downtime = format_dashboard_hours(
-                            raw_downtime_value
-                        );
-
-                        const startup_excluded = format_dashboard_hours(
-                            startup_excluded_value
-                        );
-
-                        const fatigue_excluded = format_dashboard_hours(
-                            fatigue_excluded_value
-                        );
-
-                        const total_excluded = format_dashboard_hours(
-                            total_excluded_value
-                        );
-
-                        const total_downtime = format_dashboard_hours(
-                            total_downtime_value
-                        );
-
-                        const actual_availability = Number(
-                            calculation.actual_availability || 0
-                        ).toFixed(1);
-
-                        const displayed_availability = Number(
-                            calculation.displayed_availability || 0
-                        ).toFixed(1);
-
-                        const target_label = frappe.utils.escape_html(
-                            calculation.target_label || "100% A & U"
-                        );
-
-                        html += `
-                            <div class="daily-downtime-item">
-                                <div class="daily-downtime-summary">
-                                    <strong>${status}</strong><br>
-                                    ${reason || "No reason captured"}<br>
-                                    <strong>${hours}</strong>
-                                </div>
-
-                                <div class="daily-downtime-details">
-                                    <div style="
-                                        display:grid;
-                                        grid-template-columns:minmax(260px, 1fr) minmax(240px, 0.8fr);
-                                        gap:20px;
-                                    ">
-                                        <div>
-                                            <div><strong>Type:</strong> ${downtime_type}</div>
-                                            <div><strong>Start:</strong> ${start}</div>
-                                            <div><strong>Back in Production:</strong> ${resolved}</div>
-                                            <div><strong>Reason:</strong> ${reason}</div>
-                                            <div><strong>Resolution:</strong> ${resolution || "Not captured"}</div>
-                                        </div>
-
-                                        <div style="
-                                            border-left:1px solid #bfdbfe;
-                                            padding-left:18px;
-                                        ">
-                                            <div style="
-                                                font-weight:800;
-                                                margin-bottom:5px;
-                                                color:#111827;
-                                            ">
-                                                Availability Calculation
-                                            </div>
-
-                                            <div>
-                                                <strong>Shift:</strong>
-                                                ${shift}
-                                            </div>
-
-                                            <div>
-                                                <strong>Required Hours:</strong>
-                                                ${required_hours}
-                                            </div>
-
-                                            <div>
-                                                <strong>Raw Downtime:</strong>
-                                                ${raw_downtime}
-                                            </div>
-
-                                            <div>
-                                                <strong>Startup Excluded:</strong>
-                                                ${startup_excluded}
-                                            </div>
-
-                                            <div>
-                                                <strong>Fatigue Excluded:</strong>
-                                                ${fatigue_excluded}
-                                            </div>
-
-                                            <div>
-                                                <strong>Total Excluded:</strong>
-                                                ${total_excluded}
-                                            </div>
-
-                                            <div>
-                                                <strong>Counted Downtime:</strong>
-                                                ${total_downtime}
-                                            </div>
-
-                                            <div>
-                                                <strong>Available Hours:</strong>
-                                                ${required_hours} - ${total_downtime} =
-                                                ${available_hours}
-                                            </div>
-
-                                            <div style="margin-top:5px;">
-                                                ${available_hours_value.toFixed(2)}
-                                                ÷
-                                                ${required_hours_value.toFixed(2)}
-                                                × 100 =
-                                                <strong>${actual_availability}%</strong>
-                                            </div>
-
-                                            <div style="margin-top:5px;">
-                                                <strong>${target_label}:</strong>
-                                                ${displayed_availability}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    html += `</div>`;
-                }
-
                 dialog.$body.html(html);
-
-                dialog.$wrapper
-                    .off("click.daily_downtime_item", ".daily-downtime-item")
-                    .on(
-                        "click.daily_downtime_item",
-                        ".daily-downtime-item",
-                        function () {
-                            $(this).toggleClass("is-open");
-                        }
-                    );
-
                 dialog.show();
             }
         });
+    }
+
+    build_popup_calculation_row(label, value, colour = "#172033") {
+        return `
+            <div style="
+                display:grid;
+                grid-template-columns:1fr 140px;
+                border-bottom:1px solid #e2e8f0;
+                font-size:12px;
+            ">
+                <div style="
+                    padding:9px 10px;
+                    font-weight:700;
+                    color:#334155;
+                ">
+                    ${label}
+                </div>
+
+                <div style="
+                    padding:9px 10px;
+                    font-weight:800;
+                    color:${colour};
+                    border-left:1px solid #e2e8f0;
+                ">
+                    ${value}
+                </div>
+            </div>
+        `;
     }
 
     download_pdf() {
