@@ -267,6 +267,51 @@ def build_summary_averages_from_machine_series(machine_series):
     return out
 
 
+def build_scope_averages_from_source_rows(rows):
+    production_avgs = {
+        category: {
+            "avail": None,
+            "util": None,
+        }
+        for category in UI_CATEGORIES
+    }
+
+    spare_avgs = {
+        category: {
+            "avail": None,
+            "util": None,
+        }
+        for category in UI_CATEGORIES
+    }
+
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        category = get_category(row)
+
+        if category not in UI_CATEGORIES:
+            continue
+
+        summary_scope = str(
+            row.get("summary_scope")
+            or ""
+        ).strip()
+
+        values = {
+            "avail": get_avail(row),
+            "util": get_util(row),
+        }
+
+        if summary_scope == "production":
+            production_avgs[category] = values
+
+        elif summary_scope == "spare":
+            spare_avgs[category] = values
+
+    return production_avgs, spare_avgs
+
+
 def get_au_target_multiplier(filters):
     au_target_filter = (filters or {}).get("au_target_filter") or "100% A & U"
 
@@ -351,6 +396,12 @@ def execute(filters=None):
         source_rows
     )
 
+    (
+        production_avgs,
+        spare_avgs,
+    ) = build_scope_averages_from_source_rows(
+        source_rows
+    )
 
     dashboard_html = build_dashboard_html(
         location,
@@ -361,7 +412,9 @@ def execute(filters=None):
         source_rows,
         summary_type,
         machine_scope,
-        spare_swing_asset_map
+        spare_swing_asset_map,
+        production_avgs,
+        spare_avgs,
     )
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
@@ -513,6 +566,14 @@ def build_summary_averages_from_source_rows(rows):
         machine = get_machine(row)
 
         if machine:
+            continue
+
+        summary_scope = (
+            row.get("summary_scope")
+            or "overall"
+        )
+
+        if summary_scope != "overall":
             continue
 
         out[category] = {
@@ -1013,13 +1074,39 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 
 
 
-def build_dashboard_html(location, start_date, end_date, avgs, machine_series, source_rows=None, summary_type="Average Per Machine", machine_scope="Production + Swing/Spare Machines", spare_swing_asset_map=None):
+def build_dashboard_html(
+    location,
+    start_date,
+    end_date,
+    avgs,
+    machine_series,
+    source_rows=None,
+    summary_type="Average Per Machine",
+    machine_scope="Production + Swing/Spare Machines",
+    spare_swing_asset_map=None,
+    production_avgs=None,
+    spare_avgs=None,
+):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Average Per Machine")
     header_colour = get_site_header_colour(location)
 
 
-    metric_cards = []
+    production_avgs = production_avgs or {
+        category: {
+            "avail": None,
+            "util": None,
+        }
+        for category in UI_CATEGORIES
+    }
+
+    spare_avgs = spare_avgs or {
+        category: {
+            "avail": None,
+            "util": None,
+        }
+        for category in UI_CATEGORIES
+    }
 
     month_end_url = (
         "/desk/query-report/Availability%20and%20Utilisation%20Month%20End%20Report"
@@ -1029,29 +1116,68 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
         f"&machine_scope={quote(str(machine_scope or 'Production + Swing/Spare Machines'))}"
     )
 
-    for category in UI_CATEGORIES:
-        values = avgs.get(category) or {}
 
-        av = values.get("avail")
-        ut = values.get("util")
+    def build_metric_cards(metric_values):
+        cards = []
 
-        metric_cards.append(f'''
+        for category in UI_CATEGORIES:
+            values = (
+                metric_values.get(category)
+                or {}
+            )
+
+            av = values.get("avail")
+            ut = values.get("util")
+
+            cards.append(f'''
 <div class="isd-metric">
-    <div class="isd-metric-title">{esc(category)} Avg</div>
+    <div class="isd-metric-title">
+        {esc(category)} Avg
+    </div>
 
     <div class="isd-pill-row">
-        <div class="isd-mbubble {bubble_colour('avail', av)}" onclick="window.open('{month_end_url}', '_blank')" title="Open Month End Report" style="cursor:pointer;">
-            <div class="isd-mbubble-label">Avail.</div>
-            <div class="isd-mbubble-value">{fmt_percent(av)}</div>
+        <div
+            class="isd-mbubble {bubble_colour('avail', av)}"
+            onclick="window.open('{month_end_url}', '_blank')"
+            title="Open Month End Report"
+            style="cursor:pointer;"
+        >
+            <div class="isd-mbubble-label">
+                Avail.
+            </div>
+
+            <div class="isd-mbubble-value">
+                {fmt_percent(av)}
+            </div>
         </div>
 
-        <div class="isd-mbubble {bubble_colour('util', ut)}" onclick="window.open('{month_end_url}', '_blank')" title="Open Month End Report" style="cursor:pointer;">
-            <div class="isd-mbubble-label">Util.</div>
-            <div class="isd-mbubble-value">{fmt_percent(ut)}</div>
+        <div
+            class="isd-mbubble {bubble_colour('util', ut)}"
+            onclick="window.open('{month_end_url}', '_blank')"
+            title="Open Month End Report"
+            style="cursor:pointer;"
+        >
+            <div class="isd-mbubble-label">
+                Util.
+            </div>
+
+            <div class="isd-mbubble-value">
+                {fmt_percent(ut)}
+            </div>
         </div>
     </div>
 </div>
 ''')
+
+        return "".join(cards)
+
+    production_metric_cards = build_metric_cards(
+        production_avgs
+    )
+
+    spare_metric_cards = build_metric_cards(
+        spare_avgs
+    )
 
     chart_html = build_selected_summary_chart_html(
         summary_type,
@@ -1076,9 +1202,52 @@ def build_dashboard_html(location, start_date, end_date, avgs, machine_series, s
     <div class="isd-site">
         <div class="isd-site-title">{summary_type_safe} | {site_safe} | {start_date} to {end_date}</div>
 
-        <div class="isd-band" style="--site-colour:{header_colour}">
+        <div
+            class="isd-scope-banner-title"
+            style="
+                padding:8px 12px;
+                background:#dbeafe;
+                color:#1e3a8a;
+                border-bottom:1px solid #93c5fd;
+                font-size:12px;
+                font-weight:900;
+                text-transform:uppercase;
+            "
+        >
+            Average Per Machine - Production Machines
+        </div>
+
+        <div
+            class="isd-band"
+            style="--site-colour:#4fa3dc;"
+        >
             <div class="isd-metrics">
-                {''.join(metric_cards)}
+                {production_metric_cards}
+            </div>
+        </div>
+
+        <div
+            class="isd-scope-banner-title"
+            style="
+                padding:8px 12px;
+                background:#dcfce7;
+                color:#166534;
+                border-top:1px solid #86efac;
+                border-bottom:1px solid #86efac;
+                font-size:12px;
+                font-weight:900;
+                text-transform:uppercase;
+            "
+        >
+            Average Per Machine - Swing/Spare Machines
+        </div>
+
+        <div
+            class="isd-band"
+            style="--site-colour:#55c878;"
+        >
+            <div class="isd-metrics">
+                {spare_metric_cards}
             </div>
         </div>
 

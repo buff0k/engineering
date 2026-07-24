@@ -158,6 +158,65 @@ Drills`
 			`;
 		}
 
+		if (data.is_scope_total) {
+			const is_spare =
+				data.summary_scope === "spare";
+
+			const is_production =
+				data.summary_scope === "production";
+
+			let background = "#f8fafc";
+			let colour = "#0f172a";
+			let border = "#94a3b8";
+
+			if (is_production) {
+				background = "#dbeafe";
+				colour = "#1e3a8a";
+				border = "#3b82f6";
+			}
+
+			if (is_spare) {
+				background = "#e6d6ff";
+				colour = "#4b0082";
+				border = "#7b2cbf";
+			}
+
+			let display_value = value;
+
+			if (
+				column.fieldname ===
+					"asset_category" &&
+				data.summary_label
+			) {
+				display_value =
+					frappe.utils.escape_html(
+						data.summary_label
+					);
+			}
+
+			if (
+				display_value == null ||
+				String(display_value).trim() === ""
+			) {
+				display_value = "&nbsp;";
+			}
+
+			return `
+				<span style="
+					display:block;
+					margin:-8px -10px;
+					padding:8px 10px;
+					min-height:100%;
+					background:${background};
+					color:${colour};
+					font-weight:900;
+					border-left:4px solid ${border};
+				">
+					${display_value}
+				</span>
+			`;
+		}
+
 
 		if (data.is_spare_swing_unit) {
 			const reason = data.spare_swing_reason || "Spare/Swing unit in Monthly Production Planning";

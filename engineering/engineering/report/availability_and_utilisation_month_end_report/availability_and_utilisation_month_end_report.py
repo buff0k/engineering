@@ -1140,29 +1140,120 @@ def _month_end_direct_rows(filters):
         if not machine_rows:
             continue
 
-        total_required = sum(flt(row.get("required_hrs")) for row in machine_rows)
-        total_work = sum(flt(row.get("work_hrs")) for row in machine_rows)
-        total_down = sum(flt(row.get("mechanical_downtime")) for row in machine_rows)
+        production_machine_rows = [
+            row
+            for row in machine_rows
+            if not row.get(
+                "is_spare_swing_unit"
+            )
+        ]
 
-        category_row = _month_end_calc_row(
-            category,
-            "",
-            total_required,
-            total_work,
-            total_down,
+        spare_machine_rows = [
+            row
+            for row in machine_rows
+            if row.get(
+                "is_spare_swing_unit"
+            )
+        ]
+
+        def build_scope_total_row(
+            scope_rows,
+            summary_scope,
+            summary_label,
+        ):
+            scope_required = sum(
+                flt(row.get("required_hrs"))
+                for row in scope_rows
+            )
+
+            scope_work = sum(
+                flt(row.get("work_hrs"))
+                for row in scope_rows
+            )
+
+            scope_down = sum(
+                flt(
+                    row.get(
+                        "mechanical_downtime"
+                    )
+                )
+                for row in scope_rows
+            )
+
+            scope_row = _month_end_calc_row(
+                category,
+                "",
+                scope_required,
+                scope_work,
+                scope_down,
+            )
+
+            scope_row["avail_percent"] = (
+                average_percent([
+                    row.get("avail_percent")
+                    for row in scope_rows
+                ])
+            )
+
+            scope_row["util_percent"] = (
+                average_percent([
+                    row.get("util_percent")
+                    for row in scope_rows
+                ])
+            )
+
+            scope_row["emp_avail_percent"] = (
+                average_percent([
+                    row.get(
+                        "emp_avail_percent"
+                    )
+                    for row in scope_rows
+                ])
+            )
+
+            scope_row["summary_scope"] = (
+                summary_scope
+            )
+
+            scope_row["summary_label"] = (
+                summary_label
+            )
+
+            scope_row["is_scope_total"] = 1
+
+            if summary_scope == "spare":
+                scope_row[
+                    "is_spare_scope_total"
+                ] = 1
+
+            return scope_row
+
+        overall_row = build_scope_total_row(
+            machine_rows,
+            "overall",
+            f"{category} - Overall Total",
         )
 
-        category_row["avail_percent"] = average_percent([
-            row.get("avail_percent")
-            for row in machine_rows
-        ])
+        production_row = build_scope_total_row(
+            production_machine_rows,
+            "production",
+            f"{category} - Production Machines",
+        )
 
-        category_row["util_percent"] = average_percent([
-            row.get("util_percent")
-            for row in machine_rows
-        ])
+        spare_row = build_scope_total_row(
+            spare_machine_rows,
+            "spare",
+            f"{category} - Swing/Spare Machines",
+        )
 
-        output.append(category_row)
+        output.append(overall_row)
+
+        if production_machine_rows:
+            output.append(production_row)
+
+        if spare_machine_rows:
+            output.append(spare_row)
+
         output.extend(machine_rows)
 
     for row in output:
