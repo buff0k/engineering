@@ -1,6 +1,6 @@
 import frappe
 from urllib.parse import quote
-from frappe.utils import flt, getdate, get_datetime, add_days, date_diff, now_datetime, time_diff_in_hours
+from frappe.utils import flt, getdate, get_datetime, add_days, date_diff, nowdate, now_datetime, time_diff_in_hours
 from datetime import timedelta
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
     availability_and_utilisation_month_end_report as month_end,
@@ -326,6 +326,12 @@ def execute(filters=None):
 
     if not location:
         frappe.throw("Please select Site.")
+
+    # Do not display or calculate dates after today.
+    if getdate(end_date) > getdate(nowdate()):
+        end_date = nowdate()
+        filters["end_date"] = end_date
+        filters["to_date"] = end_date
 
     source_rows = fetch_grouped_data(
         location,

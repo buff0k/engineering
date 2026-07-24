@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.utils import flt, get_datetime
+from frappe.utils import flt, get_datetime, getdate, nowdate
 
 _ = frappe._
 
@@ -76,7 +76,7 @@ def safe_msr_datetime(value, service_date=None):
         return None
 
     try:
-        return safe_msr_datetime(value)
+        return get_datetime(value)
     except Exception:
         if service_date_text and ":" in value_text:
             time_text = value_text.split()[-1].split(".")[0]
@@ -99,7 +99,7 @@ def safe_getdate(value):
         return None
 
     try:
-        return safe_getdate(value)
+        return getdate(value)
     except Exception:
         return None
 
@@ -150,6 +150,15 @@ def get_columns():
 
 
 def get_data(filters):
+	filters = frappe._dict(filters or {})
+
+	# Do not calculate dates after today.
+	to_date = filters.get("to_date") or filters.get("end_date")
+
+	if to_date and getdate(to_date) > getdate(nowdate()):
+		filters["to_date"] = nowdate()
+		filters["end_date"] = nowdate()
+
 	machine_scope = (
 		filters.get("machine_scope")
 		or "Production + Swing/Spare Machines"
@@ -238,18 +247,36 @@ def get_data(filters):
 		]
 
 	for row in category_total_rows:
+		category = row.get("asset_category")
+
+		category_machines = [
+			machine
+			for machine in grouped.values()
+			if machine.get("asset_category") == category
+		]
+
+		machine_avail_values = [
+			average_percent(machine.get("avail_percentages") or [])
+			for machine in category_machines
+		]
+
+		machine_util_values = [
+			average_percent(machine.get("util_percentages") or [])
+			for machine in category_machines
+		]
+
 		data.append({
-			"asset_category": row.get("asset_category"),
+			"asset_category": category,
 			"asset_name": "",
 			"required_hrs": summary.r1(row.get("shift_required_hours")),
 			"work_hrs": summary.r1(row.get("shift_working_hours")),
 			"mechanical_downtime": summary.r1(row.get("shift_breakdown_hours")),
 			"avail_percent": apply_au_target(
-				row.get("plant_shift_availability"),
+				average_percent(machine_avail_values),
 				filters,
 			),
 			"util_percent": apply_au_target(
-				row.get("plant_shift_utilisation"),
+				average_percent(machine_util_values),
 				filters,
 			),
 			"emp_avail_percent": summary.r1(
@@ -928,9 +955,54 @@ def _get_submitted_assets(categories, location):
 def _month_end_direct_rows(filters):
     filters = frappe._dict(filters or {})
 
-    from_date = _month_end_get_filter_value(filters, "from_date", "start_date")
-    to_date = _month_end_get_filter_value(filters, "to_date", "end_date")
-    location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+    from_date = _month_end_get_filter_value(
+        filters,
+        "from_date",
+        "start_date",
+    )
+
+    selected_to_date = _month_end_get_filter_value(
+        filters,
+        "to_date",
+        "end_date",
+    )
+
+    location = _month_end_get_filter_value(
+        filters,
+        "location",
+        "site",
+        "production_site",
+    )
+
+    mpp_end_date = None
+
+    if location and from_date:
+        mpp_end_date = frappe.db.get_value(
+            "Monthly Production Planning",
+            {
+                "location": location,
+                "prod_month_start_date": ("<=", from_date),
+                "prod_month_end_date": (">=", from_date),
+                "docstatus": ("<", 2),
+            },
+            "prod_month_end_date",
+            order_by="prod_month_end_date desc",
+        )
+
+    possible_end_dates = [
+        getdate(value)
+        for value in [
+            selected_to_date,
+            mpp_end_date,
+            nowdate(),
+        ]
+        if value
+    ]
+
+    to_date = min(possible_end_dates) if possible_end_dates else getdate(nowdate())
+
+    filters["to_date"] = to_date
+    filters["end_date"] = to_date
     selected_category = _month_end_get_filter_value(filters, "asset_category")
     machine_scope = _month_end_get_filter_value(filters, "machine_scope") or "Include Swing/Spare"
     spare_swing_asset_map = get_spare_swing_asset_map(filters)
