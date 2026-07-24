@@ -377,8 +377,15 @@ class DailyAvailabilityDashboardPage {
             production_plan.prod_month_start_date
         );
 
+        const today = frappe.datetime.get_today();
+
+        const effective_end_date =
+            production_plan.prod_month_end_date > today
+                ? today
+                : production_plan.prod_month_end_date;
+
         await this.end_date.set_value(
-            production_plan.prod_month_end_date
+            effective_end_date
         );
 
         if (!this.initializing) {

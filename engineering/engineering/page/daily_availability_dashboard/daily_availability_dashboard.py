@@ -343,14 +343,13 @@ def execute(filters=None):
 
     spare_swing_asset_map = get_spare_swing_asset_map(filters)
 
-    source_rows = apply_machine_scope_filter_to_dashboard_rows(
-        source_rows,
-        filters,
-        spare_swing_asset_map,
+    machine_series = build_machine_series_from_source_rows(
+        source_rows
     )
 
-    machine_series = build_machine_series_from_source_rows(source_rows)
-    avgs = build_summary_averages_from_machine_series(machine_series)
+    avgs = build_summary_averages_from_source_rows(
+        source_rows
+    )
 
 
     dashboard_html = build_dashboard_html(
