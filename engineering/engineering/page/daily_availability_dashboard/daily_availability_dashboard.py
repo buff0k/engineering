@@ -5,7 +5,9 @@ from datetime import timedelta
 from engineering.engineering.report.availability_and_utilisation_month_end_report import (
     availability_and_utilisation_month_end_report as month_end,
 )
-
+from is_production.production.report.avail_and_util_summary import (
+    avail_and_util_summary as au_summary,
+)
 
 _ = frappe._
 
@@ -1694,17 +1696,17 @@ def build_chart_html(
 </div>
 '''
 
-
 def get_popup_au_rows(
     machine,
     location,
     window_start,
     window_end,
 ):
-    return frappe.db.sql(
+    au_rows = frappe.db.sql(
         """
         SELECT
             name,
+            asset_name,
             shift_date,
             shift,
             shift_system,
@@ -1730,6 +1732,90 @@ def get_popup_au_rows(
         },
         as_dict=True,
     )
+
+    summary_rows = au_summary.get_grouped_data({
+        "start_date": str(
+            getdate(window_start)
+        ),
+        "end_date": str(
+            add_days(
+                getdate(window_end),
+                -1,
+            )
+        ),
+        "location": location,
+        "machine_scope": "Include Swing/Spare",
+    })
+
+    working_hours_by_shift = {}
+
+    for summary_row in summary_rows or []:
+        if not isinstance(summary_row, dict):
+            continue
+
+        if summary_row.get("asset_name") != machine:
+            continue
+
+        if (
+            summary_row.get("location")
+            and summary_row.get("location") != location
+        ):
+            continue
+
+        try:
+            indent = int(
+                summary_row.get("indent") or 0
+            )
+        except Exception:
+            indent = 0
+
+        if indent != 2:
+            continue
+
+        shift_date = summary_row.get(
+            "shift_date"
+        )
+
+        shift = str(
+            summary_row.get("shift") or ""
+        ).strip()
+
+        if not shift_date or not shift:
+            continue
+
+        key = (
+            str(getdate(shift_date)),
+            shift,
+        )
+
+        working_hours_by_shift[key] = (
+            working_hours_by_shift.get(key, 0.0)
+            + flt(
+                summary_row.get(
+                    "shift_working_hours"
+                )
+            )
+        )
+
+    for au_row in au_rows:
+        key = (
+            str(getdate(au_row.shift_date)),
+            str(au_row.shift or "").strip(),
+        )
+
+        au_row.working_hours = round(
+            flt(
+                working_hours_by_shift.get(
+                    key,
+                    0.0,
+                )
+            ),
+            2,
+        )
+
+    frappe.clear_messages()
+
+    return au_rows
 
 
 def calculate_breakdown_au(
