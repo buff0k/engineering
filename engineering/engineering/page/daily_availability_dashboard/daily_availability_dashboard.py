@@ -1712,7 +1712,7 @@ def get_popup_au_rows(
             shift_system,
             location,
             9.0 AS required_hours,
-            0.0 AS working_hours
+            COALESCE(shift_working_hours, 0) AS working_hours
         FROM `tabAvailability and Utilisation`
         WHERE asset_name = %(machine)s
           AND location = %(location)s
@@ -1769,7 +1769,7 @@ def get_popup_au_rows(
         except Exception:
             indent = 0
 
-        if indent != 2:
+        if indent != 3:
             continue
 
         shift_date = summary_row.get(
