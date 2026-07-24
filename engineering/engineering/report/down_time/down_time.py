@@ -90,14 +90,47 @@ def get_report_windows(report_date, shift=None):
     ]
 
 
-def overlap_hours(a_start, a_end, b_start, b_end):
-    start = max(a_start, b_start)
-    end = min(a_end, b_end)
+def get_mpp_required_hours(site, report_date, shift=None):
+    shift = normalise_shift(shift)
 
-    if end <= start:
-        return 0.0
+    planning_rows = frappe.get_all(
+        "Monthly Production Planning",
+        filters={
+            "location": site,
+            "site_status": "Producing",
+            "prod_month_start_date": ["<=", report_date],
+            "prod_month_end_date": [">=", report_date],
+        },
+        fields=["name"],
+        limit=1,
+    )
 
-    return float(time_diff_in_hours(end, start))
+    if not planning_rows:
+        return None
+
+    planning_doc = frappe.get_doc(
+        "Monthly Production Planning",
+        planning_rows[0].name,
+    )
+
+    for day in planning_doc.month_prod_days:
+        if getdate(day.shift_start_date) != getdate(report_date):
+            continue
+
+        if shift == "Day":
+            return float(day.shift_day_hours or 0)
+
+        if shift == "Night":
+            return float(day.shift_night_hours or 0)
+
+        return float(
+            (day.shift_day_hours or 0)
+            + (day.shift_night_hours or 0)
+            + (day.shift_morning_hours or 0)
+            + (day.shift_afternoon_hours or 0)
+        )
+
+    return None
 
 
 def exclusion_windows(shift, window_start, window_end):
@@ -429,23 +462,55 @@ def get_data(filters):
 
     data = []
     hours_cache = {}
+    required_hours_cache = {}
+
     for row in rows:
 
         cache_key = row.name
+        required_hours_key = (
+            row.site,
+            report_date,
+            filters.get("shift") or "",
+        )
+
+        if required_hours_key not in required_hours_cache:
+            required_hours_cache[required_hours_key] = get_mpp_required_hours(
+                row.site,
+                report_date,
+                filters.get("shift"),
+            )
+
+        required_hours = required_hours_cache[required_hours_key]
 
         if cache_key not in hours_cache:
             if row.breakdown_start_datetime and row.resolved_datetime:
-                hours_cache[cache_key] = round(
-                    float(time_diff_in_hours(row.resolved_datetime, row.breakdown_start_datetime)),
-                    2
+                breakdown_hours = round(
+                    float(
+                        time_diff_in_hours(
+                            row.resolved_datetime,
+                            row.breakdown_start_datetime,
+                        )
+                    ),
+                    2,
                 )
             else:
-                hours_cache[cache_key] = get_availability_engine_hours(
+                breakdown_hours = get_availability_engine_hours(
                     row.site,
                     row.plant_no,
                     report_date,
                     filters.get("shift"),
                 )
+
+            if required_hours is not None:
+                breakdown_hours = min(
+                    breakdown_hours,
+                    required_hours,
+                )
+
+            hours_cache[cache_key] = round(
+                max(breakdown_hours, 0),
+                2,
+            )
 
         data.append({
             "date": report_date,
