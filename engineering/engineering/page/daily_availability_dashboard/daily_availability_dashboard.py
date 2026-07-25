@@ -1108,16 +1108,22 @@ def build_dashboard_html(
         for category in UI_CATEGORIES
     }
 
+    au_target_filter = getattr(
+        frappe.local,
+        "daily_dashboard_au_target_filter",
+        "85% A & U",
+    )
+
     month_end_url = (
         "/desk/query-report/Availability%20and%20Utilisation%20Month%20End%20Report"
         f"?from_date={quote(str(start_date or ''))}"
         f"&to_date={quote(str(end_date or ''))}"
         f"&location={quote(str(location or ''))}"
-        f"&machine_scope={quote(str(machine_scope or 'Production + Swing/Spare Machines'))}"
+        f"&au_target_filter={quote(str(au_target_filter))}"
     )
 
 
-    def build_metric_cards(metric_values):
+    def build_metric_cards(metric_values, card_machine_scope):
         cards = []
 
         for category in UI_CATEGORIES:
@@ -1129,6 +1135,12 @@ def build_dashboard_html(
             av = values.get("avail")
             ut = values.get("util")
 
+            category_month_end_url = (
+                f"{month_end_url}"
+                f"&asset_category={quote(str(category))}"
+                f"&machine_scope={quote(str(card_machine_scope))}"
+            )
+
             cards.append(f'''
 <div class="isd-metric">
     <div class="isd-metric-title">
@@ -1138,7 +1150,7 @@ def build_dashboard_html(
     <div class="isd-pill-row">
         <div
             class="isd-mbubble {bubble_colour('avail', av)}"
-            onclick="window.open('{month_end_url}', '_blank')"
+            onclick="window.open('{category_month_end_url}', '_blank')"
             title="Open Month End Report"
             style="cursor:pointer;"
         >
@@ -1153,7 +1165,7 @@ def build_dashboard_html(
 
         <div
             class="isd-mbubble {bubble_colour('util', ut)}"
-            onclick="window.open('{month_end_url}', '_blank')"
+            onclick="window.open('{category_month_end_url}', '_blank')"
             title="Open Month End Report"
             style="cursor:pointer;"
         >
@@ -1172,11 +1184,13 @@ def build_dashboard_html(
         return "".join(cards)
 
     production_metric_cards = build_metric_cards(
-        production_avgs
+        production_avgs,
+        "Production Machines",
     )
 
     spare_metric_cards = build_metric_cards(
-        spare_avgs
+        spare_avgs,
+        "Swing/Spare Machines",
     )
 
     chart_html = build_selected_summary_chart_html(

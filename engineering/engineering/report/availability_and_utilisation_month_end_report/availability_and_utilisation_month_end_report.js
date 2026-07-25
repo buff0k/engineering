@@ -60,7 +60,8 @@ Service Truck
 TLB
 Water Bowser
 Diesel Bowsers
-Drills`
+Drills
+Loader`
 		},
 		{
 			fieldname: "machine_scope",

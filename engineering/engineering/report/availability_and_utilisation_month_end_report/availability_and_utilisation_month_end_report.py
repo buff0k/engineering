@@ -1250,11 +1250,11 @@ def _month_end_direct_rows(filters):
 
         if production_machine_rows:
             output.append(production_row)
+            output.extend(production_machine_rows)
 
         if spare_machine_rows:
             output.append(spare_row)
-
-        output.extend(machine_rows)
+            output.extend(spare_machine_rows)
 
     for row in output:
         row["avail_percent"] = apply_au_target(
