@@ -716,18 +716,50 @@ class AvailabilityandUtilisation(Document):
                 doc.shift_available_hours = shift_available_hours
                 doc.shift_other_lost_hours = shift_other_lost_hours
 
-                max_val = max(shift_working_hours, shift_available_hours)
+                max_val = max(
+                    shift_working_hours,
+                    shift_available_hours,
+                )
 
-                doc.plant_shift_utilisation = (shift_working_hours / shift_available_hours) * 100 if shift_available_hours > 0 else 0
+                # Existing utilisation field stays unchanged.
+                doc.plant_shift_utilisation = (
+                    (shift_working_hours / shift_available_hours) * 100
+                    if shift_available_hours > 0
+                    else 0
+                )
 
+                # Existing availability field stays unchanged.
                 if doc.pre_use_avail_status in ("3", "6"):
                     doc.plant_shift_availability = 100
                 else:
-                    doc.plant_shift_availability = (max_val / shift_required_hours) * 100 if shift_required_hours > 0 else 0
+                    doc.plant_shift_availability = (
+                        (max_val / shift_required_hours) * 100
+                        if shift_required_hours > 0
+                        else 0
+                    )
 
-                # HARD CAP
-                doc.plant_shift_utilisation = min(doc.plant_shift_utilisation, 100)
-                doc.plant_shift_availability = min(doc.plant_shift_availability, 100)
+                # Existing fields remain capped at 100%.
+                doc.plant_shift_utilisation = min(
+                    doc.plant_shift_utilisation,
+                    100,
+                )
+
+                doc.plant_shift_availability = min(
+                    doc.plant_shift_availability,
+                    100,
+                )
+
+                # New availability fields may exceed 100%.
+                doc.shift_available_hours_above_100 = max_val
+
+                if doc.pre_use_avail_status in ("3", "6"):
+                    doc.plant_shift_availability_above_100 = 100
+                else:
+                    doc.plant_shift_availability_above_100 = (
+                        (max_val / shift_required_hours) * 100
+                        if shift_required_hours > 0
+                        else 0
+                    )
 
 
 

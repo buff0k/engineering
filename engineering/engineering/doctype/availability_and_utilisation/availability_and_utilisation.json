@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "autoname": "autoincrement",
  "creation": "2024-11-09 14:34:10.437877",
  "doctype": "DocType",
@@ -30,7 +31,10 @@
   "shift_available_hours",
   "shift_other_lost_hours",
   "plant_shift_availability",
-  "plant_shift_utilisation"
+  "plant_shift_utilisation",
+  "section_break_jurr",
+  "shift_available_hours_above_100",
+  "plant_shift_availability_above_100"
  ],
  "fields": [
   {
@@ -102,7 +106,7 @@
    "fieldname": "shift_required_hours",
    "fieldtype": "Float",
    "label": "Shift Required Hours",
-   "precision": "3",
+   "precision": "1",
    "read_only": 1
   },
   {
@@ -193,12 +197,31 @@
    "fieldtype": "Data",
    "label": "Pre-Use Availability Status",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_break_jurr",
+   "fieldtype": "Section Break",
+   "label": "Above 100 percent availability"
+  },
+  {
+   "fieldname": "shift_available_hours_above_100",
+   "fieldtype": "Float",
+   "label": "Available Hours Above 100",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plant_shift_availability_above_100",
+   "fieldtype": "Percent",
+   "label": "Plant Shift Availability Above 100",
+   "precision": "1",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-04 15:38:49.059569",
+ "modified": "2026-07-27 12:26:19.886237",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",
@@ -260,6 +283,17 @@
    "read": 1,
    "report": 1,
    "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Area Manager",
    "share": 1,
    "write": 1
   }
