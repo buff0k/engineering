@@ -1215,7 +1215,8 @@ def _month_end_direct_rows(filters):
             asset_name,
             SUM(COALESCE(shift_required_hours, 0)) AS required_hrs,
             SUM(COALESCE(shift_working_hours, 0)) AS work_hrs,
-            SUM(COALESCE(shift_breakdown_hours, 0)) AS mechanical_downtime
+            SUM(COALESCE(shift_breakdown_hours, 0)) AS mechanical_downtime,
+            AVG(COALESCE(true_availability_percent, 0)) AS true_availability_percent
         FROM `tabAvailability and Utilisation`
         WHERE {" AND ".join(au_conditions)}
           AND COALESCE(asset_name, '') != ''
@@ -1270,6 +1271,12 @@ def _month_end_direct_rows(filters):
                     au_row.get("work_hrs"),
                     au_row.get("mechanical_downtime"),
                 )
+
+                if filters.get("au_target_filter") == "85% A & U":
+                    machine_row["avail_percent"] = summary.r1(
+                        au_row.get("true_availability_percent")
+                    )
+
                 reason_row = other_delay_reasons_by_key.get((category, asset_name), {})
 
                 other_delay_details = clean_reason_details(reason_row.get("other_delay_reason_details") or [])
@@ -1413,10 +1420,6 @@ def _month_end_direct_rows(filters):
             output.extend(spare_machine_rows)
 
     for row in output:
-        row["avail_percent"] = apply_au_target(
-            row.get("avail_percent"),
-            filters,
-        )
         row["util_percent"] = apply_au_target(
             row.get("util_percent"),
             filters,
