@@ -9,6 +9,11 @@ from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 from datetime import timedelta
 import importlib.util
+
+from engineering.engineering.report.availability_and_utilisation_month_end_report import (
+    availability_and_utilisation_month_end_report as month_end,
+)
+
 AVAIL_UTIL_REPORT_FILE = frappe.get_app_path(
     "is_production",
     "production",
@@ -273,6 +278,7 @@ def get_availability_engine_hours(site, plant_no, report_date, shift=None):
     return round(min(total_hours, 24), 2)
 
 
+
 def get_open_closed_value(row):
     value = str(row.open_closed or "").strip()
 
@@ -462,50 +468,52 @@ def get_data(filters):
 
     data = []
     hours_cache = {}
-    required_hours_cache = {}
 
     for row in rows:
 
         cache_key = row.name
-        required_hours_key = (
-            row.site,
-            report_date,
-            filters.get("shift") or "",
-        )
 
-        if required_hours_key not in required_hours_cache:
-            required_hours_cache[required_hours_key] = get_mpp_required_hours(
-                row.site,
-                report_date,
-                filters.get("shift"),
-            )
-
-        required_hours = required_hours_cache[required_hours_key]
 
         if cache_key not in hours_cache:
-            if row.breakdown_start_datetime and row.resolved_datetime:
-                breakdown_hours = round(
-                    float(
-                        time_diff_in_hours(
-                            row.resolved_datetime,
-                            row.breakdown_start_datetime,
-                        )
-                    ),
-                    2,
-                )
-            else:
-                breakdown_hours = get_availability_engine_hours(
-                    row.site,
-                    row.plant_no,
-                    report_date,
-                    filters.get("shift"),
-                )
+            breakdown_start = (
+                row.breakdown_start_datetime
+                or row.creation
+            )
 
-            if required_hours is not None:
-                breakdown_hours = min(
-                    breakdown_hours,
-                    required_hours,
+            breakdown_end = (
+                row.resolved_datetime
+                or window_end
+            )
+
+            clipped_start = max(
+                get_datetime(breakdown_start),
+                window_start,
+            )
+
+            clipped_end = min(
+                get_datetime(breakdown_end),
+                window_end,
+            )
+
+            downtime_result = (
+                month_end.get_required_downtime_minutes_for_breakdown(
+                    frappe._dict({
+                        "location": row.site,
+                        "site": row.site,
+                    }),
+                    row.plant_no,
+                    clipped_start,
+                    clipped_end,
                 )
+            )
+
+            breakdown_hours = (
+                downtime_result.get(
+                    "required_downtime_minutes",
+                    0,
+                )
+                / 60
+            )
 
             hours_cache[cache_key] = round(
                 max(breakdown_hours, 0),
