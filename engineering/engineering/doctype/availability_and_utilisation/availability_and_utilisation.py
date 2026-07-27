@@ -158,48 +158,85 @@ def _overlap_hours(a_start, a_end, b_start, b_end) -> float:
 
 
 def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
-    """
-    Windows where breakdown time should NOT be counted.
-    - Exclude 06:00–08:00 for Day/Morning shifts that start at 06:00
-    - Exclude 18:00–20:00 for Night shifts that start at 18:00
-    - Exclude 13:00–14:00 for all Day shifts
-    - Exclude 01:00–02:00 for Night shifts
-    """
-    sh = (shift or "").strip().lower()
+    configuration = frappe.db.get_value(
+        "Startup and Fatigue spesification",
+        {
+            "site": location,
+            "shift": shift,
+        },
+        [
+            "startup_start",
+            "startup_end",
+            "fatigue_start",
+            "fatigue_end",
+        ],
+        as_dict=True,
+    )
+
+    if not configuration:
+        frappe.log_error(
+            title="Missing Startup and Fatigue specification",
+            message=f"No configuration found for {location}-{shift}",
+        )
+        return []
+
+    def time_text(value):
+        if isinstance(value, timedelta):
+            seconds = int(value.total_seconds()) % 86400
+            hours, remainder = divmod(seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+        return str(value).split(".")[0]
+
+    def build_windows(start_time, end_time):
+        windows = []
+
+        start_time = time_text(start_time)
+        end_time = time_text(end_time)
+
+        base_date = getdate(shift_start)
+
+        for day_offset in (0, 1):
+            window_date = add_days(base_date, day_offset)
+
+            window_start = get_datetime(
+                f"{window_date} {start_time}"
+            )
+
+            window_end_date = window_date
+
+            if end_time <= start_time:
+                window_end_date = add_days(window_date, 1)
+
+            window_end = get_datetime(
+                f"{window_end_date} {end_time}"
+            )
+
+            if window_end <= shift_start or window_start >= shift_end:
+                continue
+
+            windows.append((
+                max(window_start, shift_start),
+                min(window_end, shift_end),
+            ))
+
+        return windows
 
     windows = []
 
-    # Helper: build a datetime window on a specific date (YYYY-MM-DD)
-    def _dt(d, hhmmss):
-        return get_datetime(f"{d} {hhmmss}")
+    # Keep startup first and fatigue second for dashboard calculations.
+    windows.extend(build_windows(
+        configuration.startup_start,
+        configuration.startup_end,
+    ))
 
-    shift_date_str = getdate(shift_start).strftime("%Y-%m-%d")
-    next_date_str = getdate(shift_end).strftime("%Y-%m-%d")  # handles crossing midnight
+    windows.extend(build_windows(
+        configuration.fatigue_start,
+        configuration.fatigue_end,
+    ))
 
-    # Startup exclusion for day-style shifts
-    if get_datetime(shift_start).strftime("%H:%M:%S") == "06:00:00" and sh in ("day", "morning"):
-        windows.append((_dt(shift_date_str, "06:00:00"), _dt(shift_date_str, "08:00:00")))
-
-    # Startup exclusion for night shifts
-    if get_datetime(shift_start).strftime("%H:%M:%S") == "18:00:00" and sh in ("night",):
-        windows.append((_dt(shift_date_str, "18:00:00"), _dt(shift_date_str, "20:00:00")))
-
-    # Day fatigue for all sites
-    if sh in ("day",):
-        windows.append((_dt(shift_date_str, "13:00:00"), _dt(shift_date_str, "14:00:00")))
-
-    # Night fatigue (01:00–02:00 happens after midnight for 18:00–06:00 shifts)
-    if sh in ("night",):
-        windows.append((_dt(next_date_str, "01:00:00"), _dt(next_date_str, "02:00:00")))
-
-    # Only keep windows that actually intersect the shift window
-    filtered = []
-    for ws, we in windows:
-        if we <= shift_start or ws >= shift_end:
-            continue
-        filtered.append((max(ws, shift_start), min(we, shift_end)))
-
-    return filtered
+    return windows
 
 # =============================================================================
 # Main DocType
@@ -633,8 +670,13 @@ class AvailabilityandUtilisation(Document):
                         total_hours += hrs
                         intervals.append((clip_start, clip_end, hrs))
 
-                # NEW: subtract excluded windows (fatigue + 06-07 / 18-19) from breakdown intervals
-                excluded_windows = _exclusion_windows(parent_record["location"], parent_record["shift"], shift_start, shift_end)
+                # Subtract site-and-shift-specific startup and fatigue windows.
+                excluded_windows = _exclusion_windows(
+                    parent_record["location"],
+                    parent_record["shift"],
+                    shift_start,
+                    shift_end,
+                )
 
                 excluded_hours = 0.0
                 effective_hours = 0.0

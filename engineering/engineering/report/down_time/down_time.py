@@ -14,6 +14,12 @@ from engineering.engineering.report.availability_and_utilisation_month_end_repor
     availability_and_utilisation_month_end_report as month_end,
 )
 
+
+from engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation import (
+    _exclusion_windows,
+)
+
+
 AVAIL_UTIL_REPORT_FILE = frappe.get_app_path(
     "is_production",
     "production",
@@ -138,42 +144,15 @@ def get_mpp_required_hours(site, report_date, shift=None):
     return None
 
 
-def exclusion_windows(shift, window_start, window_end):
+def exclusion_windows(site, shift, window_start, window_end):
     shift = normalise_shift(shift)
-    windows = []
 
-    shift_date = getdate(window_start)
-    next_date = getdate(window_end)
-
-    if shift == "Day":
-        windows.append((
-            get_datetime(str(shift_date) + " 06:00:00"),
-            get_datetime(str(shift_date) + " 08:00:00"),
-        ))
-        windows.append((
-            get_datetime(str(shift_date) + " 13:00:00"),
-            get_datetime(str(shift_date) + " 14:00:00"),
-        ))
-
-    if shift == "Night":
-        windows.append((
-            get_datetime(str(shift_date) + " 18:00:00"),
-            get_datetime(str(shift_date) + " 20:00:00"),
-        ))
-        windows.append((
-            get_datetime(str(next_date) + " 01:00:00"),
-            get_datetime(str(next_date) + " 02:00:00"),
-        ))
-
-    filtered = []
-
-    for start, end in windows:
-        if end <= window_start or start >= window_end:
-            continue
-
-        filtered.append((max(start, window_start), min(end, window_end)))
-
-    return filtered
+    return _exclusion_windows(
+        site,
+        shift,
+        window_start,
+        window_end,
+    )
 
 
 def get_breakdown_history_intervals(site, plant_no, window_start, window_end):
@@ -246,7 +225,12 @@ def calculate_availability_engine_breakdown_hours(site, plant_no, shift, window_
     effective_window_start = max(window_start, START_LOOKUP_DATETIME)
 
     intervals = get_breakdown_history_intervals(site, plant_no, effective_window_start, window_end)
-    excluded = exclusion_windows(shift, effective_window_start, window_end)
+    excluded = exclusion_windows(
+        site,
+        shift,
+        effective_window_start,
+        window_end,
+    )
 
     effective_hours = 0.0
 

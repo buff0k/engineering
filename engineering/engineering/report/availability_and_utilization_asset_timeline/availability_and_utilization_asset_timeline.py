@@ -4,6 +4,10 @@ from datetime import timedelta
 import frappe
 from frappe.utils import add_days, get_datetime, getdate
 
+from engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation import (
+    _exclusion_windows,
+)
+
 
 START_HOUR = 6
 RESOLVED_STATUS = "3"
@@ -20,15 +24,7 @@ SATURDAY_18_06_SITES = {
     "gwab",
 }
 
-FATIGUE_13_1330 = {"uitgevallen", "koppie", "bankfontein"}
-FATIGUE_13_14 = {"gwab", "klipfontein", "kriel", "kriel rehabilitation"}
 
-SATURDAY_SPECIAL_FATIGUE_1330 = {
-    "uitgevallen",
-    "kriel rehabilitation",
-    "koppie",
-    "bankfontein",
-}
 
 
 def execute(filters=None):
@@ -288,44 +284,46 @@ def _get_shift_system(site, shift_date):
 
 
 def _fixed_windows(site, shift_date, window_start, shift_system):
-    loc = (site or "").strip().lower()
-    d0 = getdate(window_start).strftime("%Y-%m-%d")
-    d1 = getdate(window_start + timedelta(days=1)).strftime("%Y-%m-%d")
+    window_end = _get_window_end(site, shift_date)
 
-    def dt(d, t):
-        return get_datetime(f"{d} {t}")
+    day_start = get_datetime(f"{shift_date} 06:00:00")
+    day_end = get_datetime(f"{shift_date} 18:00:00")
+
+    night_start = get_datetime(f"{shift_date} 18:00:00")
+    night_end = get_datetime(f"{add_days(shift_date, 1)} 06:00:00")
+
+    day_windows = _exclusion_windows(
+        site,
+        "Day",
+        day_start,
+        day_end,
+    )
+
+    night_windows = _exclusion_windows(
+        site,
+        "Night",
+        night_start,
+        night_end,
+    )
 
     startup = []
     fatigue = []
 
-    startup.append((dt(d0, "06:00:00"), dt(d0, "07:00:00")))
+    if len(day_windows) >= 1:
+        startup.append(day_windows[0])
 
-    shift_system_key = (shift_system or "").strip().lower()
+    if len(day_windows) >= 2:
+        fatigue.append(day_windows[1])
 
-    if shift_system_key == "saturday_2x9":
-        startup.append((dt(d0, "15:00:00"), dt(d0, "16:00:00")))
-    elif shift_system_key == "saturday_2x12":
-        startup.append((dt(d0, "18:00:00"), dt(d0, "19:00:00")))
-    elif shift_system_key == "2x12hour":
-        startup.append((dt(d0, "18:00:00"), dt(d0, "19:00:00")))
-    elif shift_system_key == "3x8hour":
-        startup.append((dt(d0, "14:00:00"), dt(d0, "15:00:00")))
-        startup.append((dt(d0, "22:00:00"), dt(d0, "23:00:00")))
+    if len(night_windows) >= 1:
+        startup.append(night_windows[0])
 
-    if shift_date.weekday() == 5 and loc in SATURDAY_SPECIAL_FATIGUE_1330:
-        fatigue.append((dt(d0, "13:00:00"), dt(d0, "13:30:00")))
-        fatigue.append((dt(d0, "22:00:00"), dt(d0, "22:30:00")))
-    else:
-        if loc in FATIGUE_13_1330:
-            fatigue.append((dt(d0, "13:00:00"), dt(d0, "13:30:00")))
-        elif loc in FATIGUE_13_14:
-            fatigue.append((dt(d0, "13:00:00"), dt(d0, "14:00:00")))
-
-        fatigue.append((dt(d1, "01:00:00"), dt(d1, "02:00:00")))
+    if len(night_windows) >= 2:
+        fatigue.append(night_windows[1])
 
     return {
-        "startup": _clip_to_window(startup, window_start, _get_window_end(site, shift_date)),
-        "fatigue": _clip_to_window(fatigue, window_start, _get_window_end(site, shift_date)),
+        "startup": _clip_to_window(startup, window_start, window_end),
+        "fatigue": _clip_to_window(fatigue, window_start, window_end),
     }
 
 

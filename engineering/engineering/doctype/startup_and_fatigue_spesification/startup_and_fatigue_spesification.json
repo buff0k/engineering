@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:{site}-{shift}",
+ "creation": "2026-07-27 15:50:40.928852",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "site",
+  "shift",
+  "startup_start",
+  "startup_end",
+  "fatigue_start",
+  "fatigue_end"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Day\nNight",
+   "reqd": 1
+  },
+  {
+   "fieldname": "startup_start",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Startup Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "startup_end",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Startup End",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fatigue_start",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Fatigue Start",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fatigue_end",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Fatigue End",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-27 16:17:50.318105",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Startup and Fatigue spesification",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
