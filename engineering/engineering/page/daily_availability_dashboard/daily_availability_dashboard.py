@@ -1892,7 +1892,10 @@ def get_popup_au_rows(
             shift,
             shift_system,
             location,
-            9.0 AS required_hours,
+            COALESCE(
+                shift_required_hours,
+                0
+            ) AS required_hours,
             COALESCE(
                 shift_working_hours,
                 0
@@ -1936,6 +1939,7 @@ def calculate_breakdown_au(
 
     required_hours = 0.0
     working_hours = 0.0
+    counted_downtime = 0.0
     startup_hours = 0.0
     fatigue_hours = 0.0
     shift_names = []
@@ -1944,6 +1948,14 @@ def calculate_breakdown_au(
 
     for au_row in au_rows or []:
         try:
+            row_required_hours = max(
+                flt(au_row.required_hours),
+                0,
+            )
+
+            if row_required_hours <= 0:
+                continue
+
             shift_start, shift_end = au.get_shift_timings(
                 au_row.shift_system,
                 au_row.shift,
@@ -1965,23 +1977,32 @@ def calculate_breakdown_au(
 
             row_key = au_row.name
 
-            if row_key not in seen_rows:
-                seen_rows.add(row_key)
+            if row_key in seen_rows:
+                continue
 
-                required_hours += flt(
-                    au_row.required_hours
-                )
+            seen_rows.add(row_key)
 
-                working_hours += flt(
-                    au_row.working_hours
-                )
+            required_hours += row_required_hours
+            working_hours += flt(
+                au_row.working_hours
+            )
 
-                shift_name = str(
-                    au_row.shift or ""
-                ).strip()
+            shift_name = str(
+                au_row.shift or ""
+            ).strip()
 
-                if shift_name and shift_name not in shift_names:
-                    shift_names.append(shift_name)
+            if shift_name and shift_name not in shift_names:
+                shift_names.append(shift_name)
+
+            shift_overlap_hours = au._overlap_hours(
+                start_dt,
+                end_dt,
+                shift_start,
+                shift_end,
+            )
+
+            startup_overlap = 0.0
+            fatigue_overlap = 0.0
 
             excluded_windows = au._exclusion_windows(
                 au_row.location,
@@ -1995,16 +2016,31 @@ def calculate_breakdown_au(
                 excluded_end,
             ) in enumerate(excluded_windows):
                 excluded_overlap = au._overlap_hours(
-                    overlap_start,
-                    overlap_end,
+                    start_dt,
+                    end_dt,
                     excluded_start,
                     excluded_end,
                 )
 
                 if index == 0:
-                    startup_hours += excluded_overlap
+                    startup_overlap += excluded_overlap
                 else:
-                    fatigue_hours += excluded_overlap
+                    fatigue_overlap += excluded_overlap
+
+            startup_hours += startup_overlap
+            fatigue_hours += fatigue_overlap
+
+            valid_overlap_hours = max(
+                shift_overlap_hours
+                - startup_overlap
+                - fatigue_overlap,
+                0,
+            )
+
+            counted_downtime += min(
+                valid_overlap_hours,
+                row_required_hours,
+            )
 
         except Exception:
             continue
@@ -2012,6 +2048,7 @@ def calculate_breakdown_au(
     return {
         "required_hours": round(required_hours, 2),
         "working_hours": round(working_hours, 2),
+        "counted_downtime": round(counted_downtime, 2),
         "startup_hours": round(startup_hours, 2),
         "fatigue_hours": round(fatigue_hours, 2),
         "excluded_hours": round(
@@ -2184,14 +2221,8 @@ def get_machine_downtime_details(
             event_au.get("working_hours")
         )
 
-        counted_downtime = max(
-            flt(raw_downtime) - excluded_hours,
-            0,
-        )
-
-        counted_downtime = min(
-            counted_downtime,
-            required_hours,
+        counted_downtime = flt(
+            event_au.get("counted_downtime")
         )
 
         available_hours = max(
@@ -2327,6 +2358,107 @@ def get_machine_downtime_details(
             ),
             "calculation": calculation,
         })
+
+
+    grouped_rows = {}
+
+    for detail in rows:
+        start_value = detail.get("start")
+        resolved_value = detail.get("resolved")
+
+        start_key = (
+            str(get_datetime(start_value))
+            if start_value
+            else ""
+        )
+
+        resolved_key = (
+            str(get_datetime(resolved_value))
+            if resolved_value
+            else ""
+        )
+
+        interval_key = (
+            start_key,
+            resolved_key,
+        )
+
+        if interval_key not in grouped_rows:
+            grouped_rows[interval_key] = detail
+            continue
+
+        existing = grouped_rows[interval_key]
+
+        existing_reasons = [
+            value.strip()
+            for value in str(
+                existing.get("reason") or ""
+            ).split("\n")
+            if value.strip()
+        ]
+
+        new_reasons = [
+            value.strip()
+            for value in str(
+                detail.get("reason") or ""
+            ).split("\n")
+            if value.strip()
+        ]
+
+        for reason in new_reasons:
+            if reason not in existing_reasons:
+                existing_reasons.append(reason)
+
+        existing["reason"] = "\n".join(
+            existing_reasons
+        )
+
+        existing_resolutions = [
+            value.strip()
+            for value in str(
+                existing.get("resolution") or ""
+            ).split("\n")
+            if value.strip()
+        ]
+
+        new_resolutions = [
+            value.strip()
+            for value in str(
+                detail.get("resolution") or ""
+            ).split("\n")
+            if value.strip()
+        ]
+
+        for resolution in new_resolutions:
+            if resolution not in existing_resolutions:
+                existing_resolutions.append(
+                    resolution
+                )
+
+        existing["resolution"] = "\n".join(
+            existing_resolutions
+        )
+
+        existing_names = [
+            value.strip()
+            for value in str(
+                existing.get("name") or ""
+            ).split(",")
+            if value.strip()
+        ]
+
+        new_name = str(
+            detail.get("name") or ""
+        ).strip()
+
+        if new_name and new_name not in existing_names:
+            existing_names.append(new_name)
+
+        existing["name"] = ", ".join(
+            existing_names
+        )
+
+    rows = list(grouped_rows.values())
 
 
     frappe.clear_messages()

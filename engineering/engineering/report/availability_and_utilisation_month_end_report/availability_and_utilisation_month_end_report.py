@@ -397,62 +397,160 @@ def clean_join(values):
 
 	return "\n".join(cleaned)
 
+
 def clean_reason_details(details):
-	cleaned = []
-	seen = set()
+    grouped = {}
+    order = []
 
-	for detail in details or []:
-		date_value = str(detail.get("date") or "")[:10]
-		start_datetime = str(detail.get("start_datetime") or "")[:16]
-		resolved_datetime = str(detail.get("resolved_datetime") or "")[:16]
-		reason_value = detail.get("reason") or ""
-		total_minutes = int(flt(detail.get("total_minutes")))
-		startup_fatigue_minutes = int(flt(detail.get("startup_fatigue_minutes")))
-		au_minutes = int(flt(detail.get("au_minutes")))
+    for detail in details or []:
+        date_value = str(
+            detail.get("date") or ""
+        )[:10]
 
-		for part in str(reason_value).replace("\n", ";").split(";"):
-			part = part.strip()
+        start_datetime = str(
+            detail.get("start_datetime") or ""
+        )[:16]
 
-			if not part:
-				continue
+        resolved_datetime = str(
+            detail.get("resolved_datetime") or ""
+        )[:16]
 
-			key = (date_value, start_datetime, resolved_datetime, part)
+        total_minutes = int(
+            flt(detail.get("total_minutes"))
+        )
 
-			if key in seen:
-				continue
+        startup_fatigue_minutes = int(
+            flt(
+                detail.get(
+                    "startup_fatigue_minutes"
+                )
+            )
+        )
 
-			seen.add(key)
-			cleaned.append({
-				"date": date_value,
-				"start_datetime": start_datetime,
-				"resolved_datetime": resolved_datetime,
-				"total_minutes": total_minutes,
-				"startup_fatigue_minutes": startup_fatigue_minutes,
-				"au_minutes": au_minutes,
-				"reason": part,
-			})
+        au_minutes = int(
+            flt(detail.get("au_minutes"))
+        )
 
-	return cleaned
+        interval_key = (
+            date_value,
+            start_datetime,
+            resolved_datetime,
+        )
 
+        if interval_key not in grouped:
+            grouped[interval_key] = {
+                "date": date_value,
+                "start_datetime": start_datetime,
+                "resolved_datetime": resolved_datetime,
+                "total_minutes": total_minutes,
+                "startup_fatigue_minutes": (
+                    startup_fatigue_minutes
+                ),
+                "au_minutes": au_minutes,
+                "reasons": [],
+            }
 
+            order.append(interval_key)
 
-def get_startup_fatigue_minutes_for_breakdown(filters, asset_name, start_datetime, resolved_datetime):
+        reason_value = str(
+            detail.get("reason") or ""
+        )
+
+        for part in (
+            reason_value
+            .replace("\n", ";")
+            .split(";")
+        ):
+            part = part.strip()
+
+            if (
+                part
+                and part
+                not in grouped[
+                    interval_key
+                ]["reasons"]
+            ):
+                grouped[
+                    interval_key
+                ]["reasons"].append(part)
+
+    cleaned = []
+
+    for interval_key in order:
+        grouped_row = grouped[interval_key]
+
+        cleaned.append({
+            "date": grouped_row["date"],
+            "start_datetime": (
+                grouped_row[
+                    "start_datetime"
+                ]
+            ),
+            "resolved_datetime": (
+                grouped_row[
+                    "resolved_datetime"
+                ]
+            ),
+            "total_minutes": (
+                grouped_row[
+                    "total_minutes"
+                ]
+            ),
+            "startup_fatigue_minutes": (
+                grouped_row[
+                    "startup_fatigue_minutes"
+                ]
+            ),
+            "au_minutes": (
+                grouped_row[
+                    "au_minutes"
+                ]
+            ),
+            "reason": "\n".join(
+                grouped_row["reasons"]
+            ),
+        })
+
+    return cleaned
+
+def get_required_downtime_minutes_for_breakdown(
+	filters,
+	asset_name,
+	start_datetime,
+	resolved_datetime,
+):
 	if not start_datetime or not resolved_datetime:
-		return 0
+		return {
+			"required_downtime_minutes": 0,
+			"excluded_minutes": 0,
+		}
 
 	try:
-		from engineering.engineering.doctype.availability_and_utilisation import availability_and_utilisation as au
+		from engineering.engineering.doctype.availability_and_utilisation import (
+			availability_and_utilisation as au,
+		)
 	except Exception:
-		return 0
+		return {
+			"required_downtime_minutes": 0,
+			"excluded_minutes": 0,
+		}
 
 	filters = frappe._dict(filters or {})
-	location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+	location = _month_end_get_filter_value(
+		filters,
+		"location",
+		"site",
+		"production_site",
+	)
 
 	start_dt = get_datetime(start_datetime)
 	end_dt = get_datetime(resolved_datetime)
 
 	if not start_dt or not end_dt or end_dt <= start_dt:
-		return 0
+		return {
+			"required_downtime_minutes": 0,
+			"excluded_minutes": 0,
+		}
 
 	au_rows = frappe.db.sql("""
 		SELECT
@@ -461,13 +559,16 @@ def get_startup_fatigue_minutes_for_breakdown(filters, asset_name, start_datetim
 			shift,
 			shift_system,
 			location,
-			asset_name
+			asset_name,
+			shift_required_hours
 		FROM `tabAvailability and Utilisation`
 		WHERE asset_name = %(asset_name)s
 		  AND shift_date >= DATE(%(start_datetime)s) - INTERVAL 1 DAY
 		  AND shift_date <= DATE(%(resolved_datetime)s) + INTERVAL 1 DAY
 		  AND (%(location)s = '' OR location = %(location)s)
-		ORDER BY shift_date ASC, FIELD(shift, 'Day', 'Night') ASC
+		ORDER BY
+			shift_date ASC,
+			FIELD(shift, 'Day', 'Morning', 'Afternoon', 'Night') ASC
 	""", {
 		"asset_name": asset_name,
 		"location": location or "",
@@ -475,34 +576,75 @@ def get_startup_fatigue_minutes_for_breakdown(filters, asset_name, start_datetim
 		"resolved_datetime": end_dt,
 	}, as_dict=True)
 
-	excluded_hours = 0.0
+	required_downtime_hours = 0.0
+	calendar_overlap_hours = 0.0
 
 	for row in au_rows:
 		try:
+			required_hours = max(flt(row.shift_required_hours), 0)
+
+			if required_hours <= 0:
+				continue
+
 			shift_start, shift_end = au.get_shift_timings(
 				row.shift_system,
 				row.shift,
 				str(row.shift_date),
 			)
 
-			excluded_windows = au._exclusion_windows(
-				row.location,
-				row.shift,
+			if not shift_start or not shift_end:
+				continue
+
+			shift_overlap_hours = au._overlap_hours(
+				start_dt,
+				end_dt,
 				shift_start,
 				shift_end,
 			)
 
-			for window_start, window_end in excluded_windows:
-				excluded_hours += au._overlap_hours(
+			if shift_overlap_hours <= 0:
+				continue
+
+			excluded_overlap_hours = 0.0
+
+			for window_start, window_end in au._exclusion_windows(
+				row.location,
+				row.shift,
+				shift_start,
+				shift_end,
+			):
+				excluded_overlap_hours += au._overlap_hours(
 					start_dt,
 					end_dt,
 					window_start,
 					window_end,
 				)
+
+			valid_overlap_hours = max(
+				shift_overlap_hours - excluded_overlap_hours,
+				0,
+			)
+
+			required_downtime_hours += min(
+				valid_overlap_hours,
+				required_hours,
+			)
+
+			calendar_overlap_hours += shift_overlap_hours
+
 		except Exception:
 			continue
 
-	return int(round(excluded_hours * 60))
+	required_downtime_minutes = int(round(required_downtime_hours * 60))
+	calendar_overlap_minutes = int(round(calendar_overlap_hours * 60))
+
+	return {
+		"required_downtime_minutes": required_downtime_minutes,
+		"excluded_minutes": max(
+			calendar_overlap_minutes - required_downtime_minutes,
+			0,
+		),
+	}
 
 
 
@@ -586,14 +728,22 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 					display_start_datetime = clipped_start_dt
 					display_resolved_datetime = clipped_end_dt
 
-					total_minutes = int(round((clipped_end_dt - clipped_start_dt).total_seconds() / 60))
-					startup_fatigue_minutes = get_startup_fatigue_minutes_for_breakdown(
+					required_downtime = get_required_downtime_minutes_for_breakdown(
 						filters,
 						row.get("asset_name"),
 						clipped_start_dt,
 						clipped_end_dt,
 					)
-					au_minutes = max(total_minutes - startup_fatigue_minutes, 0)
+
+					total_minutes = required_downtime[
+						"required_downtime_minutes"
+					]
+
+					startup_fatigue_minutes = required_downtime[
+						"excluded_minutes"
+					]
+
+					au_minutes = total_minutes
 
 		details_by_asset.setdefault(row.get("asset_name"), []).append({
 			"date": str(display_start_datetime or "")[:10],
@@ -1108,9 +1258,9 @@ def _month_end_direct_rows(filters):
 
             au_row = au_by_key.get((category, asset_name))
 
-            breakdown_details = clean_reason_details(plant_breakdown_details_by_asset.get(asset_name) or [])
-            pbm_total_minutes = sum(int(flt(d.get("total_minutes"))) for d in breakdown_details)
-            pbm_mechanical_downtime = pbm_total_minutes / 60
+            breakdown_details = clean_reason_details(
+                plant_breakdown_details_by_asset.get(asset_name) or []
+            )
 
             if au_row:
                 machine_row = _month_end_calc_row(
@@ -1118,7 +1268,7 @@ def _month_end_direct_rows(filters):
                     asset_name,
                     au_row.get("required_hrs"),
                     au_row.get("work_hrs"),
-                    pbm_mechanical_downtime,
+                    au_row.get("mechanical_downtime"),
                 )
                 reason_row = other_delay_reasons_by_key.get((category, asset_name), {})
 
@@ -1130,7 +1280,13 @@ def _month_end_direct_rows(filters):
                 machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
                 machine_row["other_delay_reason"] = "\n".join([d.get("reason") for d in other_delay_details])
             else:
-                machine_row = _month_end_calc_row(category, asset_name, 0, 0, pbm_mechanical_downtime)
+                machine_row = _month_end_calc_row(
+                    category,
+                    asset_name,
+                    0,
+                    0,
+                    0,
+                )
                 machine_row["breakdown_reason_details"] = breakdown_details
                 machine_row["other_delay_reason_details"] = []
                 machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
