@@ -50,7 +50,13 @@ UI_CATEGORIES = [
     "Loader",
 ]
 
-from is_production.production.report.avail_and_util_summary import avail_and_util_summary as summary
+from is_production.production.report.avail_and_util_summary import (
+    avail_and_util_summary as summary,
+)
+
+from is_production.production.report.avail_and_util_report import (
+    avail_and_util_report as detailed_au,
+)
 
 def safe_msr_datetime(value, service_date=None):
     if value in (None, ""):
@@ -1211,18 +1217,36 @@ def _month_end_direct_rows(filters):
 
     categories = [selected_category] if selected_category else list(MONTH_END_CATEGORIES)
 
-    asset_rows = _get_submitted_assets(categories, location)
-    summary_rows = summary.get_grouped_data({
+    asset_rows = _get_submitted_assets(
+        categories,
+        location,
+    )
+
+    summary_filters = {
         "start_date": from_date,
         "end_date": to_date,
         "location": location,
         "machine_scope": machine_scope,
-    })
+    }
+
+    summary_rows = summary.get_grouped_data(
+        summary_filters
+    )
+
+    true_availability_rows = []
+
+    if use_true_availability:
+        true_availability_rows = (
+            detailed_au.get_grouped_data(
+                summary_filters
+            )
+            or []
+        )
 
     other_delay_reasons_by_key = {}
     true_availability_values_by_key = {}
 
-    for row in summary_rows:
+    for row in true_availability_rows:
         if row.get("indent") != 2:
             continue
 
@@ -1235,13 +1259,24 @@ def _month_end_direct_rows(filters):
             "true_availability_percent"
         )
 
-        if true_availability not in (None, ""):
-            true_availability_values_by_key.setdefault(
-                key,
-                [],
-            ).append(
-                flt(true_availability)
-            )
+        if true_availability in (None, ""):
+            continue
+
+        true_availability_values_by_key.setdefault(
+            key,
+            [],
+        ).append(
+            flt(true_availability)
+        )
+
+    for row in summary_rows:
+        if row.get("indent") != 2:
+            continue
+
+        key = (
+            row.get("asset_category"),
+            row.get("asset_name"),
+        )
 
         reason_date = (
             row.get("shift_date")
