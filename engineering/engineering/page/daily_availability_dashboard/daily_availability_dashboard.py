@@ -403,6 +403,24 @@ def execute(filters=None):
         source_rows
     )
 
+    avgs, machine_series = apply_au_target_to_values(
+        avgs,
+        machine_series,
+        filters,
+    )
+
+    production_avgs, _ = apply_au_target_to_values(
+        production_avgs,
+        {},
+        filters,
+    )
+
+    spare_avgs, _ = apply_au_target_to_values(
+        spare_avgs,
+        {},
+        filters,
+    )
+
     dashboard_html = build_dashboard_html(
         location,
         start_date,
