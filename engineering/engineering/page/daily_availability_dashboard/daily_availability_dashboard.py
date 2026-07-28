@@ -1,4 +1,5 @@
 import frappe
+from frappe.desk.query_report import run
 from urllib.parse import quote
 from frappe.utils import flt, getdate, get_datetime, add_days, date_diff, nowdate, now_datetime, time_diff_in_hours
 from datetime import timedelta
@@ -331,21 +332,236 @@ def apply_au_target_to_values(avgs, machine_series, filters):
         if not isinstance(values, dict):
             continue
 
-        for field in ("avail", "util"):
-            if values.get(field) is not None:
-                values[field] = round(float(values.get(field) or 0) * multiplier, 1)
+        if values.get("util") is not None:
+            values["util"] = round(
+                float(values.get("util") or 0)
+                * multiplier,
+                1,
+            )
 
     for category, machines in (machine_series or {}).items():
         for machine in machines or []:
             if not isinstance(machine, dict):
                 continue
 
-            for field in ("avail", "util"):
-                if machine.get(field) is not None:
-                    machine[field] = round(float(machine.get(field) or 0) * multiplier, 1)
+            if machine.get("util") is not None:
+                machine["util"] = round(
+                    float(machine.get("util") or 0)
+                    * multiplier,
+                    1,
+                )
 
     return avgs, machine_series
 
+def apply_true_availability_to_source_rows(
+    source_rows,
+    location,
+    start_date,
+    end_date,
+    machine_scope,
+    au_target_filter,
+):
+    if au_target_filter != "85% A & U":
+        return source_rows
+
+    report_machine_scope = machine_scope
+
+    if (
+        report_machine_scope
+        == "Production + Swing/Spare Machines"
+    ):
+        report_machine_scope = "Include Swing/Spare"
+
+    try:
+        report_data = run(
+            "Avail and Util report",
+            filters={
+                "start_date": start_date,
+                "end_date": end_date,
+                "from_date": start_date,
+                "to_date": end_date,
+                "location": location,
+                "site": location,
+                "machine_scope": report_machine_scope,
+            },
+            ignore_prepared_report=True,
+        )
+
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Daily Dashboard True Availability Error",
+        )
+        frappe.clear_messages()
+        return source_rows
+
+    report_rows = []
+
+    if isinstance(report_data, dict):
+        report_rows = (
+            report_data.get("result")
+            or report_data.get("data")
+            or []
+        )
+
+    elif (
+        isinstance(report_data, (list, tuple))
+        and len(report_data) > 1
+    ):
+        report_rows = report_data[1] or []
+
+    true_values_by_machine = {}
+
+    for row in report_rows:
+        if not isinstance(row, dict):
+            continue
+
+        try:
+            indent = int(
+                row.get("indent")
+                or 0
+            )
+        except Exception:
+            indent = 0
+
+        if indent != 2:
+            continue
+
+        required_hours = to_float(
+            row.get("shift_required_hours")
+            if row.get("shift_required_hours") not in (None, "")
+            else row.get("Req Hrs")
+        )
+
+        if (
+            required_hours is not None
+            and required_hours <= 0
+        ):
+            continue
+
+        machine = str(
+            row.get("asset_name")
+            or row.get("asset")
+            or row.get("Asset")
+            or ""
+        ).strip()
+
+        if not machine:
+            continue
+
+        true_availability = to_float(
+            row.get("true_availability_percent")
+            if row.get("true_availability_percent") not in (None, "")
+            else row.get("True Availability %")
+        )
+
+        if true_availability is None:
+            continue
+
+        true_values_by_machine.setdefault(
+            machine,
+            [],
+        ).append(
+            true_availability
+        )
+
+    true_availability_by_machine = {}
+
+    for machine, values in (
+        true_values_by_machine.items()
+    ):
+        if not values:
+            continue
+
+        true_availability_by_machine[
+            machine
+        ] = round(
+            sum(values) / len(values),
+            1,
+        )
+
+    for row in source_rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        machine = str(
+            row.get("asset_name")
+            or ""
+        ).strip()
+
+        if not machine:
+            continue
+
+        if machine not in true_availability_by_machine:
+            continue
+
+        row["avail_percent"] = (
+            true_availability_by_machine[
+                machine
+            ]
+        )
+
+    return source_rows
+
+
+def build_scope_averages_from_machine_series(
+    machine_series,
+    spare_swing_asset_map,
+):
+    production_series = {
+        category: []
+        for category in UI_CATEGORIES
+    }
+
+    spare_series = {
+        category: []
+        for category in UI_CATEGORIES
+    }
+
+    for category in UI_CATEGORIES:
+        machines = (
+            machine_series.get(category)
+            or []
+        )
+
+        for machine in machines:
+            if not isinstance(machine, dict):
+                continue
+
+            machine_name = str(
+                machine.get("machine")
+                or ""
+            ).strip()
+
+            if (
+                machine_name
+                and machine_name
+                in (
+                    spare_swing_asset_map
+                    or {}
+                )
+            ):
+                spare_series[category].append(
+                    machine
+                )
+            else:
+                production_series[category].append(
+                    machine
+                )
+
+    production_avgs = (
+        build_summary_averages_from_machine_series(
+            production_series
+        )
+    )
+
+    spare_avgs = (
+        build_summary_averages_from_machine_series(
+            spare_series
+        )
+    )
+
+    return production_avgs, spare_avgs
 
 
 def execute(filters=None):
@@ -378,12 +594,30 @@ def execute(filters=None):
         filters["end_date"] = end_date
         filters["to_date"] = end_date
 
+    au_target_filter = (
+        filters.get("au_target_filter")
+        or "85% A & U"
+    )
+
+    frappe.local.daily_dashboard_au_target_filter = (
+        au_target_filter
+    )
+
     source_rows = fetch_grouped_data(
         location,
         start_date,
         end_date,
         machine_scope,
-        filters.get("au_target_filter") or "85% A & U",
+        au_target_filter,
+    )
+
+    source_rows = apply_true_availability_to_source_rows(
+        source_rows,
+        location,
+        start_date,
+        end_date,
+        machine_scope,
+        au_target_filter,
     )
 
     spare_swing_asset_map = get_spare_swing_asset_map(filters)
@@ -392,33 +626,22 @@ def execute(filters=None):
         source_rows
     )
 
-    avgs = build_summary_averages_from_source_rows(
-        source_rows
+    _, machine_series = apply_au_target_to_values(
+        {},
+        machine_series,
+        filters,
+    )
+
+    avgs = build_summary_averages_from_machine_series(
+        machine_series
     )
 
     (
         production_avgs,
         spare_avgs,
-    ) = build_scope_averages_from_source_rows(
-        source_rows
-    )
-
-    avgs, machine_series = apply_au_target_to_values(
-        avgs,
+    ) = build_scope_averages_from_machine_series(
         machine_series,
-        filters,
-    )
-
-    production_avgs, _ = apply_au_target_to_values(
-        production_avgs,
-        {},
-        filters,
-    )
-
-    spare_avgs, _ = apply_au_target_to_values(
-        spare_avgs,
-        {},
-        filters,
+        spare_swing_asset_map,
     )
 
     dashboard_html = build_dashboard_html(
@@ -462,7 +685,7 @@ def fetch_grouped_data(
                 machine_scope
                 or "Production + Swing/Spare Machines"
             ),
-            "au_target_filter": au_target_filter or "85% A & U",
+            "au_target_filter": "100% A & U",
             "include_excluded_asset_categories": 1,
         })
     )
@@ -1403,16 +1626,40 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
     daily_category_values = {}
 
     for date_value in all_dates:
+        effective_au_target_filter = (
+            au_target_filter
+            or "85% A & U"
+        )
+
         day_rows = fetch_grouped_data(
             location,
             date_value,
             date_value,
             machine_scope,
-            au_target_filter or "85% A & U",
+            effective_au_target_filter,
+        )
+
+        day_rows = apply_true_availability_to_source_rows(
+            day_rows,
+            location,
+            date_value,
+            date_value,
+            machine_scope,
+            effective_au_target_filter,
         )
 
         day_machine_series = build_machine_series_from_source_rows(
             day_rows
+        )
+
+        _, day_machine_series = apply_au_target_to_values(
+            {},
+            day_machine_series,
+            frappe._dict({
+                "au_target_filter": (
+                    effective_au_target_filter
+                ),
+            }),
         )
 
         day_avgs = build_summary_averages_from_machine_series(
