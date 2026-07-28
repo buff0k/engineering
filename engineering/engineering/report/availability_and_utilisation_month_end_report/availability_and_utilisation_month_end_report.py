@@ -209,6 +209,7 @@ def get_data(filters):
 				"shift_available_hours": 0,
 				"shift_other_lost_hours": 0,
 				"avail_percentages": [],
+				"true_avail_percentages": [],
 				"util_percentages": [],
 				"emp_avail_percentages": [],
 				"breakdown_reason": [],
@@ -223,9 +224,21 @@ def get_data(filters):
 		target["shift_available_hours"] += flt(row.get("shift_available_hours"))
 		target["shift_other_lost_hours"] += flt(row.get("shift_other_lost_hours"))
 
-		target["avail_percentages"].append(flt(row.get("plant_shift_availability")))
-		target["util_percentages"].append(flt(row.get("plant_shift_utilisation")))
-		target["emp_avail_percentages"].append(flt(row.get("employee_availability")))
+		target["avail_percentages"].append(
+			flt(row.get("plant_shift_availability"))
+		)
+
+		target["true_avail_percentages"].append(
+			flt(row.get("true_availability_percent"))
+		)
+
+		target["util_percentages"].append(
+			flt(row.get("plant_shift_utilisation"))
+		)
+
+		target["emp_avail_percentages"].append(
+			flt(row.get("employee_availability"))
+		)
 
 		if row.get("breakdown_reason"):
 			target["breakdown_reason"].append(row.get("breakdown_reason"))
@@ -234,6 +247,17 @@ def get_data(filters):
 			target["other_delay_reason"].append(row.get("other_delay_reason"))
 
 	data = []
+
+	use_true_availability = (
+		filters.get("au_target_filter")
+		== "85% A & U"
+	)
+
+	availability_list_field = (
+		"true_avail_percentages"
+		if use_true_availability
+		else "avail_percentages"
+	)
 
 	category_total_rows = [
 		row for row in summary_rows
@@ -256,7 +280,12 @@ def get_data(filters):
 		]
 
 		machine_avail_values = [
-			average_percent(machine.get("avail_percentages") or [])
+			average_percent(
+				machine.get(
+					availability_list_field
+				)
+				or []
+			)
 			for machine in category_machines
 		]
 
@@ -271,9 +300,10 @@ def get_data(filters):
 			"required_hrs": summary.r1(row.get("shift_required_hours")),
 			"work_hrs": summary.r1(row.get("shift_working_hours")),
 			"mechanical_downtime": summary.r1(row.get("shift_breakdown_hours")),
-			"avail_percent": apply_au_target(
-				average_percent(machine_avail_values),
-				filters,
+			"avail_percent": summary.r1(
+				average_percent(
+					machine_avail_values
+				)
 			),
 			"util_percent": apply_au_target(
 				average_percent(machine_util_values),
@@ -312,9 +342,13 @@ def get_data(filters):
 			"required_hrs": summary.r1(required_hrs),
 			"work_hrs": summary.r1(work_hrs),
 			"mechanical_downtime": summary.r1(mechanical_downtime),
-			"avail_percent": apply_au_target(
-				average_percent(row["avail_percentages"]),
-				filters,
+			"avail_percent": summary.r1(
+				average_percent(
+					row.get(
+						availability_list_field
+					)
+					or []
+				)
 			),
 			"util_percent": apply_au_target(
 				average_percent(row["util_percentages"]),
@@ -1153,9 +1187,27 @@ def _month_end_direct_rows(filters):
 
     filters["to_date"] = to_date
     filters["end_date"] = to_date
-    selected_category = _month_end_get_filter_value(filters, "asset_category")
-    machine_scope = _month_end_get_filter_value(filters, "machine_scope") or "Include Swing/Spare"
-    spare_swing_asset_map = get_spare_swing_asset_map(filters)
+    selected_category = _month_end_get_filter_value(
+        filters,
+        "asset_category",
+    )
+
+    machine_scope = (
+        _month_end_get_filter_value(
+            filters,
+            "machine_scope",
+        )
+        or "Include Swing/Spare"
+    )
+
+    use_true_availability = (
+        filters.get("au_target_filter")
+        == "85% A & U"
+    )
+
+    spare_swing_asset_map = get_spare_swing_asset_map(
+        filters
+    )
 
     categories = [selected_category] if selected_category else list(MONTH_END_CATEGORIES)
 
@@ -1168,13 +1220,35 @@ def _month_end_direct_rows(filters):
     })
 
     other_delay_reasons_by_key = {}
+    true_availability_values_by_key = {}
 
     for row in summary_rows:
         if row.get("indent") != 2:
             continue
 
-        key = (row.get("asset_category"), row.get("asset_name"))
-        reason_date = row.get("shift_date") or row.get("date") or row.get("posting_date") or ""
+        key = (
+            row.get("asset_category"),
+            row.get("asset_name"),
+        )
+
+        true_availability = row.get(
+            "true_availability_percent"
+        )
+
+        if true_availability not in (None, ""):
+            true_availability_values_by_key.setdefault(
+                key,
+                [],
+            ).append(
+                flt(true_availability)
+            )
+
+        reason_date = (
+            row.get("shift_date")
+            or row.get("date")
+            or row.get("posting_date")
+            or ""
+        )
 
         other_delay_reasons_by_key.setdefault(key, {
             "other_delay_reason_details": [],
@@ -1271,8 +1345,33 @@ def _month_end_direct_rows(filters):
                     au_row.get("mechanical_downtime"),
                 )
 
+                if use_true_availability:
+                    true_values = (
+                        true_availability_values_by_key.get(
+                            (
+                                category,
+                                asset_name,
+                            ),
+                            [],
+                        )
+                    )
 
-                reason_row = other_delay_reasons_by_key.get((category, asset_name), {})
+                    if true_values:
+                        machine_row["avail_percent"] = (
+                            average_percent(
+                                true_values
+                            )
+                        )
+
+                reason_row = (
+                    other_delay_reasons_by_key.get(
+                        (
+                            category,
+                            asset_name,
+                        ),
+                        {},
+                    )
+                )
 
                 other_delay_details = clean_reason_details(reason_row.get("other_delay_reason_details") or [])
 
@@ -1289,6 +1388,24 @@ def _month_end_direct_rows(filters):
                     0,
                     0,
                 )
+
+                if use_true_availability:
+                    true_values = (
+                        true_availability_values_by_key.get(
+                            (
+                                category,
+                                asset_name,
+                            ),
+                            [],
+                        )
+                    )
+
+                    if true_values:
+                        machine_row["avail_percent"] = (
+                            average_percent(
+                                true_values
+                            )
+                        )
                 machine_row["breakdown_reason_details"] = breakdown_details
                 machine_row["other_delay_reason_details"] = []
                 machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
