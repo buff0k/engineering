@@ -533,8 +533,8 @@ def get_machine(row):
 
 def get_avail(row):
     return to_float(get_any(row, [
-        "plant_shift_availability",
         "avail_percent",
+        "plant_shift_availability",
         "Avail",
         "availability",
         "Availability",
@@ -543,8 +543,8 @@ def get_avail(row):
 
 def get_util(row):
     return to_float(get_any(row, [
-        "plant_shift_utilisation",
         "util_percent",
+        "plant_shift_utilisation",
         "Util",
         "utilisation",
         "Utilisation",
