@@ -142,6 +142,8 @@ def get_columns():
 		{"label": _("Asset Name"), "fieldname": "asset_name", "fieldtype": "Data", "width": 110},
 		{"label": _("Req Hrs"), "fieldname": "required_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
 		{"label": _("Work Hrs"), "fieldname": "work_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
+		{"label": _("Avail Hrs"), "fieldname": "available_hrs", "fieldtype": "Float", "precision": 1, "width": 95},
+		{"label": _("Avail Hrs Above 100"), "fieldname": "available_hrs_above_100", "fieldtype": "Float", "precision": 1, "width": 155},
 		{"label": _("Mechanical Downtime"), "fieldname": "mechanical_downtime", "fieldtype": "Float", "precision": 1, "width": 160},
 		{"label": _("Avail (%)"), "fieldname": "avail_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
 		{"label": _("Util (%)"), "fieldname": "util_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
@@ -898,28 +900,92 @@ def _month_end_percent(value):
     return round(value, 1)
 
 
-def _month_end_calc_row(asset_category, asset_name, required_hrs, work_hrs, mechanical_downtime):
+def _month_end_calc_row(
+    asset_category,
+    asset_name,
+    required_hrs,
+    work_hrs,
+    available_hrs,
+    available_hrs_above_100,
+    mechanical_downtime,
+):
     required_hrs = flt(required_hrs)
     work_hrs = flt(work_hrs)
-    mechanical_downtime = flt(mechanical_downtime)
-    available_hrs = required_hrs - mechanical_downtime
+    available_hrs = flt(available_hrs)
+    available_hrs_above_100 = flt(
+        available_hrs_above_100
+    )
+    mechanical_downtime = flt(
+        mechanical_downtime
+    )
 
-    avail_percent = _month_end_percent((available_hrs / required_hrs * 100) if required_hrs else 0)
-    util_percent = _month_end_percent((work_hrs / available_hrs * 100) if available_hrs else 0)
-    emp_avail_percent = _month_end_percent((mechanical_downtime / required_hrs * 100) if required_hrs else 0)
+    avail_percent = _month_end_percent(
+        (
+            available_hrs
+            / required_hrs
+            * 100
+        )
+        if required_hrs
+        else 0
+    )
+
+    util_percent = _month_end_percent(
+        (
+            work_hrs
+            / available_hrs
+            * 100
+        )
+        if available_hrs
+        else 0
+    )
+
+    emp_avail_percent = _month_end_percent(
+        (
+            mechanical_downtime
+            / required_hrs
+            * 100
+        )
+        if required_hrs
+        else 0
+    )
 
     return {
         "asset_category": asset_category,
         "asset_name": asset_name or "",
-        "required_hrs": round(required_hrs, 1),
-        "work_hrs": round(work_hrs, 1),
-        "mechanical_downtime": round(mechanical_downtime, 3),
-        "avail_percent": _month_end_percent(avail_percent),
-        "util_percent": _month_end_percent(util_percent),
-        "emp_avail_percent": _month_end_percent(emp_avail_percent),
+        "required_hrs": round(
+            required_hrs,
+            1,
+        ),
+        "work_hrs": round(
+            work_hrs,
+            1,
+        ),
+        "available_hrs": round(
+            available_hrs,
+            1,
+        ),
+        "available_hrs_above_100": round(
+            available_hrs_above_100,
+            1,
+        ),
+        "mechanical_downtime": round(
+            mechanical_downtime,
+            3,
+        ),
+        "avail_percent": _month_end_percent(
+            avail_percent
+        ),
+        "util_percent": _month_end_percent(
+            util_percent
+        ),
+        "emp_avail_percent": _month_end_percent(
+            emp_avail_percent
+        ),
         "breakdown_reason": "",
         "other_delay_reason": "",
-        "is_category_total": 0 if asset_name else 1,
+        "is_category_total": (
+            0 if asset_name else 1
+        ),
     }
 
 
@@ -1324,6 +1390,8 @@ def _month_end_direct_rows(filters):
             asset_name,
             SUM(COALESCE(shift_required_hours, 0)) AS required_hrs,
             SUM(COALESCE(shift_working_hours, 0)) AS work_hrs,
+            SUM(COALESCE(shift_available_hours, 0)) AS available_hrs,
+            SUM(COALESCE(shift_available_hours_above_100, 0)) AS available_hrs_above_100,
             SUM(COALESCE(shift_breakdown_hours, 0)) AS mechanical_downtime
         FROM `tabAvailability and Utilisation`
         WHERE {" AND ".join(au_conditions)}
@@ -1377,7 +1445,13 @@ def _month_end_direct_rows(filters):
                     asset_name,
                     au_row.get("required_hrs"),
                     au_row.get("work_hrs"),
-                    au_row.get("mechanical_downtime"),
+                    au_row.get("available_hrs"),
+                    au_row.get(
+                        "available_hrs_above_100"
+                    ),
+                    au_row.get(
+                        "mechanical_downtime"
+                    ),
                 )
 
                 if use_true_availability:
@@ -1419,6 +1493,8 @@ def _month_end_direct_rows(filters):
                 machine_row = _month_end_calc_row(
                     category,
                     asset_name,
+                    0,
+                    0,
                     0,
                     0,
                     0,
@@ -1481,6 +1557,24 @@ def _month_end_direct_rows(filters):
                 for row in scope_rows
             )
 
+            scope_available = sum(
+                flt(
+                    row.get(
+                        "available_hrs"
+                    )
+                )
+                for row in scope_rows
+            )
+
+            scope_available_above_100 = sum(
+                flt(
+                    row.get(
+                        "available_hrs_above_100"
+                    )
+                )
+                for row in scope_rows
+            )
+
             scope_down = sum(
                 flt(
                     row.get(
@@ -1495,6 +1589,8 @@ def _month_end_direct_rows(filters):
                 "",
                 scope_required,
                 scope_work,
+                scope_available,
+                scope_available_above_100,
                 scope_down,
             )
 
