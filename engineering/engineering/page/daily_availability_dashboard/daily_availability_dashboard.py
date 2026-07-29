@@ -410,7 +410,8 @@ def apply_true_availability_to_source_rows(
     ):
         report_rows = report_data[1] or []
 
-    true_values_by_machine = {}
+    true_availability_values_by_machine = {}
+    true_utilisation_values_by_machine = {}
 
     for row in report_rows:
         if not isinstance(row, dict):
@@ -455,25 +456,51 @@ def apply_true_availability_to_source_rows(
             else row.get("True Availability %")
         )
 
-        if true_availability is None:
-            continue
-
-        true_values_by_machine.setdefault(
-            machine,
-            [],
-        ).append(
-            true_availability
+        true_utilisation = to_float(
+            row.get("true_utilisation_percent")
+            if row.get("true_utilisation_percent") not in (None, "")
+            else row.get("True Utilisation %")
         )
 
+        if true_availability is not None:
+            true_availability_values_by_machine.setdefault(
+                machine,
+                [],
+            ).append(
+                true_availability
+            )
+
+        if true_utilisation is not None:
+            true_utilisation_values_by_machine.setdefault(
+                machine,
+                [],
+            ).append(
+                true_utilisation
+            )
+
     true_availability_by_machine = {}
+    true_utilisation_by_machine = {}
 
     for machine, values in (
-        true_values_by_machine.items()
+        true_availability_values_by_machine.items()
     ):
         if not values:
             continue
 
         true_availability_by_machine[
+            machine
+        ] = round(
+            sum(values) / len(values),
+            1,
+        )
+
+    for machine, values in (
+        true_utilisation_values_by_machine.items()
+    ):
+        if not values:
+            continue
+
+        true_utilisation_by_machine[
             machine
         ] = round(
             sum(values) / len(values),
@@ -492,14 +519,19 @@ def apply_true_availability_to_source_rows(
         if not machine:
             continue
 
-        if machine not in true_availability_by_machine:
-            continue
+        if machine in true_availability_by_machine:
+            row["avail_percent"] = (
+                true_availability_by_machine[
+                    machine
+                ]
+            )
 
-        row["avail_percent"] = (
-            true_availability_by_machine[
-                machine
-            ]
-        )
+        if machine in true_utilisation_by_machine:
+            row["util_percent"] = (
+                true_utilisation_by_machine[
+                    machine
+                ]
+            )
 
     return source_rows
 
@@ -624,12 +656,6 @@ def execute(filters=None):
 
     machine_series = build_machine_series_from_source_rows(
         source_rows
-    )
-
-    _, machine_series = apply_au_target_to_values(
-        {},
-        machine_series,
-        filters,
     )
 
     avgs = build_summary_averages_from_machine_series(
@@ -1650,16 +1676,6 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
 
         day_machine_series = build_machine_series_from_source_rows(
             day_rows
-        )
-
-        _, day_machine_series = apply_au_target_to_values(
-            {},
-            day_machine_series,
-            frappe._dict({
-                "au_target_filter": (
-                    effective_au_target_filter
-                ),
-            }),
         )
 
         day_avgs = build_summary_averages_from_machine_series(
