@@ -34,7 +34,11 @@
   "plant_shift_utilisation",
   "section_break_jurr",
   "shift_available_hours_above_100",
-  "plant_shift_availability_above_100"
+  "plant_shift_availability_above_100",
+  "invalid_pre_use_hours",
+  "above_100_percent_utilisation_column",
+  "plant_shift_utilisation_above_100",
+  "available_hours_above_100_capped"
  ],
  "fields": [
   {
@@ -216,12 +220,39 @@
    "label": "Plant Shift Availability Above 100",
    "precision": "1",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "invalid_pre_use_hours",
+   "fieldtype": "Check",
+   "label": "Invalid Pre-Use Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "above_100_percent_utilisation_column",
+   "fieldtype": "Column Break",
+   "label": "Above 100 percent utilisation"
+  },
+  {
+   "fieldname": "plant_shift_utilisation_above_100",
+   "fieldtype": "Percent",
+   "label": "Plant Shift Utilisation Above 100",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "description": "When \"Shift working Hours\" is above 9 hours, then make \"Available Hours above 100\" to be capped at 9 hours (% can be above 100%)",
+   "fieldname": "available_hours_above_100_capped",
+   "fieldtype": "Float",
+   "label": "Available Hours Above 100 Capped",
+   "precision": "1",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-27 12:26:19.886237",
+ "modified": "2026-07-29 09:21:44.707023",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",

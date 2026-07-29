@@ -732,6 +732,7 @@ class AvailabilityandUtilisation(Document):
                 append_log(parent_record["name"], err_msg)
                 error_records.append(err_msg)
 
+
         # =============================================================================
         # Phase 8: Calculate and set final fields
         # =============================================================================
@@ -803,7 +804,21 @@ class AvailabilityandUtilisation(Document):
                         else 0
                     )
 
+                # When working hours exceed 9, cap the available-hours
+                # denominator at 9 for the above-100 utilisation calculation.
+                available_hours_above_100_capped = (
+                    min(max_val, 9) if shift_working_hours > 9 else max_val
+                )
 
+                doc.available_hours_above_100_capped = (
+                    available_hours_above_100_capped
+                )
+
+                doc.plant_shift_utilisation_above_100 = (
+                    (shift_working_hours / available_hours_above_100_capped) * 100
+                    if available_hours_above_100_capped > 0
+                    else 0
+                )
 
                 doc.save(ignore_permissions=True)
 
