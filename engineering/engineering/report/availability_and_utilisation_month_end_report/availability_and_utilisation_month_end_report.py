@@ -1288,11 +1288,19 @@ def _month_end_direct_rows(filters):
         location,
     )
 
+    detailed_machine_scope = machine_scope
+
+    if (
+        detailed_machine_scope
+        == "Production + Swing/Spare Machines"
+    ):
+        detailed_machine_scope = "Include Swing/Spare"
+
     summary_filters = {
         "start_date": from_date,
         "end_date": to_date,
         "location": location,
-        "machine_scope": machine_scope,
+        "machine_scope": detailed_machine_scope,
     }
 
     summary_rows = summary.get_grouped_data(
