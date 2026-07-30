@@ -148,3 +148,14 @@ doc_events = {
 # ---------------------------------------------------------------------
 override_whitelisted_methods = {
 }
+
+# Engineering Legals monthly SharePoint folders
+scheduler_events = globals().get("scheduler_events", {})
+
+scheduler_events.setdefault("daily", [])
+
+if "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders" not in scheduler_events["daily"]:
+    scheduler_events["daily"].append(
+        "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders"
+    )
+
