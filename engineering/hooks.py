@@ -112,6 +112,9 @@ scheduler_events = {
         "0 2 * * *": [
             "engineering.engineering.doctype.engineering_legals.engineering_legals.queue_unsynced_engineering_legals"
         ],
+        "15 3 * * *": [
+            "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_frequency.run_current_month_frequency_sync"
+        ],
     },
 }
 

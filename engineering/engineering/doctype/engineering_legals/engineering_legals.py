@@ -15,6 +15,56 @@ from frappe.utils import now, getdate, cint
 ENGINEERING_DRIVE_TEAM_TITLE = "Engineering Legals"
 
 
+NEW_SHAREPOINT_ROOT = "Isambane Mining"
+
+NEW_SHAREPOINT_SITE_MAPPING = {
+    "Gwab": "gwab",
+    "Klipfontein": "klp",
+}
+
+NEW_SHAREPOINT_SECTION_MAPPING = {
+    "Fire Suppression": ["01. Automatic Fire Suppression"],
+
+    "Illumination Baseline": ["02. Condition Monitoring"],
+    "Noise Level Baseline & Measurement": ["02. Condition Monitoring"],
+    "NDT": ["02. Condition Monitoring"],
+    "Machine NDT": ["02. Condition Monitoring"],
+
+    "Brake Test": ["03. Dynamic Brake Testing"],
+
+    "FRCS": ["06. FRCS Compliance"],
+
+    "Lifting Equipment": ["07. Load Testing"],
+
+    "Machine Service Records": [
+        "08. Maintenance Schedules",
+        "Maintenance-Services",
+    ],
+    "Service Schedule": [
+        "08. Maintenance Schedules",
+        "Maintenance-Services",
+    ],
+    "Wearcheck": [
+        "08. Maintenance Schedules",
+        "Maintenance-Services",
+    ],
+    "Brake Wear Measurements": [
+        "08. Maintenance Schedules",
+        "Maintenance-Services",
+    ],
+    "Tyre Inspection Report": [
+        "08. Maintenance Schedules",
+        "Tyre Surveys",
+    ],
+    "C-Track Inspection": [
+        "08. Maintenance Schedules",
+        "Track Surveys",
+    ],
+
+    "PDS": ["09. PDS-MPI Maintenance"],
+}
+
+
 class EngineeringLegals(Document):
     """Controller for Engineering Legals DocType."""
     def validate(self):
@@ -431,6 +481,7 @@ def _get_sharepoint_drive_id(settings: dict, site_id: str, token: str) -> str:
 
 
 def _get_sharepoint_folder_parts(doc: Document, settings: dict) -> list[str]:
+    """Return the existing/legacy SharePoint folder path."""
     site = (doc.site or "Unknown Site").strip() or "Unknown Site"
     section = (doc.sections or "Unclassified").strip() or "Unclassified"
 
@@ -448,6 +499,40 @@ def _get_sharepoint_folder_parts(doc: Document, settings: dict) -> list[str]:
         _sanitize_sharepoint_part(year_folder),
         _sanitize_sharepoint_part(section),
         _sanitize_sharepoint_part(month_folder),
+    ]
+
+
+def _get_new_sharepoint_folder_parts(doc: Document) -> Optional[list[str]]:
+    """
+    Return the new monthly SharePoint path.
+
+    Only sites and sections configured in the new structure are uploaded
+    here. All records still upload to the legacy path as well.
+    """
+    site = (getattr(doc, "site", None) or "").strip()
+    section = (getattr(doc, "sections", None) or "").strip()
+
+    new_site = NEW_SHAREPOINT_SITE_MAPPING.get(site)
+    category_parts = NEW_SHAREPOINT_SECTION_MAPPING.get(section)
+
+    if not new_site or not category_parts:
+        return None
+
+    raw_date = getattr(doc, "start_date", None)
+
+    if not raw_date:
+        raw_date = getattr(doc, "creation", None)
+
+    if raw_date:
+        month_folder = getdate(raw_date).strftime("%b-%y")
+    else:
+        month_folder = "No-Month"
+
+    return [
+        NEW_SHAREPOINT_ROOT,
+        month_folder,
+        new_site,
+        *category_parts,
     ]
 
 def _ensure_sharepoint_folder(drive_id: str, folder_parts: list[str], token: str):
@@ -543,6 +628,7 @@ def upload_engineering_legals_to_sharepoint(doc: Document, source_file_doc: Opti
     )
     mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
+    # Upload to the existing legacy SharePoint folder.
     _graph_request(
         "PUT",
         upload_url,
@@ -550,6 +636,30 @@ def upload_engineering_legals_to_sharepoint(doc: Document, source_file_doc: Opti
         data=data,
         headers={"Content-Type": mime_type},
     )
+
+    # Also upload Gwab and Klipfontein records into the new monthly
+    # Isambane Mining folder structure.
+    new_folder_parts = _get_new_sharepoint_folder_parts(doc)
+
+    if new_folder_parts:
+        new_parent_item_id = _ensure_sharepoint_folder(
+            drive_id,
+            new_folder_parts,
+            token,
+        )
+
+        new_upload_url = (
+            f"https://graph.microsoft.com/v1.0/drives/{drive_id}"
+            f"/items/{new_parent_item_id}:/{encoded_filename}:/content"
+        )
+
+        _graph_request(
+            "PUT",
+            new_upload_url,
+            token,
+            data=data,
+            headers={"Content-Type": mime_type},
+        )
 
 
 
