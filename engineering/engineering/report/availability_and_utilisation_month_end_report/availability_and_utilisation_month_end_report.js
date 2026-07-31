@@ -108,6 +108,33 @@ Loader`
 			return "";
 		}
 
+		const is_na_utilisation = (
+			column.fieldname === "util_percent"
+			&& (
+				data[column.fieldname] === null
+				|| data[column.fieldname] === undefined
+				|| data[column.fieldname] === ""
+			)
+		);
+
+		if (is_na_utilisation) {
+			value = `
+				<span style="
+					display:inline-block;
+					min-width:70px;
+					text-align:center;
+					padding:4px 10px;
+					border-radius:999px;
+					background:#e5e7eb;
+					color:#4b5563;
+					font-weight:700;
+					font-size:12px;
+				">
+					N/A
+				</span>
+			`;
+		}
+
 
 		if (column.fieldname === "mechanical_downtime" && data[column.fieldname] != null) {
 			value = window.au_month_end_format_hours_minutes(data[column.fieldname]);
@@ -267,7 +294,13 @@ Loader`
 		];
 
 		if (percent_fields.includes(column.fieldname)) {
-			const raw_value = flt(data[column.fieldname]);
+			if (is_na_utilisation) {
+				return value;
+			}
+
+			const raw_value = flt(
+				data[column.fieldname]
+			);
 
 			let bg = "#fee2e2";
 			let color = "#991b1b";

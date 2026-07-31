@@ -415,12 +415,35 @@ def ensure_all_category_total_rows(data):
 
 
 def average_percent(values):
-	valid_values = [flt(value) for value in values if value is not None]
+	valid_values = [
+		flt(value)
+		for value in values
+		if value is not None
+	]
 
 	if not valid_values:
 		return 0
 
-	return summary.r1(sum(valid_values) / len(valid_values))
+	return summary.r1(
+		sum(valid_values)
+		/ len(valid_values)
+	)
+
+
+def average_percent_or_none(values):
+	valid_values = [
+		flt(value)
+		for value in values
+		if value not in (None, "")
+	]
+
+	if not valid_values:
+		return None
+
+	return summary.r1(
+		sum(valid_values)
+		/ len(valid_values)
+	)
 
 
 
@@ -1307,21 +1330,21 @@ def _month_end_direct_rows(filters):
         summary_filters
     )
 
-    true_availability_rows = []
-
-    if use_true_availability:
-        true_availability_rows = (
-            detailed_au.get_grouped_data(
-                summary_filters
-            )
-            or []
+    detailed_au_rows = (
+        detailed_au.get_grouped_data(
+            summary_filters
         )
+        or []
+    )
 
     other_delay_reasons_by_key = {}
+
     true_availability_values_by_key = {}
+
+    utilisation_values_by_key = {}
     true_utilisation_values_by_key = {}
 
-    for row in true_availability_rows:
+    for row in detailed_au_rows:
         if row.get("indent") != 2:
             continue
 
@@ -1334,6 +1357,10 @@ def _month_end_direct_rows(filters):
             "true_availability_percent"
         )
 
+        utilisation = row.get(
+            "plant_shift_utilisation"
+        )
+
         true_utilisation = row.get(
             "true_utilisation_percent"
         )
@@ -1344,6 +1371,14 @@ def _month_end_direct_rows(filters):
                 [],
             ).append(
                 flt(true_availability)
+            )
+
+        if utilisation not in (None, ""):
+            utilisation_values_by_key.setdefault(
+                key,
+                [],
+            ).append(
+                flt(utilisation)
             )
 
         if true_utilisation not in (None, ""):
@@ -1473,23 +1508,29 @@ def _month_end_direct_rows(filters):
                     ),
                 )
 
+                machine_key = (
+                    category,
+                    asset_name,
+                )
+
+                utilisation_values = (
+                    utilisation_values_by_key.get(
+                        machine_key,
+                        [],
+                    )
+                )
+
+                true_utilisation_values = (
+                    true_utilisation_values_by_key.get(
+                        machine_key,
+                        [],
+                    )
+                )
+
                 if use_true_availability:
                     true_availability_values = (
                         true_availability_values_by_key.get(
-                            (
-                                category,
-                                asset_name,
-                            ),
-                            [],
-                        )
-                    )
-
-                    true_utilisation_values = (
-                        true_utilisation_values_by_key.get(
-                            (
-                                category,
-                                asset_name,
-                            ),
+                            machine_key,
                             [],
                         )
                     )
@@ -1501,12 +1542,17 @@ def _month_end_direct_rows(filters):
                             )
                         )
 
-                    if true_utilisation_values:
-                        machine_row["util_percent"] = (
-                            average_percent(
-                                true_utilisation_values
-                            )
+                    machine_row["util_percent"] = (
+                        average_percent_or_none(
+                            true_utilisation_values
                         )
+                    )
+                else:
+                    machine_row["util_percent"] = (
+                        average_percent_or_none(
+                            utilisation_values
+                        )
+                    )
 
                 reason_row = (
                     other_delay_reasons_by_key.get(
@@ -1638,7 +1684,7 @@ def _month_end_direct_rows(filters):
             )
 
             scope_row["util_percent"] = (
-                average_percent([
+                average_percent_or_none([
                     row.get("util_percent")
                     for row in scope_rows
                 ])
