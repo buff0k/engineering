@@ -466,7 +466,7 @@ def get_data(filters):
 
             breakdown_end = (
                 row.resolved_datetime
-                or window_end
+                or min(now_datetime(), window_end)
             )
 
             clipped_start = max(

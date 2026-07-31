@@ -608,7 +608,8 @@ function add_mobile_downtime_styles() {
                 line-height: 1.5;
             }
 
-            .downtime-prev-breakdown-item:hover .downtime-prev-breakdown-tooltip {
+            .downtime-prev-breakdown-item:hover .downtime-prev-breakdown-tooltip,
+            .downtime-prev-breakdown-item.is-open .downtime-prev-breakdown-tooltip {
                 display: block;
             }
 
@@ -736,7 +737,15 @@ function add_mobile_downtime_styles() {
                 }
 
                 .downtime-prev-breakdown-tooltip {
-                    display: none !important;
+                    left: 0;
+                    right: auto;
+                    top: calc(100% + 8px);
+                    transform: none;
+                    width: min(300px, calc(100vw - 40px));
+                }
+
+                .downtime-prev-breakdown-item.is-open .downtime-prev-breakdown-tooltip {
+                    display: block !important;
                 }
 
                 .downtime-prev-breakdown-button {
@@ -1046,6 +1055,33 @@ function render_previous_day_avail_util_summary(summary) {
         const url = get_previous_day_breakdown_report_url(previous_date, site);
         window.open(url, "_blank");
     });
+
+    $(".downtime-prev-breakdown-item")
+        .off("click.previous_day_details")
+        .on("click.previous_day_details", function (event) {
+            event.stopPropagation();
+
+            const $item = $(this);
+            const should_open = !$item.hasClass("is-open");
+
+            $(".downtime-prev-breakdown-item").removeClass("is-open");
+
+            if (should_open) {
+                $item.addClass("is-open");
+            }
+        });
+
+    $(".downtime-prev-breakdown-tooltip")
+        .off("click.previous_day_details")
+        .on("click.previous_day_details", function (event) {
+            event.stopPropagation();
+        });
+
+    $(document)
+        .off("click.previous_day_details")
+        .on("click.previous_day_details", function () {
+            $(".downtime-prev-breakdown-item").removeClass("is-open");
+        });
 }
 
 
