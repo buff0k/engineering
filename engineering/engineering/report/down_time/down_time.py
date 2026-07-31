@@ -464,20 +464,28 @@ def get_data(filters):
                 or row.creation
             )
 
-            breakdown_end = (
-                row.resolved_datetime
-                or min(now_datetime(), window_end)
-            )
+            is_open = not row.resolved_datetime
 
-            clipped_start = max(
-                get_datetime(breakdown_start),
-                window_start,
-            )
+            if is_open:
+                clipped_start = max(
+                    get_datetime(breakdown_start),
+                    START_LOOKUP_DATETIME,
+                )
 
-            clipped_end = min(
-                get_datetime(breakdown_end),
-                window_end,
-            )
+                clipped_end = min(
+                    now_datetime(),
+                    window_end,
+                )
+            else:
+                clipped_start = max(
+                    get_datetime(breakdown_start),
+                    window_start,
+                )
+
+                clipped_end = min(
+                    get_datetime(row.resolved_datetime),
+                    window_end,
+                )
 
             downtime_result = (
                 month_end.get_required_downtime_minutes_for_breakdown(
