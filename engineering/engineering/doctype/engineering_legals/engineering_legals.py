@@ -31,6 +31,25 @@ NEW_SHAREPOINT_SECTION_MAPPING = {
     "Machine NDT": ["02. Condition Monitoring"],
 
     "Brake Test": ["03. Dynamic Brake Testing"],
+    "Brake Tester Calibration Certificate": [
+        "03. Dynamic Brake Testing"
+    ],
+    "Brake Test Authorisations": [
+        "03. Dynamic Brake Testing"
+    ],
+
+    "CoC for Containers, Offices, Workshops": [
+        "04. Earth Leakage Testing & CoC"
+    ],
+    "Multi-meter Calibration Certificate": [
+        "04. Earth Leakage Testing & CoC"
+    ],
+    "Authorised LV Person": [
+        "04. Earth Leakage Testing & CoC"
+    ],
+    "Earth Leakage Testing": [
+        "04. Earth Leakage Testing & CoC"
+    ],
 
     "FRCS": ["06. FRCS Compliance"],
 
@@ -62,6 +81,8 @@ NEW_SHAREPOINT_SECTION_MAPPING = {
     ],
 
     "PDS": ["09. PDS-MPI Maintenance"],
+
+    "Pressure Vessels": ["10. Pressure Vessels"],
 }
 
 
@@ -85,6 +106,27 @@ class EngineeringLegals(Document):
             frappe.throw("Section is required.")
 
         section = (self.sections or "").strip()
+
+        # FLEET NUMBER REQUIREMENT RULE - START
+        fleet_optional_sections = {
+            "Brake Tester Calibration Certificate",
+            "Brake Test Authorisations",
+            "CoC for Containers, Offices, Workshops",
+            "Multi-meter Calibration Certificate",
+            "Authorised LV Person",
+            "Earth Leakage Testing",
+            "Pressure Vessels",
+        }
+
+        if (
+            section not in fleet_optional_sections
+            and not self.fleet_number
+        ):
+            frappe.throw(
+                "Fleet Number is required for this Section."
+            )
+        # FLEET NUMBER REQUIREMENT RULE - END
+
 
         no_start_date_sections = {
             "Machine Service Records",
@@ -112,6 +154,41 @@ class EngineeringLegals(Document):
 
         elif section == "FRCS":
             self.expiry_date = add_months(self.start_date, 3)
+
+        elif section in (
+            "Brake Tester Calibration Certificate",
+            "Brake Test Authorisations",
+            "Multi-meter Calibration Certificate",
+            "Authorised LV Person",
+            "Pressure Vessels",
+        ):
+            self.expiry_date = add_months(self.start_date, 12)
+
+        elif section == "CoC for Containers, Offices, Workshops":
+            self.expiry_date = add_months(self.start_date, 1)
+
+        elif section == "Earth Leakage Testing":
+            self.expiry_date = add_months(self.start_date, 3)
+
+        # NEW LEGAL SECTIONS EXPIRY RULES - START
+        elif section in (
+            "Brake Tester Calibration Certificate",
+            "Brake Test Authorisations",
+            "Multi-meter Calibration Certificate",
+            "Authorised LV Person",
+            "Pressure Vessels",
+        ):
+            # Yearly validity
+            self.expiry_date = add_months(self.start_date, 12)
+
+        elif section == "CoC for Containers, Offices, Workshops":
+            # Monthly validity
+            self.expiry_date = add_months(self.start_date, 1)
+
+        elif section == "Earth Leakage Testing":
+            # Quarterly validity
+            self.expiry_date = add_months(self.start_date, 3)
+        # NEW LEGAL SECTIONS EXPIRY RULES - END
 
         elif section == "Lifting Equipment":
             if not self.lifting_type:

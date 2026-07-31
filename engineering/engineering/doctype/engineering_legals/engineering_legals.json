@@ -46,7 +46,7 @@
    "in_standard_filter": 1,
    "label": "Fleet Number",
    "options": "Asset",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "site",

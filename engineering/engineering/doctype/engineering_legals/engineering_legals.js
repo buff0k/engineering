@@ -224,5 +224,94 @@ function add_eng_legals_report_button(frm) {
   });
 }
 
+// NEW LEGAL SECTIONS EXPIRY CALCULATION - START
+frappe.ui.form.on("Engineering Legals", {
+    sections(frm) {
+        calculate_new_legal_section_expiry(frm);
+    },
+
+    start_date(frm) {
+        calculate_new_legal_section_expiry(frm);
+    },
+});
+
+function calculate_new_legal_section_expiry(frm) {
+    const section = (frm.doc.sections || "").trim();
+    const startDate = frm.doc.start_date;
+
+    if (!section || !startDate) {
+        return;
+    }
+
+    const yearlySections = [
+        "Brake Tester Calibration Certificate",
+        "Brake Test Authorisations",
+        "Multi-meter Calibration Certificate",
+        "Authorised LV Person",
+        "Pressure Vessels",
+    ];
+
+    let months = null;
+
+    if (yearlySections.includes(section)) {
+        months = 12;
+    } else if (
+        section === "CoC for Containers, Offices, Workshops"
+    ) {
+        months = 1;
+    } else if (section === "Earth Leakage Testing") {
+        months = 3;
+    }
+
+    if (months === null) {
+        return;
+    }
+
+    const expiryDate = frappe.datetime.add_months(
+        startDate,
+        months
+    );
+
+    if (frm.doc.expiry_date !== expiryDate) {
+        frm.set_value("expiry_date", expiryDate);
+    }
+}
+// NEW LEGAL SECTIONS EXPIRY CALCULATION - END
 
 
+// FLEET NUMBER REQUIREMENT RULE - START
+frappe.ui.form.on("Engineering Legals", {
+    refresh(frm) {
+        update_fleet_number_requirement(frm);
+    },
+
+    sections(frm) {
+        update_fleet_number_requirement(frm);
+    },
+});
+
+function update_fleet_number_requirement(frm) {
+    const section = (frm.doc.sections || "").trim();
+
+    const fleetOptionalSections = [
+        "Brake Tester Calibration Certificate",
+        "Brake Test Authorisations",
+        "CoC for Containers, Offices, Workshops",
+        "Multi-meter Calibration Certificate",
+        "Authorised LV Person",
+        "Earth Leakage Testing",
+        "Pressure Vessels",
+    ];
+
+    const fleetIsOptional =
+        fleetOptionalSections.includes(section);
+
+    frm.set_df_property(
+        "fleet_number",
+        "reqd",
+        fleetIsOptional ? 0 : 1
+    );
+
+    frm.refresh_field("fleet_number");
+}
+// FLEET NUMBER REQUIREMENT RULE - END
