@@ -622,10 +622,7 @@ def get_required_downtime_minutes_for_breakdown(
             "excluded_minutes": 0,
         }
 
-    # Raw PBM duration shown in the Total Time column.
-    total_minutes = int(round(
-        (end_dt - start_dt).total_seconds() / 60
-    ))
+    total_minutes = 0
 
     au_rows = frappe.db.sql(
         """
@@ -735,6 +732,13 @@ def get_required_downtime_minutes_for_breakdown(
     excluded_minutes = int(round(
         excluded_overlap_hours * 60
     ))
+
+    # Total Time only includes time relevant to A&U:
+    # mechanical downtime plus startup/fatigue overlap.
+    total_minutes = (
+        required_downtime_minutes
+        + excluded_minutes
+    )
 
     return {
         "total_minutes": total_minutes,
