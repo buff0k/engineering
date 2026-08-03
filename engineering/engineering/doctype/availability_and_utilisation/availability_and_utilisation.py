@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.utils import (
+    flt,
     getdate,
     add_days,
     today,
@@ -569,15 +570,20 @@ class AvailabilityandUtilisation(Document):
                 append_log(doc_name, err_msg)
                 error_records.append(err_msg)
 
+
+
         # =============================================================================
-        # Phase 7: Update shift_breakdown_hours
+        # Phase 7: Update shift_breakdown_hours directly from PBM
         # =============================================================================
         current_date = getdate(today())
         start_date = current_date - timedelta(days=7)
 
         parent_records = frappe.get_all(
             "Availability and Utilisation",
-            filters=[["shift_date", ">=", start_date], ["shift_date", "<=", current_date]],
+            filters=[
+                ["shift_date", ">=", start_date],
+                ["shift_date", "<=", current_date],
+            ],
             fields=[
                 "name",
                 "shift_date",
@@ -585,92 +591,49 @@ class AvailabilityandUtilisation(Document):
                 "shift_system",
                 "location",
                 "asset_name",
-                "shift_breakdown_hours",
+                "shift_required_hours",
             ],
-            order_by="creation desc",
+            order_by="shift_date asc",
         )
 
         for parent_record in parent_records:
             try:
-                # shift start/end times
                 shift_start, shift_end = get_shift_timings(
                     parent_record["shift_system"],
                     parent_record["shift"],
                     str(parent_record["shift_date"]),
                 )
 
-                base_filters = {
-                    "location": parent_record["location"],
-                    "asset_name": parent_record["asset_name"],
-                    "exclude_from_au": 0,  # only include unexcluded breakdowns
-                }
-
-                # Last event BEFORE shift start (tells us if breakdown already active at shift_start)
-                last_before = frappe.get_all(
-                    "Breakdown History",
-                    filters={**base_filters, "update_date_time": ["<", shift_start]},
-                    fields=["update_date_time", "breakdown_status"],
-                    order_by="update_date_time desc",
-                    limit=1,
+                breakdown_rows = frappe.db.sql(
+                    """
+                    SELECT
+                        name,
+                        breakdown_start_datetime,
+                        resolved_datetime
+                    FROM `tabPlant Breakdown or Maintenance`
+                    WHERE location = %(location)s
+                      AND asset_name = %(asset_name)s
+                      AND IFNULL(exclude_from_au, 0) = 0
+                      AND breakdown_start_datetime IS NOT NULL
+                      AND breakdown_start_datetime >= %(trust_datetime)s
+                      AND breakdown_start_datetime < %(shift_end)s
+                      AND (
+                            resolved_datetime IS NULL
+                            OR resolved_datetime = ''
+                            OR resolved_datetime > %(shift_start)s
+                      )
+                    ORDER BY breakdown_start_datetime ASC
+                    """,
+                    {
+                        "location": parent_record["location"],
+                        "asset_name": parent_record["asset_name"],
+                        "shift_start": shift_start,
+                        "shift_end": shift_end,
+                        "trust_datetime": "2026-01-01 00:00:00",
+                    },
+                    as_dict=True,
                 )
 
-                # Events DURING the shift window
-                events_in_shift = frappe.get_all(
-                    "Breakdown History",
-                    filters={**base_filters, "update_date_time": ["between", [shift_start, shift_end]]},
-                    fields=["update_date_time", "breakdown_status"],
-                    order_by="update_date_time asc",
-                )
-
-                # No event before shift, and no events during shift => no breakdown for this shift
-                if not last_before and not events_in_shift:
-                    append_log(parent_record["name"], f"Phase 7: No breakdown history in/near shift window for doc={parent_record['name']}")
-                    continue
-
-                in_breakdown = False
-                current_start = None
-
-                # If last_before exists and is NOT "3", breakdown is active at shift_start
-                if last_before and str(last_before[0].get("breakdown_status")) != "3":
-                    in_breakdown = True
-                    current_start = shift_start
-
-                total_hours = 0.0
-                intervals = []
-
-                for ev in events_in_shift:
-                    ev_time = ev["update_date_time"]
-                    ev_status = str(ev.get("breakdown_status") or "")
-
-                    # Start: any non-"3" while not already in breakdown
-                    if ev_status != "3" and not in_breakdown:
-                        in_breakdown = True
-                        current_start = ev_time
-
-                    # End: status "3" while in breakdown
-                    elif ev_status == "3" and in_breakdown:
-                        clip_start = max(current_start, shift_start)
-                        clip_end = min(ev_time, shift_end)
-
-                        if clip_end > clip_start:
-                            hrs = float(time_diff_in_hours(clip_end, clip_start))
-                            total_hours += hrs
-                            intervals.append((clip_start, clip_end, hrs))
-
-                        in_breakdown = False
-                        current_start = None
-
-                # If still in breakdown at end of shift, assume it continued until shift_end
-                if in_breakdown and current_start:
-                    clip_start = max(current_start, shift_start)
-                    clip_end = shift_end
-
-                    if clip_end > clip_start:
-                        hrs = float(time_diff_in_hours(clip_end, clip_start))
-                        total_hours += hrs
-                        intervals.append((clip_start, clip_end, hrs))
-
-                # Subtract site-and-shift-specific startup and fatigue windows.
                 excluded_windows = _exclusion_windows(
                     parent_record["location"],
                     parent_record["shift"],
@@ -678,36 +641,70 @@ class AvailabilityandUtilisation(Document):
                     shift_end,
                 )
 
-                excluded_hours = 0.0
                 effective_hours = 0.0
+                excluded_hours = 0.0
 
-                for (a_s, a_e, a_hrs) in intervals:
-                    overlap = 0.0
-                    for (w_s, w_e) in excluded_windows:
-                        overlap += _overlap_hours(a_s, a_e, w_s, w_e)
+                for breakdown in breakdown_rows:
+                    breakdown_start = get_datetime(
+                        breakdown["breakdown_start_datetime"]
+                    )
 
-                    overlap = min(overlap, a_hrs)  # never subtract more than the interval
-                    excluded_hours += overlap
-                    effective_hours += max(a_hrs - overlap, 0.0)
+                    breakdown_end = (
+                        get_datetime(breakdown["resolved_datetime"])
+                        if breakdown.get("resolved_datetime")
+                        else min(now_datetime(), shift_end)
+                    )
 
-                shift_breakdown_hours = effective_hours
+                    interval_start = max(
+                        breakdown_start,
+                        shift_start,
+                    )
 
-                if shift_breakdown_hours == 0:
-                    scenario = "No Breakdown During Shift"
-                else:
-                    scenario = f"Intervals={len(intervals)}, Excluded={excluded_hours:.2f}h, Windows={len(excluded_windows)}"
+                    interval_end = min(
+                        breakdown_end,
+                        shift_end,
+                    )
 
+                    if interval_end <= interval_start:
+                        continue
 
+                    interval_hours = _overlap_hours(
+                        interval_start,
+                        interval_end,
+                        shift_start,
+                        shift_end,
+                    )
 
+                    interval_excluded = 0.0
 
+                    for window_start, window_end in excluded_windows:
+                        interval_excluded += _overlap_hours(
+                            interval_start,
+                            interval_end,
+                            window_start,
+                            window_end,
+                        )
 
+                    interval_excluded = min(
+                        interval_excluded,
+                        interval_hours,
+                    )
 
-                # Cap breakdown hours: does not exceed (required - working)
-                doc = frappe.get_doc("Availability and Utilisation", parent_record["name"])
-                shift_required_hours = doc.shift_required_hours or 0
-                shift_working_hours = doc.shift_working_hours or 0
-                max_breakdown_allowed = max(shift_required_hours - shift_working_hours, 0)
-                shift_breakdown_hours = min(shift_breakdown_hours, max_breakdown_allowed)
+                    excluded_hours += interval_excluded
+                    effective_hours += max(
+                        interval_hours - interval_excluded,
+                        0,
+                    )
+
+                shift_required_hours = max(
+                    flt(parent_record["shift_required_hours"]),
+                    0,
+                )
+
+                shift_breakdown_hours = min(
+                    effective_hours,
+                    shift_required_hours,
+                )
 
                 frappe.db.set_value(
                     "Availability and Utilisation",
@@ -719,18 +716,32 @@ class AvailabilityandUtilisation(Document):
                 append_log(
                     parent_record["name"],
                     (
-                        f"Phase 7: shift_breakdown_hours updated for doc={parent_record['name']}. "
-                        f"{scenario} => {shift_breakdown_hours} hour(s). "
-                        f"(Shift Start: {shift_start}, Shift End: {shift_end})"
+                        f"Phase 7: PBM downtime updated for "
+                        f"doc={parent_record['name']}. "
+                        f"Breakdowns={len(breakdown_rows)}, "
+                        f"Excluded={excluded_hours:.2f}h, "
+                        f"A&U Downtime={shift_breakdown_hours:.3f}h."
                     ),
                 )
 
-
             except Exception as e:
-                asset_name, item_name = _get_doc_asset_item_name(parent_record["name"])
-                err_msg = f"Phase 7 Error for doc={parent_record['name']}, asset_name={asset_name}, item_name={item_name}: {str(e)}"
-                append_log(parent_record["name"], err_msg)
+                asset_name, item_name = _get_doc_asset_item_name(
+                    parent_record["name"]
+                )
+
+                err_msg = (
+                    f"Phase 7 Error for doc={parent_record['name']}, "
+                    f"asset_name={asset_name}, "
+                    f"item_name={item_name}: {str(e)}"
+                )
+
+                append_log(
+                    parent_record["name"],
+                    err_msg,
+                )
+
                 error_records.append(err_msg)
+
 
 
         # =============================================================================
@@ -764,7 +775,6 @@ class AvailabilityandUtilisation(Document):
                     shift_available_hours,
                 )
 
-                # Existing utilisation field stays unchanged.
                 doc.plant_shift_utilisation = (
                     (shift_working_hours / shift_available_hours) * 100
                     if shift_available_hours > 0
