@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from datetime import timedelta
 from frappe.utils import flt, get_datetime, getdate, nowdate
 
 _ = frappe._
@@ -759,9 +760,12 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 	if not from_date or not to_date:
 		return {}
 
+	report_start_date = getdate(from_date)
+	report_end_date = getdate(to_date) + timedelta(days=1)
+
 	values = {
-		"from_datetime": f"{from_date} 00:00:00",
-		"to_datetime": f"{to_date} 23:59:59",
+		"from_datetime": f"{report_start_date} 06:00:00",
+		"to_datetime": f"{report_end_date} 06:00:00",
 		"asset_names": tuple(asset_names),
 		"plant_breakdown_trust_datetime": "2026-01-01 00:00:00",
 	}
