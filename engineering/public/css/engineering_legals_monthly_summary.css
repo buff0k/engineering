@@ -1,0 +1,269 @@
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.report-wrapper {
+    background: var(--fg-color);
+    border-radius: 12px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.report-summary {
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.chart-container {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 18px;
+    background: var(--fg-color);
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.datatable {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.dt-header .dt-cell {
+    font-weight: 700;
+    background: var(--subtle-fg);
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-summary-count {
+    cursor: pointer;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-summary-count:hover {
+    transform: scale(1.05);
+}
+
+/* Larger, bold chart category labels */
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.chart-container svg text {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}
+
+/* Specifically strengthen x-axis labels */
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.chart-container .x.axis text,
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.chart-container .x-axis text {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}
+
+/* Machine Plant List */
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list {
+    max-width: 620px;
+    margin: 18px auto 22px;
+    padding: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--fg-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list__header h4 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list table {
+    margin-bottom: 0;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list thead th {
+    font-weight: 700;
+    background: var(--subtle-fg);
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list tbody td {
+    padding: 9px 12px;
+    font-size: 14px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-machine-list tbody td:last-child {
+    font-size: 15px;
+}
+
+/* Machine Plant List popup */
+.engineering-machine-dialog {
+    border: 1px solid var(--blue-300);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.engineering-machine-dialog__title {
+    padding: 13px 15px;
+    background: var(--blue-100);
+    color: var(--blue-700);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.engineering-machine-dialog table {
+    margin-bottom: 0;
+}
+
+.engineering-machine-dialog thead th {
+    padding: 11px 12px;
+    background: var(--blue-50);
+    color: var(--blue-700);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.engineering-machine-dialog tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+.engineering-machine-dialog tbody tr:hover {
+    background: var(--subtle-fg);
+}
+
+.engineering-machine-dialog tfoot th {
+    padding: 11px 12px;
+    background: var(--blue-50);
+    color: var(--blue-700);
+    font-weight: 700;
+}
+
+/* Small print button inside machine popup */
+.modal-dialog .modal-footer .btn-primary {
+    padding: 4px 12px;
+    min-height: 28px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+/* Machine Plant List total row */
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-total-fleet-row td {
+    background: var(--blue-50);
+    border-top: 2px solid var(--blue-300);
+    font-weight: 800;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-total-fleet-row .engineering-machine-count-link {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+}
+
+/* Grouped Total Fleet popup */
+.engineering-total-fleet-sections {
+    padding: 12px;
+}
+
+.engineering-total-fleet-section {
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.engineering-total-fleet-section__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 13px;
+    background: var(--blue-50);
+    color: var(--blue-700);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.engineering-total-fleet-section table {
+    margin-bottom: 0;
+}
+
+.engineering-total-fleet-section thead th {
+    background: var(--subtle-fg);
+    font-weight: 700;
+}
+
+.engineering-total-fleet-section tbody td {
+    padding: 8px 10px;
+}
+
+.engineering-total-fleet-grand-total {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 18px;
+    padding: 13px 18px;
+    background: var(--blue-50);
+    border-top: 2px solid var(--blue-300);
+    color: var(--blue-700);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.engineering-total-fleet-grand-total strong {
+    font-size: 17px;
+}
+
+/* View Legals button in Total Fleet category headers */
+.engineering-view-category-legals {
+    white-space: nowrap;
+}
+
+.engineering-view-category-legals:hover {
+    transform: scale(1.04);
+}
+
+/* Machine Plant List action buttons */
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-machine-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-machine-count {
+    display: inline-block;
+    min-width: 28px;
+    text-align: right;
+    font-size: 14px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-view-plant-list,
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-main-view-legals {
+    padding: 3px 9px;
+    min-height: 24px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-total-fleet-row .engineering-machine-count {
+    font-size: 16px;
+    font-weight: 800;
+}

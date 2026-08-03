@@ -1,0 +1,42 @@
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.report-wrapper {
+    background: var(--fg-color);
+    border-radius: 12px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.report-summary {
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.chart-container {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 18px;
+    background: var(--fg-color);
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.datatable {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.dt-header .dt-cell {
+    font-weight: 700;
+    background: var(--subtle-fg);
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-summary-count {
+    cursor: pointer;
+}
+
+[data-page-route="query-report/Engineering Legals Monthly Summary"]
+.engineering-legals-summary-count:hover {
+    transform: scale(1.05);
+}
