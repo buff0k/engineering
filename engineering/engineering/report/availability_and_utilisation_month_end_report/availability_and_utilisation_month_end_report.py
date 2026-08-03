@@ -579,138 +579,167 @@ def clean_reason_details(details):
     return cleaned
 
 def get_required_downtime_minutes_for_breakdown(
-	filters,
-	asset_name,
-	start_datetime,
-	resolved_datetime,
+    filters,
+    asset_name,
+    start_datetime,
+    resolved_datetime,
 ):
-	if not start_datetime or not resolved_datetime:
-		return {
-			"required_downtime_minutes": 0,
-			"excluded_minutes": 0,
-		}
+    if not start_datetime or not resolved_datetime:
+        return {
+            "total_minutes": 0,
+            "required_downtime_minutes": 0,
+            "excluded_minutes": 0,
+        }
 
-	try:
-		from engineering.engineering.doctype.availability_and_utilisation import (
-			availability_and_utilisation as au,
-		)
-	except Exception:
-		return {
-			"required_downtime_minutes": 0,
-			"excluded_minutes": 0,
-		}
+    try:
+        from engineering.engineering.doctype.availability_and_utilisation import (
+            availability_and_utilisation as au,
+        )
+    except Exception:
+        return {
+            "total_minutes": 0,
+            "required_downtime_minutes": 0,
+            "excluded_minutes": 0,
+        }
 
-	filters = frappe._dict(filters or {})
-	location = _month_end_get_filter_value(
-		filters,
-		"location",
-		"site",
-		"production_site",
-	)
+    filters = frappe._dict(filters or {})
 
-	start_dt = get_datetime(start_datetime)
-	end_dt = get_datetime(resolved_datetime)
+    location = _month_end_get_filter_value(
+        filters,
+        "location",
+        "site",
+        "production_site",
+    )
 
-	if not start_dt or not end_dt or end_dt <= start_dt:
-		return {
-			"required_downtime_minutes": 0,
-			"excluded_minutes": 0,
-		}
+    start_dt = get_datetime(start_datetime)
+    end_dt = get_datetime(resolved_datetime)
 
-	au_rows = frappe.db.sql("""
-		SELECT
-			name,
-			shift_date,
-			shift,
-			shift_system,
-			location,
-			asset_name,
-			shift_required_hours
-		FROM `tabAvailability and Utilisation`
-		WHERE asset_name = %(asset_name)s
-		  AND shift_date >= DATE(%(start_datetime)s) - INTERVAL 1 DAY
-		  AND shift_date <= DATE(%(resolved_datetime)s) + INTERVAL 1 DAY
-		  AND (%(location)s = '' OR location = %(location)s)
-		ORDER BY
-			shift_date ASC,
-			FIELD(shift, 'Day', 'Morning', 'Afternoon', 'Night') ASC
-	""", {
-		"asset_name": asset_name,
-		"location": location or "",
-		"start_datetime": start_dt,
-		"resolved_datetime": end_dt,
-	}, as_dict=True)
+    if not start_dt or not end_dt or end_dt <= start_dt:
+        return {
+            "total_minutes": 0,
+            "required_downtime_minutes": 0,
+            "excluded_minutes": 0,
+        }
 
-	required_downtime_hours = 0.0
-	calendar_overlap_hours = 0.0
+    # Raw PBM duration shown in the Total Time column.
+    total_minutes = int(round(
+        (end_dt - start_dt).total_seconds() / 60
+    ))
 
-	for row in au_rows:
-		try:
-			required_hours = max(flt(row.shift_required_hours), 0)
+    au_rows = frappe.db.sql(
+        """
+        SELECT
+            name,
+            shift_date,
+            shift,
+            shift_system,
+            location,
+            asset_name,
+            shift_required_hours
+        FROM `tabAvailability and Utilisation`
+        WHERE asset_name = %(asset_name)s
+          AND shift_date >= DATE(%(start_datetime)s) - INTERVAL 1 DAY
+          AND shift_date <= DATE(%(resolved_datetime)s) + INTERVAL 1 DAY
+          AND (%(location)s = '' OR location = %(location)s)
+        ORDER BY
+            shift_date ASC,
+            FIELD(
+                shift,
+                'Day',
+                'Morning',
+                'Afternoon',
+                'Night'
+            ) ASC
+        """,
+        {
+            "asset_name": asset_name,
+            "location": location or "",
+            "start_datetime": start_dt,
+            "resolved_datetime": end_dt,
+        },
+        as_dict=True,
+    )
 
-			if required_hours <= 0:
-				continue
+    required_downtime_hours = 0.0
+    excluded_overlap_hours = 0.0
 
-			shift_start, shift_end = au.get_shift_timings(
-				row.shift_system,
-				row.shift,
-				str(row.shift_date),
-			)
+    for row in au_rows:
+        try:
+            required_hours = max(
+                flt(row.shift_required_hours),
+                0,
+            )
 
-			if not shift_start or not shift_end:
-				continue
+            if required_hours <= 0:
+                continue
 
-			shift_overlap_hours = au._overlap_hours(
-				start_dt,
-				end_dt,
-				shift_start,
-				shift_end,
-			)
+            shift_start, shift_end = au.get_shift_timings(
+                row.shift_system,
+                row.shift,
+                str(row.shift_date),
+            )
 
-			if shift_overlap_hours <= 0:
-				continue
+            if not shift_start or not shift_end:
+                continue
 
-			excluded_overlap_hours = 0.0
+            shift_overlap_hours = au._overlap_hours(
+                start_dt,
+                end_dt,
+                shift_start,
+                shift_end,
+            )
 
-			for window_start, window_end in au._exclusion_windows(
-				row.location,
-				row.shift,
-				shift_start,
-				shift_end,
-			):
-				excluded_overlap_hours += au._overlap_hours(
-					start_dt,
-					end_dt,
-					window_start,
-					window_end,
-				)
+            if shift_overlap_hours <= 0:
+                continue
 
-			valid_overlap_hours = max(
-				shift_overlap_hours - excluded_overlap_hours,
-				0,
-			)
+            shift_excluded_hours = 0.0
 
-			required_downtime_hours += min(
-				valid_overlap_hours,
-				required_hours,
-			)
+            for window_start, window_end in au._exclusion_windows(
+                row.location,
+                row.shift,
+                shift_start,
+                shift_end,
+            ):
+                shift_excluded_hours += au._overlap_hours(
+                    start_dt,
+                    end_dt,
+                    window_start,
+                    window_end,
+                )
 
-			calendar_overlap_hours += shift_overlap_hours
+            shift_excluded_hours = min(
+                shift_excluded_hours,
+                shift_overlap_hours,
+            )
 
-		except Exception:
-			continue
+            valid_overlap_hours = max(
+                shift_overlap_hours - shift_excluded_hours,
+                0,
+            )
 
-	required_downtime_minutes = int(round(required_downtime_hours * 60))
-	calendar_overlap_minutes = int(round(calendar_overlap_hours * 60))
+            required_downtime_hours += min(
+                valid_overlap_hours,
+                required_hours,
+            )
 
-	return {
-		"required_downtime_minutes": required_downtime_minutes,
-		"excluded_minutes": max(
-			calendar_overlap_minutes - required_downtime_minutes,
-			0,
-		),
-	}
+            excluded_overlap_hours += shift_excluded_hours
 
+        except Exception:
+            continue
+
+    required_downtime_minutes = int(round(
+        required_downtime_hours * 60
+    ))
+
+    excluded_minutes = int(round(
+        excluded_overlap_hours * 60
+    ))
+
+    return {
+        "total_minutes": total_minutes,
+        "required_downtime_minutes": required_downtime_minutes,
+        "excluded_minutes": excluded_minutes,
+    }
 
 
 
@@ -801,14 +830,16 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 					)
 
 					total_minutes = required_downtime[
-						"required_downtime_minutes"
+						"total_minutes"
 					]
 
 					startup_fatigue_minutes = required_downtime[
 						"excluded_minutes"
 					]
 
-					au_minutes = total_minutes
+					au_minutes = required_downtime[
+						"required_downtime_minutes"
+					]
 
 		details_by_asset.setdefault(row.get("asset_name"), []).append({
 			"date": str(display_start_datetime or "")[:10],
