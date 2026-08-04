@@ -26,8 +26,8 @@ def get_context(context):
         frappe.local.flags.redirect_location = "/login?redirect-to=/pre_use_deviation_supplier"
         raise frappe.Redirect
 
-    if "Supplier" not in frappe.get_roles(frappe.session.user):
-        frappe.throw(_("Not permitted."), frappe.PermissionError)
+    if not _get_user_suppliers():
+        frappe.throw(_("Your user is not linked to a Supplier."), frappe.PermissionError)
 
     if frappe.request.method == "POST":
         _handle_post()
@@ -96,16 +96,25 @@ def _handle_post():
     doc.report_datetime = _parse_datetime(frappe.form_dict.get("report_datetime")) or frappe.utils.now_datetime()
     doc.site = site
     doc.fleet_number = fleet_number
-    doc.pre_use_no = int(frappe.form_dict.get("pre_use_no") or 0)
+    try:
+        doc.pre_use_no = int(frappe.form_dict.get("pre_use_no") or 0)
+    except Exception:
+        doc.pre_use_no = 0
     doc.machine_type = frappe.form_dict.get("machine_type") or None
     doc.machine_model = frappe.form_dict.get("machine_model") or None
     doc.operating_status = frappe.form_dict.get("operating_status") or None
     doc.deviation_details = frappe.form_dict.get("deviation_details") or None
-    doc.reported_by_coy_number = frappe.form_dict.get("reported_by_coy_number") or None
+    reported_by_coy_number = frappe.form_dict.get("reported_by_coy_number") or None
+    if reported_by_coy_number and not _link_value_exists("Employee", reported_by_coy_number):
+        reported_by_coy_number = None
+    doc.reported_by_coy_number = reported_by_coy_number
     doc.reported_by_name_and_surname = frappe.form_dict.get("reported_by_name_and_surname") or frappe.session.user
     doc.resolution_summary = frappe.form_dict.get("resolution_summary") or None
     doc.action_date_and_time = _parse_datetime(frappe.form_dict.get("action_date_and_time"))
-    doc.actioned_by_coy_number = frappe.form_dict.get("actioned_by_coy_number") or None
+    actioned_by_coy_number = frappe.form_dict.get("actioned_by_coy_number") or None
+    if actioned_by_coy_number and not _link_value_exists("Employee", actioned_by_coy_number):
+        actioned_by_coy_number = None
+    doc.actioned_by_coy_number = actioned_by_coy_number
     doc.actioned_by_name_and_surname = frappe.form_dict.get("actioned_by_name_and_surname") or None
     doc.job_card_number = frappe.form_dict.get("job_card_number") or None
     doc.action_status = action_status
@@ -162,40 +171,12 @@ def _get_doc_from_query():
 
 
 def _get_user_suppliers():
-    suppliers = []
-
-    try:
-        customers, rfq_suppliers = get_customers_suppliers(
-            "Request for Quotation Supplier",
-            frappe.session.user,
-        )
-        suppliers.extend(rfq_suppliers or [])
-    except Exception:
-        pass
-
-    contact_names = frappe.db.sql_list(
-        """
-        SELECT DISTINCT c.name
-        FROM `tabContact` c
-        LEFT JOIN `tabContact Email` ce ON ce.parent = c.name
-        WHERE c.email_id = %(user)s
-           OR ce.email_id = %(user)s
-        """,
-        {"user": frappe.session.user},
+    suppliers = frappe.get_all(
+        "Portal User",
+        filters={"user": frappe.session.user},
+        pluck="parent",
+        limit_page_length=0,
     )
-
-    if contact_names:
-        linked_suppliers = frappe.db.sql_list(
-            """
-            SELECT DISTINCT link_name
-            FROM `tabDynamic Link`
-            WHERE parenttype = 'Contact'
-              AND parent IN %(contacts)s
-              AND link_doctype = 'Supplier'
-            """,
-            {"contacts": tuple(contact_names)},
-        )
-        suppliers.extend(linked_suppliers or [])
 
     return sorted(set([s for s in suppliers if s]))
 
@@ -271,3 +252,13 @@ def _validate_asset(asset):
 def _validate_doc_access(doc):
     _validate_site(doc.site)
     _validate_asset(doc.fleet_number)
+
+
+def _link_value_exists(doctype, value):
+    if not value:
+        return False
+
+    try:
+        return bool(frappe.db.exists(doctype, value))
+    except Exception:
+        return False

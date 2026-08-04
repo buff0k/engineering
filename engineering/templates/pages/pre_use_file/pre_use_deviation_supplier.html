@@ -60,7 +60,7 @@
     </div>
 
     <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token or '' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
         <input type="hidden" name="name" value="{{ form_values.name or '' }}">
 
         <div class="row">
