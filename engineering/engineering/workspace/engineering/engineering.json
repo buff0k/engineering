@@ -78,7 +78,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Breakdown Report",
    "link_count": 0,
    "link_to": "Availability and utilization Asset timeline",
@@ -170,7 +170,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Breakdown Report",
    "link_count": 0,
    "link_to": "Availability and utilization Asset timeline",
@@ -551,7 +551,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Down Time",
    "link_count": 0,
    "link_to": "Down Time",
@@ -583,7 +583,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "A & U Month End Report",
    "link_count": 0,
    "link_to": "Availability and Utilisation Month End Report",
@@ -594,7 +594,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "A & U Summary",
    "link_count": 0,
    "link_to": "Avail and Util summary",
@@ -605,7 +605,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "A & U Detailed per Shift Report",
    "link_count": 0,
    "link_to": "Avail and Util report",
@@ -616,7 +616,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Breakdown and Standby Machine Report",
    "link_count": 0,
    "link_to": "Availability and utilization Asset timeline",
@@ -667,7 +667,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Downtime Verification",
    "link_count": 0,
    "link_to": "Down Time",
@@ -678,7 +678,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Control Room Correction Dashboard",
    "link_count": 0,
    "link_to": "Downtime Correction Dashboard",
@@ -688,7 +688,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-03 13:45:49.552726",
+ "modified": "2026-08-04 11:24:34.472514",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
