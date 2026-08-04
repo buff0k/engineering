@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from erpnext.controllers.website_list_for_contact import get_customers_suppliers
 
-ALLOWED_SUPPLIER_SITES = ["GWAB", "Klipfontein"]
+ALLOWED_SUPPLIER_SITES = ["Gwab", "Klipfontein"]
 ACTION_STATUS_OPTIONS = ["Open", "Closed", "Cancelled"]
 OPERATING_STATUS_OPTIONS = [
     "Off Site",
@@ -19,8 +19,9 @@ OPERATING_STATUS_OPTIONS = [
 
 def get_context(context):
     context.no_cache = 1
-    context.show_sidebar = True
+    context.show_sidebar = False
     context.title = "Pre Use Deviation"
+    context.base_template_path = "templates/base.html"
 
     if frappe.session.user == "Guest":
         frappe.local.flags.redirect_location = "/login?redirect-to=/pre_use_deviation_supplier"
