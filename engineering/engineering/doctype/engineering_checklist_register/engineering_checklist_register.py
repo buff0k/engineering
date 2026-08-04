@@ -10,6 +10,7 @@ class EngineeringChecklistRegister(Document):
         self.set_site_month_year_name()
 
     def validate(self):
+        self.ensure_supplier_assets_loaded()
         self.prevent_header_changes_after_save()
 
     def set_site_month_year_name(self):
@@ -35,6 +36,94 @@ class EngineeringChecklistRegister(Document):
         for fieldname in locked_fields:
             if self.get(fieldname) != old_doc.get(fieldname):
                 frappe.throw(f"{frappe.unscrub(fieldname)} cannot be changed after saving.")
+
+
+    def ensure_supplier_assets_loaded(self):
+        """Always add missing supplier machines for the selected site."""
+
+        if not self.get("site"):
+            return
+
+        child_field = self._get_checklist_child_fieldname()
+
+        if not child_field:
+            return
+
+        existing = set()
+
+        for row in self.get(child_field) or []:
+            fleet_no = row.get("fleet_no")
+            if fleet_no:
+                existing.add(str(fleet_no).strip())
+                existing.add(self._norm_asset(fleet_no))
+
+        supplier_assets = frappe.get_all(
+            "Asset",
+            filters={
+                "location": self.site,
+                "asset_owner": "Supplier",
+                "supplier": ["is", "set"],
+                "docstatus": ["!=", 2],
+            },
+            fields=[
+                "name",
+                "asset_name",
+                "asset_category",
+                "item_name",
+                "supplier",
+            ],
+            order_by="name asc",
+            limit_page_length=0,
+        )
+
+        for asset in supplier_assets:
+            keys = set()
+
+            if asset.get("name"):
+                keys.add(str(asset.get("name")).strip())
+                keys.add(self._norm_asset(asset.get("name")))
+
+            if asset.get("asset_name"):
+                keys.add(str(asset.get("asset_name")).strip())
+                keys.add(self._norm_asset(asset.get("asset_name")))
+
+            if existing.intersection(keys):
+                continue
+
+            self.append(child_field, {
+                "fleet_no": asset.get("name"),
+                "machine_type": asset.get("asset_category") or "",
+                "item_name": asset.get("item_name") or asset.get("asset_name") or asset.get("name"),
+                "target": 100,
+                "checklist_submission": 0,
+            })
+
+            existing.update(keys)
+
+    def _get_checklist_child_fieldname(self):
+        meta = frappe.get_meta(self.doctype)
+
+        preferred_fields = ["rows", "machines", "checklist_rows"]
+
+        for fieldname in preferred_fields:
+            field = meta.get_field(fieldname)
+            if field and field.fieldtype == "Table":
+                return fieldname
+
+        for field in meta.fields:
+            if field.fieldtype == "Table":
+                return field.fieldname
+
+        return None
+
+    def _norm_asset(self, value):
+        return (
+            str(value or "")
+            .strip()
+            .upper()
+            .replace("IS0", "IS")
+            .replace(" ", "")
+        )
 
 
 ALLOWED_MACHINE_TYPES = [

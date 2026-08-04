@@ -55,9 +55,6 @@ def get_context(context):
   for row in doc.get(child_table_fieldname) or []:
     fleet_no = row.get("fleet_no")
 
-    if float(row.get("checklist_submission") or 0) <= 0:
-      continue
-
     if fleet_no not in supplier_assets and _norm_asset(fleet_no) not in supplier_assets:
       continue
 
@@ -119,25 +116,30 @@ def _save_supplier_rows(name):
 
 
 def _get_supplier_asset_values(site):
-
-  supplier = frappe.db.get_value(
-      "Portal User",
-      {
-          "user": frappe.session.user
-      },
-      "parent"
+  suppliers = frappe.get_all(
+    "Portal User",
+    filters={
+      "user": frappe.session.user
+    },
+    pluck="parent",
+    limit_page_length=0,
   )
 
-  if not supplier:
+  suppliers = sorted(set([s for s in suppliers if s]))
+
+  if not suppliers:
     return set()
 
   rows = frappe.get_all(
     "Asset",
     filters={
-      "supplier": supplier,
+      "supplier": ["in", suppliers],
       "location": site,
     },
-    fields=["name", "asset_name"],
+    fields=[
+      "name",
+      "asset_name",
+    ],
     limit_page_length=0,
   )
 
@@ -147,7 +149,7 @@ def _get_supplier_asset_values(site):
     for key in ("name", "asset_name"):
       val = row.get(key)
       if val:
-        values.add(val)
+        values.add(str(val).strip())
         values.add(_norm_asset(val))
 
   return values
