@@ -145,6 +145,7 @@ def get_columns():
 		{"label": _("Work Hrs"), "fieldname": "work_hrs", "fieldtype": "Float", "precision": 1, "width": 90},
 		{"label": _("Avail Hrs"), "fieldname": "available_hrs", "fieldtype": "Float", "precision": 1, "width": 95},
 		{"label": _("Avail Hrs Above 100"), "fieldname": "available_hrs_above_100", "fieldtype": "Float", "precision": 1, "width": 155},
+		{"label": _("Capped Avail Hrs"), "fieldname": "capped_available_hrs", "fieldtype": "Float", "precision": 1, "width": 145},
 		{"label": _("Mechanical Downtime"), "fieldname": "mechanical_downtime", "fieldtype": "Float", "precision": 1, "width": 160},
 		{"label": _("Avail (%)"), "fieldname": "avail_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
 		{"label": _("Util (%)"), "fieldname": "util_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
@@ -969,6 +970,7 @@ def _month_end_calc_row(
     work_hrs,
     available_hrs,
     available_hrs_above_100,
+    capped_available_hrs,
     mechanical_downtime,
 ):
     required_hrs = flt(required_hrs)
@@ -976,6 +978,9 @@ def _month_end_calc_row(
     available_hrs = flt(available_hrs)
     available_hrs_above_100 = flt(
         available_hrs_above_100
+    )
+    capped_available_hrs = flt(
+        capped_available_hrs
     )
     mechanical_downtime = flt(
         mechanical_downtime
@@ -1028,6 +1033,10 @@ def _month_end_calc_row(
         ),
         "available_hrs_above_100": round(
             available_hrs_above_100,
+            1,
+        ),
+        "capped_available_hrs": round(
+            capped_available_hrs,
             1,
         ),
         "mechanical_downtime": round(
@@ -1485,6 +1494,7 @@ def _month_end_direct_rows(filters):
             SUM(COALESCE(shift_working_hours, 0)) AS work_hrs,
             SUM(COALESCE(shift_available_hours, 0)) AS available_hrs,
             SUM(COALESCE(shift_available_hours_above_100, 0)) AS available_hrs_above_100,
+            SUM(COALESCE(available_hours_above_100_capped, 0)) AS capped_available_hrs,
             SUM(COALESCE(shift_breakdown_hours, 0)) AS mechanical_downtime
         FROM `tabAvailability and Utilisation`
         WHERE {" AND ".join(au_conditions)}
@@ -1541,6 +1551,9 @@ def _month_end_direct_rows(filters):
                     au_row.get("available_hrs"),
                     au_row.get(
                         "available_hrs_above_100"
+                    ),
+                    au_row.get(
+                        "capped_available_hrs"
                     ),
                     au_row.get(
                         "mechanical_downtime"
@@ -1614,6 +1627,7 @@ def _month_end_direct_rows(filters):
                 machine_row = _month_end_calc_row(
                     category,
                     asset_name,
+                    0,
                     0,
                     0,
                     0,
@@ -1696,6 +1710,15 @@ def _month_end_direct_rows(filters):
                 for row in scope_rows
             )
 
+            scope_capped_available = sum(
+                flt(
+                    row.get(
+                        "capped_available_hrs"
+                    )
+                )
+                for row in scope_rows
+            )
+
             scope_down = sum(
                 flt(
                     row.get(
@@ -1712,6 +1735,7 @@ def _month_end_direct_rows(filters):
                 scope_work,
                 scope_available,
                 scope_available_above_100,
+                scope_capped_available,
                 scope_down,
             )
 
