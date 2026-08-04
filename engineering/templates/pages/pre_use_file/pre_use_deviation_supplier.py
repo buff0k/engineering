@@ -36,6 +36,11 @@ def get_context(context):
 
     context.site_options = ALLOWED_SUPPLIER_SITES
     context.asset_options = _get_asset_options()
+
+    try:
+        context.csrf_token = getattr(frappe.session, "csrf_token", "") or ""
+    except Exception:
+        context.csrf_token = ""
     context.asset_details = _get_asset_details(context.asset_options)
     context.action_status_options = ACTION_STATUS_OPTIONS
     context.operating_status_options = OPERATING_STATUS_OPTIONS

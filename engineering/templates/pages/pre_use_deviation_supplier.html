@@ -1,1 +1,564 @@
-{% include "templates/pages/pre_use_file/pre_use_deviation_supplier.html" %}
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+
+<style>
+#completion_percentage_percent.completion-red {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+#completion_percentage_percent.completion-green {
+    color: #16a34a !important;
+    font-weight: 700;
+}
+</style>
+
+
+<style>
+#completion_percentage_range {
+    pointer-events: none !important;
+}
+</style>
+
+
+<style>
+#completion_percentage_number {
+    display: none !important;
+}
+
+#completion_percentage_range {
+    width: 140px;
+}
+
+#completion_percentage_range.completion-red {
+    accent-color: #dc2626 !important;
+}
+
+#completion_percentage_range.completion-green {
+    accent-color: #16a34a !important;
+}
+
+#completion_percentage_label.completion-red {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+
+#completion_percentage_label.completion-green {
+    color: #16a34a !important;
+    font-weight: 700;
+}
+</style>
+
+
+
+
+<div class="container my-4">
+    <h2>Pre Use Deviation</h2>
+
+    <div class="mb-3">
+        <a href="/pre_use_deviation_list" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+        <input type="hidden" name="name" value="{{ form_values.name or '' }}">
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Report Date and Time</strong></label>
+                <input type="text" class="form-control datetime-popup" name="report_datetime" value="{{ form_values.report_datetime or '' }}" autocomplete="off">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Site</strong></label>
+                <select class="form-control" name="site" required>
+                    <option value="">Select Site</option>
+                    {% for site in site_options %}
+                    <option value="{{ site }}" {% if form_values.site == site %}selected{% endif %}>{{ site }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Fleet Number</strong></label>
+            <select class="form-control" id="fleet_number" id="fleet_number" name="fleet_number" required>
+                <option value="">Select Fleet Number</option>
+                {% for asset in asset_options %}
+                <option value="{{ asset }}" {% if form_values.fleet_number == asset %}selected{% endif %}>{{ asset }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label><strong>Pre-Use No.</strong></label>
+                <input type="number" class="form-control" name="pre_use_no" value="{{ form_values.pre_use_no or 0 }}">
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label><strong>Machine Type</strong></label>
+                <input type="text" class="form-control" id="machine_type" name="machine_type" value="{{ form_values.machine_type or '' }}">
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label><strong>Machine Model</strong></label>
+                <input type="text" class="form-control" id="machine_model" name="machine_model" value="{{ form_values.machine_model or '' }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Operating Status</strong></label>
+            <select class="form-control" name="operating_status">
+                <option value="">Select Operating Status</option>
+                {% for status in operating_status_options %}
+                <option value="{{ status }}" {% if form_values.operating_status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Deviation Details</strong></label>
+            <textarea class="form-control" name="deviation_details" rows="4">{{ form_values.deviation_details or '' }}</textarea>
+        </div>
+
+        <hr>
+        <h5>Reported By</h5>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Reported By Coy Number</strong></label>
+                <input type="text" class="form-control" name="reported_by_coy_number" value="{{ form_values.reported_by_coy_number or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Reported By Name and Surname</strong></label>
+                <input type="text" class="form-control" name="reported_by_name_and_surname" value="{{ form_values.reported_by_name_and_surname or '' }}">
+            </div>
+        </div>
+
+        <hr>
+        <h5>Resolution</h5>
+
+        <div class="mb-3">
+            <label><strong>Resolution Summary</strong></label>
+            <textarea class="form-control" name="resolution_summary" rows="4">{{ form_values.resolution_summary or '' }}</textarea>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Action Date and Time</strong></label>
+                <input type="text" class="form-control datetime-popup" id="action_date_and_time" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}" autocomplete="off">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Job Card Number</strong></label>
+                <input type="text" class="form-control" name="job_card_number" value="{{ form_values.job_card_number or '' }}">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label><strong>Actioned By Coy Number</strong></label>
+                <input type="text" class="form-control" name="actioned_by_coy_number" value="{{ form_values.actioned_by_coy_number or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label><strong>Actioned By Name and Surname</strong></label>
+                <input type="text" class="form-control" name="actioned_by_name_and_surname" value="{{ form_values.actioned_by_name_and_surname or '' }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Action Status</strong></label>
+            <select class="form-control" name="action_status" required>
+                {% for status in action_status_options %}
+                <option value="{{ status }}" {% if form_values.action_status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Completion Percentage</strong></label>
+            <input type="number" class="form-control mb-2" id="completion_percentage_number" name="completion_percentage" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
+            <input type="range" class="form-range" id="completion_percentage_range" tabindex="-1" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
+            <div class="text-success mt-1">
+                <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span><span id="completion_percentage_percent">%</span>
+            </div>
+        </div>
+
+        <script type="application/json" id="asset_details_json">{{ asset_details | tojson }}</script>
+
+        <script>
+        (function () {
+            const numberInput = document.getElementById("completion_percentage_number");
+            const rangeInput = document.getElementById("completion_percentage_range");
+            const label = document.getElementById("completion_percentage_label");
+        const percent = document.getElementById("completion_percentage_percent");
+            const fleetNumberInput = document.getElementById("fleet_number");
+            const machineTypeInput = document.getElementById("machine_type");
+            const machineModelInput = document.getElementById("machine_model");
+            const actionDateTimeInput = document.getElementById("action_date_and_time");
+            const assetDetails = JSON.parse(document.getElementById("asset_details_json").textContent || "{}");
+
+            function currentDateTimeLocal() {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                return now.toISOString().slice(0, 16);
+            }
+
+            function populateMachineDetails() {
+                const selectedAsset = fleetNumberInput ? fleetNumberInput.value : "";
+                const details = assetDetails[selectedAsset] || {};
+
+                if (machineTypeInput) {
+                    machineTypeInput.value = details.machine_type || "";
+                }
+
+                if (machineModelInput) {
+                    machineModelInput.value = details.machine_model || "";
+                }
+            }
+            const fleetNumberInput = document.getElementById("fleet_number");
+            const machineTypeInput = document.getElementById("machine_type");
+            const machineModelInput = document.getElementById("machine_model");
+            const actionDateTimeInput = document.getElementById("action_date_and_time");
+            const assetDetails = JSON.parse(document.getElementById("asset_details_json").textContent || "{}");
+
+            function currentDateTimeLocal() {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                return now.toISOString().slice(0, 16);
+            }
+
+            function populateMachineDetails() {
+                const selectedAsset = fleetNumberInput ? fleetNumberInput.value : "";
+                const details = assetDetails[selectedAsset] || {};
+
+                if (machineTypeInput) {
+                    machineTypeInput.value = details.machine_type || "";
+                }
+
+                if (machineModelInput) {
+                    machineModelInput.value = details.machine_model || "";
+                }
+            }
+
+            function clamp(value) {
+                value = parseInt(value || 0, 10);
+                if (isNaN(value)) value = 0;
+                if (value < 0) value = 0;
+                if (value > 100) value = 100;
+                return value;
+            }
+
+            function syncFromNumber() {
+                const value = clamp(numberInput.value);
+                numberInput.value = value;
+                rangeInput.value = value;
+                label.textContent = value;
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
+            }
+
+            function syncFromRange() {
+                const value = clamp(rangeInput.value);
+                numberInput.value = value;
+                label.textContent = value;
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
+
+                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
+                    actionDateTimeInput.value = currentDateTimeLocal();
+                }
+            }
+
+            numberInput.addEventListener("input", syncFromNumber);
+            rangeInput.addEventListener("input", syncFromRange);
+
+            if (fleetNumberInput) {
+                fleetNumberInput.addEventListener("change", populateMachineDetails);
+                populateMachineDetails();
+            }
+
+            syncFromNumber();
+        })();
+        </script>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/pre_use_deviation_list" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<script>
+(function () {
+    function applyAssetDetails() {
+        const fleet = document.querySelector('[name="fleet_number"]');
+        const machineType = document.querySelector('[name="machine_type"]');
+        const machineModel = document.querySelector('[name="machine_model"]');
+        const jsonEl = document.getElementById("asset_details_json");
+
+        if (!fleet || !machineType || !machineModel || !jsonEl) {
+            return;
+        }
+
+        const details = JSON.parse(jsonEl.textContent || "{}");
+        const selected = fleet.value || "";
+        const asset = details[selected] || {};
+
+        machineType.value = asset.machine_type || "";
+        machineModel.value = asset.machine_model || "";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const fleet = document.querySelector('[name="fleet_number"]');
+        if (fleet) {
+            fleet.addEventListener("change", applyAssetDetails);
+            applyAssetDetails();
+        }
+    });
+})();
+</script>
+
+
+
+
+
+
+
+
+
+
+<script>
+(function () {
+    function setCompletion(value) {
+        const numberInput = document.getElementById("completion_percentage_number");
+        const rangeInput = document.getElementById("completion_percentage_range");
+        const label = document.getElementById("completion_percentage_label");
+        const percent = document.getElementById("completion_percentage_percent");
+        const actionStatus = document.querySelector('[name="action_status"]');
+
+        value = parseInt(value || 0, 10);
+        if (isNaN(value)) value = 0;
+        value = value >= 100 ? 100 : 0;
+
+        const colorClass = value === 100 ? "completion-green" : "completion-red";
+
+        if (numberInput) {
+            numberInput.value = value;
+        }
+
+        if (rangeInput) {
+            rangeInput.value = value;
+            rangeInput.classList.remove("completion-red", "completion-green");
+            rangeInput.classList.add(colorClass);
+        }
+
+        if (label) {
+            label.textContent = value;
+            label.classList.remove("completion-red", "completion-green");
+            label.classList.add(colorClass);
+        }
+
+        if (percent) {
+            percent.classList.remove("completion-red", "completion-green");
+            percent.classList.add(colorClass);
+        }
+
+        if (actionStatus) {
+            actionStatus.value = value === 100 ? "Closed" : "Open";
+        }
+    }
+
+    function syncCompletionFromActionDate() {
+        const actionDate = document.getElementById("action_date_and_time");
+
+        if (actionDate && actionDate.value) {
+            setCompletion(100);
+        } else {
+            setCompletion(0);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const actionDate = document.getElementById("action_date_and_time");
+
+        if (actionDate) {
+            actionDate.addEventListener("input", syncCompletionFromActionDate);
+            actionDate.addEventListener("change", syncCompletionFromActionDate);
+            actionDate.addEventListener("keyup", syncCompletionFromActionDate);
+            actionDate.addEventListener("blur", syncCompletionFromActionDate);
+        }
+
+        syncCompletionFromActionDate();
+    });
+})();
+</script>
+
+
+
+
+
+
+
+
+<script>
+(function () {
+    function pad(value) {
+        return String(value).padStart(2, "0");
+    }
+
+    function formatDateTime(date) {
+        return (
+            pad(date.getDate()) + "-" +
+            pad(date.getMonth() + 1) + "-" +
+            date.getFullYear() + " " +
+            pad(date.getHours()) + ":" +
+            pad(date.getMinutes()) + ":" +
+            pad(date.getSeconds())
+        );
+    }
+
+    function setupDateTimePopups() {
+        if (typeof flatpickr === "undefined") {
+            return;
+        }
+
+        document.querySelectorAll(".datetime-popup").forEach(function (input) {
+            if (input._flatpickr) {
+                input._flatpickr.destroy();
+            }
+
+            flatpickr(input, {
+                enableTime: true,
+                enableSeconds: true,
+                allowInput: true,
+                clickOpens: true,
+                dateFormat: "d-m-Y H:i:S",
+                time_24hr: true,
+                closeOnSelect: false,
+
+                onOpen: function (selectedDates, dateStr, instance) {
+                    if (!input.value) {
+                        const now = new Date();
+                        instance.jumpToDate(now);
+                        instance.setDate(now, false);
+                        input.value = "";
+                    }
+                },
+
+                onChange: function (selectedDates) {
+                    if (selectedDates.length) {
+                        input.value = formatDateTime(selectedDates[0]);
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                        input.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+            });
+
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Backspace" || event.key === "Delete") {
+                    setTimeout(function () {
+                        if (!input.value) {
+                            input.dispatchEvent(new Event("input", { bubbles: true }));
+                            input.dispatchEvent(new Event("change", { bubbles: true }));
+                        }
+                    }, 50);
+                }
+            });
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", setupDateTimePopups);
+})();
+</script>
+
+
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+.flatpickr-calendar {
+    font-size: 12px !important;
+    width: 260px !important;
+}
+
+.flatpickr-calendar .flatpickr-months {
+    padding-top: 4px;
+}
+
+.flatpickr-calendar .flatpickr-day {
+    max-width: 30px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+}
+
+.flatpickr-calendar .flatpickr-time {
+    height: 38px !important;
+}
+
+.flatpickr-calendar .numInputWrapper {
+    height: 28px !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+(function () {
+    function setupSmallCalendar() {
+        if (typeof flatpickr === "undefined") {
+            console.log("flatpickr not loaded");
+            return;
+        }
+
+        document.querySelectorAll(".datetime-popup").forEach(function (input) {
+            if (input._flatpickr) {
+                input._flatpickr.destroy();
+            }
+
+            flatpickr(input, {
+                enableTime: true,
+                enableSeconds: true,
+                allowInput: true,
+                clickOpens: true,
+                dateFormat: "d-m-Y H:i:S",
+                time_24hr: true,
+                disableMobile: true,
+                closeOnSelect: false,
+
+                onChange: function (selectedDates, dateStr) {
+                    input.value = dateStr || "";
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Backspace" || event.key === "Delete") {
+                    setTimeout(function () {
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                        input.dispatchEvent(new Event("change", { bubbles: true }));
+                    }, 50);
+                }
+            });
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        setTimeout(setupSmallCalendar, 300);
+    });
+})();
+</script>
+
+{% endblock %}
