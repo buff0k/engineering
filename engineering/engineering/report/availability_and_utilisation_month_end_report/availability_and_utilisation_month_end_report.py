@@ -1567,30 +1567,48 @@ def _month_end_direct_rows(filters):
                 )
 
                 if use_true_availability:
-                    true_availability_values = (
-                        true_availability_values_by_key.get(
-                            machine_key,
-                            [],
+                    required_hrs = flt(
+                        machine_row.get("required_hrs")
+                    )
+
+                    work_hrs = flt(
+                        machine_row.get("work_hrs")
+                    )
+
+                    available_hrs = flt(
+                        machine_row.get("available_hrs")
+                    )
+
+                    available_hrs_above_100 = flt(
+                        machine_row.get(
+                            "available_hrs_above_100"
                         )
                     )
 
-                    if true_availability_values:
-                        machine_row["avail_percent"] = (
-                            average_percent(
-                                true_availability_values
+                    machine_row["avail_percent"] = (
+                        summary.r1(
+                            (
+                                available_hrs_above_100
+                                / required_hrs
                             )
+                            * 100
+                            * 0.85
                         )
+                        if required_hrs > 0
+                        else 0
+                    )
 
                     machine_row["util_percent"] = (
-                        average_percent_or_none(
-                            true_utilisation_values
+                        summary.r1(
+                            (
+                                work_hrs
+                                / available_hrs
+                            )
+                            * 100
+                            * 0.85
                         )
-                    )
-                else:
-                    machine_row["util_percent"] = (
-                        average_percent_or_none(
-                            utilisation_values
-                        )
+                        if available_hrs > 0
+                        else None
                     )
 
                 reason_row = (
@@ -1715,19 +1733,32 @@ def _month_end_direct_rows(filters):
                 scope_down,
             )
 
-            scope_row["avail_percent"] = (
-                average_percent([
-                    row.get("avail_percent")
-                    for row in scope_rows
-                ])
-            )
+            if use_true_availability:
+                scope_row["avail_percent"] = (
+                    summary.r1(
+                        (
+                            scope_available_above_100
+                            / scope_required
+                        )
+                        * 100
+                        * 0.85
+                    )
+                    if scope_required > 0
+                    else 0
+                )
 
-            scope_row["util_percent"] = (
-                average_percent_or_none([
-                    row.get("util_percent")
-                    for row in scope_rows
-                ])
-            )
+                scope_row["util_percent"] = (
+                    summary.r1(
+                        (
+                            scope_work
+                            / scope_available
+                        )
+                        * 100
+                        * 0.85
+                    )
+                    if scope_available > 0
+                    else None
+                )
 
             scope_row["emp_avail_percent"] = (
                 average_percent([

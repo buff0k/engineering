@@ -643,31 +643,21 @@ def execute(filters=None):
         au_target_filter,
     )
 
-    source_rows = apply_true_availability_to_source_rows(
-        source_rows,
-        location,
-        start_date,
-        end_date,
-        machine_scope,
-        au_target_filter,
-    )
-
     spare_swing_asset_map = get_spare_swing_asset_map(filters)
 
     machine_series = build_machine_series_from_source_rows(
         source_rows
     )
 
-    avgs = build_summary_averages_from_machine_series(
-        machine_series
+    avgs = build_summary_averages_from_source_rows(
+        source_rows
     )
 
     (
         production_avgs,
         spare_avgs,
-    ) = build_scope_averages_from_machine_series(
-        machine_series,
-        spare_swing_asset_map,
+    ) = build_scope_averages_from_source_rows(
+        source_rows
     )
 
     dashboard_html = build_dashboard_html(
@@ -711,7 +701,10 @@ def fetch_grouped_data(
                 machine_scope
                 or "Production + Swing/Spare Machines"
             ),
-            "au_target_filter": "100% A & U",
+            "au_target_filter": (
+                au_target_filter
+                or "85% A & U"
+            ),
             "include_excluded_asset_categories": 1,
         })
     )
@@ -1665,21 +1658,8 @@ def build_daily_summary_chart_html(location, start_date, end_date, machine_scope
             effective_au_target_filter,
         )
 
-        day_rows = apply_true_availability_to_source_rows(
-            day_rows,
-            location,
-            date_value,
-            date_value,
-            machine_scope,
-            effective_au_target_filter,
-        )
-
-        day_machine_series = build_machine_series_from_source_rows(
+        day_avgs = build_summary_averages_from_source_rows(
             day_rows
-        )
-
-        day_avgs = build_summary_averages_from_machine_series(
-            day_machine_series
         )
 
         for category in UI_CATEGORIES:
