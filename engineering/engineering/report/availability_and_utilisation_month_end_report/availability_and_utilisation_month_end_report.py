@@ -1363,11 +1363,8 @@ def _month_end_direct_rows(filters):
         "end_date": to_date,
         "location": location,
         "machine_scope": detailed_machine_scope,
+        "include_excluded_asset_categories": 1,
     }
-
-    summary_rows = summary.get_grouped_data(
-        summary_filters
-    )
 
     detailed_au_rows = (
         detailed_au.get_grouped_data(
@@ -1376,66 +1373,52 @@ def _month_end_direct_rows(filters):
         or []
     )
 
+
     other_delay_reasons_by_key = {}
 
-    true_availability_values_by_key = {}
+    machines_by_category = {
+        category: set()
+        for category in categories
+    }
 
-    utilisation_values_by_key = {}
-    true_utilisation_values_by_key = {}
+    for row in asset_rows:
+        if (
+            row.asset_category in machines_by_category
+            and row.asset_name
+        ):
+            machines_by_category[
+                row.asset_category
+            ].add(row.asset_name)
+
+    au_rows_by_key = {}
 
     for row in detailed_au_rows:
         if row.get("indent") != 2:
             continue
 
-        key = (
-            row.get("asset_category"),
-            row.get("asset_name"),
-        )
+        category = row.get("asset_category")
+        asset_name = row.get("asset_name")
 
-        true_availability = row.get(
-            "true_availability_percent"
-        )
+        if not category or not asset_name:
+            continue
 
-        utilisation = row.get(
-            "plant_shift_utilisation"
-        )
-
-        true_utilisation = row.get(
-            "true_utilisation_percent"
-        )
-
-        if true_availability not in (None, ""):
-            true_availability_values_by_key.setdefault(
-                key,
-                [],
-            ).append(
-                flt(true_availability)
-            )
-
-        if utilisation not in (None, ""):
-            utilisation_values_by_key.setdefault(
-                key,
-                [],
-            ).append(
-                flt(utilisation)
-            )
-
-        if true_utilisation not in (None, ""):
-            true_utilisation_values_by_key.setdefault(
-                key,
-                [],
-            ).append(
-                flt(true_utilisation)
-            )
-
-    for row in summary_rows:
-        if row.get("indent") != 2:
+        if category not in categories:
             continue
 
         key = (
-            row.get("asset_category"),
-            row.get("asset_name"),
+            category,
+            asset_name,
         )
+
+        au_rows_by_key.setdefault(
+            key,
+            [],
+        ).append(row)
+
+        machines_by_category.setdefault(
+            category,
+            set(),
+        ).add(asset_name)
 
         reason_date = (
             row.get("shift_date")
@@ -1444,64 +1427,38 @@ def _month_end_direct_rows(filters):
             or ""
         )
 
-        other_delay_reasons_by_key.setdefault(key, {
-            "other_delay_reason_details": [],
-        })
+        other_delay_reasons_by_key.setdefault(
+            key,
+            {
+                "other_delay_reason_details": [],
+            },
+        )
 
         if row.get("other_delay_reason"):
-            other_delay_reasons_by_key[key]["other_delay_reason_details"].append({
+            other_delay_reasons_by_key[
+                key
+            ][
+                "other_delay_reason_details"
+            ].append({
                 "date": reason_date,
-                "reason": row.get("other_delay_reason"),
+                "reason": row.get(
+                    "other_delay_reason"
+                ),
             })
-    machines_by_category = {category: set() for category in categories}
-    for row in asset_rows:
-        if row.asset_category in machines_by_category and row.asset_name:
-            machines_by_category[row.asset_category].add(row.asset_name)
-
-    au_conditions = ["1=1"]
-    au_values = {}
-
-    if from_date:
-        au_conditions.append("shift_date >= %(from_date)s")
-        au_values["from_date"] = from_date
-
-    if to_date:
-        au_conditions.append("shift_date <= %(to_date)s")
-        au_values["to_date"] = to_date
-
-    if location:
-        au_conditions.append("location = %(location)s")
-        au_values["location"] = location
-
-    au_conditions.append("asset_category in %(categories)s")
-    au_values["categories"] = tuple(categories)
-
-    au_machine_rows = frappe.db.sql(
-        f"""
-        SELECT
-            asset_category,
-            asset_name,
-            SUM(COALESCE(shift_required_hours, 0)) AS required_hrs,
-            SUM(COALESCE(shift_working_hours, 0)) AS work_hrs,
-            SUM(COALESCE(shift_available_hours, 0)) AS available_hrs,
-            SUM(COALESCE(shift_available_hours_above_100, 0)) AS available_hrs_above_100,
-            SUM(COALESCE(shift_breakdown_hours, 0)) AS mechanical_downtime
-        FROM `tabAvailability and Utilisation`
-        WHERE {" AND ".join(au_conditions)}
-          AND COALESCE(asset_name, '') != ''
-        GROUP BY asset_category, asset_name
-        """,
-        au_values,
-        as_dict=True,
-    )
 
     au_by_key = {}
-    for row in au_machine_rows:
-        key = (row.asset_category, row.asset_name)
-        au_by_key[key] = row
 
-        if row.asset_category in machines_by_category and row.asset_name:
-            machines_by_category[row.asset_category].add(row.asset_name)
+    for key, rows in au_rows_by_key.items():
+        category, asset_name = key
+
+        au_by_key[key] = detailed_au.summary_row(
+            rows,
+            indent=2,
+            asset_category=category,
+            asset_name=asset_name,
+            location=location,
+        )
+
 
     all_asset_names = sorted({
         asset_name
@@ -1536,80 +1493,51 @@ def _month_end_direct_rows(filters):
                 machine_row = _month_end_calc_row(
                     category,
                     asset_name,
-                    au_row.get("required_hrs"),
-                    au_row.get("work_hrs"),
-                    au_row.get("available_hrs"),
                     au_row.get(
-                        "available_hrs_above_100"
+                        "shift_required_hours"
                     ),
                     au_row.get(
-                        "mechanical_downtime"
+                        "shift_working_hours"
+                    ),
+                    au_row.get(
+                        "shift_available_hours"
+                    ),
+                    au_row.get(
+                        "shift_available_hours_above_100"
+                    ),
+                    au_row.get(
+                        "shift_breakdown_hours"
                     ),
                 )
 
-                machine_key = (
-                    category,
-                    asset_name,
+                machine_row["avail_percent"] = (
+                    au_row.get(
+                        "true_availability_percent"
+                    )
                 )
 
-                utilisation_values = (
-                    utilisation_values_by_key.get(
-                        machine_key,
+                machine_row["util_percent"] = (
+                    au_row.get(
+                        "true_utilisation_percent"
+                    )
+                )
+
+                machine_row[
+                    "emp_avail_percent"
+                ] = au_row.get(
+                    "employee_availability"
+                )
+
+                machine_row["_au_source_row"] = au_row
+                machine_row["_au_source_rows"] = (
+                    au_rows_by_key.get(
+                        (
+                            category,
+                            asset_name,
+                        ),
                         [],
                     )
                 )
-
-                true_utilisation_values = (
-                    true_utilisation_values_by_key.get(
-                        machine_key,
-                        [],
-                    )
-                )
-
-                if use_true_availability:
-                    required_hrs = flt(
-                        machine_row.get("required_hrs")
-                    )
-
-                    work_hrs = flt(
-                        machine_row.get("work_hrs")
-                    )
-
-                    available_hrs = flt(
-                        machine_row.get("available_hrs")
-                    )
-
-                    available_hrs_above_100 = flt(
-                        machine_row.get(
-                            "available_hrs_above_100"
-                        )
-                    )
-
-                    machine_row["avail_percent"] = (
-                        summary.r1(
-                            (
-                                available_hrs_above_100
-                                / required_hrs
-                            )
-                            * 100
-                            * 0.85
-                        )
-                        if required_hrs > 0
-                        else 0
-                    )
-
-                    machine_row["util_percent"] = (
-                        summary.r1(
-                            (
-                                work_hrs
-                                / available_hrs
-                            )
-                            * 100
-                            * 0.85
-                        )
-                        if available_hrs > 0
-                        else None
-                    )
 
                 reason_row = (
                     other_delay_reasons_by_key.get(
@@ -1639,23 +1567,7 @@ def _month_end_direct_rows(filters):
                     0,
                 )
 
-                if use_true_availability:
-                    true_values = (
-                        true_availability_values_by_key.get(
-                            (
-                                category,
-                                asset_name,
-                            ),
-                            [],
-                        )
-                    )
 
-                    if true_values:
-                        machine_row["avail_percent"] = (
-                            average_percent(
-                                true_values
-                            )
-                        )
                 machine_row["breakdown_reason_details"] = breakdown_details
                 machine_row["other_delay_reason_details"] = []
                 machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
@@ -1686,88 +1598,72 @@ def _month_end_direct_rows(filters):
             summary_scope,
             summary_label,
         ):
-            scope_required = sum(
-                flt(row.get("required_hrs"))
-                for row in scope_rows
-            )
-
-            scope_work = sum(
-                flt(row.get("work_hrs"))
-                for row in scope_rows
-            )
-
-            scope_available = sum(
-                flt(
-                    row.get(
-                        "available_hrs"
+            source_rows = [
+                source_row
+                for machine_row in scope_rows
+                for source_row in (
+                    machine_row.get(
+                        "_au_source_rows"
                     )
+                    or []
                 )
-                for row in scope_rows
-            )
+            ]
 
-            scope_available_above_100 = sum(
-                flt(
-                    row.get(
-                        "available_hrs_above_100"
-                    )
+            if source_rows:
+                au_scope_row = detailed_au.summary_row(
+                    source_rows,
+                    indent=0,
+                    asset_category=category,
+                    location=location,
                 )
-                for row in scope_rows
-            )
 
-            scope_down = sum(
-                flt(
-                    row.get(
-                        "mechanical_downtime"
-                    )
+                scope_row = _month_end_calc_row(
+                    category,
+                    "",
+                    au_scope_row.get(
+                        "shift_required_hours"
+                    ),
+                    au_scope_row.get(
+                        "shift_working_hours"
+                    ),
+                    au_scope_row.get(
+                        "shift_available_hours"
+                    ),
+                    au_scope_row.get(
+                        "shift_available_hours_above_100"
+                    ),
+                    au_scope_row.get(
+                        "shift_breakdown_hours"
+                    ),
                 )
-                for row in scope_rows
-            )
 
-            scope_row = _month_end_calc_row(
-                category,
-                "",
-                scope_required,
-                scope_work,
-                scope_available,
-                scope_available_above_100,
-                scope_down,
-            )
-
-            if use_true_availability:
                 scope_row["avail_percent"] = (
-                    summary.r1(
-                        (
-                            scope_available_above_100
-                            / scope_required
-                        )
-                        * 100
-                        * 0.85
+                    au_scope_row.get(
+                        "true_availability_percent"
                     )
-                    if scope_required > 0
-                    else 0
                 )
 
                 scope_row["util_percent"] = (
-                    summary.r1(
-                        (
-                            scope_work
-                            / scope_available
-                        )
-                        * 100
-                        * 0.85
+                    au_scope_row.get(
+                        "true_utilisation_percent"
                     )
-                    if scope_available > 0
-                    else None
                 )
 
-            scope_row["emp_avail_percent"] = (
-                average_percent([
-                    row.get(
-                        "emp_avail_percent"
+                scope_row["emp_avail_percent"] = (
+                    au_scope_row.get(
+                        "employee_availability"
                     )
-                    for row in scope_rows
-                ])
-            )
+                )
+            else:
+                scope_row = _month_end_calc_row(
+                    category,
+                    "",
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                )
 
             scope_row["summary_scope"] = (
                 summary_scope
