@@ -162,7 +162,13 @@ Loader`
 			window.au_month_end_reason_details = window.au_month_end_reason_details || {};
 
 			const key = `${column.fieldname}-${data.asset_name || ""}-${Math.random()}`;
-			window.au_month_end_reason_details[key] = details;
+
+			window.au_month_end_reason_details[key] = {
+				details: details,
+				official_au_minutes: column.fieldname === "breakdown_reason"
+					? flt(data.mechanical_downtime || 0) * 60
+					: null
+			};
 
 			const title = column.fieldname === "breakdown_reason"
 				? "Breakdown Reasons"
@@ -390,7 +396,11 @@ Loader`
 };
 
 window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme) {
-	const details = (window.au_month_end_reason_details || {})[key] || [];
+	const payload = (window.au_month_end_reason_details || {})[key] || {};
+	const details = Array.isArray(payload) ? payload : (payload.details || []);
+	const official_au_minutes = Array.isArray(payload)
+		? null
+		: payload.official_au_minutes;
 
 	const colours = theme === "purple"
 		? {
@@ -427,7 +437,10 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 
 	const total_raw_minutes = details.reduce((total, detail) => total + flt(detail.total_minutes || 0), 0);
 	const total_excluded_minutes = details.reduce((total, detail) => total + flt(detail.startup_fatigue_minutes || 0), 0);
-	const total_au_minutes = details.reduce((total, detail) => total + flt(detail.au_minutes || 0), 0);
+	const calculated_au_minutes = details.reduce((total, detail) => total + flt(detail.au_minutes || 0), 0);
+	const total_au_minutes = official_au_minutes !== null
+		? flt(official_au_minutes)
+		: calculated_au_minutes;
 
 	const header = has_times
 		? `
@@ -509,6 +522,29 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 		`
 		: "";
 
+	const reconciliation_note = (
+		official_au_minutes !== null
+		&& Math.round(flt(official_au_minutes)) !== Math.round(calculated_au_minutes)
+	)
+		? `
+			<div style="
+				margin-top:10px;
+				padding:9px 12px;
+				border:1px solid #f59e0b;
+				border-radius:8px;
+				background:#fffbeb;
+				color:#92400e;
+				font-weight:700;
+			">
+				Official A&amp;U Mechanical Downtime:
+				${window.au_month_end_format_minutes(official_au_minutes)}.
+				PBM detail rows reconcile to
+				${window.au_month_end_format_minutes(calculated_au_minutes)}.
+			</div>
+		`
+		: "";
+
+
 	const dialog = new frappe.ui.Dialog({
 		title: `${title} - ${asset_name || ""}`,
 		size: "extra-large"
@@ -530,6 +566,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 				</tbody>
 			</table>
 		</div>
+		${reconciliation_note}
 	`);
 
 	dialog.show();
