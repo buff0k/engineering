@@ -493,6 +493,10 @@ def clean_reason_details(details):
             )
         )
 
+        sunday_minutes = int(
+            flt(detail.get("sunday_minutes"))
+        )
+
         au_minutes = int(
             flt(detail.get("au_minutes"))
         )
@@ -512,6 +516,7 @@ def clean_reason_details(details):
                 "startup_fatigue_minutes": (
                     startup_fatigue_minutes
                 ),
+                "sunday_minutes": sunday_minutes,
                 "au_minutes": au_minutes,
                 "reasons": [],
             }
@@ -567,6 +572,11 @@ def clean_reason_details(details):
                     "startup_fatigue_minutes"
                 ]
             ),
+            "sunday_minutes": (
+                grouped_row[
+                    "sunday_minutes"
+                ]
+            ),
             "au_minutes": (
                 grouped_row[
                     "au_minutes"
@@ -579,29 +589,29 @@ def clean_reason_details(details):
 
     return cleaned
 
+
 def get_required_downtime_minutes_for_breakdown(
     filters,
     asset_name,
     start_datetime,
     resolved_datetime,
 ):
+    empty_result = {
+        "total_minutes": 0,
+        "required_downtime_minutes": 0,
+        "excluded_minutes": 0,
+        "sunday_minutes": 0,
+    }
+
     if not start_datetime or not resolved_datetime:
-        return {
-            "total_minutes": 0,
-            "required_downtime_minutes": 0,
-            "excluded_minutes": 0,
-        }
+        return empty_result
 
     try:
         from engineering.engineering.doctype.availability_and_utilisation import (
             availability_and_utilisation as au,
         )
     except Exception:
-        return {
-            "total_minutes": 0,
-            "required_downtime_minutes": 0,
-            "excluded_minutes": 0,
-        }
+        return empty_result
 
     filters = frappe._dict(filters or {})
 
@@ -616,13 +626,7 @@ def get_required_downtime_minutes_for_breakdown(
     end_dt = get_datetime(resolved_datetime)
 
     if not start_dt or not end_dt or end_dt <= start_dt:
-        return {
-            "total_minutes": 0,
-            "required_downtime_minutes": 0,
-            "excluded_minutes": 0,
-        }
-
-    total_minutes = 0
+        return empty_result
 
     au_rows = frappe.db.sql(
         """
@@ -658,8 +662,10 @@ def get_required_downtime_minutes_for_breakdown(
         as_dict=True,
     )
 
+    raw_overlap_hours = 0.0
     required_downtime_hours = 0.0
     excluded_overlap_hours = 0.0
+    sunday_overlap_hours = 0.0
 
     for row in au_rows:
         try:
@@ -667,9 +673,6 @@ def get_required_downtime_minutes_for_breakdown(
                 flt(row.shift_required_hours),
                 0,
             )
-
-            if required_hours <= 0:
-                continue
 
             shift_start, shift_end = au.get_shift_timings(
                 row.shift_system,
@@ -689,6 +692,8 @@ def get_required_downtime_minutes_for_breakdown(
 
             if shift_overlap_hours <= 0:
                 continue
+
+            raw_overlap_hours += shift_overlap_hours
 
             shift_excluded_hours = 0.0
 
@@ -715,37 +720,40 @@ def get_required_downtime_minutes_for_breakdown(
                 0,
             )
 
+            excluded_overlap_hours += shift_excluded_hours
+
+            if (
+                getdate(row.shift_date).weekday() == 6
+                and required_hours <= 0
+            ):
+                sunday_overlap_hours += valid_overlap_hours
+                continue
+
+            if required_hours <= 0:
+                continue
+
             required_downtime_hours += min(
                 valid_overlap_hours,
                 required_hours,
             )
 
-            excluded_overlap_hours += shift_excluded_hours
-
         except Exception:
             continue
 
-    required_downtime_minutes = int(round(
-        required_downtime_hours * 60
-    ))
-
-    excluded_minutes = int(round(
-        excluded_overlap_hours * 60
-    ))
-
-    # Total Time only includes time relevant to A&U:
-    # mechanical downtime plus startup/fatigue overlap.
-    total_minutes = (
-        required_downtime_minutes
-        + excluded_minutes
-    )
-
     return {
-        "total_minutes": total_minutes,
-        "required_downtime_minutes": required_downtime_minutes,
-        "excluded_minutes": excluded_minutes,
+        "total_minutes": int(round(
+            raw_overlap_hours * 60
+        )),
+        "required_downtime_minutes": int(round(
+            required_downtime_hours * 60
+        )),
+        "excluded_minutes": int(round(
+            excluded_overlap_hours * 60
+        )),
+        "sunday_minutes": int(round(
+            sunday_overlap_hours * 60
+        )),
     }
-
 
 
 def get_plant_breakdown_reason_details(filters, asset_names):
@@ -811,6 +819,7 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 
 		total_minutes = 0
 		startup_fatigue_minutes = 0
+		sunday_minutes = 0
 		au_minutes = 0
 
 		display_start_datetime = start_datetime
@@ -845,6 +854,10 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 						"excluded_minutes"
 					]
 
+					sunday_minutes = required_downtime[
+						"sunday_minutes"
+					]
+
 					au_minutes = required_downtime[
 						"required_downtime_minutes"
 					]
@@ -855,6 +868,7 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 			"resolved_datetime": display_resolved_datetime,
 			"total_minutes": total_minutes,
 			"startup_fatigue_minutes": startup_fatigue_minutes,
+			"sunday_minutes": sunday_minutes,
 			"au_minutes": au_minutes,
 			"reason": row.get("breakdown_reason"),
 		})

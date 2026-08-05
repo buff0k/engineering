@@ -437,6 +437,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 
 	const total_raw_minutes = details.reduce((total, detail) => total + flt(detail.total_minutes || 0), 0);
 	const total_excluded_minutes = details.reduce((total, detail) => total + flt(detail.startup_fatigue_minutes || 0), 0);
+	const total_sunday_minutes = details.reduce((total, detail) => total + flt(detail.sunday_minutes || 0), 0);
 	const calculated_au_minutes = details.reduce((total, detail) => total + flt(detail.au_minutes || 0), 0);
 	const total_au_minutes = official_au_minutes !== null
 		? flt(official_au_minutes)
@@ -449,6 +450,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 				<th style="padding:8px 10px;text-align:left;width:150px;">Resolved</th>
 				<th style="padding:8px 10px;text-align:left;width:100px;">Total Time</th>
 				<th style="padding:8px 10px;text-align:left;width:150px;">Start-up + Fatigue</th>
+				<th style="padding:8px 10px;text-align:left;width:110px;">Sunday Hours</th>
 				<th style="padding:8px 10px;text-align:left;width:100px;">A&U Time</th>
 				<th style="padding:8px 10px;text-align:left;">Reason</th>
 			</tr>
@@ -470,6 +472,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 				: format_total_time(detail.start_datetime, detail.resolved_datetime)
 		);
 		const startup_fatigue_value = frappe.utils.escape_html(window.au_month_end_format_minutes(detail.startup_fatigue_minutes || 0));
+		const sunday_value = frappe.utils.escape_html(window.au_month_end_format_minutes(detail.sunday_minutes || 0));
 		const au_time_value = frappe.utils.escape_html(window.au_month_end_format_minutes(detail.au_minutes || 0));
 		const reason_value = frappe.utils.escape_html(detail.reason || "");
 
@@ -487,6 +490,9 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 					</td>
 					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;color:#b45309;">
 						${startup_fatigue_value}
+					</td>
+					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;color:#7c3aed;">
+						${sunday_value}
 					</td>
 					<td style="padding:8px 10px;border-bottom:1px solid ${colours.line};font-weight:700;white-space:nowrap;color:#166534;">
 						${au_time_value}
@@ -516,6 +522,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 				<td colspan="2" style="padding:9px 10px;text-align:right;">Totals</td>
 				<td style="padding:9px 10px;white-space:nowrap;">${window.au_month_end_format_minutes(total_raw_minutes)}</td>
 				<td style="padding:9px 10px;white-space:nowrap;color:#b45309;">${window.au_month_end_format_minutes(total_excluded_minutes)}</td>
+				<td style="padding:9px 10px;white-space:nowrap;color:#7c3aed;">${window.au_month_end_format_minutes(total_sunday_minutes)}</td>
 				<td style="padding:9px 10px;white-space:nowrap;color:#166534;">${window.au_month_end_format_minutes(total_au_minutes)}</td>
 				<td style="padding:9px 10px;"></td>
 			</tr>
@@ -561,7 +568,7 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 					${header}
 				</thead>
 				<tbody>
-					${rows || `<tr><td colspan="6" style="padding:10px;">No reasons found.</td></tr>`}
+					${rows || `<tr><td colspan="7" style="padding:10px;">No reasons found.</td></tr>`}
 					${rows ? total_row : ""}
 				</tbody>
 			</table>
