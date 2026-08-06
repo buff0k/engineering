@@ -63,7 +63,9 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             "pbm_elapsed_time",
             "pbm_startup_fatigue_time",
             "pbm_sunday_time",
-            "pbm_total_downtime"
+            "pbm_total_downtime",
+            "shift_available_hours",
+            "available_hours_above_100"
         ];
 
         const raw_value = data

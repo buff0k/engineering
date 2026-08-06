@@ -150,6 +150,34 @@ def get_columns():
             "precision": 3,
             "width": 165,
         },
+        {
+            "label": "Shift Available Hours",
+            "fieldname": "shift_available_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 175,
+        },
+        {
+            "label": "Available Hours Above 100",
+            "fieldname": "available_hours_above_100",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 205,
+        },
+        {
+            "label": "Availability %",
+            "fieldname": "availability_percentage",
+            "fieldtype": "Percent",
+            "precision": 2,
+            "width": 125,
+        },
+        {
+            "label": "Utilisation %",
+            "fieldname": "utilisation_percentage",
+            "fieldtype": "Percent",
+            "precision": 2,
+            "width": 125,
+        },
     ]
 
 
@@ -420,6 +448,7 @@ def get_data(filters):
             ),
         )
 
+        calculate_availability_values(row)
         round_engine_row(row)
 
     return build_tree_rows(
@@ -541,6 +570,76 @@ def distribute_daily_pbm(
             )
 
 
+def calculate_availability_values(row):
+    required_hours = max(
+        flt(
+            row.get("required_hours")
+        ),
+        0,
+    )
+
+    work_hours = max(
+        flt(
+            row.get("work_hours")
+        ),
+        0,
+    )
+
+    pbm_total_downtime = max(
+        flt(
+            row.get("pbm_total_downtime")
+        ),
+        0,
+    )
+
+    shift_available_hours = max(
+        required_hours
+        - pbm_total_downtime,
+        0,
+    )
+
+    available_hours_above_100 = max(
+        work_hours,
+        shift_available_hours,
+    )
+
+    availability_percentage = (
+        (
+            available_hours_above_100
+            / required_hours
+        )
+        * 100
+        if required_hours > 0
+        else 0
+    )
+
+    utilisation_percentage = (
+        (
+            work_hours
+            / available_hours_above_100
+        )
+        * 100
+        if available_hours_above_100 > 0
+        else 0
+    )
+
+    row["shift_available_hours"] = (
+        shift_available_hours
+    )
+
+    row["available_hours_above_100"] = (
+        available_hours_above_100
+    )
+
+    row["availability_percentage"] = (
+        availability_percentage
+    )
+
+    row["utilisation_percentage"] = (
+        utilisation_percentage
+    )
+
+
 def round_engine_row(row):
     for fieldname in (
         "actual_hours",
@@ -551,6 +650,10 @@ def round_engine_row(row):
         "pbm_startup_fatigue_time",
         "pbm_sunday_time",
         "pbm_total_downtime",
+        "shift_available_hours",
+        "available_hours_above_100",
+        "availability_percentage",
+        "utilisation_percentage",
     ):
         row[fieldname] = round(
             flt(
@@ -608,6 +711,14 @@ def build_summary_row(
             ),
             3,
         )
+
+    calculate_availability_values(
+        summary
+    )
+
+    round_engine_row(
+        summary
+    )
 
     return summary
 
