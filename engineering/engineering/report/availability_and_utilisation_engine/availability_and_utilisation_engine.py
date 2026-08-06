@@ -600,7 +600,7 @@ def calculate_availability_values(row):
     )
 
     available_hours_above_100 = max(
-        uncapped_available_hours,
+        work_hours,
         shift_available_hours,
     )
 
