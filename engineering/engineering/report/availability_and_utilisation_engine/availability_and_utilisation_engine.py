@@ -435,17 +435,13 @@ def get_data(filters):
             0,
         )
 
-        row["pbm_total_downtime"] = min(
+        row["pbm_total_downtime"] = max(
             flt(
                 row.get(
                     "pbm_total_downtime"
                 )
             ),
-            flt(
-                row.get(
-                    "required_hours"
-                )
-            ),
+            0,
         )
 
         calculate_availability_values(row)
@@ -592,14 +588,19 @@ def calculate_availability_values(row):
         0,
     )
 
-    shift_available_hours = max(
-        required_hours
+    uncapped_available_hours = max(
+        work_hours
         - pbm_total_downtime,
         0,
     )
 
+    shift_available_hours = min(
+        uncapped_available_hours,
+        required_hours,
+    )
+
     available_hours_above_100 = max(
-        work_hours,
+        uncapped_available_hours,
         shift_available_hours,
     )
 
