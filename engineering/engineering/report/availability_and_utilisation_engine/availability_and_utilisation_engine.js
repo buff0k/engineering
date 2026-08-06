@@ -84,6 +84,20 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         }
 
         if (
+            [
+                "availability_percentage",
+                "utilisation_percentage"
+            ].includes(column.fieldname)
+            && (
+                raw_value === null
+                || raw_value === undefined
+                || raw_value === ""
+            )
+        ) {
+            value = "N/A";
+        }
+
+        if (
             data
             && Number(
                 data.is_spare_swing_unit || 0

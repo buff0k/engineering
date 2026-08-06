@@ -611,7 +611,7 @@ def calculate_availability_values(row):
         )
         * 100
         if required_hours > 0
-        else 0
+        else None
     )
 
     utilisation_percentage = (
@@ -621,7 +621,7 @@ def calculate_availability_values(row):
         )
         * 100
         if shift_available_hours > 0
-        else 0
+        else None
     )
 
     row["shift_available_hours"] = (
@@ -642,6 +642,11 @@ def calculate_availability_values(row):
 
 
 def round_engine_row(row):
+    percentage_fields = {
+        "availability_percentage",
+        "utilisation_percentage",
+    }
+
     for fieldname in (
         "actual_hours",
         "planned_downtime",
@@ -656,6 +661,12 @@ def round_engine_row(row):
         "availability_percentage",
         "utilisation_percentage",
     ):
+        if (
+            fieldname in percentage_fields
+            and row.get(fieldname) is None
+        ):
+            continue
+
         row[fieldname] = round(
             flt(
                 row.get(fieldname)
@@ -683,6 +694,14 @@ def build_summary_row(
         rows
     )
 
+    utilisation_rows = [
+        row
+        for row in valid_rows
+        if flt(
+            row.get("shift_available_hours")
+        ) > 0
+    ]
+
     summary = {
         **identity_fields,
         "indent": indent,
@@ -702,19 +721,48 @@ def build_summary_row(
         "pbm_startup_fatigue_time",
         "pbm_sunday_time",
         "pbm_total_downtime",
+        "shift_available_hours",
+        "available_hours_above_100",
     ):
-        summary[fieldname] = round(
-            sum(
-                flt(
-                    row.get(fieldname)
-                )
-                for row in valid_rows
-            ),
-            3,
+        summary[fieldname] = sum(
+            flt(
+                row.get(fieldname)
+            )
+            for row in valid_rows
         )
 
-    calculate_availability_values(
-        summary
+    summary["availability_percentage"] = (
+        (
+            summary["available_hours_above_100"]
+            / summary["required_hours"]
+        )
+        * 100
+        if summary["required_hours"] > 0
+        else None
+    )
+
+    utilisation_work_hours = sum(
+        flt(
+            row.get("work_hours")
+        )
+        for row in utilisation_rows
+    )
+
+    utilisation_available_hours = sum(
+        flt(
+            row.get("shift_available_hours")
+        )
+        for row in utilisation_rows
+    )
+
+    summary["utilisation_percentage"] = (
+        (
+            utilisation_work_hours
+            / utilisation_available_hours
+        )
+        * 100
+        if utilisation_available_hours > 0
+        else None
     )
 
     round_engine_row(
