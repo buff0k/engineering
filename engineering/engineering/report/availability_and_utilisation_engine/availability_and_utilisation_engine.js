@@ -51,6 +51,17 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             label: __("Production Machines Only"),
             fieldtype: "Check",
             default: 0
+        },
+        {
+            fieldname: "au_percentage_basis",
+            label: __("A & U Percentage"),
+            fieldtype: "Select",
+            options: [
+                "85% A & U",
+                "100% A & U"
+            ].join("\n"),
+            default: "85% A & U",
+            reqd: 1
         }
     ],
 

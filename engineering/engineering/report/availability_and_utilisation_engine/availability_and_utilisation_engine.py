@@ -447,9 +447,46 @@ def get_data(filters):
         calculate_availability_values(row)
         round_engine_row(row)
 
-    return build_tree_rows(
+    data = build_tree_rows(
         shift_rows
     )
+
+    apply_au_percentage_basis(
+        data,
+        filters.get(
+            "au_percentage_basis"
+        ),
+    )
+
+    return data
+
+def apply_au_percentage_basis(
+    rows,
+    percentage_basis,
+):
+    multiplier = (
+        1.0
+        if percentage_basis == "100% A & U"
+        else 0.85
+    )
+
+    for row in rows:
+        for fieldname in (
+            "availability_percentage",
+            "utilisation_percentage",
+        ):
+            value = row.get(fieldname)
+
+            if value is None:
+                continue
+
+            row[fieldname] = round(
+                flt(value) * multiplier,
+                3,
+            )
+
+    return rows
+
 
 
 def get_shifts_for_row(
