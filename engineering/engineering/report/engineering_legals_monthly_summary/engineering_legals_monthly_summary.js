@@ -64,10 +64,47 @@ frappe.query_reports["Engineering Legals Monthly Summary"] = {
         }
 
         if (column.fieldname === "category") {
+            let missingItems = [];
+
+            try {
+                missingItems = JSON.parse(
+                    data.missing_items_json || "[]"
+                );
+            } catch (error) {
+                console.error(
+                    "Unable to read missing legal items:",
+                    error
+                );
+            }
+
+            const missingHtml = missingItems.length
+                ? `
+                    <div
+                        style="
+                            margin-top: 6px;
+                            font-size: 11px;
+                            line-height: 1.5;
+                            color: var(--red-600);
+                            white-space: normal;
+                        "
+                    >
+                        <strong>${__("Not done")}:</strong>
+                        ${missingItems.map((item) => `
+                            <div>
+                                • ${frappe.utils.escape_html(item)}
+                            </div>
+                        `).join("")}
+                    </div>
+                `
+                : "";
+
             return `
-                <span style="font-weight: 600;">
-                    ${value}
-                </span>
+                <div style="white-space: normal;">
+                    <span style="font-weight: 600;">
+                        ${value}
+                    </span>
+                    ${missingHtml}
+                </div>
             `;
         }
 
@@ -99,17 +136,11 @@ frappe.query_reports["Engineering Legals Monthly Summary"] = {
             column.fieldname === "ldv" ||
             column.fieldname === "drills"
         ) {
-            if (!data.view_enabled) {
-                return "";
-            }
-
             const count = Number(
                 data[column.fieldname] || 0
             );
 
-            return count > 0
-                ? `<strong>${count}</strong>`
-                : "";
+            return `<strong>${count}</strong>`;
         }
 
         if (column.fieldname === "view_rows") {
@@ -363,6 +394,140 @@ function build_machine_rows_html(
 // MACHINE PLANT LIST CLICK ACTION - END
 
 
+function simpleLegalStatus(done, completedLabel) {
+    if (!done) {
+        return `
+            <div
+                style="
+                    color: var(--red-600);
+                    font-size: 11px;
+                    font-weight: 600;
+                    white-space: normal;
+                "
+            >
+                ${__("Not done")}
+            </div>
+        `;
+    }
+
+    return `
+        <div
+            style="
+                color: var(--green-600);
+                font-size: 11px;
+                white-space: normal;
+                line-height: 1.35;
+            "
+        >
+            • ${frappe.utils.escape_html(completedLabel)}
+        </div>
+    `;
+}
+
+
+function applicableLegalStatus(
+    applicable,
+    done,
+    completedLabel
+) {
+    if (!applicable) {
+        return `
+            <div
+                style="
+                    color: var(--text-muted);
+                    font-size: 11px;
+                    font-weight: 600;
+                    white-space: normal;
+                "
+            >
+                ${__("N/A")}
+            </div>
+        `;
+    }
+
+    return simpleLegalStatus(done, completedLabel);
+}
+
+
+function completedLegalItems(items) {
+    const completedItems = items || [];
+
+    if (!completedItems.length) {
+        return `
+            <div
+                style="
+                    color: var(--red-600);
+                    font-size: 11px;
+                    font-weight: 600;
+                    white-space: normal;
+                "
+            >
+                ${__("Not done")}
+            </div>
+        `;
+    }
+
+    return completedItems
+        .map((item) => `
+            <div
+                style="
+                    color: var(--green-600);
+                    font-size: 11px;
+                    white-space: normal;
+                    line-height: 1.35;
+                    margin-top: 3px;
+                "
+            >
+                • ${frappe.utils.escape_html(item)}
+            </div>
+        `)
+        .join("");
+}
+
+
+function conditionMonitoringStatus(row) {
+    const doneItems =
+        row.condition_monitoring_done || [];
+
+    if (!doneItems.length) {
+        return `
+            <div
+                style="
+                    color: var(--red-600);
+                    font-size: 11px;
+                    font-weight: 600;
+                    white-space: normal;
+                "
+            >
+                ${__("Not done")}
+            </div>
+        `;
+    }
+
+    const doneHtml = doneItems
+        .map((item) => `
+            <div
+                style="
+                    margin-top: 3px;
+                    color: var(--green-600);
+                    font-size: 11px;
+                    white-space: normal;
+                    line-height: 1.35;
+                "
+            >
+                • ${frappe.utils.escape_html(item)}
+            </div>
+        `)
+        .join("");
+
+    return `
+        <div style="min-width: 190px;">
+            ${doneHtml}
+        </div>
+    `;
+}
+
+
 // MACHINE PLANT POPUP DIRECT ACTION - START
 window.openEngineeringMachineRows = function (
     machineType,
@@ -428,26 +593,64 @@ window.openEngineeringMachineRows = function (
                         </td>
 
                         <td>
-                            ${statusBadge(row.fire_suppression)}
+                            ${simpleLegalStatus(
+                                row.fire_suppression,
+                                __("Fire Suppression")
+                            )}
                         </td>
 
                         <td>
-                            ${statusBadge(row.condition_monitoring)}
+                            ${conditionMonitoringStatus(row)}
                         </td>
 
                         <td>
-                            ${statusBadge(row.brake_tested)}
+                            ${simpleLegalStatus(
+                                row.brake_tested,
+                                __("Brake Tested")
+                            )}
                         </td>
 
                         <td>
-                            ${statusBadge(row.frcs)}
+                            ${simpleLegalStatus(
+                                row.frcs,
+                                __("FRCS")
+                            )}
+                        </td>
+
+                        <td>
+                            ${applicableLegalStatus(
+                                row.load_testing_applicable,
+                                row.load_testing,
+                                __("Load Testing")
+                            )}
+                        </td>
+
+                        <td>
+                            ${completedLegalItems(
+                                row.maintenance_done
+                            )}
+                        </td>
+
+                        <td>
+                            ${simpleLegalStatus(
+                                row.pds_mpi,
+                                __("PDS-MPI Maintenance")
+                            )}
+                        </td>
+
+                        <td>
+                            ${applicableLegalStatus(
+                                row.pressure_vessels_applicable,
+                                row.pressure_vessels,
+                                __("Pressure Vessels")
+                            )}
                         </td>
                     </tr>
                 `).join("")
                 : `
                     <tr>
                         <td
-                            colspan="5"
+                            colspan="9"
                             style="
                                 text-align:center;
                                 padding:28px;
@@ -479,6 +682,10 @@ window.openEngineeringMachineRows = function (
                                     <th>${__("Condition Monitoring")}</th>
                                     <th>${__("Brake Tested")}</th>
                                     <th>${__("FRCS")}</th>
+                                    <th>${__("Load Testing")}</th>
+                                    <th>${__("Maintenance Schedules")}</th>
+                                    <th>${__("PDS-MPI Maintenance")}</th>
+                                    <th>${__("Pressure Vessels")}</th>
                                 </tr>
                             </thead>
 
@@ -489,7 +696,7 @@ window.openEngineeringMachineRows = function (
                             <tfoot>
                                 <tr>
                                     <th
-                                        colspan="4"
+                                        colspan="8"
                                         class="text-right"
                                     >
                                         ${__("Total Machines")}
@@ -744,6 +951,9 @@ function build_grouped_total_fleet_html(rows, site) {
         "Grader",
         "TLB",
         "Lighting Plant",
+        "Service Truck",
+        "Diesel Bowser",
+        "Loader",
         "Drills",
         "LDV",
     ];
@@ -769,6 +979,22 @@ function build_grouped_total_fleet_html(rows, site) {
         "LIGHTING PLANTS": "Lighting Plant",
         "LIGHT TOWER": "Lighting Plant",
         "LIGHT TOWERS": "Lighting Plant",
+
+        "SERVICE TRUCK": "Service Truck",
+        "SERVICE TRUCKS": "Service Truck",
+
+        "DIESEL BOWSER": "Diesel Bowser",
+        "DIESEL BOWSERS": "Diesel Bowser",
+        "DIESELBOWSER": "Diesel Bowser",
+        "DIESELBOWSERS": "Diesel Bowser",
+
+        "LOADER": "Loader",
+        "LOADERS": "Loader",
+        "FRONT END LOADER": "Loader",
+        "FRONT END LOADERS": "Loader",
+        "FRONT-END LOADER": "Loader",
+        "FRONT-END LOADERS": "Loader",
+
         "DRILL": "Drills",
         "DRILLS": "Drills",
         "LDV": "LDV",
@@ -996,6 +1222,9 @@ function open_total_fleet_legal_status(site) {
                 "Grader",
                 "TLB",
                 "Lighting Plant",
+                "Service Truck",
+                "Diesel Bowser",
+                "Loader",
                 "Drills",
                 "LDV",
             ];
@@ -1056,25 +1285,57 @@ function open_total_fleet_legal_status(site) {
                                 </td>
 
                                 <td>
-                                    ${statusBadge(
-                                        row.fire_suppression
+                                    ${simpleLegalStatus(
+                                        row.fire_suppression,
+                                        __("Fire Suppression")
                                     )}
                                 </td>
 
                                 <td>
-                                    ${statusBadge(
-                                        row.condition_monitoring
+                                    ${conditionMonitoringStatus(row)}
+                                </td>
+
+                                <td>
+                                    ${simpleLegalStatus(
+                                        row.brake_tested,
+                                        __("Brake Tested")
                                     )}
                                 </td>
 
                                 <td>
-                                    ${statusBadge(
-                                        row.brake_tested
+                                    ${simpleLegalStatus(
+                                        row.frcs,
+                                        __("FRCS")
                                     )}
                                 </td>
 
                                 <td>
-                                    ${statusBadge(row.frcs)}
+                                    ${applicableLegalStatus(
+                                        row.load_testing_applicable,
+                                        row.load_testing,
+                                        __("Load Testing")
+                                    )}
+                                </td>
+
+                                <td>
+                                    ${completedLegalItems(
+                                        row.maintenance_done
+                                    )}
+                                </td>
+
+                                <td>
+                                    ${simpleLegalStatus(
+                                        row.pds_mpi,
+                                        __("PDS-MPI Maintenance")
+                                    )}
+                                </td>
+
+                                <td>
+                                    ${applicableLegalStatus(
+                                        row.pressure_vessels_applicable,
+                                        row.pressure_vessels,
+                                        __("Pressure Vessels")
+                                    )}
                                 </td>
                             </tr>
                         `)
@@ -1112,6 +1373,18 @@ function open_total_fleet_legal_status(site) {
                                             </th>
                                             <th>
                                                 ${__("FRCS")}
+                                            </th>
+                                            <th>
+                                                ${__("Load Testing")}
+                                            </th>
+                                            <th>
+                                                ${__("Maintenance Schedules")}
+                                            </th>
+                                            <th>
+                                                ${__("PDS-MPI Maintenance")}
+                                            </th>
+                                            <th>
+                                                ${__("Pressure Vessels")}
                                             </th>
                                         </tr>
                                     </thead>

@@ -200,14 +200,31 @@ def execute(filters=None):
             for record in matching_records
         ]
 
-        total += completed
+        missing_items = []
 
-        view_enabled_categories = {
-            "01. Automatic Fire Suppression",
-            "02. Condition Monitoring",
-            "03. Dynamic Brake Testing",
-            "06. FRCS Compliance",
-        }
+        if config["category"] == "02. Condition Monitoring":
+            active_sections = {
+                (record.sections or "").strip()
+                for record in matching_records
+            }
+
+            if "Illumination Baseline" not in active_sections:
+                missing_items.append("Illumination Baseline")
+
+            if (
+                "Noise Level Baseline & Measurement"
+                not in active_sections
+            ):
+                missing_items.append(
+                    "Noise Level Baseline & Measurement"
+                )
+
+            if not (
+                {"NDT", "Machine NDT"} & active_sections
+            ):
+                missing_items.append("NDT / Machine NDT")
+
+        total += completed
 
         data.append({
             "category": config["category"],
@@ -220,9 +237,11 @@ def execute(filters=None):
             "mode": config["mode"],
             "sections_json": frappe.as_json(config["sections"]),
             "record_names_json": frappe.as_json(record_names),
-            "view_enabled": (
-                config["category"] in view_enabled_categories
-            ),
+            "missing_items_json": frappe.as_json(missing_items),
+
+            # Every legal category must provide access to its
+            # contributing Engineering Legals records.
+            "view_enabled": 1,
         })
 
     data.append({
@@ -304,6 +323,9 @@ def build_machine_plant_list_html(plant_counts, site_label):
         "Grader",
         "TLB",
         "Lighting Plant",
+        "Service Truck",
+        "Diesel Bowser",
+        "Loader",
         "Drills",
         "LDV",
     ]
@@ -452,6 +474,24 @@ def get_submitted_plant_counts(site=None):
             "LIGHTING PLANTS",
             "LIGHT TOWER",
             "LIGHT TOWERS",
+        },
+        "Service Truck": {
+            "SERVICE TRUCK",
+            "SERVICE TRUCKS",
+        },
+        "Diesel Bowser": {
+            "DIESEL BOWSER",
+            "DIESEL BOWSERS",
+            "DIESELBOWSER",
+            "DIESELBOWSERS",
+        },
+        "Loader": {
+            "LOADER",
+            "LOADERS",
+            "FRONT END LOADER",
+            "FRONT END LOADERS",
+            "FRONT-END LOADER",
+            "FRONT-END LOADERS",
         },
         "Drills": {
             "DRILL",
@@ -692,6 +732,24 @@ def get_submitted_machine_rows(machine_type, site=None):
             "Light Tower",
             "Light Towers",
         ],
+        "Service Truck": [
+            "Service Truck",
+            "Service Trucks",
+        ],
+        "Diesel Bowser": [
+            "Diesel Bowser",
+            "Diesel Bowsers",
+            "Dieselbowser",
+            "Dieselbowsers",
+        ],
+        "Loader": [
+            "Loader",
+            "Loaders",
+            "Front End Loader",
+            "Front End Loaders",
+            "Front-End Loader",
+            "Front-End Loaders",
+        ],
         "Drills": [
             "Drill",
             "Drills",
@@ -795,6 +853,24 @@ def get_machine_legal_status_rows(
             "Light Tower",
             "Light Towers",
         ],
+        "Service Truck": [
+            "Service Truck",
+            "Service Trucks",
+        ],
+        "Diesel Bowser": [
+            "Diesel Bowser",
+            "Diesel Bowsers",
+            "Dieselbowser",
+            "Dieselbowsers",
+        ],
+        "Loader": [
+            "Loader",
+            "Loaders",
+            "Front End Loader",
+            "Front End Loaders",
+            "Front-End Loader",
+            "Front-End Loaders",
+        ],
         "Drills": ["Drill", "Drills"],
         "LDV": ["LDV", "LDVs"],
     }
@@ -834,15 +910,9 @@ def get_machine_legal_status_rows(
 
     fleet_numbers = [row.name for row in assets]
 
-    legal_groups = {
+    active_legal_groups = {
         "fire_suppression": {
             "Fire Suppression",
-        },
-        "condition_monitoring": {
-            "Illumination Baseline",
-            "Noise Level Baseline & Measurement",
-            "NDT",
-            "Machine NDT",
         },
         "brake_tested": {
             "Brake Test",
@@ -852,14 +922,48 @@ def get_machine_legal_status_rows(
         "frcs": {
             "FRCS",
         },
+        "load_testing": {
+            "Lifting Equipment",
+            "Load Test Certificate",
+        },
+        "pressure_vessels": {
+            "Pressure Vessels",
+            "Pressure Vessel",
+        },
+    }
+
+    condition_monitoring_sections = {
+        "Illumination Baseline",
+        "Noise Level Baseline & Measurement",
+        "NDT",
+        "Machine NDT",
+    }
+
+    maintenance_sections = {
+        "Machine Service Records",
+        "Service Schedule",
+        "Wearcheck",
+        "Brake Wear Measurements",
+        "Tyre Inspection Report",
+        "C-Track Inspection",
+        "Maintenance Inspections",
+    }
+
+    pds_mpi_sections = {
+        "PDS",
+        "PDS Installation",
     }
 
     legal_by_fleet = {
         fleet_number: {
             "fire_suppression": False,
-            "condition_monitoring": False,
+            "condition_monitoring_sections": set(),
             "brake_tested": False,
             "frcs": False,
+            "load_testing": False,
+            "maintenance_sections": set(),
+            "pds_mpi": False,
+            "pressure_vessels": False,
         }
         for fleet_number in fleet_numbers
     }
@@ -869,14 +973,13 @@ def get_machine_legal_status_rows(
             "Engineering Legals",
             filters={
                 "fleet_number": ["in", fleet_numbers],
-                "start_date": ["<=", month_end],
-                "expiry_date": [">=", month_start],
             },
             fields=[
                 "fleet_number",
                 "sections",
                 "start_date",
                 "expiry_date",
+                "creation",
             ],
         )
 
@@ -887,9 +990,53 @@ def get_machine_legal_status_rows(
             if fleet_number not in legal_by_fleet:
                 continue
 
-            for status_key, sections in legal_groups.items():
-                if section in sections:
-                    legal_by_fleet[fleet_number][status_key] = True
+            is_active = False
+
+            if legal.start_date and legal.expiry_date:
+                start_date = getdate(legal.start_date)
+                expiry_date = getdate(legal.expiry_date)
+
+                is_active = (
+                    start_date <= month_end
+                    and expiry_date >= month_start
+                )
+
+            relevant_date = legal.start_date or legal.creation
+            is_saved_in_selected_month = False
+
+            if relevant_date:
+                relevant_date = getdate(relevant_date)
+
+                is_saved_in_selected_month = (
+                    month_start
+                    <= relevant_date
+                    <= month_end
+                )
+
+            if is_active:
+                if section in condition_monitoring_sections:
+                    legal_by_fleet[fleet_number][
+                        "condition_monitoring_sections"
+                    ].add(section)
+
+                for status_key, sections in (
+                    active_legal_groups.items()
+                ):
+                    if section in sections:
+                        legal_by_fleet[fleet_number][
+                            status_key
+                        ] = True
+
+            if is_saved_in_selected_month:
+                if section in maintenance_sections:
+                    legal_by_fleet[fleet_number][
+                        "maintenance_sections"
+                    ].add(section)
+
+                if section in pds_mpi_sections:
+                    legal_by_fleet[fleet_number][
+                        "pds_mpi"
+                    ] = True
 
     result_rows = []
 
@@ -921,10 +1068,110 @@ def get_machine_legal_status_rows(
             "LIGHTING PLANTS": "Lighting Plant",
             "LIGHT TOWER": "Lighting Plant",
             "LIGHT TOWERS": "Lighting Plant",
+            "SERVICE TRUCK": "Service Truck",
+            "SERVICE TRUCKS": "Service Truck",
+            "DIESEL BOWSER": "Diesel Bowser",
+            "DIESEL BOWSERS": "Diesel Bowser",
+            "DIESELBOWSER": "Diesel Bowser",
+            "DIESELBOWSERS": "Diesel Bowser",
+            "LOADER": "Loader",
+            "LOADERS": "Loader",
+            "FRONT END LOADER": "Loader",
+            "FRONT END LOADERS": "Loader",
+            "FRONT-END LOADER": "Loader",
+            "FRONT-END LOADERS": "Loader",
             "DRILL": "Drills",
             "DRILLS": "Drills",
             "LDV": "LDV",
             "LDVS": "LDV",
+        }
+
+        active_condition_sections = set(
+            statuses.get(
+                "condition_monitoring_sections",
+                set(),
+            )
+        )
+
+        condition_monitoring_done = []
+        condition_monitoring_missing = []
+
+        if "Illumination Baseline" in active_condition_sections:
+            condition_monitoring_done.append(
+                "Illumination Baseline"
+            )
+        else:
+            condition_monitoring_missing.append(
+                "Illumination Baseline"
+            )
+
+        if (
+            "Noise Level Baseline & Measurement"
+            in active_condition_sections
+        ):
+            condition_monitoring_done.append(
+                "Noise Level Baseline & Measurement"
+            )
+        else:
+            condition_monitoring_missing.append(
+                "Noise Level Baseline & Measurement"
+            )
+
+        if (
+            {"NDT", "Machine NDT"}
+            & active_condition_sections
+        ):
+            condition_monitoring_done.append(
+                "NDT / Machine NDT"
+            )
+        else:
+            condition_monitoring_missing.append(
+                "NDT / Machine NDT"
+            )
+
+        active_maintenance_sections = set(
+            statuses.get(
+                "maintenance_sections",
+                set(),
+            )
+        )
+
+        maintenance_done = []
+
+        if (
+            {
+                "Machine Service Records",
+                "Service Schedule",
+                "Wearcheck",
+                "Brake Wear Measurements",
+                "Maintenance Inspections",
+            }
+            & active_maintenance_sections
+        ):
+            maintenance_done.append(
+                "Maintenance / Service"
+            )
+
+        if (
+            "Tyre Inspection Report"
+            in active_maintenance_sections
+        ):
+            maintenance_done.append("Tyre Surveys")
+
+        if (
+            "C-Track Inspection"
+            in active_maintenance_sections
+        ):
+            maintenance_done.append("Track Surveys")
+
+        is_service_truck = raw_category in {
+            "SERVICE TRUCK",
+            "SERVICE TRUCKS",
+        }
+
+        is_drill = raw_category in {
+            "DRILL",
+            "DRILLS",
         }
 
         result_rows.append({
@@ -942,13 +1189,37 @@ def get_machine_legal_status_rows(
             "fire_suppression": bool(
                 statuses.get("fire_suppression")
             ),
-            "condition_monitoring": bool(
-                statuses.get("condition_monitoring")
+            "condition_monitoring": (
+                not condition_monitoring_missing
+            ),
+            "condition_monitoring_done": (
+                condition_monitoring_done
+            ),
+            "condition_monitoring_missing": (
+                condition_monitoring_missing
             ),
             "brake_tested": bool(
                 statuses.get("brake_tested")
             ),
             "frcs": bool(statuses.get("frcs")),
+
+            "load_testing_applicable": is_service_truck,
+            "load_testing": bool(
+                statuses.get("load_testing")
+            ),
+
+            "maintenance_done": maintenance_done,
+
+            "pds_mpi": bool(
+                statuses.get("pds_mpi")
+            ),
+
+            "pressure_vessels_applicable": (
+                is_drill or is_service_truck
+            ),
+            "pressure_vessels": bool(
+                statuses.get("pressure_vessels")
+            ),
         })
 
     return {
