@@ -169,6 +169,16 @@ function apply_engine_spare_highlight(value, reason) {
         <span
             class="availability-engine-spare-cell"
             title="${safe_reason}"
+            style="
+                display:block;
+                min-height:100%;
+                margin:-8px -10px;
+                padding:8px 10px;
+                background:#e6d6ff !important;
+                color:#4b0082 !important;
+                font-weight:600 !important;
+                border-left:3px solid #7b2cbf !important;
+            "
         >
             ${value || ""}
         </span>
