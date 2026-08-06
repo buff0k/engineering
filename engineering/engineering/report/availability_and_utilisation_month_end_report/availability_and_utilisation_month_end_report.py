@@ -760,46 +760,89 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 	if not asset_names:
 		return {}
 
-	if not frappe.db.exists("DocType", "Plant Breakdown or Maintenance"):
+	if not frappe.db.exists(
+		"DocType",
+		"Plant Breakdown or Maintenance",
+	):
 		return {}
 
 	filters = frappe._dict(filters or {})
 
-	from_date = _month_end_get_filter_value(filters, "from_date", "start_date")
-	to_date = _month_end_get_filter_value(filters, "to_date", "end_date")
-	location = _month_end_get_filter_value(filters, "location", "site", "production_site")
+	from_date = _month_end_get_filter_value(
+		filters,
+		"from_date",
+		"start_date",
+	)
+
+	to_date = _month_end_get_filter_value(
+		filters,
+		"to_date",
+		"end_date",
+	)
+
+	location = _month_end_get_filter_value(
+		filters,
+		"location",
+		"site",
+		"production_site",
+	)
 
 	if not from_date or not to_date:
 		return {}
 
-	report_start_date = getdate(from_date)
-	report_end_date = getdate(to_date) + timedelta(days=1)
+	report_start = get_datetime(
+		f"{getdate(from_date)} 06:00:00"
+	)
+
+	report_end_date = getdate(to_date) + timedelta(
+		days=1
+	)
+
+	report_end = get_datetime(
+		f"{report_end_date} 06:00:00"
+	)
 
 	values = {
-		"from_datetime": f"{report_start_date} 06:00:00",
-		"to_datetime": f"{report_end_date} 06:00:00",
+		"from_datetime": report_start,
+		"to_datetime": report_end,
 		"asset_names": tuple(asset_names),
-		"plant_breakdown_trust_datetime": "2026-01-01 00:00:00",
+		"plant_breakdown_trust_datetime": (
+			"2026-01-01 00:00:00"
+		),
 	}
 
 	conditions = [
 		"IFNULL(asset_name, '') != ''",
 		"IFNULL(breakdown_reason, '') != ''",
 		"IFNULL(exclude_from_au, 0) = 0",
-		"asset_name in %(asset_names)s",
-		"breakdown_start_datetime >= %(plant_breakdown_trust_datetime)s",
-		"breakdown_start_datetime <= %(to_datetime)s",
-		"(resolved_datetime >= %(from_datetime)s OR resolved_datetime IS NULL)",
+		"asset_name IN %(asset_names)s",
+		(
+			"breakdown_start_datetime >= "
+			"%(plant_breakdown_trust_datetime)s"
+		),
+		(
+			"breakdown_start_datetime <= "
+			"%(to_datetime)s"
+		),
+		(
+			"(resolved_datetime >= "
+			"%(from_datetime)s "
+			"OR resolved_datetime IS NULL)"
+		),
 	]
 
 	if location:
-		conditions.append("location = %(location)s")
+		conditions.append(
+			"location = %(location)s"
+		)
+
 		values["location"] = location
 
 	rows = frappe.db.sql(
 		f"""
 		SELECT
 			asset_name,
+			location,
 			breakdown_start_datetime,
 			resolved_datetime,
 			breakdown_reason
@@ -812,66 +855,159 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 	)
 
 	details_by_asset = {}
+	seen_intervals = set()
 
 	for row in rows:
-		start_datetime = row.get("breakdown_start_datetime")
-		resolved_datetime = row.get("resolved_datetime")
+		start_datetime = row.get(
+			"breakdown_start_datetime"
+		)
 
-		total_minutes = 0
-		startup_fatigue_minutes = 0
-		sunday_minutes = 0
-		au_minutes = 0
+		resolved_datetime = row.get(
+			"resolved_datetime"
+		)
 
-		display_start_datetime = start_datetime
-		display_resolved_datetime = resolved_datetime
+		if not start_datetime:
+			continue
 
-		if start_datetime:
-			start_dt = get_datetime(start_datetime)
-			end_dt = get_datetime(resolved_datetime) if resolved_datetime else get_datetime(values["to_datetime"])
-			filter_start_dt = get_datetime(values["from_datetime"])
-			filter_end_dt = get_datetime(values["to_datetime"])
+		start_dt = get_datetime(
+			start_datetime
+		)
 
-			if start_dt and end_dt and end_dt > start_dt:
-				clipped_start_dt = max(start_dt, filter_start_dt)
-				clipped_end_dt = min(end_dt, filter_end_dt)
+		end_dt = (
+			get_datetime(
+				resolved_datetime
+			)
+			if resolved_datetime
+			else report_end
+		)
 
-				if clipped_end_dt > clipped_start_dt:
-					display_start_datetime = clipped_start_dt
-					display_resolved_datetime = clipped_end_dt
+		clipped_start = max(
+			start_dt,
+			report_start,
+		)
 
-					required_downtime = get_required_downtime_minutes_for_breakdown(
-						filters,
-						row.get("asset_name"),
-						clipped_start_dt,
-						clipped_end_dt,
+		clipped_end = min(
+			end_dt,
+			report_end,
+		)
+
+		if clipped_end <= clipped_start:
+			continue
+
+		interval_key = (
+			row.get("asset_name"),
+			row.get("location"),
+			str(clipped_start),
+			str(clipped_end),
+			row.get("breakdown_reason"),
+		)
+
+		if interval_key in seen_intervals:
+			continue
+
+		seen_intervals.add(
+			interval_key
+		)
+
+		row_filters = frappe._dict(
+			filters.copy()
+		)
+
+		row_filters["location"] = (
+			row.get("location")
+		)
+
+		current_date = getdate(
+			clipped_start
+		)
+
+		current_day_start = get_datetime(
+			f"{current_date} 06:00:00"
+		)
+
+		if clipped_start < current_day_start:
+			current_date = (
+				current_date
+				- timedelta(days=1)
+			)
+
+		while True:
+			day_start = get_datetime(
+				f"{current_date} 06:00:00"
+			)
+
+			day_end = (
+				day_start
+				+ timedelta(days=1)
+			)
+
+			if day_start >= clipped_end:
+				break
+
+			segment_start = max(
+				clipped_start,
+				day_start,
+			)
+
+			segment_end = min(
+				clipped_end,
+				day_end,
+			)
+
+			if segment_end > segment_start:
+				required_downtime = (
+					get_required_downtime_minutes_for_breakdown(
+						row_filters,
+						row.get(
+							"asset_name"
+						),
+						segment_start,
+						segment_end,
 					)
+				)
 
-					total_minutes = required_downtime[
-						"total_minutes"
-					]
+				details_by_asset.setdefault(
+					row.get("asset_name"),
+					[],
+				).append({
+					"date": str(
+						current_date
+					),
+					"start_datetime": (
+						segment_start
+					),
+					"resolved_datetime": (
+						segment_end
+					),
+					"total_minutes": (
+						required_downtime[
+							"total_minutes"
+						]
+					),
+					"startup_fatigue_minutes": (
+						required_downtime[
+							"excluded_minutes"
+						]
+					),
+					"sunday_minutes": (
+						required_downtime[
+							"sunday_minutes"
+						]
+					),
+					"au_minutes": (
+						required_downtime[
+							"required_downtime_minutes"
+						]
+					),
+					"reason": row.get(
+						"breakdown_reason"
+					),
+				})
 
-					startup_fatigue_minutes = required_downtime[
-						"excluded_minutes"
-					]
-
-					sunday_minutes = required_downtime[
-						"sunday_minutes"
-					]
-
-					au_minutes = required_downtime[
-						"required_downtime_minutes"
-					]
-
-		details_by_asset.setdefault(row.get("asset_name"), []).append({
-			"date": str(display_start_datetime or "")[:10],
-			"start_datetime": display_start_datetime,
-			"resolved_datetime": display_resolved_datetime,
-			"total_minutes": total_minutes,
-			"startup_fatigue_minutes": startup_fatigue_minutes,
-			"sunday_minutes": sunday_minutes,
-			"au_minutes": au_minutes,
-			"reason": row.get("breakdown_reason"),
-		})
+			current_date = (
+				current_date
+				+ timedelta(days=1)
+			)
 
 	return details_by_asset
 
