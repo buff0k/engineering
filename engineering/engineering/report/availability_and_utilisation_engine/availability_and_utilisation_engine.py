@@ -1,0 +1,1204 @@
+import json
+from collections import defaultdict
+from datetime import timedelta
+
+import frappe
+from frappe.utils import (
+    add_days,
+    flt,
+    get_datetime,
+    getdate,
+)
+
+
+EXCLUDED_ASSET_CATEGORIES = {
+    "Grader",
+    "Service Truck",
+    "TLB",
+    "Water Bowser",
+    "Diesel Bowsers",
+    "Drills",
+    "Loader",
+}
+
+
+def execute(filters=None):
+    filters = frappe._dict(filters or {})
+
+    validate_filters(filters)
+
+    return (
+        get_columns(),
+        get_data(filters),
+    )
+
+
+def validate_filters(filters):
+    if not filters.get("from_date"):
+        frappe.throw("From Date is required.")
+
+    if not filters.get("to_date"):
+        frappe.throw("To Date is required.")
+
+    if getdate(filters.from_date) > getdate(filters.to_date):
+        frappe.throw(
+            "From Date cannot be after To Date."
+        )
+
+
+def get_columns():
+    return [
+        {
+            "label": "Asset Category",
+            "fieldname": "asset_category",
+            "fieldtype": "Data",
+            "width": 130,
+        },
+        {
+            "label": "Shift Date",
+            "fieldname": "shift_date",
+            "fieldtype": "Date",
+            "width": 100,
+        },
+        {
+            "label": "Asset Name",
+            "fieldname": "asset_name",
+            "fieldtype": "Data",
+            "width": 115,
+        },
+        {
+            "label": "Location",
+            "fieldname": "location",
+            "fieldtype": "Link",
+            "options": "Location",
+            "width": 120,
+        },
+        {
+            "label": "Company",
+            "fieldname": "company",
+            "fieldtype": "Link",
+            "options": "Company",
+            "width": 150,
+        },
+        {
+            "label": "Actual Hours",
+            "fieldname": "actual_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 110,
+        },
+        {
+            "label": "Planned Downtime",
+            "fieldname": "planned_downtime",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 135,
+        },
+        {
+            "label": "Req Hrs",
+            "fieldname": "required_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 90,
+        },
+        {
+            "label": "Work Hrs",
+            "fieldname": "work_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 90,
+        },
+        {
+            "label": "PBM Elapsed Time",
+            "fieldname": "pbm_elapsed_time",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 145,
+        },
+        {
+            "label": "PBM Start-up + Fatigue",
+            "fieldname": "pbm_startup_fatigue_time",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 190,
+        },
+        {
+            "label": "PBM Sunday Time",
+            "fieldname": "pbm_sunday_time",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 150,
+        },
+        {
+            "label": "PBM Total Downtime",
+            "fieldname": "pbm_total_downtime",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 165,
+        },
+    ]
+
+
+def get_data(filters):
+    locations = parse_multiselect(
+        filters.get("locations")
+    )
+
+    selected_assets = parse_multiselect(
+        filters.get("assets")
+    )
+
+    companies = parse_multiselect(
+        filters.get("companies")
+    )
+
+    free_hours = max(
+        flt(filters.get("free_hours")),
+        0,
+    )
+
+    planning_rows = get_planning_rows(
+        filters.from_date,
+        filters.to_date,
+        locations,
+    )
+
+    if not planning_rows:
+        return []
+
+    planning_map = build_planning_map(
+        planning_rows
+    )
+
+    assets = get_assets(
+        planning_rows,
+        selected_assets,
+        companies,
+    )
+
+    if not assets:
+        return []
+
+    if filters.get("production_machines_only"):
+        spare_assets = get_spare_swing_assets(
+            filters.from_date,
+            filters.to_date,
+            locations,
+        )
+
+        assets = [
+            asset
+            for asset in assets
+            if asset.name not in spare_assets
+            and asset.asset_name not in spare_assets
+        ]
+
+    if not assets:
+        return []
+
+    preuse_map = get_preuse_map(
+        filters.from_date,
+        filters.to_date,
+        locations,
+    )
+
+    pbm_map = get_pbm_map(
+        filters.from_date,
+        filters.to_date,
+        assets,
+        locations,
+    )
+
+    assets_by_location = defaultdict(list)
+
+    for asset in assets:
+        assets_by_location[
+            asset.location
+        ].append(asset)
+
+    data = []
+
+    current_date = getdate(
+        filters.from_date
+    )
+
+    end_date = getdate(
+        filters.to_date
+    )
+
+    while current_date <= end_date:
+        date_text = str(current_date)
+
+        for location, location_assets in assets_by_location.items():
+            planning = planning_map.get(
+                (
+                    location,
+                    date_text,
+                )
+            )
+
+            if not planning:
+                continue
+
+            shifts = get_shifts(
+                planning.get("shift_system")
+            )
+
+            actual_hours = get_actual_hours(
+                location,
+                current_date,
+            )
+
+            planned_downtime = get_planned_downtime(
+                location,
+                current_date,
+            )
+
+            for asset in location_assets:
+                required_hours = 0.0
+                work_hours = 0.0
+
+                for shift in shifts:
+                    shift_required_hours = get_required_hours(
+                        planning,
+                        shift,
+                    )
+
+                    preuse = preuse_map.get(
+                        (
+                            location,
+                            date_text,
+                            shift,
+                            asset.asset_name,
+                        )
+                    )
+
+                    if preuse:
+                        status = str(
+                            preuse.get(
+                                "pre_use_avail_status"
+                            )
+                            or ""
+                        )
+
+                        if status in ("3", "6"):
+                            shift_required_hours = 0.0
+
+                        start_hours = preuse.get(
+                            "eng_hrs_start"
+                        )
+
+                        end_hours = preuse.get(
+                            "eng_hrs_end"
+                        )
+
+                        if (
+                            start_hours is not None
+                            and end_hours is not None
+                        ):
+                            work_hours += max(
+                                flt(end_hours)
+                                - flt(start_hours),
+                                0,
+                            )
+
+                    required_hours += max(
+                        flt(shift_required_hours),
+                        0,
+                    )
+
+                required_hours = max(
+                    required_hours - free_hours,
+                    0,
+                )
+
+                pbm = pbm_map.get(
+                    (
+                        asset.asset_name,
+                        date_text,
+                        location,
+                    ),
+                    {},
+                )
+
+                pbm_total_downtime = min(
+                    flt(
+                        pbm.get(
+                            "pbm_total_downtime"
+                        )
+                    ),
+                    required_hours,
+                )
+
+                data.append({
+                    "asset_category": (
+                        asset.asset_category
+                    ),
+                    "shift_date": current_date,
+                    "asset_name": asset.asset_name,
+                    "location": location,
+                    "company": asset.company,
+                    "actual_hours": round(
+                        actual_hours,
+                        3,
+                    ),
+                    "planned_downtime": round(
+                        planned_downtime,
+                        3,
+                    ),
+                    "required_hours": round(
+                        required_hours,
+                        3,
+                    ),
+                    "work_hours": round(
+                        work_hours,
+                        3,
+                    ),
+                    "pbm_elapsed_time": round(
+                        flt(
+                            pbm.get(
+                                "pbm_elapsed_time"
+                            )
+                        ),
+                        3,
+                    ),
+                    "pbm_startup_fatigue_time": round(
+                        flt(
+                            pbm.get(
+                                "pbm_startup_fatigue_time"
+                            )
+                        ),
+                        3,
+                    ),
+                    "pbm_sunday_time": round(
+                        flt(
+                            pbm.get(
+                                "pbm_sunday_time"
+                            )
+                        ),
+                        3,
+                    ),
+                    "pbm_total_downtime": round(
+                        pbm_total_downtime,
+                        3,
+                    ),
+                })
+
+        current_date = add_days(
+            current_date,
+            1,
+        )
+
+    data.sort(
+        key=lambda row: (
+            row.get("asset_category") or "",
+            str(row.get("shift_date") or ""),
+            row.get("location") or "",
+            row.get("asset_name") or "",
+        )
+    )
+
+    return data
+
+
+def parse_multiselect(value):
+    if not value:
+        return []
+
+    if isinstance(
+        value,
+        (
+            list,
+            tuple,
+            set,
+        ),
+    ):
+        return [
+            str(item).strip()
+            for item in value
+            if str(item).strip()
+        ]
+
+    value_text = str(value).strip()
+
+    if not value_text:
+        return []
+
+    try:
+        parsed = json.loads(
+            value_text
+        )
+
+        if isinstance(parsed, list):
+            return [
+                str(item).strip()
+                for item in parsed
+                if str(item).strip()
+            ]
+    except Exception:
+        pass
+
+    return [
+        item.strip()
+        for item in value_text.split(",")
+        if item.strip()
+    ]
+
+
+def get_planning_rows(
+    from_date,
+    to_date,
+    locations,
+):
+    conditions = [
+        "mpp.docstatus < 2",
+        "mpp.site_status = 'Producing'",
+        (
+            "mpp.prod_month_start_date "
+            "<= %(to_date)s"
+        ),
+        (
+            "mpp.prod_month_end_date "
+            ">= %(from_date)s"
+        ),
+    ]
+
+    values = {
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+    if locations:
+        conditions.append(
+            "mpp.location IN %(locations)s"
+        )
+
+        values["locations"] = tuple(
+            locations
+        )
+
+    return frappe.db.sql(
+        f"""
+        SELECT
+            mpp.name,
+            mpp.location,
+            mpp.shift_system,
+            mpp.prod_month_start_date,
+            mpp.prod_month_end_date
+        FROM `tabMonthly Production Planning` mpp
+        WHERE {" AND ".join(conditions)}
+        ORDER BY
+            mpp.location,
+            mpp.prod_month_start_date
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+def build_planning_map(planning_rows):
+    planning_map = {}
+
+    for planning_row in planning_rows:
+        planning_doc = frappe.get_doc(
+            "Monthly Production Planning",
+            planning_row.name,
+        )
+
+        for day in planning_doc.month_prod_days:
+            shift_date = getdate(
+                day.shift_start_date
+            )
+
+            planning_map[
+                (
+                    planning_row.location,
+                    str(shift_date),
+                )
+            ] = {
+                "shift_system": (
+                    planning_row.shift_system
+                ),
+                "shift_day_hours": flt(
+                    day.shift_day_hours
+                ),
+                "shift_night_hours": flt(
+                    day.shift_night_hours
+                ),
+                "shift_morning_hours": flt(
+                    day.shift_morning_hours
+                ),
+                "shift_afternoon_hours": flt(
+                    day.shift_afternoon_hours
+                ),
+            }
+
+    return planning_map
+
+
+def get_assets(
+    planning_rows,
+    selected_assets,
+    companies,
+):
+    locations = sorted({
+        row.location
+        for row in planning_rows
+        if row.location
+    })
+
+    conditions = [
+        "asset.docstatus = 1",
+        "asset.location IN %(locations)s",
+        "IFNULL(asset.asset_name, '') != ''",
+    ]
+
+    values = {
+        "locations": tuple(locations),
+    }
+
+    if selected_assets:
+        conditions.append(
+            """
+            (
+                asset.name IN %(assets)s
+                OR asset.asset_name IN %(assets)s
+            )
+            """
+        )
+
+        values["assets"] = tuple(
+            selected_assets
+        )
+
+    if companies:
+        conditions.append(
+            "asset.company IN %(companies)s"
+        )
+
+        values["companies"] = tuple(
+            companies
+        )
+
+    assets = frappe.db.sql(
+        f"""
+        SELECT
+            asset.name,
+            asset.asset_name,
+            asset.asset_category,
+            asset.location,
+            asset.company
+        FROM `tabAsset` asset
+        WHERE {" AND ".join(conditions)}
+        ORDER BY
+            asset.asset_category,
+            asset.asset_name
+        """,
+        values,
+        as_dict=True,
+    )
+
+    return [
+        asset
+        for asset in assets
+        if (
+            asset.asset_category or ""
+        ) not in EXCLUDED_ASSET_CATEGORIES
+    ]
+
+
+def get_preuse_map(
+    from_date,
+    to_date,
+    locations,
+):
+    conditions = [
+        (
+            "puh.shift_date BETWEEN "
+            "%(from_date)s AND %(to_date)s"
+        ),
+        "puh.docstatus < 2",
+    ]
+
+    values = {
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+    if locations:
+        conditions.append(
+            "puh.location IN %(locations)s"
+        )
+
+        values["locations"] = tuple(
+            locations
+        )
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            puh.name,
+            puh.location,
+            puh.shift_date,
+            puh.shift
+        FROM `tabPre-Use Hours` puh
+        WHERE {" AND ".join(conditions)}
+        """,
+        values,
+        as_dict=True,
+    )
+
+    preuse_map = {}
+
+    for row in rows:
+        doc = frappe.get_doc(
+            "Pre-Use Hours",
+            row.name,
+        )
+
+        for asset_row in doc.pre_use_assets:
+            plant_no = get_preuse_plant_no(
+                asset_row
+            )
+
+            if not plant_no:
+                continue
+
+            preuse_map[
+                (
+                    row.location,
+                    str(row.shift_date),
+                    row.shift,
+                    plant_no,
+                )
+            ] = {
+                "eng_hrs_start": (
+                    asset_row.eng_hrs_start
+                ),
+                "eng_hrs_end": (
+                    asset_row.eng_hrs_end
+                ),
+                "pre_use_avail_status": getattr(
+                    asset_row,
+                    "pre_use_avail_status",
+                    None,
+                ),
+            }
+
+    return preuse_map
+
+
+def get_preuse_plant_no(asset_row):
+    plant_no = getattr(
+        asset_row,
+        "plant_no",
+        None,
+    )
+
+    if plant_no:
+        return str(
+            plant_no
+        ).strip()
+
+    asset_link = getattr(
+        asset_row,
+        "asset_name",
+        None,
+    )
+
+    if not asset_link:
+        return None
+
+    return frappe.db.get_value(
+        "Asset",
+        asset_link,
+        "asset_name",
+    )
+
+
+def get_shifts(shift_system):
+    shift_system = (
+        shift_system or ""
+    ).strip().lower()
+
+    if shift_system == "2x12hour":
+        return [
+            "Day",
+            "Night",
+        ]
+
+    return [
+        "Morning",
+        "Afternoon",
+        "Night",
+    ]
+
+
+def get_required_hours(
+    planning,
+    shift,
+):
+    field_map = {
+        "Day": "shift_day_hours",
+        "Night": "shift_night_hours",
+        "Morning": "shift_morning_hours",
+        "Afternoon": "shift_afternoon_hours",
+    }
+
+    return flt(
+        planning.get(
+            field_map.get(
+                shift,
+                "",
+            ),
+            0,
+        )
+    )
+
+
+def get_actual_hours(
+    location,
+    shift_date,
+):
+    day_of_week = getdate(
+        shift_date
+    ).weekday()
+
+    site = (
+        location or ""
+    ).strip().lower()
+
+    special_saturday_sites = {
+        "koppie",
+        "uitgevallen",
+        "bankfontein",
+        "kriel",
+    }
+
+    if day_of_week == 6:
+        return 0.0
+
+    if day_of_week == 5:
+        if site in special_saturday_sites:
+            return 18.0
+
+        return 24.0
+
+    return 24.0
+
+
+def get_planned_downtime(
+    location,
+    shift_date,
+):
+    day_of_week = getdate(
+        shift_date
+    ).weekday()
+
+    site = (
+        location or ""
+    ).strip().lower()
+
+    special_saturday_sites = {
+        "koppie",
+        "uitgevallen",
+        "bankfontein",
+        "kriel",
+    }
+
+    if day_of_week == 6:
+        return 0.0
+
+    if day_of_week == 5:
+        if site in special_saturday_sites:
+            return 4.0
+
+        return 6.0
+
+    return 6.0
+
+
+def get_spare_swing_assets(
+    from_date,
+    to_date,
+    locations,
+):
+    conditions = [
+        "mpp.docstatus < 2",
+        (
+            "mpp.prod_month_start_date "
+            "<= %(to_date)s"
+        ),
+        (
+            "mpp.prod_month_end_date "
+            ">= %(from_date)s"
+        ),
+    ]
+
+    values = {
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+    if locations:
+        conditions.append(
+            "mpp.location IN %(locations)s"
+        )
+
+        values["locations"] = tuple(
+            locations
+        )
+
+    condition_sql = " AND ".join(
+        conditions
+    )
+
+    spare_assets = set()
+
+    queries = [
+        f"""
+        SELECT DISTINCT
+            etl.truck AS asset_name
+        FROM `tabMonthly Production Planning` mpp
+        INNER JOIN `tabExcavator Truck Link` etl
+            ON etl.parent = mpp.name
+            AND etl.parenttype
+                = 'Monthly Production Planning'
+        WHERE {condition_sql}
+          AND IFNULL(etl.truck, '') != ''
+          AND IFNULL(etl.excavator, '') = ''
+        """,
+        f"""
+        SELECT DISTINCT
+            etl.excavator AS asset_name
+        FROM `tabMonthly Production Planning` mpp
+        INNER JOIN `tabExcavator Truck Link` etl
+            ON etl.parent = mpp.name
+            AND etl.parenttype
+                = 'Monthly Production Planning'
+        WHERE {condition_sql}
+          AND IFNULL(etl.excavator, '') != ''
+          AND IFNULL(etl.truck, '') = ''
+          AND NOT EXISTS (
+              SELECT 1
+              FROM `tabExcavator Truck Link` assigned
+              WHERE assigned.parent = etl.parent
+                AND assigned.parenttype
+                    = etl.parenttype
+                AND assigned.excavator
+                    = etl.excavator
+                AND IFNULL(assigned.truck, '') != ''
+          )
+        """,
+        f"""
+        SELECT DISTINCT
+            dp.asset_name
+        FROM `tabMonthly Production Planning` mpp
+        INNER JOIN `tabDozers Planned` dp
+            ON dp.parent = mpp.name
+            AND dp.parenttype
+                = 'Monthly Production Planning'
+        WHERE {condition_sql}
+          AND IFNULL(dp.asset_name, '') != ''
+          AND IFNULL(dp.dozing_type, '') = ''
+        """,
+    ]
+
+    for query in queries:
+        try:
+            rows = frappe.db.sql(
+                query,
+                values,
+                as_dict=True,
+            )
+
+            for row in rows:
+                if row.asset_name:
+                    spare_assets.add(
+                        str(
+                            row.asset_name
+                        ).strip()
+                    )
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                (
+                    "Availability Utilisation "
+                    "Engine Spare Assets"
+                ),
+            )
+
+            frappe.clear_messages()
+
+    resolved_assets = set(
+        spare_assets
+    )
+
+    for asset_name in list(
+        spare_assets
+    ):
+        asset = frappe.db.get_value(
+            "Asset",
+            {
+                "asset_name": asset_name,
+            },
+            [
+                "name",
+                "asset_name",
+            ],
+            as_dict=True,
+        )
+
+        if asset:
+            resolved_assets.add(
+                asset.name
+            )
+
+            resolved_assets.add(
+                asset.asset_name
+            )
+
+    return resolved_assets
+
+
+def get_pbm_map(
+    from_date,
+    to_date,
+    assets,
+    locations,
+):
+    from engineering.engineering.report.availability_and_utilisation_month_end_report import (
+        availability_and_utilisation_month_end_report as month_end,
+    )
+
+    report_start = get_datetime(
+        f"{from_date} 06:00:00"
+    )
+
+    report_end = get_datetime(
+        f"{add_days(to_date, 1)} 06:00:00"
+    )
+
+    asset_names = sorted({
+        asset.asset_name
+        for asset in assets
+        if asset.asset_name
+    })
+
+    conditions = [
+        "IFNULL(asset_name, '') != ''",
+        "IFNULL(breakdown_reason, '') != ''",
+        "IFNULL(exclude_from_au, 0) = 0",
+        "asset_name IN %(asset_names)s",
+        (
+            "breakdown_start_datetime "
+            "< %(report_end)s"
+        ),
+        (
+            "("
+            "resolved_datetime >= %(report_start)s "
+            "OR resolved_datetime IS NULL"
+            ")"
+        ),
+    ]
+
+    values = {
+        "asset_names": tuple(
+            asset_names
+        ),
+        "report_start": report_start,
+        "report_end": report_end,
+    }
+
+    if locations:
+        conditions.append(
+            "location IN %(locations)s"
+        )
+
+        values["locations"] = tuple(
+            locations
+        )
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            name,
+            asset_name,
+            location,
+            breakdown_start_datetime,
+            resolved_datetime
+        FROM `tabPlant Breakdown or Maintenance`
+        WHERE {" AND ".join(conditions)}
+        ORDER BY breakdown_start_datetime
+        """,
+        values,
+        as_dict=True,
+    )
+
+    pbm_map = {}
+    seen_intervals = set()
+
+    for row in rows:
+        start_dt = get_datetime(
+            row.breakdown_start_datetime
+        )
+
+        end_dt = (
+            get_datetime(
+                row.resolved_datetime
+            )
+            if row.resolved_datetime
+            else report_end
+        )
+
+        clipped_start = max(
+            start_dt,
+            report_start,
+        )
+
+        clipped_end = min(
+            end_dt,
+            report_end,
+        )
+
+        if clipped_end <= clipped_start:
+            continue
+
+        interval_key = (
+            row.asset_name,
+            row.location,
+            str(clipped_start),
+            str(clipped_end),
+        )
+
+        if interval_key in seen_intervals:
+            continue
+
+        seen_intervals.add(
+            interval_key
+        )
+
+        current_date = getdate(
+            clipped_start
+        )
+
+        current_day_start = get_datetime(
+            f"{current_date} 06:00:00"
+        )
+
+        if clipped_start < current_day_start:
+            current_date = add_days(
+                current_date,
+                -1,
+            )
+
+        while True:
+            day_start = get_datetime(
+                f"{current_date} 06:00:00"
+            )
+
+            day_end = (
+                day_start
+                + timedelta(days=1)
+            )
+
+            if day_start >= clipped_end:
+                break
+
+            segment_start = max(
+                clipped_start,
+                day_start,
+            )
+
+            segment_end = min(
+                clipped_end,
+                day_end,
+            )
+
+            if segment_end > segment_start:
+                calculated = (
+                    month_end
+                    .get_required_downtime_minutes_for_breakdown(
+                        frappe._dict({
+                            "location": (
+                                row.location
+                            ),
+                            "start_date": (
+                                from_date
+                            ),
+                            "end_date": (
+                                to_date
+                            ),
+                        }),
+                        row.asset_name,
+                        segment_start,
+                        segment_end,
+                    )
+                )
+
+                key = (
+                    row.asset_name,
+                    str(current_date),
+                    row.location,
+                )
+
+                bucket = pbm_map.setdefault(
+                    key,
+                    {
+                        "pbm_elapsed_time": 0.0,
+                        "pbm_startup_fatigue_time": 0.0,
+                        "pbm_sunday_time": 0.0,
+                        "pbm_total_downtime": 0.0,
+                    },
+                )
+
+                bucket[
+                    "pbm_elapsed_time"
+                ] += (
+                    flt(
+                        calculated.get(
+                            "total_minutes"
+                        )
+                    )
+                    / 60
+                )
+
+                bucket[
+                    "pbm_startup_fatigue_time"
+                ] += (
+                    flt(
+                        calculated.get(
+                            "excluded_minutes"
+                        )
+                    )
+                    / 60
+                )
+
+                bucket[
+                    "pbm_sunday_time"
+                ] += (
+                    flt(
+                        calculated.get(
+                            "sunday_minutes"
+                        )
+                    )
+                    / 60
+                )
+
+                bucket[
+                    "pbm_total_downtime"
+                ] += (
+                    flt(
+                        calculated.get(
+                            "required_downtime_minutes"
+                        )
+                    )
+                    / 60
+                )
+
+            current_date = add_days(
+                current_date,
+                1,
+            )
+
+    return pbm_map
