@@ -193,13 +193,13 @@ def get_data(filters):
     if not assets:
         return []
 
-    if filters.get("production_machines_only"):
-        spare_assets = get_spare_swing_assets(
-            filters.from_date,
-            filters.to_date,
-            locations,
-        )
+    spare_assets = get_spare_swing_assets(
+        filters.from_date,
+        filters.to_date,
+        locations,
+    )
 
+    if filters.get("production_machines_only"):
         assets = [
             asset
             for asset in assets
@@ -324,6 +324,17 @@ def get_data(filters):
                         "shift": shift,
                         "location": location,
                         "company": asset.company,
+                        "is_spare_swing_unit": (
+                            1
+                            if (
+                                asset.name in spare_assets
+                                or asset.asset_name in spare_assets
+                            )
+                            else 0
+                        ),
+                        "spare_swing_reason": (
+                            "Spare/Swing unit in Monthly Production Planning"
+                        ),
                         "actual_hours": (
                             get_shift_actual_hours(
                                 location,
@@ -686,24 +697,32 @@ def build_tree_rows(shift_rows):
                     for row in machine_rows
                 )
 
-                machine_summary = (
-                    build_summary_row(
-                        machine_rows,
-                        indent=2,
-                        asset_category=category,
-                        shift_date=shift_date,
-                        asset_name=asset_name,
-                        location=(
-                            first_machine_row.get(
-                                "location"
-                            )
-                        ),
-                        company=(
-                            first_machine_row.get(
-                                "company"
-                            )
-                        ),
-                    )
+                machine_summary = build_summary_row(
+                    machine_rows,
+                    indent=2,
+                    asset_category=category,
+                    shift_date=shift_date,
+                    asset_name=asset_name,
+                    location=(
+                        first_machine_row.get(
+                            "location"
+                        )
+                    ),
+                    company=(
+                        first_machine_row.get(
+                            "company"
+                        )
+                    ),
+                    is_spare_swing_unit=(
+                        first_machine_row.get(
+                            "is_spare_swing_unit"
+                        )
+                    ),
+                    spare_swing_reason=(
+                        first_machine_row.get(
+                            "spare_swing_reason"
+                        )
+                    ),
                 )
 
                 if machine_invalid:

@@ -1,4 +1,6 @@
 frappe.query_reports["Availability and Utilisation Engine"] = {
+    initial_depth: 0,
+
     filters: [
         {
             fieldname: "from_date",
@@ -79,6 +81,50 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             value = format_engine_hours(raw_value);
         }
 
+        if (
+            data
+            && Number(
+                data.is_spare_swing_unit || 0
+            ) === 1
+        ) {
+            value = apply_engine_spare_highlight(
+                value,
+                data.spare_swing_reason
+            );
+        }
+
+        if (
+            data
+            && column.fieldname === "invalid_pre_use_status"
+            && data.invalid_pre_use_status
+        ) {
+            const invalid = String(
+                data.invalid_pre_use_status
+            ).startsWith("Invalid");
+
+            const contains_invalid = (
+                data.invalid_pre_use_status
+                === "Contains Invalid Shift"
+            );
+
+            if (invalid || contains_invalid) {
+                value = `
+                    <span style="
+                        display:inline-block;
+                        padding:3px 8px;
+                        border-radius:999px;
+                        background:#fee2e2;
+                        color:#991b1b;
+                        font-weight:700;
+                    ">
+                        ${frappe.utils.escape_html(
+                            data.invalid_pre_use_status
+                        )}
+                    </span>
+                `;
+            }
+        }
+
         return value;
     },
 
@@ -97,6 +143,21 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     }
 };
 
+function apply_engine_spare_highlight(value, reason) {
+    const safe_reason = frappe.utils.escape_html(
+        reason
+        || "Spare/Swing unit in Monthly Production Planning"
+    );
+
+    return `
+        <span
+            class="availability-engine-spare-cell"
+            title="${safe_reason}"
+        >
+            ${value || ""}
+        </span>
+    `;
+}
 
 function format_engine_hours(hours_value) {
     const total_minutes = Math.round(
@@ -140,6 +201,31 @@ function apply_engine_styles() {
             color: #166534 !important;
             font-weight: 800 !important;
             border-bottom: 2px solid #16a34a !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .availability-engine-spare-cell {
+            display: block;
+            min-height: 100%;
+            margin: -8px -10px;
+            padding: 8px 10px;
+            background: #e6d6ff !important;
+            color: #4b0082 !important;
+            font-weight: 600 !important;
+            border-left: 3px solid #7b2cbf !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell__tree-node,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-tree-node,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell__toggle {
+            position: relative !important;
+            z-index: 20 !important;
+            color: #111111 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
     `;
 
