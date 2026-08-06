@@ -65,6 +65,18 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         }
     ],
 
+
+    get_datatable_options: function(options) {
+        return Object.assign(
+            options,
+            {
+                freezeColumns: 8
+            }
+        );
+    },
+
+
+
     formatter: function(value, row, column, data, default_formatter) {
         const hour_fields = [
             "actual_hours",
@@ -238,6 +250,89 @@ function apply_engine_styles() {
             color: #166534 !important;
             font-weight: 800 !important;
             border-bottom: 2px solid #16a34a !important;
+        }
+
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-0,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-1,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-2,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-3,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-4,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-5,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-6,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-7 {
+            position: sticky !important;
+            background: #ffffff;
+            z-index: 30 !important;
+            box-shadow: 1px 0 0 #d1d8dd;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-0,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-1,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-2,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-3,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-4,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-5,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-6,
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--header.dt-cell--col-7 {
+            background: #dcfce7 !important;
+            z-index: 60 !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-0 {
+            left: 0 !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-1 {
+            left: 38px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-2 {
+            left: 168px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-3 {
+            left: 268px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-4 {
+            left: 383px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-5 {
+            left: 468px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-6 {
+            left: 603px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-cell--col-7 {
+            left: 723px !important;
         }
 
         .query-report[data-report-name="Availability and Utilisation Engine"]
