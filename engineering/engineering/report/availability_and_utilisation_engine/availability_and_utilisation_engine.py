@@ -617,10 +617,10 @@ def calculate_availability_values(row):
     utilisation_percentage = (
         (
             work_hours
-            / available_hours_above_100
+            / shift_available_hours
         )
         * 100
-        if available_hours_above_100 > 0
+        if shift_available_hours > 0
         else 0
     )
 
