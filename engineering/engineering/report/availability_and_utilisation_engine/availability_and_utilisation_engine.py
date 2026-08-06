@@ -1318,14 +1318,12 @@ def get_spare_swing_assets(
         spare_assets
     )
 
-    for asset_name in list(
+    for asset_identifier in list(
         spare_assets
     ):
         asset = frappe.db.get_value(
             "Asset",
-            {
-                "asset_name": asset_name,
-            },
+            asset_identifier,
             [
                 "name",
                 "asset_name",
@@ -1333,13 +1331,30 @@ def get_spare_swing_assets(
             as_dict=True,
         )
 
-        if asset:
-            resolved_assets.add(
-                asset.name
+        if not asset:
+            asset = frappe.db.get_value(
+                "Asset",
+                {
+                    "asset_name": asset_identifier,
+                },
+                [
+                    "name",
+                    "asset_name",
+                ],
+                as_dict=True,
             )
 
+        if not asset:
+            continue
+
+        if asset.name:
             resolved_assets.add(
-                asset.asset_name
+                str(asset.name).strip()
+            )
+
+        if asset.asset_name:
+            resolved_assets.add(
+                str(asset.asset_name).strip()
             )
 
     return resolved_assets
