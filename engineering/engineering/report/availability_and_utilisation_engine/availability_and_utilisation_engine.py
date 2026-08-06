@@ -11,13 +11,15 @@ from frappe.utils import (
 )
 
 
-EXCLUDED_ASSET_CATEGORIES = {
-    "Grader",
-    "Service Truck",
-    "TLB",
+ALLOWED_ASSET_CATEGORIES = {
+    "ADT",
+    "Dozer",
+    "Excavator",
+    "Drills",
     "Water Bowser",
     "Diesel Bowsers",
-    "Drills",
+    "Grader",
+    "TLB",
     "Loader",
 }
 
@@ -65,6 +67,18 @@ def get_columns():
             "fieldname": "asset_name",
             "fieldtype": "Data",
             "width": 115,
+        },
+        {
+            "label": "Shift",
+            "fieldname": "shift",
+            "fieldtype": "Data",
+            "width": 85,
+        },
+        {
+            "label": "Invalid Pre-Use",
+            "fieldname": "invalid_pre_use_status",
+            "fieldtype": "Data",
+            "width": 135,
         },
         {
             "label": "Location",
@@ -216,7 +230,7 @@ def get_data(filters):
             asset.location
         ].append(asset)
 
-    data = []
+    shift_rows = []
 
     current_date = getdate(
         filters.from_date
@@ -244,22 +258,18 @@ def get_data(filters):
                 planning.get("shift_system")
             )
 
-            actual_hours = get_actual_hours(
-                location,
-                current_date,
-            )
-
-            planned_downtime = get_planned_downtime(
-                location,
-                current_date,
-            )
-
             for asset in location_assets:
-                required_hours = 0.0
-                work_hours = 0.0
+                daily_pbm = pbm_map.get(
+                    (
+                        asset.asset_name,
+                        date_text,
+                        location,
+                    ),
+                    {},
+                )
 
                 for shift in shifts:
-                    shift_required_hours = get_required_hours(
+                    required_hours = get_required_hours(
                         planning,
                         shift,
                     )
@@ -273,16 +283,19 @@ def get_data(filters):
                         )
                     )
 
+                    work_hours = 0.0
+                    pre_use_status = ""
+
                     if preuse:
-                        status = str(
+                        pre_use_status = str(
                             preuse.get(
                                 "pre_use_avail_status"
                             )
                             or ""
                         )
 
-                        if status in ("3", "6"):
-                            shift_required_hours = 0.0
+                        if pre_use_status in ("3", "6"):
+                            required_hours = 0.0
 
                         start_hours = preuse.get(
                             "eng_hrs_start"
@@ -296,109 +309,461 @@ def get_data(filters):
                             start_hours is not None
                             and end_hours is not None
                         ):
-                            work_hours += max(
+                            work_hours = max(
                                 flt(end_hours)
                                 - flt(start_hours),
                                 0,
                             )
 
-                    required_hours += max(
-                        flt(shift_required_hours),
-                        0,
-                    )
-
-                required_hours = max(
-                    required_hours - free_hours,
-                    0,
-                )
-
-                pbm = pbm_map.get(
-                    (
-                        asset.asset_name,
-                        date_text,
-                        location,
-                    ),
-                    {},
-                )
-
-                pbm_total_downtime = min(
-                    flt(
-                        pbm.get(
-                            "pbm_total_downtime"
-                        )
-                    ),
-                    required_hours,
-                )
-
-                data.append({
-                    "asset_category": (
-                        asset.asset_category
-                    ),
-                    "shift_date": current_date,
-                    "asset_name": asset.asset_name,
-                    "location": location,
-                    "company": asset.company,
-                    "actual_hours": round(
-                        actual_hours,
-                        3,
-                    ),
-                    "planned_downtime": round(
-                        planned_downtime,
-                        3,
-                    ),
-                    "required_hours": round(
-                        required_hours,
-                        3,
-                    ),
-                    "work_hours": round(
-                        work_hours,
-                        3,
-                    ),
-                    "pbm_elapsed_time": round(
-                        flt(
-                            pbm.get(
-                                "pbm_elapsed_time"
+                    shift_rows.append({
+                        "asset_category": (
+                            asset.asset_category
+                        ),
+                        "shift_date": current_date,
+                        "asset_name": asset.asset_name,
+                        "shift": shift,
+                        "location": location,
+                        "company": asset.company,
+                        "actual_hours": (
+                            get_shift_actual_hours(
+                                location,
+                                current_date,
+                                shift,
                             )
                         ),
-                        3,
-                    ),
-                    "pbm_startup_fatigue_time": round(
-                        flt(
-                            pbm.get(
-                                "pbm_startup_fatigue_time"
+                        "planned_downtime": (
+                            get_shift_planned_downtime(
+                                location,
+                                current_date,
+                                shift,
                             )
                         ),
-                        3,
-                    ),
-                    "pbm_sunday_time": round(
-                        flt(
-                            pbm.get(
-                                "pbm_sunday_time"
-                            )
+                        "required_hours": max(
+                            flt(required_hours),
+                            0,
                         ),
-                        3,
-                    ),
-                    "pbm_total_downtime": round(
-                        pbm_total_downtime,
-                        3,
-                    ),
-                })
+                        "work_hours": work_hours,
+                        "pre_use_avail_status": (
+                            pre_use_status
+                        ),
+                        "pbm_elapsed_time": 0.0,
+                        "pbm_startup_fatigue_time": 0.0,
+                        "pbm_sunday_time": 0.0,
+                        "pbm_total_downtime": 0.0,
+                        "indent": 3,
+                    })
+
+                asset_shift_rows = [
+                    row
+                    for row in shift_rows
+                    if row.get("asset_name")
+                    == asset.asset_name
+                    and row.get("location")
+                    == location
+                    and str(row.get("shift_date"))
+                    == date_text
+                ]
+
+                distribute_daily_pbm(
+                    asset_shift_rows,
+                    daily_pbm,
+                )
 
         current_date = add_days(
             current_date,
             1,
         )
 
-    data.sort(
-        key=lambda row: (
-            row.get("asset_category") or "",
-            str(row.get("shift_date") or ""),
-            row.get("location") or "",
-            row.get("asset_name") or "",
+    mark_invalid_preuse_rows(
+        shift_rows
+    )
+
+    for row in shift_rows:
+        row["required_hours"] = max(
+            flt(row.get("required_hours"))
+            - (
+                free_hours
+                / max(
+                    len(
+                        get_shifts_for_row(
+                            row,
+                            planning_map,
+                        )
+                    ),
+                    1,
+                )
+            ),
+            0,
+        )
+
+        row["pbm_total_downtime"] = min(
+            flt(
+                row.get(
+                    "pbm_total_downtime"
+                )
+            ),
+            flt(
+                row.get(
+                    "required_hours"
+                )
+            ),
+        )
+
+        round_engine_row(row)
+
+    return build_tree_rows(
+        shift_rows
+    )
+
+
+def get_shifts_for_row(
+    row,
+    planning_map,
+):
+    planning = planning_map.get(
+        (
+            row.get("location"),
+            str(row.get("shift_date")),
+        ),
+        {},
+    )
+
+    return get_shifts(
+        planning.get("shift_system")
+    )
+
+
+def mark_invalid_preuse_rows(rows):
+    daily_hours = defaultdict(float)
+
+    for row in rows:
+        key = (
+            row.get("asset_category"),
+            str(row.get("shift_date")),
+            row.get("location"),
+            row.get("asset_name"),
+        )
+
+        daily_hours[key] += flt(
+            row.get("work_hours")
+        )
+
+    for row in rows:
+        key = (
+            row.get("asset_category"),
+            str(row.get("shift_date")),
+            row.get("location"),
+            row.get("asset_name"),
+        )
+
+        shift_invalid = (
+            flt(
+                row.get("work_hours")
+            ) > 12
+        )
+
+        daily_invalid = (
+            flt(
+                daily_hours.get(key)
+            ) > 24
+        )
+
+        row["invalid_pre_use"] = (
+            1
+            if shift_invalid or daily_invalid
+            else 0
+        )
+
+        if shift_invalid:
+            row["invalid_pre_use_status"] = (
+                "Invalid: Shift > 12h"
+            )
+        elif daily_invalid:
+            row["invalid_pre_use_status"] = (
+                "Invalid: Day > 24h"
+            )
+        else:
+            row["invalid_pre_use_status"] = "Valid"
+
+
+def distribute_daily_pbm(
+    shift_rows,
+    daily_pbm,
+):
+    if not shift_rows:
+        return
+
+    total_required = sum(
+        flt(
+            row.get("required_hours")
+        )
+        for row in shift_rows
+    )
+
+    for row in shift_rows:
+        if total_required > 0:
+            ratio = (
+                flt(
+                    row.get("required_hours")
+                )
+                / total_required
+            )
+        else:
+            ratio = (
+                1
+                / len(shift_rows)
+            )
+
+        for fieldname in (
+            "pbm_elapsed_time",
+            "pbm_startup_fatigue_time",
+            "pbm_sunday_time",
+            "pbm_total_downtime",
+        ):
+            row[fieldname] = (
+                flt(
+                    daily_pbm.get(
+                        fieldname
+                    )
+                )
+                * ratio
+            )
+
+
+def round_engine_row(row):
+    for fieldname in (
+        "actual_hours",
+        "planned_downtime",
+        "required_hours",
+        "work_hours",
+        "pbm_elapsed_time",
+        "pbm_startup_fatigue_time",
+        "pbm_sunday_time",
+        "pbm_total_downtime",
+    ):
+        row[fieldname] = round(
+            flt(
+                row.get(fieldname)
+            ),
+            3,
+        )
+
+
+def get_valid_rows(rows):
+    return [
+        row
+        for row in rows
+        if not row.get(
+            "invalid_pre_use"
+        )
+    ]
+
+
+def build_summary_row(
+    rows,
+    indent,
+    **identity_fields,
+):
+    valid_rows = get_valid_rows(
+        rows
+    )
+
+    summary = {
+        **identity_fields,
+        "indent": indent,
+        "invalid_pre_use_status": (
+            ""
+            if valid_rows
+            else "No valid Pre-Use"
+        ),
+    }
+
+    for fieldname in (
+        "actual_hours",
+        "planned_downtime",
+        "required_hours",
+        "work_hours",
+        "pbm_elapsed_time",
+        "pbm_startup_fatigue_time",
+        "pbm_sunday_time",
+        "pbm_total_downtime",
+    ):
+        summary[fieldname] = round(
+            sum(
+                flt(
+                    row.get(fieldname)
+                )
+                for row in valid_rows
+            ),
+            3,
+        )
+
+    return summary
+
+
+def build_tree_rows(shift_rows):
+    grouped = defaultdict(
+        lambda: defaultdict(
+            lambda: defaultdict(list)
         )
     )
 
+    for row in shift_rows:
+        grouped[
+            row.get("asset_category")
+        ][
+            str(row.get("shift_date"))
+        ][
+            row.get("asset_name")
+        ].append(row)
+
+    data = []
+
+    for category in sorted(grouped):
+        category_rows = [
+            shift_row
+            for date_assets in grouped[
+                category
+            ].values()
+            for machine_rows in date_assets.values()
+            for shift_row in machine_rows
+        ]
+
+        data.append(
+            build_summary_row(
+                category_rows,
+                indent=0,
+                asset_category=category,
+            )
+        )
+
+        for shift_date in sorted(
+            grouped[category]
+        ):
+            machines = grouped[
+                category
+            ][shift_date]
+
+            date_rows = [
+                shift_row
+                for machine_rows in machines.values()
+                for shift_row in machine_rows
+            ]
+
+            first_date_row = (
+                date_rows[0]
+                if date_rows
+                else {}
+            )
+
+            data.append(
+                build_summary_row(
+                    date_rows,
+                    indent=1,
+                    asset_category=category,
+                    shift_date=shift_date,
+                    location=first_date_row.get(
+                        "location"
+                    ),
+                )
+            )
+
+            for asset_name in sorted(
+                machines
+            ):
+                machine_rows = machines[
+                    asset_name
+                ]
+
+                first_machine_row = (
+                    machine_rows[0]
+                )
+
+                machine_invalid = any(
+                    row.get(
+                        "invalid_pre_use"
+                    )
+                    for row in machine_rows
+                )
+
+                machine_summary = (
+                    build_summary_row(
+                        machine_rows,
+                        indent=2,
+                        asset_category=category,
+                        shift_date=shift_date,
+                        asset_name=asset_name,
+                        location=(
+                            first_machine_row.get(
+                                "location"
+                            )
+                        ),
+                        company=(
+                            first_machine_row.get(
+                                "company"
+                            )
+                        ),
+                    )
+                )
+
+                if machine_invalid:
+                    machine_summary[
+                        "invalid_pre_use_status"
+                    ] = "Contains Invalid Shift"
+
+                data.append(
+                    machine_summary
+                )
+
+                for shift_row in sorted(
+                    machine_rows,
+                    key=lambda row: (
+                        row.get("shift") or ""
+                    ),
+                ):
+                    data.append(
+                        shift_row
+                    )
+
     return data
+
+
+def get_shift_actual_hours(
+    location,
+    shift_date,
+    shift,
+):
+    daily_hours = get_actual_hours(
+        location,
+        shift_date,
+    )
+
+    if shift in (
+        "Day",
+        "Night",
+    ):
+        return daily_hours / 2
+
+    return daily_hours / 3
+
+
+def get_shift_planned_downtime(
+    location,
+    shift_date,
+    shift,
+):
+    daily_hours = get_planned_downtime(
+        location,
+        shift_date,
+    )
+
+    if shift in (
+        "Day",
+        "Night",
+    ):
+        return daily_hours / 2
+
+    return daily_hours / 3
 
 
 def parse_multiselect(value):
@@ -551,10 +916,16 @@ def get_assets(
         "asset.docstatus = 1",
         "asset.location IN %(locations)s",
         "IFNULL(asset.asset_name, '') != ''",
+        "asset.asset_category IN %(allowed_categories)s",
     ]
 
     values = {
         "locations": tuple(locations),
+        "allowed_categories": tuple(
+            sorted(
+                ALLOWED_ASSET_CATEGORIES
+            )
+        ),
     }
 
     if selected_assets:
@@ -598,13 +969,7 @@ def get_assets(
         as_dict=True,
     )
 
-    return [
-        asset
-        for asset in assets
-        if (
-            asset.asset_category or ""
-        ) not in EXCLUDED_ASSET_CATEGORIES
-    ]
+    return assets
 
 
 def get_preuse_map(
