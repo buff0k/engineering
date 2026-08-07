@@ -157,6 +157,18 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         }
 
         if (
+            data
+            && Number(data.indent || 0) === 1
+            && column.fieldname === "shift_date"
+        ) {
+            value = `
+                <span class="availability-engine-date-label">
+                    ${value}
+                </span>
+            `;
+        }
+
+        if (
             [
                 "availability_percentage",
                 "utilisation_percentage"
@@ -168,6 +180,20 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             )
         ) {
             value = "N/A";
+        }
+
+        if (
+            data
+            && Number(data.indent || 0) === 3
+            && (
+                data.shift === "Day"
+                || data.shift === "Night"
+            )
+        ) {
+            value = apply_engine_shift_highlight(
+                value,
+                data.shift
+            );
         }
 
         if (
@@ -236,6 +262,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 apply_engine_freeze_columns();
                 bind_shift_available_formula_header();
                 bind_available_hours_formula_header();
+                bind_engine_expanded_date_highlight();
             },
             200
         );
@@ -553,6 +580,80 @@ function show_available_hours_above_100_formula() {
     dialog.show();
 }
 
+function apply_engine_shift_highlight(value, shift) {
+    const background = (
+        shift === "Day"
+        ? "#eaf4ff"
+        : "#f3f4f6"
+    );
+
+    return `
+        <span
+            class="availability-engine-shift-cell"
+            style="
+                display:block;
+                min-height:100%;
+                margin:-8px -10px;
+                padding:8px 10px;
+                background:${background} !important;
+            "
+        >
+            ${value || ""}
+        </span>
+    `;
+}
+
+
+function bind_engine_expanded_date_highlight() {
+    const report = document.querySelector(
+        '.query-report[data-report-name="Availability and Utilisation Engine"]'
+    );
+
+    if (
+        !report
+        || report.dataset.expandedDateBound === "1"
+    ) {
+        return;
+    }
+
+    report.dataset.expandedDateBound = "1";
+
+    report.addEventListener("click", function(event) {
+        const toggle = event.target.closest(
+            ".dt-cell__toggle, .dt-cell__tree-node, .dt-tree-node"
+        );
+
+        if (!toggle) {
+            return;
+        }
+
+        const row = toggle.closest(".dt-row");
+
+        if (!row) {
+            return;
+        }
+
+        const date_label = row.querySelector(
+            ".availability-engine-date-label"
+        );
+
+        if (!date_label) {
+            return;
+        }
+
+        setTimeout(
+            function() {
+                date_label.classList.toggle(
+                    "availability-engine-date-expanded"
+                );
+            },
+            50
+        );
+    });
+}
+
+
+
 
 function apply_engine_spare_highlight(value, reason) {
     const safe_reason = frappe.utils.escape_html(
@@ -739,6 +840,17 @@ function apply_engine_styles() {
             color: #111111 !important;
             opacity: 1 !important;
             visibility: visible !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .availability-engine-date-label {
+            font-weight: 600;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .availability-engine-date-expanded {
+            color: #15803d !important;
+            font-weight: 800 !important;
         }
     `;
 
