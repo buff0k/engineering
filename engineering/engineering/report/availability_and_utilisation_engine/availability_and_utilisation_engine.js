@@ -167,7 +167,14 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         return value;
     },
 
-    onload: function() {
+    onload: function(report) {
+        report.page.add_inner_button(
+            __("Available Hours Above 100 Formula"),
+            function() {
+                show_available_hours_above_100_formula();
+            }
+        );
+
         setTimeout(
             apply_engine_freeze_columns,
             500
@@ -234,6 +241,76 @@ function format_engine_hours(hours_value) {
 
     return `${minutes}m`;
 }
+
+
+function show_available_hours_above_100_formula() {
+    frappe.msgprint({
+        title: __("Available Hours Above 100"),
+        indicator: "blue",
+        message: `
+            <div style="line-height:1.7;">
+                <p>
+                    <strong>Shift Available Hours</strong>
+                </p>
+
+                <p>
+                    Required Hours - PBM Total Downtime
+                </p>
+
+                <p>
+                    Shift Available Hours cannot be less than 0
+                    or greater than the shift's Required Hours.
+                </p>
+
+                <hr>
+
+                <p>
+                    <strong>Available Hours Above 100</strong>
+                </p>
+
+                <p>
+                    MAX(
+                        Work Hours,
+                        Shift Available Hours
+                    )
+                </p>
+
+                <p>
+                    This means the higher value is used:
+                </p>
+
+                <ul>
+                    <li>
+                        If Shift Available Hours is greater than Work Hours,
+                        Shift Available Hours is used.
+                    </li>
+                    <li>
+                        If Work Hours is greater than Shift Available Hours,
+                        Work Hours is used.
+                    </li>
+                </ul>
+
+                <p>
+                    This allows availability to exceed 100% when the machine
+                    worked more hours than the calculated available hours.
+                </p>
+
+                <hr>
+
+                <p>
+                    <strong>Totals</strong>
+                </p>
+
+                <p>
+                    Each shift is calculated separately first.
+                    Day, machine, date and category totals are then
+                    the sum of the individual shift results.
+                </p>
+            </div>
+        `
+    });
+}
+
 
 
 function apply_engine_freeze_columns() {
