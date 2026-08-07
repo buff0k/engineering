@@ -187,11 +187,27 @@ function set_expiry_date(frm) {
     expiry = addMonths(24);
   } else if (section === 'Noise Level Baseline & Measurement') {
     expiry = addMonths(24);
+  } else if (
+    [
+      'Brake Tester Calibration Certificate',
+      'Brake Test Authorisations',
+      'Multi-meter Calibration Certificate',
+      'Authorised LV Person',
+      'Pressure Vessels'
+    ].includes(section)
+  ) {
+    expiry = addMonths(12);
+  } else if (section === 'CoC for Containers, Offices, Workshops') {
+    expiry = addMonths(1);
+  } else if (section === 'Earth Leakage Testing') {
+    expiry = addMonths(3);
   } else {
     expiry = null;
   }
 
-  frm.set_value('expiry_date', expiry);
+  if (frm.doc.expiry_date !== expiry) {
+    frm.set_value('expiry_date', expiry);
+  }
 }
 
 function apply_asset_filter(frm) {
@@ -224,59 +240,8 @@ function add_eng_legals_report_button(frm) {
   });
 }
 
-// NEW LEGAL SECTIONS EXPIRY CALCULATION - START
-frappe.ui.form.on("Engineering Legals", {
-    sections(frm) {
-        calculate_new_legal_section_expiry(frm);
-    },
+// New legal section expiry rules are handled by set_expiry_date(frm).
 
-    start_date(frm) {
-        calculate_new_legal_section_expiry(frm);
-    },
-});
-
-function calculate_new_legal_section_expiry(frm) {
-    const section = (frm.doc.sections || "").trim();
-    const startDate = frm.doc.start_date;
-
-    if (!section || !startDate) {
-        return;
-    }
-
-    const yearlySections = [
-        "Brake Tester Calibration Certificate",
-        "Brake Test Authorisations",
-        "Multi-meter Calibration Certificate",
-        "Authorised LV Person",
-        "Pressure Vessels",
-    ];
-
-    let months = null;
-
-    if (yearlySections.includes(section)) {
-        months = 12;
-    } else if (
-        section === "CoC for Containers, Offices, Workshops"
-    ) {
-        months = 1;
-    } else if (section === "Earth Leakage Testing") {
-        months = 3;
-    }
-
-    if (months === null) {
-        return;
-    }
-
-    const expiryDate = frappe.datetime.add_months(
-        startDate,
-        months
-    );
-
-    if (frm.doc.expiry_date !== expiryDate) {
-        frm.set_value("expiry_date", expiryDate);
-    }
-}
-// NEW LEGAL SECTIONS EXPIRY CALCULATION - END
 
 
 // FLEET NUMBER REQUIREMENT RULE - START

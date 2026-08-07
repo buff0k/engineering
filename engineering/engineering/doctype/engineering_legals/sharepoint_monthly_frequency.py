@@ -67,8 +67,24 @@ def _target_month(year=None, month=None):
     if month < 1 or month > 12:
         frappe.throw("Month must be between 1 and 12.")
 
+    sharepoint_month_names = {
+        1: "Jan",
+        2: "Feb",
+        3: "Mar",
+        4: "Apr",
+        5: "May",
+        6: "June",
+        7: "Jul",
+        8: "Aug",
+        9: "Sep",
+        10: "Oct",
+        11: "Nov",
+        12: "Dec",
+    }
+
     month_date = getdate(f"{year:04d}-{month:02d}-01")
-    month_folder = datetime(year, month, 1).strftime("%b-%y")
+    month_name = sharepoint_month_names[month]
+    month_folder = f"{month:02d}.{month_name}-{year % 100:02d}"
 
     return month_date, month_folder
 
