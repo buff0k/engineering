@@ -184,12 +184,89 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         setTimeout(
             function() {
                 apply_engine_freeze_columns();
+                render_engine_formula_strip();
                 bind_available_hours_formula_header();
             },
             200
         );
     }
 };
+
+function render_engine_formula_strip() {
+    const old_strip = document.getElementById(
+        "availability-engine-formula-strip"
+    );
+
+    if (old_strip) {
+        old_strip.remove();
+    }
+
+    if (
+        !frappe.query_report
+        || !frappe.query_report.$report
+    ) {
+        return;
+    }
+
+    const datatable = frappe.query_report.$report
+        .find(".datatable")
+        .first();
+
+    if (!datatable.length) {
+        return;
+    }
+
+    const strip = $(`
+        <div
+            id="availability-engine-formula-strip"
+            style="
+                display:flex;
+                flex-wrap:wrap;
+                gap:8px;
+                margin:0 0 6px 0;
+                padding:7px 9px;
+                background:#eff6ff;
+                border:1px solid #bfdbfe;
+                border-radius:6px;
+                color:#1d4ed8;
+                font-size:11px;
+                line-height:1.4;
+            "
+        >
+            <span>
+                <strong>Shift Available:</strong>
+                Required Hrs - PBM Downtime
+            </span>
+
+            <span style="color:#93c5fd;">|</span>
+
+            <span>
+                <strong>Available Above 100:</strong>
+                MAX(Work Hrs, Shift Available)
+            </span>
+
+            <span style="color:#93c5fd;">|</span>
+
+            <span>
+                <strong>Availability %:</strong>
+                (Available Above 100 / Required Hrs)
+                × 100 × A&amp;U Basis
+            </span>
+
+            <span style="color:#93c5fd;">|</span>
+
+            <span>
+                <strong>Utilisation %:</strong>
+                (Work Hrs / Shift Available)
+                × 100 × A&amp;U Basis
+            </span>
+        </div>
+    `);
+
+    datatable.before(strip);
+}
+
+
 
 function bind_available_hours_formula_header() {
     const headers = document.querySelectorAll(
@@ -393,73 +470,6 @@ function format_engine_hours(hours_value) {
 }
 
 
-function show_available_hours_above_100_formula() {
-    frappe.msgprint({
-        title: __("Available Hours Above 100"),
-        indicator: "blue",
-        message: `
-            <div style="line-height:1.7;">
-                <p>
-                    <strong>Shift Available Hours</strong>
-                </p>
-
-                <p>
-                    Required Hours - PBM Total Downtime
-                </p>
-
-                <p>
-                    Shift Available Hours cannot be less than 0
-                    or greater than the shift's Required Hours.
-                </p>
-
-                <hr>
-
-                <p>
-                    <strong>Available Hours Above 100</strong>
-                </p>
-
-                <p>
-                    MAX(
-                        Work Hours,
-                        Shift Available Hours
-                    )
-                </p>
-
-                <p>
-                    This means the higher value is used:
-                </p>
-
-                <ul>
-                    <li>
-                        If Shift Available Hours is greater than Work Hours,
-                        Shift Available Hours is used.
-                    </li>
-                    <li>
-                        If Work Hours is greater than Shift Available Hours,
-                        Work Hours is used.
-                    </li>
-                </ul>
-
-                <p>
-                    This allows availability to exceed 100% when the machine
-                    worked more hours than the calculated available hours.
-                </p>
-
-                <hr>
-
-                <p>
-                    <strong>Totals</strong>
-                </p>
-
-                <p>
-                    Each shift is calculated separately first.
-                    Day, machine, date and category totals are then
-                    the sum of the individual shift results.
-                </p>
-            </div>
-        `
-    });
-}
 
 
 
