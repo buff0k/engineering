@@ -184,7 +184,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         setTimeout(
             function() {
                 apply_engine_freeze_columns();
-                render_engine_formula_strip();
+                render_engine_formula_header_cards();
                 bind_available_hours_formula_header();
             },
             200
@@ -192,80 +192,80 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     }
 };
 
-function render_engine_formula_strip() {
-    const old_strip = document.getElementById(
-        "availability-engine-formula-strip"
+function render_engine_formula_header_cards() {
+    document.querySelectorAll(
+        ".availability-engine-formula-card"
+    ).forEach(function(card) {
+        card.remove();
+    });
+
+    const formulas = {
+        "Shift Available Hours": (
+            "Req Hrs - PBM Downtime"
+        ),
+        "Available Hours Above 100": (
+            "MAX(Work Hrs, Shift Available)"
+        ),
+        "Availability %": (
+            "(Above 100 / Req Hrs) × 100 × A&U"
+        ),
+        "Utilisation %": (
+            "(Work Hrs / Shift Available) × 100 × A&U"
+        )
+    };
+
+    const headers = document.querySelectorAll(
+        ".dt-cell--header"
     );
 
-    if (old_strip) {
-        old_strip.remove();
-    }
+    headers.forEach(function(header) {
+        const label = (
+            header.innerText || ""
+        ).trim();
 
-    if (
-        !frappe.query_report
-        || !frappe.query_report.$report
-    ) {
-        return;
-    }
+        const formula = formulas[label];
 
-    const datatable = frappe.query_report.$report
-        .find(".datatable")
-        .first();
+        if (!formula) {
+            return;
+        }
 
-    if (!datatable.length) {
-        return;
-    }
+        const content = header.querySelector(
+            ".dt-cell__content"
+        );
 
-    const strip = $(`
-        <div
-            id="availability-engine-formula-strip"
-            style="
-                display:flex;
-                flex-wrap:wrap;
-                gap:8px;
-                margin:0 0 6px 0;
-                padding:7px 9px;
-                background:#eff6ff;
-                border:1px solid #bfdbfe;
-                border-radius:6px;
-                color:#1d4ed8;
-                font-size:11px;
-                line-height:1.4;
-            "
-        >
-            <span>
-                <strong>Shift Available:</strong>
-                Required Hrs - PBM Downtime
-            </span>
+        if (!content) {
+            return;
+        }
 
-            <span style="color:#93c5fd;">|</span>
+        const card = document.createElement("div");
 
-            <span>
-                <strong>Available Above 100:</strong>
-                MAX(Work Hrs, Shift Available)
-            </span>
+        card.className = (
+            "availability-engine-formula-card"
+        );
 
-            <span style="color:#93c5fd;">|</span>
+        card.innerText = formula;
 
-            <span>
-                <strong>Availability %:</strong>
-                (Available Above 100 / Required Hrs)
-                × 100 × A&amp;U Basis
-            </span>
+        card.style.cssText = `
+            display:block;
+            margin-bottom:4px;
+            padding:3px 5px;
+            border:1px solid #93c5fd;
+            border-radius:4px;
+            background:#eff6ff;
+            color:#1d4ed8;
+            font-size:9px;
+            font-weight:600;
+            line-height:1.2;
+            white-space:normal;
+            text-align:center;
+        `;
 
-            <span style="color:#93c5fd;">|</span>
-
-            <span>
-                <strong>Utilisation %:</strong>
-                (Work Hrs / Shift Available)
-                × 100 × A&amp;U Basis
-            </span>
-        </div>
-    `);
-
-    datatable.before(strip);
+        content.insertBefore(
+            card,
+            content.firstChild
+        );
+    });
 }
-
 
 
 function bind_available_hours_formula_header() {
@@ -513,6 +513,14 @@ function apply_engine_styles() {
             color: #166534 !important;
             font-weight: 800 !important;
             border-bottom: 2px solid #16a34a !important;
+            min-height: 68px !important;
+            height: auto !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-header .dt-row {
+            min-height: 68px !important;
+            height: auto !important;
         }
 
 
