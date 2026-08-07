@@ -192,13 +192,8 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     }
 };
 
-function render_engine_formula_header_cards() {
-    document.querySelectorAll(
-        ".availability-engine-formula-card"
-    ).forEach(function(card) {
-        card.remove();
-    });
 
+function render_engine_formula_header_cards() {
     const formulas = {
         "Shift Available Hours": (
             "Req Hrs - PBM Downtime"
@@ -219,16 +214,6 @@ function render_engine_formula_header_cards() {
     );
 
     headers.forEach(function(header) {
-        const label = (
-            header.innerText || ""
-        ).trim();
-
-        const formula = formulas[label];
-
-        if (!formula) {
-            return;
-        }
-
         const content = header.querySelector(
             ".dt-cell__content"
         );
@@ -237,33 +222,58 @@ function render_engine_formula_header_cards() {
             return;
         }
 
-        const card = document.createElement("div");
+        const existing_label = (
+            content.dataset.engineHeading
+            || content.innerText
+            || ""
+        ).trim();
 
-        card.className = (
-            "availability-engine-formula-card"
-        );
+        const formula = formulas[existing_label];
 
-        card.innerText = formula;
+        if (!formula) {
+            return;
+        }
 
-        card.style.cssText = `
-            display:block;
-            margin-bottom:4px;
-            padding:3px 5px;
-            border:1px solid #93c5fd;
-            border-radius:4px;
-            background:#eff6ff;
-            color:#1d4ed8;
-            font-size:9px;
-            font-weight:600;
-            line-height:1.2;
-            white-space:normal;
-            text-align:center;
+        content.dataset.engineHeading = existing_label;
+
+        content.innerHTML = `
+            <div
+                class="availability-engine-formula-card"
+                style="
+                    display:block;
+                    width:100%;
+                    margin-bottom:5px;
+                    padding:3px 4px;
+                    border:1px solid #60a5fa;
+                    border-radius:4px;
+                    background:#eff6ff;
+                    color:#1d4ed8;
+                    font-size:9px;
+                    font-weight:600;
+                    line-height:1.15;
+                    white-space:normal;
+                    text-align:center;
+                    box-sizing:border-box;
+                "
+            >
+                ${frappe.utils.escape_html(formula)}
+            </div>
+
+            <div
+                class="availability-engine-heading-label"
+                style="
+                    display:block;
+                    color:#166534;
+                    font-size:12px;
+                    font-weight:800;
+                    line-height:1.2;
+                    text-align:center;
+                    white-space:normal;
+                "
+            >
+                ${frappe.utils.escape_html(existing_label)}
+            </div>
         `;
-
-        content.insertBefore(
-            card,
-            content.firstChild
-        );
     });
 }
 
@@ -513,14 +523,24 @@ function apply_engine_styles() {
             color: #166534 !important;
             font-weight: 800 !important;
             border-bottom: 2px solid #16a34a !important;
-            min-height: 68px !important;
-            height: auto !important;
+            height: 72px !important;
+            min-height: 72px !important;
+            overflow: visible !important;
         }
 
         .query-report[data-report-name="Availability and Utilisation Engine"]
         .dt-header .dt-row {
-            min-height: 68px !important;
+            height: 72px !important;
+            min-height: 72px !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .dt-header .dt-cell__content {
             height: auto !important;
+            min-height: 64px !important;
+            overflow: visible !important;
+            padding-top: 5px !important;
+            padding-bottom: 5px !important;
         }
 
 
