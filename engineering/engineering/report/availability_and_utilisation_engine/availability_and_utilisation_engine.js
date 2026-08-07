@@ -86,7 +86,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         ) {
             const formulas = {
                 "shift_available_hours": (
-                    "Req Hrs - PBM Downtime"
+                    "MIN(MAX(Work Hrs - PBM Downtime, 0), Req Hrs)"
                 ),
                 "available_hours_above_100": (
                     "MAX(Work Hrs, Shift Available)"
@@ -234,6 +234,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         setTimeout(
             function() {
                 apply_engine_freeze_columns();
+                bind_shift_available_formula_header();
                 bind_available_hours_formula_header();
             },
             200
@@ -243,10 +244,160 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
 
 
 
+function bind_shift_available_formula_header() {
+    const headers = document.querySelectorAll(
+        ".dt-cell--header"
+    );
+
+    headers.forEach(function(header) {
+        const text = (
+            header.innerText || ""
+        ).trim();
+
+        if (
+            text !== "Shift Available Hours"
+        ) {
+            return;
+        }
+
+        if (
+            header.dataset.shiftFormulaBound === "1"
+        ) {
+            return;
+        }
+
+        header.dataset.shiftFormulaBound = "1";
+        header.style.cursor = "pointer";
+        header.title = "Click to view formula";
+
+        header.addEventListener(
+            "click",
+            show_shift_available_formula
+        );
+    });
+}
+
+
+function show_shift_available_formula() {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Shift Available Hours"),
+        size: "large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "formula_html"
+            }
+        ]
+    });
+
+    dialog.fields_dict.formula_html.$wrapper.html(`
+        <div style="
+            padding: 6px 4px 12px;
+            line-height: 1.6;
+        ">
+            <div style="
+                background: #eff6ff;
+                border: 1px solid #93c5fd;
+                border-radius: 10px;
+                padding: 16px;
+                margin-bottom: 16px;
+            ">
+                <div style="
+                    color: #1d4ed8;
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                ">
+                    Shift Available Hours Formula
+                </div>
+
+                <div style="
+                    color: #1d4ed8;
+                    font-size: 16px;
+                    font-weight: 700;
+                ">
+                    MIN(
+                        MAX(
+                            Work Hours - PBM Total Downtime,
+                            0
+                        ),
+                        Required Hours
+                    )
+                </div>
+            </div>
+
+            <div style="
+                background: #f8fafc;
+                border: 1px solid #d1d8dd;
+                border-radius: 10px;
+                padding: 16px;
+                margin-bottom: 12px;
+            ">
+                <strong>1. Start with Work Hours</strong>
+
+                <div style="margin-top: 6px;">
+                    Use the Working Hours recorded for the
+                    individual shift.
+                </div>
+            </div>
+
+            <div style="
+                background: #f8fafc;
+                border: 1px solid #d1d8dd;
+                border-radius: 10px;
+                padding: 16px;
+                margin-bottom: 12px;
+            ">
+                <strong>2. Subtract PBM Total Downtime</strong>
+
+                <div style="margin-top: 6px;">
+                    Subtract PBM Total Downtime from Work Hours.
+                </div>
+            </div>
+
+            <div style="
+                background: #f8fafc;
+                border: 1px solid #d1d8dd;
+                border-radius: 10px;
+                padding: 16px;
+            ">
+                <strong>3. Apply the limits</strong>
+
+                <ul style="
+                    margin-top: 8px;
+                    margin-bottom: 0;
+                    padding-left: 22px;
+                ">
+                    <li>
+                        If the result is below 0, use 0.
+                    </li>
+
+                    <li>
+                        If the result is above Required Hours,
+                        use Required Hours.
+                    </li>
+                </ul>
+
+                <div style="
+                    margin-top: 12px;
+                    font-weight: 700;
+                ">
+                    Shift Available Hours can therefore never
+                    be negative and can never exceed the
+                    shift's Required Hours.
+                </div>
+            </div>
+        </div>
+    `);
+
+    dialog.show();
+}
+
 function bind_available_hours_formula_header() {
     const headers = document.querySelectorAll(
         ".dt-cell--header"
     );
+
 
     headers.forEach(function(header) {
         const text = (
@@ -314,12 +465,19 @@ function show_available_hours_above_100_formula() {
                     font-weight: 700;
                     margin-bottom: 8px;
                 ">
-                    Required Hours - PBM Total Downtime
+                    MIN(
+                        MAX(
+                            Work Hours - PBM Total Downtime,
+                            0
+                        ),
+                        Required Hours
+                    )
                 </div>
 
                 <div>
-                    The result cannot be less than 0
-                    and cannot exceed the shift's Required Hours.
+                    Work Hours minus PBM Total Downtime is used,
+                    with a minimum of 0 and a maximum of the
+                    shift's Required Hours.
                 </div>
             </div>
 

@@ -634,7 +634,7 @@ def calculate_availability_values(row):
     )
 
     uncapped_available_hours = max(
-        required_hours
+        work_hours
         - pbm_total_downtime,
         0,
     )
