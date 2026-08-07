@@ -168,12 +168,6 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     },
 
     onload: function(report) {
-        report.page.add_inner_button(
-            __("Available Hours Above 100 Formula"),
-            function() {
-                show_available_hours_above_100_formula();
-            }
-        );
 
         setTimeout(
             apply_engine_freeze_columns,
@@ -188,11 +182,167 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
 
     after_datatable_render: function() {
         setTimeout(
-            apply_engine_freeze_columns,
+            function() {
+                apply_engine_freeze_columns();
+                bind_available_hours_formula_header();
+            },
             200
         );
     }
 };
+
+function bind_available_hours_formula_header() {
+    const headers = document.querySelectorAll(
+        ".dt-cell--header"
+    );
+
+    headers.forEach(function(header) {
+        const text = (
+            header.innerText || ""
+        ).trim();
+
+        if (
+            text !== "Available Hours Above 100"
+        ) {
+            return;
+        }
+
+        if (
+            header.dataset.formulaBound === "1"
+        ) {
+            return;
+        }
+
+        header.dataset.formulaBound = "1";
+        header.style.cursor = "pointer";
+        header.title = "Click to view formula";
+
+        header.addEventListener(
+            "click",
+            show_available_hours_above_100_formula
+        );
+    });
+}
+
+
+function show_available_hours_above_100_formula() {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Available Hours Above 100"),
+        size: "large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "formula_html"
+            }
+        ]
+    });
+
+    dialog.fields_dict.formula_html.$wrapper.html(`
+        <div style="
+            padding: 6px 4px 12px;
+            line-height: 1.6;
+        ">
+            <div style="
+                background: #f8fafc;
+                border: 1px solid #d1d8dd;
+                border-radius: 10px;
+                padding: 16px;
+                margin-bottom: 16px;
+            ">
+                <div style="
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                ">
+                    1. Shift Available Hours
+                </div>
+
+                <div style="
+                    font-size: 16px;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                ">
+                    Required Hours - PBM Total Downtime
+                </div>
+
+                <div>
+                    The result cannot be less than 0
+                    and cannot exceed the shift's Required Hours.
+                </div>
+            </div>
+
+            <div style="
+                background: #f8fafc;
+                border: 1px solid #d1d8dd;
+                border-radius: 10px;
+                padding: 16px;
+                margin-bottom: 16px;
+            ">
+                <div style="
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                ">
+                    2. Available Hours Above 100
+                </div>
+
+                <div style="
+                    font-size: 16px;
+                    font-weight: 700;
+                    margin-bottom: 10px;
+                ">
+                    MAX(
+                        Work Hours,
+                        Shift Available Hours
+                    )
+                </div>
+
+                <div style="margin-bottom: 8px;">
+                    The higher of the two values is used.
+                </div>
+
+                <ul style="
+                    margin-bottom: 0;
+                    padding-left: 22px;
+                ">
+                    <li>
+                        If Shift Available Hours is higher,
+                        Shift Available Hours is used.
+                    </li>
+                    <li>
+                        If Work Hours is higher,
+                        Work Hours is used.
+                    </li>
+                </ul>
+            </div>
+
+            <div style="
+                background: #f8fafc;
+                border: 1px solid #d1d8dd;
+                border-radius: 10px;
+                padding: 16px;
+            ">
+                <div style="
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                ">
+                    3. Totals
+                </div>
+
+                <div>
+                    Each shift is calculated separately first.
+                    Machine, day, category and main totals are
+                    then calculated by summing the individual
+                    shift results.
+                </div>
+            </div>
+        </div>
+    `);
+
+    dialog.show();
+}
+
 
 function apply_engine_spare_highlight(value, reason) {
     const safe_reason = frappe.utils.escape_html(
