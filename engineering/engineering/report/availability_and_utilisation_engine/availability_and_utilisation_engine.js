@@ -78,6 +78,56 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
 
 
     formatter: function(value, row, column, data, default_formatter) {
+        if (
+            data
+            && Number(
+                data.is_formula_row || 0
+            ) === 1
+        ) {
+            const formulas = {
+                "shift_available_hours": (
+                    "Req Hrs - PBM Downtime"
+                ),
+                "available_hours_above_100": (
+                    "MAX(Work Hrs, Shift Available)"
+                ),
+                "availability_percentage": (
+                    "(Above 100 / Req Hrs) × 100 × A&U"
+                ),
+                "utilisation_percentage": (
+                    "(Work Hrs / Shift Available) × 100 × A&U"
+                )
+            };
+
+            const formula = formulas[
+                column.fieldname
+            ];
+
+            if (!formula) {
+                return "";
+            }
+
+            return `
+                <div style="
+                    display:block;
+                    width:100%;
+                    padding:4px 5px;
+                    border:1px solid #60a5fa;
+                    border-radius:4px;
+                    background:#eff6ff;
+                    color:#1d4ed8;
+                    font-size:9px;
+                    font-weight:700;
+                    line-height:1.2;
+                    text-align:center;
+                    white-space:normal;
+                    box-sizing:border-box;
+                ">
+                    ${frappe.utils.escape_html(formula)}
+                </div>
+            `;
+        }
+
         const hour_fields = [
             "actual_hours",
             "planned_downtime",
@@ -184,7 +234,6 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         setTimeout(
             function() {
                 apply_engine_freeze_columns();
-                render_engine_formula_header_cards();
                 bind_available_hours_formula_header();
             },
             200
@@ -192,90 +241,6 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     }
 };
 
-
-function render_engine_formula_header_cards() {
-    const formulas = {
-        "Shift Available Hours": (
-            "Req Hrs - PBM Downtime"
-        ),
-        "Available Hours Above 100": (
-            "MAX(Work Hrs, Shift Available)"
-        ),
-        "Availability %": (
-            "(Above 100 / Req Hrs) × 100 × A&U"
-        ),
-        "Utilisation %": (
-            "(Work Hrs / Shift Available) × 100 × A&U"
-        )
-    };
-
-    const headers = document.querySelectorAll(
-        ".dt-cell--header"
-    );
-
-    headers.forEach(function(header) {
-        const content = header.querySelector(
-            ".dt-cell__content"
-        );
-
-        if (!content) {
-            return;
-        }
-
-        const existing_label = (
-            content.dataset.engineHeading
-            || content.innerText
-            || ""
-        ).trim();
-
-        const formula = formulas[existing_label];
-
-        if (!formula) {
-            return;
-        }
-
-        content.dataset.engineHeading = existing_label;
-
-        content.innerHTML = `
-            <div
-                class="availability-engine-formula-card"
-                style="
-                    display:block;
-                    width:100%;
-                    margin-bottom:5px;
-                    padding:3px 4px;
-                    border:1px solid #60a5fa;
-                    border-radius:4px;
-                    background:#eff6ff;
-                    color:#1d4ed8;
-                    font-size:9px;
-                    font-weight:600;
-                    line-height:1.15;
-                    white-space:normal;
-                    text-align:center;
-                    box-sizing:border-box;
-                "
-            >
-                ${frappe.utils.escape_html(formula)}
-            </div>
-
-            <div
-                class="availability-engine-heading-label"
-                style="
-                    display:block;
-                    color:#166534;
-                    font-size:12px;
-                    font-weight:800;
-                    line-height:1.2;
-                    text-align:center;
-                    white-space:normal;
-                "
-            >
-                ${frappe.utils.escape_html(existing_label)}
-            </div>
-        `;
-    });
-}
 
 
 function bind_available_hours_formula_header() {
@@ -523,24 +488,6 @@ function apply_engine_styles() {
             color: #166534 !important;
             font-weight: 800 !important;
             border-bottom: 2px solid #16a34a !important;
-            height: 72px !important;
-            min-height: 72px !important;
-            overflow: visible !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-header .dt-row {
-            height: 72px !important;
-            min-height: 72px !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-header .dt-cell__content {
-            height: auto !important;
-            min-height: 64px !important;
-            overflow: visible !important;
-            padding-top: 5px !important;
-            padding-bottom: 5px !important;
         }
 
 

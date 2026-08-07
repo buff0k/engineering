@@ -458,6 +458,14 @@ def get_data(filters):
         ),
     )
 
+    data.insert(
+        0,
+        {
+            "is_formula_row": 1,
+            "indent": 0,
+        },
+    )
+
     return data
 
 def apply_au_percentage_basis(
