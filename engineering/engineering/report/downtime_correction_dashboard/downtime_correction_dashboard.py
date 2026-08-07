@@ -9,6 +9,32 @@ from frappe.utils import add_days, getdate, nowdate
 FIXES_FIELD = "fixes"
 
 
+def get_allowed_sites():
+	if frappe.session.user == "Administrator":
+		return []
+
+	if "System Manager" in frappe.get_roles(frappe.session.user):
+		return []
+
+	return frappe.get_all(
+		"User Permission",
+		filters={
+			"user": frappe.session.user,
+			"allow": "Location",
+		},
+		pluck="for_value",
+	)
+
+
+def check_site_access(site):
+	allowed_sites = get_allowed_sites()
+
+	if allowed_sites and site not in allowed_sites:
+		frappe.throw(
+			_("You do not have permission to access site {0}.").format(site)
+		)
+
+
 def execute(filters=None):
 	filters = filters or {}
 
@@ -30,9 +56,15 @@ def get_items(from_date, to_date, site=None):
 	conditions = ["c.parenttype = 'Mechanical Downtime sign-off'"]
 	values = {}
 
+	allowed_sites = get_allowed_sites()
+
 	if site:
+		check_site_access(site)
 		conditions.append("p.site = %(site)s")
 		values["site"] = site
+	elif allowed_sites:
+		conditions.append("p.site IN %(allowed_sites)s")
+		values["allowed_sites"] = tuple(allowed_sites)
 
 	rows = frappe.db.sql(
 		f"""
@@ -251,6 +283,15 @@ def set_fixed_status(child_row, fixed_key, fixed):
 	fixed = int(fixed)
 
 	row = frappe.get_doc("Mechanical Downtime sign-off child", child_row)
+
+	parent_site = frappe.db.get_value(
+		"Mechanical Downtime sign-off",
+		row.parent,
+		"site",
+	)
+
+	check_site_access(parent_site)
+
 	fixes = frappe.parse_json(row.fixes or "{}") or {}
 
 	if fixed:

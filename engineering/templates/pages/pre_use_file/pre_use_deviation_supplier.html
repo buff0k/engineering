@@ -1,564 +1,361 @@
-{% extends "templates/web.html" %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Pre Use Deviation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-{% block page_content %}
+    <style>
+        body {
+            margin: 0;
+            background: #f3f4f6;
+            font-family: Arial, sans-serif;
+            color: #111827;
+        }
 
-<style>
-#completion_percentage_percent.completion-red {
-    color: #dc2626 !important;
-    font-weight: 700;
-}
-#completion_percentage_percent.completion-green {
-    color: #16a34a !important;
-    font-weight: 700;
-}
-</style>
+        .page {
+            max-width: 1200px;
+            margin: 24px auto;
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
 
+        .header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 14px;
+        }
 
-<style>
-#completion_percentage_range {
-    pointer-events: none !important;
-}
-</style>
+        .title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+            color: #991b1b;
+        }
 
+        .subtitle {
+            margin-top: 6px;
+            color: #6b7280;
+            font-size: 14px;
+        }
 
-<style>
-#completion_percentage_number {
-    display: none !important;
-}
+        .btn-list {
+            display: inline-block;
+            background: #374151;
+            color: white;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
 
-#completion_percentage_range {
-    width: 140px;
-}
+        form {
+            margin: 0;
+        }
 
-#completion_percentage_range.completion-red {
-    accent-color: #dc2626 !important;
-}
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
 
-#completion_percentage_range.completion-green {
-    accent-color: #16a34a !important;
-}
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
 
-#completion_percentage_label.completion-red {
-    color: #dc2626 !important;
-    font-weight: 700;
-}
+        label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+        }
 
-#completion_percentage_label.completion-green {
-    color: #16a34a !important;
-    font-weight: 700;
-}
-</style>
+        input,
+        select,
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 11px;
+            font-size: 14px;
+            background: white;
+            color: #111827;
+        }
 
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
 
+        .full {
+            grid-column: 1 / -1;
+        }
 
+        .section {
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #e5e7eb;
+        }
 
-<div class="container my-4">
-    <h2>Pre Use Deviation</h2>
+        .section-title {
+            margin: 0 0 14px 0;
+            font-size: 18px;
+            color: #111827;
+        }
 
-    <div class="mb-3">
-        <a href="/pre_use_deviation_list" class="btn btn-secondary">Back to List</a>
+        .actions {
+            margin-top: 22px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-save {
+            background: #991b1b;
+            border: 0;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-reset {
+            background: #6b7280;
+            color: white;
+            text-decoration: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .completion-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .completion-row input[type="range"] {
+            flex: 1;
+        }
+
+        .completion-value {
+            min-width: 48px;
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        @media (max-width: 760px) {
+            .page {
+                margin: 10px;
+                padding: 14px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <div class="header">
+        <div>
+            <h1 class="title">Pre Use Deviation</h1>
+            <div class="subtitle">Supplier capture page</div>
+        </div>
+        <a class="btn-list" href="/pre_use_deviation_list">View List</a>
     </div>
 
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
         <input type="hidden" name="name" value="{{ form_values.name or '' }}">
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label><strong>Report Date and Time</strong></label>
-                <input type="text" class="form-control datetime-popup" name="report_datetime" value="{{ form_values.report_datetime or '' }}" autocomplete="off">
+        <div class="grid">
+            <div class="field">
+                <label>Report Date & Time</label>
+                <input type="text" name="report_datetime" value="{{ form_values.report_datetime or '' }}" required>
+                <div class="hint">Format: DD-MM-YYYY HH:MM:SS</div>
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label><strong>Site</strong></label>
-                <select class="form-control" name="site" required>
+            <div class="field">
+                <label>Site</label>
+                <select name="site" id="site" required>
                     <option value="">Select Site</option>
                     {% for site in site_options %}
                     <option value="{{ site }}" {% if form_values.site == site %}selected{% endif %}>{{ site }}</option>
                     {% endfor %}
                 </select>
             </div>
-        </div>
 
-        <div class="mb-3">
-            <label><strong>Fleet Number</strong></label>
-            <select class="form-control" id="fleet_number" id="fleet_number" name="fleet_number" required>
-                <option value="">Select Fleet Number</option>
-                {% for asset in asset_options %}
-                <option value="{{ asset }}" {% if form_values.fleet_number == asset %}selected{% endif %}>{{ asset }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label><strong>Pre-Use No.</strong></label>
-                <input type="number" class="form-control" name="pre_use_no" value="{{ form_values.pre_use_no or 0 }}">
+            <div class="field">
+                <label>Fleet Number</label>
+                <select name="fleet_number" id="fleet_number" required>
+                    <option value="">Select Fleet Number</option>
+                    {% for asset in asset_options %}
+                    <option value="{{ asset }}" {% if form_values.fleet_number == asset %}selected{% endif %}>{{ asset }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-            <div class="col-md-4 mb-3">
-                <label><strong>Machine Type</strong></label>
-                <input type="text" class="form-control" id="machine_type" name="machine_type" value="{{ form_values.machine_type or '' }}">
+            <div class="field">
+                <label>Pre Use No</label>
+                <input type="number" name="pre_use_no" value="{{ form_values.pre_use_no or 0 }}">
             </div>
 
-            <div class="col-md-4 mb-3">
-                <label><strong>Machine Model</strong></label>
-                <input type="text" class="form-control" id="machine_model" name="machine_model" value="{{ form_values.machine_model or '' }}">
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label><strong>Operating Status</strong></label>
-            <select class="form-control" name="operating_status">
-                <option value="">Select Operating Status</option>
-                {% for status in operating_status_options %}
-                <option value="{{ status }}" {% if form_values.operating_status == status %}selected{% endif %}>{{ status }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label><strong>Deviation Details</strong></label>
-            <textarea class="form-control" name="deviation_details" rows="4">{{ form_values.deviation_details or '' }}</textarea>
-        </div>
-
-        <hr>
-        <h5>Reported By</h5>
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label><strong>Reported By Coy Number</strong></label>
-                <input type="text" class="form-control" name="reported_by_coy_number" value="{{ form_values.reported_by_coy_number or '' }}">
+            <div class="field">
+                <label>Machine Type</label>
+                <input type="text" name="machine_type" id="machine_type" value="{{ form_values.machine_type or '' }}">
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label><strong>Reported By Name and Surname</strong></label>
-                <input type="text" class="form-control" name="reported_by_name_and_surname" value="{{ form_values.reported_by_name_and_surname or '' }}">
+            <div class="field">
+                <label>Machine Model</label>
+                <input type="text" name="machine_model" id="machine_model" value="{{ form_values.machine_model or '' }}">
+            </div>
+
+            <div class="field">
+                <label>Operating Status</label>
+                <select name="operating_status">
+                    <option value="">Select Operating Status</option>
+                    {% for status in operating_status_options %}
+                    <option value="{{ status }}" {% if form_values.operating_status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Action Status</label>
+                <select name="action_status">
+                    {% for status in action_status_options %}
+                    <option value="{{ status }}" {% if form_values.action_status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field full">
+                <label>Deviation Details</label>
+                <textarea name="deviation_details" required>{{ form_values.deviation_details or '' }}</textarea>
             </div>
         </div>
 
-        <hr>
-        <h5>Resolution</h5>
+        <div class="section">
+            <h2 class="section-title">Reported By</h2>
 
-        <div class="mb-3">
-            <label><strong>Resolution Summary</strong></label>
-            <textarea class="form-control" name="resolution_summary" rows="4">{{ form_values.resolution_summary or '' }}</textarea>
-        </div>
+            <div class="grid">
+                <div class="field">
+                    <label>Reported By Coy Number</label>
+                    <input type="text" name="reported_by_coy_number" value="{{ form_values.reported_by_coy_number or '' }}">
+                </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label><strong>Action Date and Time</strong></label>
-                <input type="text" class="form-control datetime-popup" id="action_date_and_time" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}" autocomplete="off">
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label><strong>Job Card Number</strong></label>
-                <input type="text" class="form-control" name="job_card_number" value="{{ form_values.job_card_number or '' }}">
+                <div class="field">
+                    <label>Reported By Name and Surname</label>
+                    <input type="text" name="reported_by_name_and_surname" value="{{ form_values.reported_by_name_and_surname or '' }}">
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label><strong>Actioned By Coy Number</strong></label>
-                <input type="text" class="form-control" name="actioned_by_coy_number" value="{{ form_values.actioned_by_coy_number or '' }}">
-            </div>
+        <div class="section">
+            <h2 class="section-title">Action / Resolution</h2>
 
-            <div class="col-md-6 mb-3">
-                <label><strong>Actioned By Name and Surname</strong></label>
-                <input type="text" class="form-control" name="actioned_by_name_and_surname" value="{{ form_values.actioned_by_name_and_surname or '' }}">
+            <div class="grid">
+                <div class="field full">
+                    <label>Resolution Summary</label>
+                    <textarea name="resolution_summary">{{ form_values.resolution_summary or '' }}</textarea>
+                </div>
+
+                <div class="field">
+                    <label>Action Date and Time</label>
+                    <input type="text" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}">
+                    <div class="hint">Format: DD-MM-YYYY HH:MM:SS</div>
+                </div>
+
+                <div class="field">
+                    <label>Actioned By Coy Number</label>
+                    <input type="text" name="actioned_by_coy_number" value="{{ form_values.actioned_by_coy_number or '' }}">
+                </div>
+
+                <div class="field">
+                    <label>Actioned By Name and Surname</label>
+                    <input type="text" name="actioned_by_name_and_surname" value="{{ form_values.actioned_by_name_and_surname or '' }}">
+                </div>
+
+                <div class="field">
+                    <label>Job Card Number</label>
+                    <input type="text" name="job_card_number" value="{{ form_values.job_card_number or '' }}">
+                </div>
+
+                <div class="field">
+                    <label>Completion Percentage</label>
+                    <div class="completion-row">
+                        <input type="range" min="0" max="100" step="1" name="completion_percentage" id="completion_percentage" value="{{ form_values.completion_percentage or 0 }}">
+                        <span class="completion-value" id="completion_text">{{ form_values.completion_percentage or 0 }}%</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="mb-3">
-            <label><strong>Action Status</strong></label>
-            <select class="form-control" name="action_status" required>
-                {% for status in action_status_options %}
-                <option value="{{ status }}" {% if form_values.action_status == status %}selected{% endif %}>{{ status }}</option>
-                {% endfor %}
-            </select>
+        <div class="actions">
+            <button class="btn-save" type="submit">Save Pre Use Deviation</button>
+            <a class="btn-reset" href="/pre_use_deviation_supplier">New</a>
         </div>
-
-        <div class="mb-3">
-            <label><strong>Completion Percentage</strong></label>
-            <input type="number" class="form-control mb-2" id="completion_percentage_number" name="completion_percentage" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
-            <input type="range" class="form-range" id="completion_percentage_range" tabindex="-1" min="0" max="100" value="{{ form_values.completion_percentage or 0 }}">
-            <div class="text-success mt-1">
-                <span id="completion_percentage_label">{{ form_values.completion_percentage or 0 }}</span><span id="completion_percentage_percent">%</span>
-            </div>
-        </div>
-
-        <script type="application/json" id="asset_details_json">{{ asset_details | tojson }}</script>
-
-        <script>
-        (function () {
-            const numberInput = document.getElementById("completion_percentage_number");
-            const rangeInput = document.getElementById("completion_percentage_range");
-            const label = document.getElementById("completion_percentage_label");
-        const percent = document.getElementById("completion_percentage_percent");
-            const fleetNumberInput = document.getElementById("fleet_number");
-            const machineTypeInput = document.getElementById("machine_type");
-            const machineModelInput = document.getElementById("machine_model");
-            const actionDateTimeInput = document.getElementById("action_date_and_time");
-            const assetDetails = JSON.parse(document.getElementById("asset_details_json").textContent || "{}");
-
-            function currentDateTimeLocal() {
-                const now = new Date();
-                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-                return now.toISOString().slice(0, 16);
-            }
-
-            function populateMachineDetails() {
-                const selectedAsset = fleetNumberInput ? fleetNumberInput.value : "";
-                const details = assetDetails[selectedAsset] || {};
-
-                if (machineTypeInput) {
-                    machineTypeInput.value = details.machine_type || "";
-                }
-
-                if (machineModelInput) {
-                    machineModelInput.value = details.machine_model || "";
-                }
-            }
-            const fleetNumberInput = document.getElementById("fleet_number");
-            const machineTypeInput = document.getElementById("machine_type");
-            const machineModelInput = document.getElementById("machine_model");
-            const actionDateTimeInput = document.getElementById("action_date_and_time");
-            const assetDetails = JSON.parse(document.getElementById("asset_details_json").textContent || "{}");
-
-            function currentDateTimeLocal() {
-                const now = new Date();
-                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-                return now.toISOString().slice(0, 16);
-            }
-
-            function populateMachineDetails() {
-                const selectedAsset = fleetNumberInput ? fleetNumberInput.value : "";
-                const details = assetDetails[selectedAsset] || {};
-
-                if (machineTypeInput) {
-                    machineTypeInput.value = details.machine_type || "";
-                }
-
-                if (machineModelInput) {
-                    machineModelInput.value = details.machine_model || "";
-                }
-            }
-
-            function clamp(value) {
-                value = parseInt(value || 0, 10);
-                if (isNaN(value)) value = 0;
-                if (value < 0) value = 0;
-                if (value > 100) value = 100;
-                return value;
-            }
-
-            function syncFromNumber() {
-                const value = clamp(numberInput.value);
-                numberInput.value = value;
-                rangeInput.value = value;
-                label.textContent = value;
-
-                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
-                    actionDateTimeInput.value = currentDateTimeLocal();
-                }
-
-                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
-                    actionDateTimeInput.value = currentDateTimeLocal();
-                }
-            }
-
-            function syncFromRange() {
-                const value = clamp(rangeInput.value);
-                numberInput.value = value;
-                label.textContent = value;
-
-                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
-                    actionDateTimeInput.value = currentDateTimeLocal();
-                }
-
-                if (value > 0 && actionDateTimeInput && !actionDateTimeInput.value) {
-                    actionDateTimeInput.value = currentDateTimeLocal();
-                }
-            }
-
-            numberInput.addEventListener("input", syncFromNumber);
-            rangeInput.addEventListener("input", syncFromRange);
-
-            if (fleetNumberInput) {
-                fleetNumberInput.addEventListener("change", populateMachineDetails);
-                populateMachineDetails();
-            }
-
-            syncFromNumber();
-        })();
-        </script>
-
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a href="/pre_use_deviation_list" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
 
 <script>
-(function () {
-    function applyAssetDetails() {
-        const fleet = document.querySelector('[name="fleet_number"]');
-        const machineType = document.querySelector('[name="machine_type"]');
-        const machineModel = document.querySelector('[name="machine_model"]');
-        const jsonEl = document.getElementById("asset_details_json");
+const assetDetails = {{ asset_details | tojson }};
 
-        if (!fleet || !machineType || !machineModel || !jsonEl) {
-            return;
-        }
+function updateAssetFields() {
+    const fleet = document.getElementById("fleet_number").value;
+    const details = assetDetails[fleet] || {};
 
-        const details = JSON.parse(jsonEl.textContent || "{}");
-        const selected = fleet.value || "";
-        const asset = details[selected] || {};
-
-        machineType.value = asset.machine_type || "";
-        machineModel.value = asset.machine_model || "";
+    if (details.site) {
+        document.getElementById("site").value = details.site;
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const fleet = document.querySelector('[name="fleet_number"]');
-        if (fleet) {
-            fleet.addEventListener("change", applyAssetDetails);
-            applyAssetDetails();
-        }
-    });
-})();
+    if (details.machine_type) {
+        document.getElementById("machine_type").value = details.machine_type;
+    }
+
+    if (details.machine_model) {
+        document.getElementById("machine_model").value = details.machine_model;
+    }
+}
+
+function updateCompletionText() {
+    const value = document.getElementById("completion_percentage").value || 0;
+    document.getElementById("completion_text").innerText = value + "%";
+}
+
+document.getElementById("fleet_number").addEventListener("change", updateAssetFields);
+document.getElementById("completion_percentage").addEventListener("input", updateCompletionText);
+
+updateAssetFields();
+updateCompletionText();
 </script>
-
-
-
-
-
-
-
-
-
-
-<script>
-(function () {
-    function setCompletion(value) {
-        const numberInput = document.getElementById("completion_percentage_number");
-        const rangeInput = document.getElementById("completion_percentage_range");
-        const label = document.getElementById("completion_percentage_label");
-        const percent = document.getElementById("completion_percentage_percent");
-        const actionStatus = document.querySelector('[name="action_status"]');
-
-        value = parseInt(value || 0, 10);
-        if (isNaN(value)) value = 0;
-        value = value >= 100 ? 100 : 0;
-
-        const colorClass = value === 100 ? "completion-green" : "completion-red";
-
-        if (numberInput) {
-            numberInput.value = value;
-        }
-
-        if (rangeInput) {
-            rangeInput.value = value;
-            rangeInput.classList.remove("completion-red", "completion-green");
-            rangeInput.classList.add(colorClass);
-        }
-
-        if (label) {
-            label.textContent = value;
-            label.classList.remove("completion-red", "completion-green");
-            label.classList.add(colorClass);
-        }
-
-        if (percent) {
-            percent.classList.remove("completion-red", "completion-green");
-            percent.classList.add(colorClass);
-        }
-
-        if (actionStatus) {
-            actionStatus.value = value === 100 ? "Closed" : "Open";
-        }
-    }
-
-    function syncCompletionFromActionDate() {
-        const actionDate = document.getElementById("action_date_and_time");
-
-        if (actionDate && actionDate.value) {
-            setCompletion(100);
-        } else {
-            setCompletion(0);
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const actionDate = document.getElementById("action_date_and_time");
-
-        if (actionDate) {
-            actionDate.addEventListener("input", syncCompletionFromActionDate);
-            actionDate.addEventListener("change", syncCompletionFromActionDate);
-            actionDate.addEventListener("keyup", syncCompletionFromActionDate);
-            actionDate.addEventListener("blur", syncCompletionFromActionDate);
-        }
-
-        syncCompletionFromActionDate();
-    });
-})();
-</script>
-
-
-
-
-
-
-
-
-<script>
-(function () {
-    function pad(value) {
-        return String(value).padStart(2, "0");
-    }
-
-    function formatDateTime(date) {
-        return (
-            pad(date.getDate()) + "-" +
-            pad(date.getMonth() + 1) + "-" +
-            date.getFullYear() + " " +
-            pad(date.getHours()) + ":" +
-            pad(date.getMinutes()) + ":" +
-            pad(date.getSeconds())
-        );
-    }
-
-    function setupDateTimePopups() {
-        if (typeof flatpickr === "undefined") {
-            return;
-        }
-
-        document.querySelectorAll(".datetime-popup").forEach(function (input) {
-            if (input._flatpickr) {
-                input._flatpickr.destroy();
-            }
-
-            flatpickr(input, {
-                enableTime: true,
-                enableSeconds: true,
-                allowInput: true,
-                clickOpens: true,
-                dateFormat: "d-m-Y H:i:S",
-                time_24hr: true,
-                closeOnSelect: false,
-
-                onOpen: function (selectedDates, dateStr, instance) {
-                    if (!input.value) {
-                        const now = new Date();
-                        instance.jumpToDate(now);
-                        instance.setDate(now, false);
-                        input.value = "";
-                    }
-                },
-
-                onChange: function (selectedDates) {
-                    if (selectedDates.length) {
-                        input.value = formatDateTime(selectedDates[0]);
-                        input.dispatchEvent(new Event("input", { bubbles: true }));
-                        input.dispatchEvent(new Event("change", { bubbles: true }));
-                    }
-                }
-            });
-
-            input.addEventListener("keydown", function (event) {
-                if (event.key === "Backspace" || event.key === "Delete") {
-                    setTimeout(function () {
-                        if (!input.value) {
-                            input.dispatchEvent(new Event("input", { bubbles: true }));
-                            input.dispatchEvent(new Event("change", { bubbles: true }));
-                        }
-                    }, 50);
-                }
-            });
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", setupDateTimePopups);
-})();
-</script>
-
-
-
-
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
-<style>
-.flatpickr-calendar {
-    font-size: 12px !important;
-    width: 260px !important;
-}
-
-.flatpickr-calendar .flatpickr-months {
-    padding-top: 4px;
-}
-
-.flatpickr-calendar .flatpickr-day {
-    max-width: 30px !important;
-    height: 30px !important;
-    line-height: 30px !important;
-}
-
-.flatpickr-calendar .flatpickr-time {
-    height: 38px !important;
-}
-
-.flatpickr-calendar .numInputWrapper {
-    height: 28px !important;
-}
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-<script>
-(function () {
-    function setupSmallCalendar() {
-        if (typeof flatpickr === "undefined") {
-            console.log("flatpickr not loaded");
-            return;
-        }
-
-        document.querySelectorAll(".datetime-popup").forEach(function (input) {
-            if (input._flatpickr) {
-                input._flatpickr.destroy();
-            }
-
-            flatpickr(input, {
-                enableTime: true,
-                enableSeconds: true,
-                allowInput: true,
-                clickOpens: true,
-                dateFormat: "d-m-Y H:i:S",
-                time_24hr: true,
-                disableMobile: true,
-                closeOnSelect: false,
-
-                onChange: function (selectedDates, dateStr) {
-                    input.value = dateStr || "";
-                    input.dispatchEvent(new Event("input", { bubbles: true }));
-                    input.dispatchEvent(new Event("change", { bubbles: true }));
-                }
-            });
-
-            input.addEventListener("keydown", function (event) {
-                if (event.key === "Backspace" || event.key === "Delete") {
-                    setTimeout(function () {
-                        input.dispatchEvent(new Event("input", { bubbles: true }));
-                        input.dispatchEvent(new Event("change", { bubbles: true }));
-                    }, 50);
-                }
-            });
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        setTimeout(setupSmallCalendar, 300);
-    });
-})();
-</script>
-
-{% endblock %}
+</body>
+</html>

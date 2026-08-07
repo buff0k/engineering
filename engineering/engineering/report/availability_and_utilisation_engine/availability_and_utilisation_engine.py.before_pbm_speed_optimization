@@ -1578,20 +1578,8 @@ def get_pbm_map(
     assets,
     locations,
 ):
-    """
-    Build PBM downtime values using the same Availability & Utilisation
-    calculation rules, but without issuing repeated A&U SQL queries for
-    every individual breakdown segment.
-
-    Performance strategy:
-    - Load all relevant A&U shift rows once.
-    - Index those rows by asset/location.
-    - Cache Startup/Fatigue configuration by location/shift.
-    - Perform overlap calculations in memory.
-    """
-
-    from engineering.engineering.doctype.availability_and_utilisation import (
-        availability_and_utilisation as au,
+    from engineering.engineering.report.availability_and_utilisation_month_end_report import (
+        availability_and_utilisation_month_end_report as month_end,
     )
 
     report_start = get_datetime(
@@ -1607,13 +1595,6 @@ def get_pbm_map(
         for asset in assets
         if asset.asset_name
     })
-
-    if not asset_names:
-        return {}
-
-    # ------------------------------------------------------------------
-    # Load Plant Breakdown or Maintenance rows once
-    # ------------------------------------------------------------------
 
     conditions = [
         "IFNULL(asset_name, '') != ''",
@@ -1633,7 +1614,9 @@ def get_pbm_map(
     ]
 
     values = {
-        "asset_names": tuple(asset_names),
+        "asset_names": tuple(
+            asset_names
+        ),
         "report_start": report_start,
         "report_end": report_end,
     }
@@ -1662,451 +1645,6 @@ def get_pbm_map(
         values,
         as_dict=True,
     )
-
-    if not rows:
-        return {}
-
-    # ------------------------------------------------------------------
-    # Load all A&U shift rows needed for the complete report ONCE.
-    #
-    # Previously get_required_downtime_minutes_for_breakdown() executed
-    # essentially this query for every PBM segment.
-    # ------------------------------------------------------------------
-
-    au_conditions = [
-        "asset_name IN %(asset_names)s",
-        (
-            "shift_date >= "
-            "DATE(%(from_date)s) - INTERVAL 1 DAY"
-        ),
-        (
-            "shift_date <= "
-            "DATE(%(to_date)s) + INTERVAL 1 DAY"
-        ),
-    ]
-
-    au_values = {
-        "asset_names": tuple(asset_names),
-        "from_date": from_date,
-        "to_date": to_date,
-    }
-
-    if locations:
-        au_conditions.append(
-            "location IN %(locations)s"
-        )
-
-        au_values["locations"] = tuple(
-            locations
-        )
-
-    au_rows = frappe.db.sql(
-        f"""
-        SELECT
-            name,
-            shift_date,
-            shift,
-            shift_system,
-            location,
-            asset_name,
-            shift_required_hours
-        FROM `tabAvailability and Utilisation`
-        WHERE {" AND ".join(au_conditions)}
-        ORDER BY
-            asset_name ASC,
-            location ASC,
-            shift_date ASC,
-            FIELD(
-                shift,
-                'Day',
-                'Morning',
-                'Afternoon',
-                'Night'
-            ) ASC
-        """,
-        au_values,
-        as_dict=True,
-    )
-
-    # ------------------------------------------------------------------
-    # Index A&U rows so each breakdown only examines rows belonging to
-    # the same asset and location.
-    # ------------------------------------------------------------------
-
-    au_rows_by_asset_location = {}
-
-    for au_row in au_rows:
-        au_key = (
-            au_row.asset_name,
-            au_row.location,
-        )
-
-        au_rows_by_asset_location.setdefault(
-            au_key,
-            [],
-        ).append(au_row)
-
-    # ------------------------------------------------------------------
-    # Startup/Fatigue configuration cache.
-    #
-    # _exclusion_windows() previously called frappe.db.get_value()
-    # repeatedly. We intentionally still use frappe.db.get_value here,
-    # but only once per unique location/shift pair so record-selection
-    # behaviour remains consistent.
-    # ------------------------------------------------------------------
-
-    exclusion_configuration_cache = {}
-
-    def get_exclusion_configuration(
-        location,
-        shift,
-    ):
-        cache_key = (
-            location,
-            shift,
-        )
-
-        if cache_key not in exclusion_configuration_cache:
-            exclusion_configuration_cache[
-                cache_key
-            ] = frappe.db.get_value(
-                "Startup and Fatigue spesification",
-                {
-                    "site": location,
-                    "shift": shift,
-                },
-                [
-                    "startup_start",
-                    "startup_end",
-                    "fatigue_start",
-                    "fatigue_end",
-                ],
-                as_dict=True,
-            )
-
-        return exclusion_configuration_cache[
-            cache_key
-        ]
-
-    def time_text(value):
-        if isinstance(value, timedelta):
-            seconds = (
-                int(value.total_seconds())
-                % 86400
-            )
-
-            hours, remainder = divmod(
-                seconds,
-                3600,
-            )
-
-            minutes, seconds = divmod(
-                remainder,
-                60,
-            )
-
-            return (
-                f"{hours:02d}:"
-                f"{minutes:02d}:"
-                f"{seconds:02d}"
-            )
-
-        return str(value).split(".")[0]
-
-    def get_cached_exclusion_windows(
-        location,
-        shift,
-        shift_start,
-        shift_end,
-    ):
-        configuration = (
-            get_exclusion_configuration(
-                location,
-                shift,
-            )
-        )
-
-        if not configuration:
-            return []
-
-        def build_windows(
-            start_time,
-            end_time,
-        ):
-            windows = []
-
-            start_time = time_text(
-                start_time
-            )
-
-            end_time = time_text(
-                end_time
-            )
-
-            base_date = getdate(
-                shift_start
-            )
-
-            for day_offset in (0, 1):
-                window_date = add_days(
-                    base_date,
-                    day_offset,
-                )
-
-                window_start = get_datetime(
-                    f"{window_date} {start_time}"
-                )
-
-                window_end_date = (
-                    window_date
-                )
-
-                if end_time <= start_time:
-                    window_end_date = add_days(
-                        window_date,
-                        1,
-                    )
-
-                window_end = get_datetime(
-                    f"{window_end_date} {end_time}"
-                )
-
-                if (
-                    window_end <= shift_start
-                    or window_start >= shift_end
-                ):
-                    continue
-
-                windows.append((
-                    max(
-                        window_start,
-                        shift_start,
-                    ),
-                    min(
-                        window_end,
-                        shift_end,
-                    ),
-                ))
-
-            return windows
-
-        windows = []
-
-        # Preserve original order:
-        # startup first, fatigue second.
-        windows.extend(
-            build_windows(
-                configuration.startup_start,
-                configuration.startup_end,
-            )
-        )
-
-        windows.extend(
-            build_windows(
-                configuration.fatigue_start,
-                configuration.fatigue_end,
-            )
-        )
-
-        return windows
-
-    # ------------------------------------------------------------------
-    # Same calculation as
-    # get_required_downtime_minutes_for_breakdown(), but against the
-    # already-loaded A&U rows.
-    # ------------------------------------------------------------------
-
-    def calculate_required_downtime(
-        asset_name,
-        location,
-        start_datetime,
-        resolved_datetime,
-    ):
-        empty_result = {
-            "total_minutes": 0,
-            "required_downtime_minutes": 0,
-            "excluded_minutes": 0,
-            "sunday_minutes": 0,
-        }
-
-        if (
-            not start_datetime
-            or not resolved_datetime
-        ):
-            return empty_result
-
-        start_dt = get_datetime(
-            start_datetime
-        )
-
-        end_dt = get_datetime(
-            resolved_datetime
-        )
-
-        if (
-            not start_dt
-            or not end_dt
-            or end_dt <= start_dt
-        ):
-            return empty_result
-
-        candidate_rows = (
-            au_rows_by_asset_location.get(
-                (
-                    asset_name,
-                    location,
-                ),
-                [],
-            )
-        )
-
-        raw_overlap_hours = 0.0
-        required_downtime_hours = 0.0
-        excluded_overlap_hours = 0.0
-        sunday_overlap_hours = 0.0
-
-        for au_row in candidate_rows:
-            try:
-                # Reproduce the original SQL date window.
-                row_date = getdate(
-                    au_row.shift_date
-                )
-
-                if (
-                    row_date
-                    < add_days(
-                        getdate(start_dt),
-                        -1,
-                    )
-                ):
-                    continue
-
-                if (
-                    row_date
-                    > add_days(
-                        getdate(end_dt),
-                        1,
-                    )
-                ):
-                    continue
-
-                required_hours = max(
-                    flt(
-                        au_row.shift_required_hours
-                    ),
-                    0,
-                )
-
-                shift_start, shift_end = (
-                    au.get_shift_timings(
-                        au_row.shift_system,
-                        au_row.shift,
-                        str(
-                            au_row.shift_date
-                        ),
-                    )
-                )
-
-                if (
-                    not shift_start
-                    or not shift_end
-                ):
-                    continue
-
-                shift_overlap_hours = (
-                    au._overlap_hours(
-                        start_dt,
-                        end_dt,
-                        shift_start,
-                        shift_end,
-                    )
-                )
-
-                if shift_overlap_hours <= 0:
-                    continue
-
-                raw_overlap_hours += (
-                    shift_overlap_hours
-                )
-
-                shift_excluded_hours = 0.0
-
-                for (
-                    window_start,
-                    window_end,
-                ) in get_cached_exclusion_windows(
-                    au_row.location,
-                    au_row.shift,
-                    shift_start,
-                    shift_end,
-                ):
-                    shift_excluded_hours += (
-                        au._overlap_hours(
-                            start_dt,
-                            end_dt,
-                            window_start,
-                            window_end,
-                        )
-                    )
-
-                shift_excluded_hours = min(
-                    shift_excluded_hours,
-                    shift_overlap_hours,
-                )
-
-                valid_overlap_hours = max(
-                    (
-                        shift_overlap_hours
-                        - shift_excluded_hours
-                    ),
-                    0,
-                )
-
-                excluded_overlap_hours += (
-                    shift_excluded_hours
-                )
-
-                if (
-                    getdate(
-                        au_row.shift_date
-                    ).weekday() == 6
-                    and required_hours <= 0
-                ):
-                    sunday_overlap_hours += (
-                        valid_overlap_hours
-                    )
-
-                    continue
-
-                if required_hours <= 0:
-                    continue
-
-                required_downtime_hours += min(
-                    valid_overlap_hours,
-                    required_hours,
-                )
-
-            except Exception:
-                continue
-
-        return {
-            "total_minutes": int(round(
-                raw_overlap_hours * 60
-            )),
-            "required_downtime_minutes": int(round(
-                required_downtime_hours * 60
-            )),
-            "excluded_minutes": int(round(
-                excluded_overlap_hours * 60
-            )),
-            "sunday_minutes": int(round(
-                sunday_overlap_hours * 60
-            )),
-        }
-
-    # ------------------------------------------------------------------
-    # Build PBM map.
-    # ------------------------------------------------------------------
 
     pbm_map = {}
     seen_intervals = set()
@@ -2190,9 +1728,20 @@ def get_pbm_map(
 
             if segment_end > segment_start:
                 calculated = (
-                    calculate_required_downtime(
+                    month_end
+                    .get_required_downtime_minutes_for_breakdown(
+                        frappe._dict({
+                            "location": (
+                                row.location
+                            ),
+                            "start_date": (
+                                from_date
+                            ),
+                            "end_date": (
+                                to_date
+                            ),
+                        }),
                         row.asset_name,
-                        row.location,
                         segment_start,
                         segment_end,
                     )
@@ -2264,5 +1813,3 @@ def get_pbm_map(
             )
 
     return pbm_map
-
-

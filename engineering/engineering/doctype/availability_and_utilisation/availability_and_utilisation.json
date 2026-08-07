@@ -209,7 +209,7 @@
    "fieldtype": "Section Break"
   },
   {
-   "description": "Available hours is not capped",
+   "description": "Available hours is not capped.\nShift Breakdown Hours is not yet subtracted",
    "fieldname": "shift_available_hours_above_100",
    "fieldtype": "Float",
    "label": "Available Hours Above 100",
@@ -239,14 +239,15 @@
    "description": "Field not needed",
    "fieldname": "plant_shift_utilisation_above_100",
    "fieldtype": "Percent",
-   "hidden": 1,
    "label": "Plant Shift Utilisation Above 100",
    "precision": "1",
    "read_only": 1
   },
   {
+   "description": "Field not needed",
    "fieldname": "available_hours_above_100_capped",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Available Hours Above 100 Capped",
    "precision": "3",
    "read_only": 1
@@ -260,7 +261,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-05 05:39:43.161659",
+ "modified": "2026-08-05 08:54:02.533399",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Availability and Utilisation",

@@ -814,10 +814,8 @@ class AvailabilityandUtilisation(Document):
                         else 0
                     )
 
-                # When working hours exceed 9, cap the available-hours
-                # denominator at 9 for the above-100 utilisation calculation.
                 available_hours_above_100_capped = (
-                    min(max_val, 9) if shift_working_hours > 9 else max_val
+                    shift_required_hours
                 )
 
                 doc.available_hours_above_100_capped = (
@@ -825,7 +823,11 @@ class AvailabilityandUtilisation(Document):
                 )
 
                 doc.plant_shift_utilisation_above_100 = (
-                    (shift_working_hours / available_hours_above_100_capped) * 100
+                    (
+                        shift_working_hours
+                        / available_hours_above_100_capped
+                    )
+                    * 100
                     if available_hours_above_100_capped > 0
                     else 0
                 )
