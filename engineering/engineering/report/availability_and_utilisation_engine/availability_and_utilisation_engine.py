@@ -633,11 +633,18 @@ def calculate_availability_values(row):
         0,
     )
 
-    uncapped_available_hours = max(
-        work_hours
-        - pbm_total_downtime,
-        0,
-    )
+    if work_hours > 0:
+        uncapped_available_hours = max(
+            work_hours
+            - pbm_total_downtime,
+            0,
+        )
+    else:
+        uncapped_available_hours = max(
+            required_hours
+            - pbm_total_downtime,
+            0,
+        )
 
     shift_available_hours = min(
         uncapped_available_hours,

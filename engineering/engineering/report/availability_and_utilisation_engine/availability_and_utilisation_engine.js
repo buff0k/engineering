@@ -86,7 +86,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         ) {
             const formulas = {
                 "shift_available_hours": (
-                    "MIN(MAX(Work Hrs - PBM Downtime, 0), Req Hrs)"
+                    "IF Work > 0: Work - PBM | IF Work = 0: Req - PBM"
                 ),
                 "available_hours_above_100": (
                     "MAX(Work Hrs, Shift Available)"
@@ -343,12 +343,23 @@ function show_shift_available_formula() {
                     font-size: 16px;
                     font-weight: 700;
                 ">
+                    If Work Hours &gt; 0:
+                    <br>
                     MIN(
                         MAX(
                             Work Hours - PBM Total Downtime,
                             0
                         ),
                         Required Hours
+                    )
+
+                    <br><br>
+
+                    If Work Hours = 0:
+                    <br>
+                    MAX(
+                        Required Hours - PBM Total Downtime,
+                        0
                     )
                 </div>
             </div>
@@ -360,11 +371,13 @@ function show_shift_available_formula() {
                 padding: 16px;
                 margin-bottom: 12px;
             ">
-                <strong>1. Start with Work Hours</strong>
+                <strong>1. If the machine worked</strong>
 
                 <div style="margin-top: 6px;">
-                    Use the Working Hours recorded for the
-                    individual shift.
+                    Shift Available Hours is calculated from
+                    Work Hours minus PBM Total Downtime.
+                    The result cannot be below 0 and cannot
+                    exceed Required Hours.
                 </div>
             </div>
 
@@ -375,10 +388,15 @@ function show_shift_available_formula() {
                 padding: 16px;
                 margin-bottom: 12px;
             ">
-                <strong>2. Subtract PBM Total Downtime</strong>
+                <strong>2. If the machine did not work</strong>
 
                 <div style="margin-top: 6px;">
-                    Subtract PBM Total Downtime from Work Hours.
+                    Zero Work Hours does not mean that the
+                    machine was unavailable.
+
+                    Required Hours minus PBM Total Downtime is
+                    used to determine how many hours the machine
+                    was available during the shift.
                 </div>
             </div>
 
@@ -388,30 +406,15 @@ function show_shift_available_formula() {
                 border-radius: 10px;
                 padding: 16px;
             ">
-                <strong>3. Apply the limits</strong>
+                <strong>Example</strong>
 
-                <ul style="
-                    margin-top: 8px;
-                    margin-bottom: 0;
-                    padding-left: 22px;
-                ">
-                    <li>
-                        If the result is below 0, use 0.
-                    </li>
+                <div style="margin-top: 6px;">
+                    Required Hours = 9<br>
+                    Work Hours = 0<br>
+                    PBM Total Downtime = 0<br><br>
 
-                    <li>
-                        If the result is above Required Hours,
-                        use Required Hours.
-                    </li>
-                </ul>
-
-                <div style="
-                    margin-top: 12px;
-                    font-weight: 700;
-                ">
-                    Shift Available Hours can therefore never
-                    be negative and can never exceed the
-                    shift's Required Hours.
+                    Shift Available Hours = 9<br>
+                    Utilisation = 0 / 9 = 0%
                 </div>
             </div>
         </div>
@@ -419,6 +422,8 @@ function show_shift_available_formula() {
 
     dialog.show();
 }
+
+
 
 function bind_available_hours_formula_header() {
     const headers = document.querySelectorAll(
@@ -492,19 +497,22 @@ function show_available_hours_above_100_formula() {
                     font-weight: 700;
                     margin-bottom: 8px;
                 ">
-                    MIN(
-                        MAX(
-                            Work Hours - PBM Total Downtime,
-                            0
-                        ),
-                        Required Hours
-                    )
+                    If Work Hours &gt; 0:
+                    <br>
+                    Work Hours - PBM Total Downtime
+
+                    <br><br>
+
+                    If Work Hours = 0:
+                    <br>
+                    Required Hours - PBM Total Downtime
                 </div>
 
                 <div>
-                    Work Hours minus PBM Total Downtime is used,
-                    with a minimum of 0 and a maximum of the
-                    shift's Required Hours.
+                    The result cannot be below 0 or above the
+                    shift's Required Hours. A machine can therefore
+                    have Shift Available Hours even when it recorded
+                    zero Work Hours.
                 </div>
             </div>
 
@@ -633,21 +641,8 @@ function bind_engine_expanded_date_highlight() {
             return;
         }
 
-        const date_label = row.querySelector(
-            ".availability-engine-date-label"
-        );
-
-        if (!date_label) {
-            return;
-        }
-
-        setTimeout(
-            function() {
-                date_label.classList.toggle(
-                    "availability-engine-date-expanded"
-                );
-            },
-            50
+        row.classList.toggle(
+            "availability-engine-row-expanded"
         );
     });
 }
@@ -848,9 +843,22 @@ function apply_engine_styles() {
         }
 
         .query-report[data-report-name="Availability and Utilisation Engine"]
-        .availability-engine-date-expanded {
-            color: #15803d !important;
-            font-weight: 800 !important;
+        .availability-engine-row-expanded
+        .dt-cell {
+            border-top: 2px solid #22c55e !important;
+            border-bottom: 2px solid #22c55e !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .availability-engine-row-expanded
+        .dt-cell:first-child {
+            border-left: 3px solid #16a34a !important;
+        }
+
+        .query-report[data-report-name="Availability and Utilisation Engine"]
+        .availability-engine-row-expanded
+        .dt-cell:last-child {
+            border-right: 2px solid #22c55e !important;
         }
     `;
 
