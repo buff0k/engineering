@@ -297,7 +297,7 @@ def _month_folder_name(year, month_number):
         int(year),
         int(month_number),
         1,
-    ).strftime("%b-%y")
+    ).strftime("%m.%b-%y").replace(".Jun-", ".June-")
 
 
 def _old_month_folder_name(year, month_number):
