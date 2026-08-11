@@ -25,7 +25,7 @@ function format_dashboard_hours(value) {
 frappe.pages["daily-availability-and-utilization-dashboard"].on_page_load = function(wrapper) {
     const page = frappe.ui.make_app_page({
         parent: wrapper,
-        title: __("Daily Availability and Utilization Dashboard"),
+        title: __("Daily A&U Engine Dashboard"),
         single_column: true
     });
 
@@ -521,7 +521,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
                     .html(`
                         <div class="frappe-card"
                              style="padding:18px;color:#b42318;">
-                            Could not load Daily Availability and Utilization Dashboard.
+                            Could not load Daily A&U Engine Dashboard.
                             Please check the filters and try again.
                         </div>
                     `);
