@@ -2,13 +2,14 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "format:{site}-{shift}",
+ "autoname": "format:{site}-{shift}-{day_type}",
  "creation": "2026-07-27 15:50:40.928852",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "site",
   "shift",
+  "day_type",
   "startup_start",
   "startup_end",
   "fatigue_start",
@@ -58,12 +59,21 @@
    "in_list_view": 1,
    "label": "Fatigue End",
    "reqd": 1
+  },
+  {
+   "default": "Weekday",
+   "fieldname": "day_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Day Type",
+   "options": "Weekday\nSaturday\nSunday",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-27 16:17:50.318105",
+ "modified": "2026-08-11 08:21:02.521922",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Startup and Fatigue spesification",
