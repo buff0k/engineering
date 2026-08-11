@@ -173,6 +173,20 @@ def get_columns():
             "width": 125,
         },
         {
+            "label": "Utilisation Work Hrs",
+            "fieldname": "utilisation_work_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 160,
+        },
+        {
+            "label": "Utilisation Available Hrs",
+            "fieldname": "utilisation_available_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 180,
+        },
+        {
             "label": "Utilisation %",
             "fieldname": "utilisation_percentage",
             "fieldtype": "Percent",
@@ -288,16 +302,17 @@ def get_data(filters):
             )
 
             for asset in location_assets:
-                daily_pbm = pbm_map.get(
-                    (
-                        asset.asset_name,
-                        date_text,
-                        location,
-                    ),
-                    {},
-                )
-
                 for shift in shifts:
+                    shift_pbm = pbm_map.get(
+                        (
+                            asset.asset_name,
+                            date_text,
+                            location,
+                            shift,
+                        ),
+                        {},
+                    )
+
                     required_hours = get_required_hours(
                         planning,
                         shift,
@@ -353,6 +368,14 @@ def get_data(filters):
                         "shift": shift,
                         "location": location,
                         "company": asset.company,
+                        "shift_limit_hours": (
+                            12.0
+                            if str(
+                                planning.get("shift_system")
+                                or ""
+                            ).strip().lower() == "2x12hour"
+                            else 8.0
+                        ),
                         "is_spare_swing_unit": (
                             1
                             if (
@@ -386,28 +409,29 @@ def get_data(filters):
                         "pre_use_avail_status": (
                             pre_use_status
                         ),
-                        "pbm_elapsed_time": 0.0,
-                        "pbm_startup_fatigue_time": 0.0,
-                        "pbm_sunday_time": 0.0,
-                        "pbm_total_downtime": 0.0,
+                        "pbm_elapsed_time": flt(
+                            shift_pbm.get(
+                                "pbm_elapsed_time"
+                            )
+                        ),
+                        "pbm_startup_fatigue_time": flt(
+                            shift_pbm.get(
+                                "pbm_startup_fatigue_time"
+                            )
+                        ),
+                        "pbm_sunday_time": flt(
+                            shift_pbm.get(
+                                "pbm_sunday_time"
+                            )
+                        ),
+                        "pbm_total_downtime": flt(
+                            shift_pbm.get(
+                                "pbm_total_downtime"
+                            )
+                        ),
                         "indent": 3,
                     })
 
-                asset_shift_rows = [
-                    row
-                    for row in shift_rows
-                    if row.get("asset_name")
-                    == asset.asset_name
-                    and row.get("location")
-                    == location
-                    and str(row.get("shift_date"))
-                    == date_text
-                ]
-
-                distribute_daily_pbm(
-                    asset_shift_rows,
-                    daily_pbm,
-                )
 
         current_date = add_days(
             current_date,
@@ -446,6 +470,7 @@ def get_data(filters):
         )
 
         calculate_availability_values(row)
+        validate_au_row(row)
         round_engine_row(row)
 
     data = build_tree_rows(
@@ -568,48 +593,6 @@ def mark_invalid_preuse_rows(rows):
             row["invalid_pre_use_status"] = "Valid"
 
 
-def distribute_daily_pbm(
-    shift_rows,
-    daily_pbm,
-):
-    if not shift_rows:
-        return
-
-    total_required = sum(
-        flt(
-            row.get("required_hours")
-        )
-        for row in shift_rows
-    )
-
-    for row in shift_rows:
-        if total_required > 0:
-            ratio = (
-                flt(
-                    row.get("required_hours")
-                )
-                / total_required
-            )
-        else:
-            ratio = (
-                1
-                / len(shift_rows)
-            )
-
-        for fieldname in (
-            "pbm_elapsed_time",
-            "pbm_startup_fatigue_time",
-            "pbm_sunday_time",
-            "pbm_total_downtime",
-        ):
-            row[fieldname] = (
-                flt(
-                    daily_pbm.get(
-                        fieldname
-                    )
-                )
-                * ratio
-            )
 
 
 def calculate_availability_values(row):
@@ -640,6 +623,12 @@ def calculate_availability_values(row):
             - pbm_total_downtime,
             0,
         )
+
+        if uncapped_available_hours <= 0:
+            uncapped_available_hours = min(
+                work_hours,
+                required_hours,
+            )
     else:
         uncapped_available_hours = max(
             required_hours
@@ -667,14 +656,40 @@ def calculate_availability_values(row):
         else None
     )
 
+    if required_hours > 0:
+        if work_hours >= required_hours:
+            utilisation_available_hours = required_hours
+        else:
+            utilisation_available_hours = max(
+                required_hours
+                - pbm_total_downtime,
+                0,
+            )
+    else:
+        utilisation_available_hours = 0.0
+
+    utilisation_work_hours = (
+        work_hours
+        if utilisation_available_hours > 0
+        else 0.0
+    )
+
     utilisation_percentage = (
         (
-            work_hours
-            / shift_available_hours
+            utilisation_work_hours
+            / utilisation_available_hours
         )
         * 100
-        if shift_available_hours > 0
+        if utilisation_available_hours > 0
         else None
+    )
+
+    row["utilisation_work_hours"] = (
+        utilisation_work_hours
+    )
+
+    row["utilisation_available_hours"] = (
+        utilisation_available_hours
     )
 
     row["shift_available_hours"] = (
@@ -694,6 +709,128 @@ def calculate_availability_values(row):
     )
 
 
+def validate_au_row(row):
+    shift_limit_hours = max(
+        flt(row.get("shift_limit_hours")),
+        0,
+    )
+
+    required_hours = max(
+        flt(row.get("required_hours")),
+        0,
+    )
+
+    work_hours = max(
+        flt(row.get("work_hours")),
+        0,
+    )
+
+    pbm_total_downtime = max(
+        flt(row.get("pbm_total_downtime")),
+        0,
+    )
+
+    utilisation_available_hours = max(
+        flt(
+            row.get(
+                "utilisation_available_hours"
+            )
+        ),
+        0,
+    )
+
+    utilisation_percentage = row.get(
+        "utilisation_percentage"
+    )
+
+    invalid_reasons = []
+    warning_reasons = []
+
+    if work_hours > shift_limit_hours:
+        invalid_reasons.append(
+            f"Work {work_hours:g}h exceeds "
+            f"{shift_limit_hours:g}h shift"
+        )
+
+    if pbm_total_downtime > shift_limit_hours:
+        invalid_reasons.append(
+            f"PBM {pbm_total_downtime:g}h exceeds "
+            f"{shift_limit_hours:g}h shift"
+        )
+
+    if (
+        work_hours
+        + pbm_total_downtime
+        > shift_limit_hours
+    ):
+        invalid_reasons.append(
+            f"Work + PBM = "
+            f"{work_hours + pbm_total_downtime:g}h "
+            f"exceeds {shift_limit_hours:g}h shift"
+        )
+
+    if required_hours > shift_limit_hours:
+        invalid_reasons.append(
+            f"Required {required_hours:g}h exceeds "
+            f"{shift_limit_hours:g}h shift"
+        )
+
+    if (
+        utilisation_available_hours
+        > shift_limit_hours
+    ):
+        invalid_reasons.append(
+            f"Utilisation Available "
+            f"{utilisation_available_hours:g}h exceeds "
+            f"{shift_limit_hours:g}h shift"
+        )
+
+    if (
+        work_hours > 0
+        and utilisation_available_hours <= 0
+    ):
+        warning_reasons.append(
+            "Machine worked but Utilisation "
+            "Available Hours is 0"
+        )
+
+    if (
+        required_hours <= 0
+        and work_hours > 0
+    ):
+        warning_reasons.append(
+            "Machine worked while Required Hours is 0"
+        )
+
+    if (
+        utilisation_percentage is not None
+        and flt(utilisation_percentage) > 150
+    ):
+        warning_reasons.append(
+            f"Utilisation is "
+            f"{flt(utilisation_percentage):.2f}%"
+        )
+
+    if invalid_reasons:
+        row["invalid_au"] = 1
+        row["au_validation_level"] = "invalid"
+        row["au_validation_status"] = (
+            "Invalid A&U: "
+            + "; ".join(invalid_reasons)
+        )
+    elif warning_reasons:
+        row["invalid_au"] = 0
+        row["au_validation_level"] = "warning"
+        row["au_validation_status"] = (
+            "A&U Warning: "
+            + "; ".join(warning_reasons)
+        )
+    else:
+        row["invalid_au"] = 0
+        row["au_validation_level"] = "valid"
+        row["au_validation_status"] = "Valid"
+
+
 def round_engine_row(row):
     percentage_fields = {
         "availability_percentage",
@@ -711,6 +848,8 @@ def round_engine_row(row):
         "pbm_total_downtime",
         "shift_available_hours",
         "available_hours_above_100",
+        "utilisation_work_hours",
+        "utilisation_available_hours",
         "availability_percentage",
         "utilisation_percentage",
     ):
@@ -735,6 +874,9 @@ def get_valid_rows(rows):
         if not row.get(
             "invalid_pre_use"
         )
+        and not row.get(
+            "invalid_au"
+        )
     ]
 
 
@@ -743,9 +885,52 @@ def build_summary_row(
     indent,
     **identity_fields,
 ):
+
     valid_rows = get_valid_rows(
         rows
     )
+
+    problem_dates = {
+        str(row.get("shift_date"))
+        for row in rows
+        if row.get("shift_date")
+        and row.get("au_validation_level")
+        in ("warning", "invalid")
+    }
+
+    problem_day_count = len(
+        problem_dates
+    )
+
+    invalid_au_rows = [
+        row
+        for row in rows
+        if row.get("au_validation_level")
+        == "invalid"
+    ]
+
+    warning_au_rows = [
+        row
+        for row in rows
+        if row.get("au_validation_level")
+        == "warning"
+    ]
+
+    if invalid_au_rows:
+        au_validation_level = "invalid"
+        au_validation_status = (
+            f"{len(invalid_au_rows)} invalid A&U "
+            f"shift(s)"
+        )
+    elif warning_au_rows:
+        au_validation_level = "warning"
+        au_validation_status = (
+            f"{len(warning_au_rows)} A&U warning "
+            f"shift(s)"
+        )
+    else:
+        au_validation_level = "valid"
+        au_validation_status = "Valid"
 
     utilisation_rows = [
         row
@@ -758,6 +943,9 @@ def build_summary_row(
     summary = {
         **identity_fields,
         "indent": indent,
+        "au_problem_day_count": problem_day_count,
+        "au_validation_level": au_validation_level,
+        "au_validation_status": au_validation_status,
         "invalid_pre_use_status": (
             ""
             if valid_rows
@@ -776,6 +964,8 @@ def build_summary_row(
         "pbm_total_downtime",
         "shift_available_hours",
         "available_hours_above_100",
+        "utilisation_work_hours",
+        "utilisation_available_hours",
     ):
         summary[fieldname] = sum(
             flt(
@@ -794,19 +984,13 @@ def build_summary_row(
         else None
     )
 
-    utilisation_work_hours = sum(
-        flt(
-            row.get("work_hours")
-        )
-        for row in utilisation_rows
-    )
+    utilisation_work_hours = summary[
+        "utilisation_work_hours"
+    ]
 
-    utilisation_available_hours = sum(
-        flt(
-            row.get("shift_available_hours")
-        )
-        for row in utilisation_rows
-    )
+    utilisation_available_hours = summary[
+        "utilisation_available_hours"
+    ]
 
     summary["utilisation_percentage"] = (
         (
@@ -843,7 +1027,21 @@ def build_tree_rows(shift_rows):
 
     data = []
 
-    for category in sorted(grouped):
+    priority_categories = {
+        "ADT": 0,
+        "Dozer": 1,
+        "Excavator": 2,
+    }
+
+    sorted_categories = sorted(
+        grouped,
+        key=lambda category: (
+            priority_categories.get(category, 999),
+            category or "",
+        ),
+    )
+
+    for category in sorted_categories:
         category_rows = [
             shift_row
             for date_assets in grouped[
@@ -965,18 +1163,22 @@ def get_shift_actual_hours(
     shift_date,
     shift,
 ):
-    daily_hours = get_actual_hours(
+    planned_downtime = get_shift_planned_downtime(
         location,
         shift_date,
+        shift,
     )
 
-    if shift in (
-        "Day",
-        "Night",
-    ):
-        return daily_hours / 2
+    shift_hours = (
+        12.0
+        if shift in ("Day", "Night")
+        else 8.0
+    )
 
-    return daily_hours / 3
+    return max(
+        shift_hours - planned_downtime,
+        0.0,
+    )
 
 
 def get_shift_planned_downtime(
@@ -984,18 +1186,72 @@ def get_shift_planned_downtime(
     shift_date,
     shift,
 ):
-    daily_hours = get_planned_downtime(
-        location,
-        shift_date,
+    day_of_week = getdate(
+        shift_date
+    ).weekday()
+
+    if day_of_week == 5:
+        day_type = "Saturday"
+    elif day_of_week == 6:
+        day_type = "Sunday"
+    else:
+        day_type = "Weekday"
+
+    configuration = frappe.db.get_value(
+        "Startup and Fatigue spesification",
+        {
+            "site": location,
+            "shift": shift,
+            "day_type": day_type,
+        },
+        [
+            "startup_start",
+            "startup_end",
+            "fatigue_start",
+            "fatigue_end",
+        ],
+        as_dict=True,
     )
 
-    if shift in (
-        "Day",
-        "Night",
-    ):
-        return daily_hours / 2
+    if not configuration:
+        frappe.log_error(
+            title="Missing Startup and Fatigue specification",
+            message=(
+                f"No configuration found for "
+                f"{location}-{shift}-{day_type}"
+            ),
+        )
+        return 0.0
 
-    return daily_hours / 3
+    startup_hours = get_time_window_hours(
+        configuration.startup_start,
+        configuration.startup_end,
+    )
+
+    fatigue_hours = get_time_window_hours(
+        configuration.fatigue_start,
+        configuration.fatigue_end,
+    )
+
+    return startup_hours + fatigue_hours
+
+
+def get_time_window_hours(
+    start_time,
+    end_time,
+):
+    if start_time is None or end_time is None:
+        return 0.0
+
+    start_seconds = start_time.total_seconds()
+    end_seconds = end_time.total_seconds()
+
+    if end_seconds < start_seconds:
+        end_seconds += 24 * 60 * 60
+
+    return (
+        end_seconds - start_seconds
+    ) / 3600
 
 
 def parse_multiselect(value):
@@ -1353,66 +1609,6 @@ def get_required_hours(
     )
 
 
-def get_actual_hours(
-    location,
-    shift_date,
-):
-    day_of_week = getdate(
-        shift_date
-    ).weekday()
-
-    site = (
-        location or ""
-    ).strip().lower()
-
-    special_saturday_sites = {
-        "koppie",
-        "uitgevallen",
-        "bankfontein",
-        "kriel",
-    }
-
-    if day_of_week == 6:
-        return 0.0
-
-    if day_of_week == 5:
-        if site in special_saturday_sites:
-            return 18.0
-
-        return 24.0
-
-    return 24.0
-
-
-def get_planned_downtime(
-    location,
-    shift_date,
-):
-    day_of_week = getdate(
-        shift_date
-    ).weekday()
-
-    site = (
-        location or ""
-    ).strip().lower()
-
-    special_saturday_sites = {
-        "koppie",
-        "uitgevallen",
-        "bankfontein",
-        "kriel",
-    }
-
-    if day_of_week == 6:
-        return 0.0
-
-    if day_of_week == 5:
-        if site in special_saturday_sites:
-            return 4.0
-
-        return 6.0
-
-    return 6.0
 
 
 def get_spare_swing_assets(
@@ -1761,10 +1957,23 @@ def get_pbm_map(
     def get_exclusion_configuration(
         location,
         shift,
+        shift_date,
     ):
+        day_of_week = getdate(
+            shift_date
+        ).weekday()
+
+        if day_of_week == 5:
+            day_type = "Saturday"
+        elif day_of_week == 6:
+            day_type = "Sunday"
+        else:
+            day_type = "Weekday"
+
         cache_key = (
             location,
             shift,
+            day_type,
         )
 
         if cache_key not in exclusion_configuration_cache:
@@ -1775,6 +1984,7 @@ def get_pbm_map(
                 {
                     "site": location,
                     "shift": shift,
+                    "day_type": day_type,
                 },
                 [
                     "startup_start",
@@ -1824,6 +2034,7 @@ def get_pbm_map(
             get_exclusion_configuration(
                 location,
                 shift,
+                shift_start,
             )
         )
 
@@ -1923,18 +2134,11 @@ def get_pbm_map(
         start_datetime,
         resolved_datetime,
     ):
-        empty_result = {
-            "total_minutes": 0,
-            "required_downtime_minutes": 0,
-            "excluded_minutes": 0,
-            "sunday_minutes": 0,
-        }
-
         if (
             not start_datetime
             or not resolved_datetime
         ):
-            return empty_result
+            return {}
 
         start_dt = get_datetime(
             start_datetime
@@ -1949,7 +2153,7 @@ def get_pbm_map(
             or not end_dt
             or end_dt <= start_dt
         ):
-            return empty_result
+            return {}
 
         candidate_rows = (
             au_rows_by_asset_location.get(
@@ -1961,14 +2165,10 @@ def get_pbm_map(
             )
         )
 
-        raw_overlap_hours = 0.0
-        required_downtime_hours = 0.0
-        excluded_overlap_hours = 0.0
-        sunday_overlap_hours = 0.0
+        shift_results = {}
 
         for au_row in candidate_rows:
             try:
-                # Reproduce the original SQL date window.
                 row_date = getdate(
                     au_row.shift_date
                 )
@@ -2026,10 +2226,6 @@ def get_pbm_map(
                 if shift_overlap_hours <= 0:
                     continue
 
-                raw_overlap_hours += (
-                    shift_overlap_hours
-                )
-
                 shift_excluded_hours = 0.0
 
                 for (
@@ -2063,47 +2259,58 @@ def get_pbm_map(
                     0,
                 )
 
-                excluded_overlap_hours += (
-                    shift_excluded_hours
-                )
+                sunday_hours = 0.0
 
                 if (
                     getdate(
                         au_row.shift_date
                     ).weekday() == 6
-                    and required_hours <= 0
                 ):
-                    sunday_overlap_hours += (
+                    sunday_hours = (
                         valid_overlap_hours
                     )
 
-                    continue
-
-                if required_hours <= 0:
-                    continue
-
-                required_downtime_hours += min(
-                    valid_overlap_hours,
-                    required_hours,
+                required_downtime_hours = max(
+                    valid_overlap_hours
+                    - sunday_hours,
+                    0.0,
                 )
+
+                shift_key = (
+                    str(au_row.shift_date),
+                    au_row.shift,
+                )
+
+                bucket = shift_results.setdefault(
+                    shift_key,
+                    {
+                        "pbm_elapsed_time": 0.0,
+                        "pbm_startup_fatigue_time": 0.0,
+                        "pbm_sunday_time": 0.0,
+                        "pbm_total_downtime": 0.0,
+                    },
+                )
+
+                bucket[
+                    "pbm_elapsed_time"
+                ] += shift_overlap_hours
+
+                bucket[
+                    "pbm_startup_fatigue_time"
+                ] += shift_excluded_hours
+
+                bucket[
+                    "pbm_sunday_time"
+                ] += sunday_hours
+
+                bucket[
+                    "pbm_total_downtime"
+                ] += required_downtime_hours
 
             except Exception:
                 continue
 
-        return {
-            "total_minutes": int(round(
-                raw_overlap_hours * 60
-            )),
-            "required_downtime_minutes": int(round(
-                required_downtime_hours * 60
-            )),
-            "excluded_minutes": int(round(
-                excluded_overlap_hours * 60
-            )),
-            "sunday_minutes": int(round(
-                sunday_overlap_hours * 60
-            )),
-        }
+        return shift_results
 
     # ------------------------------------------------------------------
     # Build PBM map.
@@ -2190,7 +2397,7 @@ def get_pbm_map(
             )
 
             if segment_end > segment_start:
-                calculated = (
+                calculated_by_shift = (
                     calculate_required_downtime(
                         row.asset_name,
                         row.location,
@@ -2199,65 +2406,40 @@ def get_pbm_map(
                     )
                 )
 
-                key = (
-                    row.asset_name,
-                    str(current_date),
-                    row.location,
-                )
+                for (
+                    shift_key,
+                    calculated,
+                ) in calculated_by_shift.items():
+                    shift_date, shift = shift_key
 
-                bucket = pbm_map.setdefault(
-                    key,
-                    {
-                        "pbm_elapsed_time": 0.0,
-                        "pbm_startup_fatigue_time": 0.0,
-                        "pbm_sunday_time": 0.0,
-                        "pbm_total_downtime": 0.0,
-                    },
-                )
-
-                bucket[
-                    "pbm_elapsed_time"
-                ] += (
-                    flt(
-                        calculated.get(
-                            "total_minutes"
-                        )
+                    key = (
+                        row.asset_name,
+                        shift_date,
+                        row.location,
+                        shift,
                     )
-                    / 60
-                )
 
-                bucket[
-                    "pbm_startup_fatigue_time"
-                ] += (
-                    flt(
-                        calculated.get(
-                            "excluded_minutes"
-                        )
+                    bucket = pbm_map.setdefault(
+                        key,
+                        {
+                            "pbm_elapsed_time": 0.0,
+                            "pbm_startup_fatigue_time": 0.0,
+                            "pbm_sunday_time": 0.0,
+                            "pbm_total_downtime": 0.0,
+                        },
                     )
-                    / 60
-                )
 
-                bucket[
-                    "pbm_sunday_time"
-                ] += (
-                    flt(
-                        calculated.get(
-                            "sunday_minutes"
+                    for fieldname in (
+                        "pbm_elapsed_time",
+                        "pbm_startup_fatigue_time",
+                        "pbm_sunday_time",
+                        "pbm_total_downtime",
+                    ):
+                        bucket[fieldname] += flt(
+                            calculated.get(
+                                fieldname
+                            )
                         )
-                    )
-                    / 60
-                )
-
-                bucket[
-                    "pbm_total_downtime"
-                ] += (
-                    flt(
-                        calculated.get(
-                            "required_downtime_minutes"
-                        )
-                    )
-                    / 60
-                )
 
             current_date = add_days(
                 current_date,
