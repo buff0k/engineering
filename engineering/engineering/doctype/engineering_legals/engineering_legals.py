@@ -79,6 +79,10 @@ NEW_SHAREPOINT_SECTION_MAPPING = {
         "08. Maintenance Schedules",
         "Track Surveys",
     ],
+    "Track Surveys": [
+        "08. Maintenance Schedules",
+        "Track Surveys",
+    ],
 
     "PDS": ["09. PDS-MPI Maintenance"],
 
