@@ -79,6 +79,10 @@ NEW_SHAREPOINT_SECTION_MAPPING = {
         "08. Maintenance Schedules",
         "Track Surveys",
     ],
+    "Track Surveys": [
+        "08. Maintenance Schedules",
+        "Track Surveys",
+    ],
 
     "PDS": ["09. PDS-MPI Maintenance"],
 
@@ -601,7 +605,7 @@ def _get_new_sharepoint_folder_parts(doc: Document) -> Optional[list[str]]:
         raw_date = getattr(doc, "creation", None)
 
     if raw_date:
-        month_folder = getdate(raw_date).strftime("%b-%y")
+        month_folder = getdate(raw_date).strftime("%m.%b-%y").replace(".Jun-", ".June-")
     else:
         month_folder = "No-Month"
 

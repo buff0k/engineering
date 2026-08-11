@@ -326,7 +326,7 @@ def _parse_month(month=None, year=None):
         selected_year,
         selected_month,
         1,
-    ).strftime("%b-%y")
+    ).strftime("%m.%b-%y").replace(".Jun-", ".June-")
 
     return selected_year, selected_month, month_folder
 
