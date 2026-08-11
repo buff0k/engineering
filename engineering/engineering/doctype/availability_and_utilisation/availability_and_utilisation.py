@@ -159,11 +159,21 @@ def _overlap_hours(a_start, a_end, b_start, b_end) -> float:
 
 
 def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
+    shift_date = getdate(shift_start)
+
+    if shift_date.weekday() == 5:
+        day_type = "Saturday"
+    elif shift_date.weekday() == 6:
+        day_type = "Sunday"
+    else:
+        day_type = "Weekday"
+
     configuration = frappe.db.get_value(
         "Startup and Fatigue spesification",
         {
             "site": location,
             "shift": shift,
+            "day_type": day_type,
         },
         [
             "startup_start",
@@ -177,7 +187,7 @@ def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
     if not configuration:
         frappe.log_error(
             title="Missing Startup and Fatigue specification",
-            message=f"No configuration found for {location}-{shift}",
+            message=f"No configuration found for {location}-{shift}-{day_type}",
         )
         return []
 
