@@ -601,7 +601,7 @@ def _get_new_sharepoint_folder_parts(doc: Document) -> Optional[list[str]]:
         raw_date = getattr(doc, "creation", None)
 
     if raw_date:
-        month_folder = getdate(raw_date).strftime("%b-%y")
+        month_folder = getdate(raw_date).strftime("%m.%b-%y").replace(".Jun-", ".June-")
     else:
         month_folder = "No-Month"
 
