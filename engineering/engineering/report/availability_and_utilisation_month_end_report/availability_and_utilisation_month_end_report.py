@@ -59,6 +59,10 @@ from is_production.production.report.avail_and_util_report import (
     avail_and_util_report as detailed_au,
 )
 
+from engineering.engineering.report.availability_and_utilisation_engine import (
+    availability_and_utilisation_engine as au_engine,
+)
+
 def safe_msr_datetime(value, service_date=None):
     if value in (None, ""):
         return None
@@ -1508,6 +1512,113 @@ def _month_end_direct_rows(filters):
     ):
         detailed_machine_scope = "Include Swing/Spare"
 
+    # -----------------------------------------------------
+    # Availability and Utilisation Engine is the source of
+    # truth for all A&U hours and percentages.
+    #
+    # detailed_au remains below only for supplementary
+    # employee-availability / other-delay information.
+    # -----------------------------------------------------
+
+    percentage_basis = (
+        filters.get("au_target_filter")
+        or filters.get("au_percentage_basis")
+        or "85% A & U"
+    )
+
+    engine_filters = frappe._dict({
+        "from_date": from_date,
+        "to_date": to_date,
+        "locations": (
+            [location]
+            if location
+            else []
+        ),
+        "assets": [],
+        "companies": [],
+        "free_hours": 0,
+        "production_machines_only": 0,
+
+        # Build summaries from raw Engine hours first.
+        # Apply the selected basis after grouping.
+        "au_percentage_basis": "100% A & U",
+    })
+
+    engine_data = (
+        au_engine.get_data(
+            engine_filters
+        )
+        or []
+    )
+
+    engine_shift_rows = [
+        row
+        for row in engine_data
+        if isinstance(row, dict)
+        and int(
+            row.get("indent")
+            or 0
+        ) == 3
+        and not row.get(
+            "is_formula_row"
+        )
+        and row.get(
+            "asset_category"
+        ) in categories
+    ]
+
+    engine_rows_by_key = {}
+
+    for row in engine_shift_rows:
+        category = row.get(
+            "asset_category"
+        )
+        asset_name = row.get(
+            "asset_name"
+        )
+
+        if not category or not asset_name:
+            continue
+
+        key = (
+            category,
+            asset_name,
+        )
+
+        engine_rows_by_key.setdefault(
+            key,
+            [],
+        ).append(row)
+
+    au_by_key = {}
+
+    for key, rows in engine_rows_by_key.items():
+        category, asset_name = key
+
+        engine_summary = (
+            au_engine.build_summary_row(
+                rows,
+                indent=2,
+                asset_category=category,
+                asset_name=asset_name,
+                location=location,
+            )
+        )
+
+        au_engine.apply_au_percentage_basis(
+            [engine_summary],
+            percentage_basis,
+        )
+
+        au_by_key[key] = (
+            engine_summary
+        )
+
+    # -----------------------------------------------------
+    # Supplementary data only.
+    # These rows are NOT used for A&U calculations.
+    # -----------------------------------------------------
+
     summary_filters = {
         "start_date": from_date,
         "end_date": to_date,
@@ -1523,8 +1634,8 @@ def _month_end_direct_rows(filters):
         or []
     )
 
-
     other_delay_reasons_by_key = {}
+    legacy_rows_by_key = {}
 
     machines_by_category = {
         category: set()
@@ -1533,21 +1644,36 @@ def _month_end_direct_rows(filters):
 
     for row in asset_rows:
         if (
-            row.asset_category in machines_by_category
+            row.asset_category
+            in machines_by_category
             and row.asset_name
         ):
             machines_by_category[
                 row.asset_category
-            ].add(row.asset_name)
+            ].add(
+                row.asset_name
+            )
 
-    au_rows_by_key = {}
+    for key in engine_rows_by_key:
+        category, asset_name = key
+
+        machines_by_category.setdefault(
+            category,
+            set(),
+        ).add(
+            asset_name
+        )
 
     for row in detailed_au_rows:
         if row.get("indent") != 2:
             continue
 
-        category = row.get("asset_category")
-        asset_name = row.get("asset_name")
+        category = row.get(
+            "asset_category"
+        )
+        asset_name = row.get(
+            "asset_name"
+        )
 
         if not category or not asset_name:
             continue
@@ -1560,15 +1686,10 @@ def _month_end_direct_rows(filters):
             asset_name,
         )
 
-        au_rows_by_key.setdefault(
+        legacy_rows_by_key.setdefault(
             key,
             [],
         ).append(row)
-
-        machines_by_category.setdefault(
-            category,
-            set(),
-        ).add(asset_name)
 
         reason_date = (
             row.get("shift_date")
@@ -1584,7 +1705,9 @@ def _month_end_direct_rows(filters):
             },
         )
 
-        if row.get("other_delay_reason"):
+        if row.get(
+            "other_delay_reason"
+        ):
             other_delay_reasons_by_key[
                 key
             ][
@@ -1596,17 +1719,27 @@ def _month_end_direct_rows(filters):
                 ),
             })
 
-    au_by_key = {}
+    employee_availability_by_key = {}
 
-    for key, rows in au_rows_by_key.items():
+    for key, rows in (
+        legacy_rows_by_key.items()
+    ):
         category, asset_name = key
 
-        au_by_key[key] = detailed_au.summary_row(
-            rows,
-            indent=2,
-            asset_category=category,
-            asset_name=asset_name,
-            location=location,
+        legacy_summary = (
+            detailed_au.summary_row(
+                rows,
+                indent=2,
+                asset_category=category,
+                asset_name=asset_name,
+                location=location,
+            )
+        )
+
+        employee_availability_by_key[
+            key
+        ] = legacy_summary.get(
+            "employee_availability"
         )
 
 
@@ -1644,43 +1777,55 @@ def _month_end_direct_rows(filters):
                     category,
                     asset_name,
                     au_row.get(
-                        "shift_required_hours"
+                        "required_hours"
                     ),
                     au_row.get(
-                        "shift_working_hours"
+                        "work_hours"
                     ),
                     au_row.get(
                         "shift_available_hours"
                     ),
                     au_row.get(
-                        "shift_available_hours_above_100"
+                        "available_hours_above_100"
                     ),
                     au_row.get(
-                        "shift_breakdown_hours"
+                        "pbm_total_downtime"
                     ),
                 )
 
+                # Percentages are copied directly from
+                # Availability and Utilisation Engine.
                 machine_row["avail_percent"] = (
                     au_row.get(
-                        "true_availability_percent"
+                        "availability_percentage"
                     )
                 )
 
                 machine_row["util_percent"] = (
                     au_row.get(
-                        "true_utilisation_percent"
+                        "utilisation_percentage"
                     )
                 )
 
+                # Employee Availability is supplementary
+                # and is not currently exposed by Engine.
                 machine_row[
                     "emp_avail_percent"
-                ] = au_row.get(
-                    "employee_availability"
+                ] = (
+                    employee_availability_by_key.get(
+                        (
+                            category,
+                            asset_name,
+                        )
+                    )
                 )
 
-                machine_row["_au_source_row"] = au_row
+                machine_row["_au_source_row"] = (
+                    au_row
+                )
+
                 machine_row["_au_source_rows"] = (
-                    au_rows_by_key.get(
+                    engine_rows_by_key.get(
                         (
                             category,
                             asset_name,
@@ -1760,49 +1905,78 @@ def _month_end_direct_rows(filters):
             ]
 
             if source_rows:
-                au_scope_row = detailed_au.summary_row(
-                    source_rows,
-                    indent=0,
-                    asset_category=category,
-                    location=location,
+                au_scope_row = (
+                    au_engine.build_summary_row(
+                        source_rows,
+                        indent=0,
+                        asset_category=category,
+                        location=location,
+                    )
+                )
+
+                au_engine.apply_au_percentage_basis(
+                    [au_scope_row],
+                    percentage_basis,
                 )
 
                 scope_row = _month_end_calc_row(
                     category,
                     "",
                     au_scope_row.get(
-                        "shift_required_hours"
+                        "required_hours"
                     ),
                     au_scope_row.get(
-                        "shift_working_hours"
+                        "work_hours"
                     ),
                     au_scope_row.get(
                         "shift_available_hours"
                     ),
                     au_scope_row.get(
-                        "shift_available_hours_above_100"
+                        "available_hours_above_100"
                     ),
                     au_scope_row.get(
-                        "shift_breakdown_hours"
+                        "pbm_total_downtime"
                     ),
                 )
 
                 scope_row["avail_percent"] = (
                     au_scope_row.get(
-                        "true_availability_percent"
+                        "availability_percentage"
                     )
                 )
 
                 scope_row["util_percent"] = (
                     au_scope_row.get(
-                        "true_utilisation_percent"
+                        "utilisation_percentage"
                     )
                 )
 
-                scope_row["emp_avail_percent"] = (
-                    au_scope_row.get(
-                        "employee_availability"
+                # Keep the existing Employee Availability
+                # aggregation because Engine does not
+                # currently expose this percentage.
+                emp_values = [
+                    row.get(
+                        "emp_avail_percent"
                     )
+                    for row in scope_rows
+                    if row.get(
+                        "emp_avail_percent"
+                    ) is not None
+                ]
+
+                scope_row[
+                    "emp_avail_percent"
+                ] = (
+                    round(
+                        sum(
+                            flt(value)
+                            for value in emp_values
+                        )
+                        / len(emp_values),
+                        1,
+                    )
+                    if emp_values
+                    else None
                 )
             else:
                 scope_row = _month_end_calc_row(

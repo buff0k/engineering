@@ -19,6 +19,7 @@ ALLOWED_ASSET_CATEGORIES = {
     "Water Bowser",
     "Diesel Bowsers",
     "Grader",
+    "Service Truck",
     "TLB",
     "Loader",
 }
