@@ -71,6 +71,16 @@ jobs:
         run: |
           bench get-app engineering ${{ github.workspace }}
 
+      - name: Get erpnext (required by engineering)
+        working-directory: /home/runner/work/frappe-bench
+        run: |
+          bench get-app erpnext --branch version-16
+
+      - name: Get is_production (required by engineering)
+        working-directory: /home/runner/work/frappe-bench
+        run: |
+          bench get-app https://github.com/buff0k/is_production
+
       - name: Create test site
         working-directory: /home/runner/work/frappe-bench
         run: |
