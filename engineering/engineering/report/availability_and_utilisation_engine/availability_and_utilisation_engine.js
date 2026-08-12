@@ -86,7 +86,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         ) {
             const formulas = {
                 "shift_available_hours": (
-                    "IF Work > 0: Work - PBM | IF Work = 0: Req - PBM"
+                    "Req Hrs - PBM Total Downtime"
                 ),
                 "available_hours_above_100": (
                     "MAX(Work Hrs, Shift Available)"
@@ -94,14 +94,15 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 "availability_percentage": (
                     "(Above 100 / Req Hrs) × 100 × A&U"
                 ),
-                "utilisation_work_hours": (
-                    "Work Hrs used when Util Available > 0"
-                ),
-                "utilisation_available_hours": (
-                    "IF Work >= Req: Req | ELSE: Req - PBM"
-                ),
+                // OLD UTILISATION FORMULA COLUMNS
+                // "utilisation_work_hours": (
+                //     "Work Hrs used when Util Available > 0"
+                // ),
+                // "utilisation_available_hours": (
+                //     "IF Work >= Req: Req | ELSE: Req - PBM"
+                // ),
                 "utilisation_percentage": (
-                    "(Util Work Hrs / Util Available Hrs) × 100 × A&U"
+                    "(Work Hrs / Shift Available Hrs) × 100 × A&U"
                 )
             };
 
@@ -147,9 +148,10 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             "pbm_sunday_time",
             "pbm_total_downtime",
             "shift_available_hours",
-            "available_hours_above_100",
-            "utilisation_work_hours",
-            "utilisation_available_hours"
+            "available_hours_above_100"
+            // OLD UTILISATION SUPPORT FIELDS
+            // "utilisation_work_hours",
+            // "utilisation_available_hours"
         ];
 
         const raw_value = data
@@ -529,9 +531,11 @@ function show_au_warning_explanation() {
                     margin-bottom:0;
                     padding-left:22px;
                 ">
+                    <!-- OLD UTILISATION AVAILABLE HOURS WARNING
                     <li>
                         Work Hours &gt; 0 while Utilisation Available Hours = 0.
                     </li>
+                    -->
                     <li>
                         Required Hours = 0 while the machine still recorded Work Hours.
                     </li>
@@ -624,9 +628,11 @@ function show_au_invalid_explanation() {
                     <li>
                         Required Hours exceed the physical shift length.
                     </li>
+                    <!-- OLD UTILISATION AVAILABLE HOURS VALIDATION
                     <li>
                         Utilisation Available Hours exceed the physical shift length.
                     </li>
+                    -->
                 </ul>
             </div>
 
@@ -817,60 +823,9 @@ function show_shift_available_formula() {
                     font-size: 16px;
                     font-weight: 700;
                 ">
-                    If Work Hours &gt; 0:
-                    <br>
-                    MIN(
-                        MAX(
-                            Work Hours - PBM Total Downtime,
-                            0
-                        ),
-                        Required Hours
-                    )
-
-                    <br><br>
-
-                    If Work Hours = 0:
-                    <br>
-                    MAX(
-                        Required Hours - PBM Total Downtime,
-                        0
-                    )
-                </div>
-            </div>
-
-            <div style="
-                background: #f8fafc;
-                border: 1px solid #d1d8dd;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 12px;
-            ">
-                <strong>1. If the machine worked</strong>
-
-                <div style="margin-top: 6px;">
-                    Shift Available Hours is calculated from
-                    Work Hours minus PBM Total Downtime.
-                    The result cannot be below 0 and cannot
-                    exceed Required Hours.
-                </div>
-            </div>
-
-            <div style="
-                background: #f8fafc;
-                border: 1px solid #d1d8dd;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 12px;
-            ">
-                <strong>2. If the machine did not work</strong>
-
-                <div style="margin-top: 6px;">
-                    Zero Work Hours does not mean that the
-                    machine was unavailable.
-
-                    Required Hours minus PBM Total Downtime is
-                    used to determine how many hours the machine
-                    was available during the shift.
+                    Required Hours
+                    -
+                    PBM Total Downtime
                 </div>
             </div>
 
@@ -884,11 +839,11 @@ function show_shift_available_formula() {
 
                 <div style="margin-top: 6px;">
                     Required Hours = 9<br>
-                    Work Hours = 0<br>
-                    PBM Total Downtime = 0<br><br>
+                    PBM Total Downtime = 2<br><br>
 
-                    Shift Available Hours = 9<br>
-                    Utilisation = 0 / 9 = 0%
+                    Shift Available Hours =
+                    9 - 2 =
+                    <strong>7 hours</strong>
                 </div>
             </div>
         </div>
@@ -896,7 +851,6 @@ function show_shift_available_formula() {
 
     dialog.show();
 }
-
 
 
 function bind_available_hours_formula_header() {
@@ -971,22 +925,13 @@ function show_available_hours_above_100_formula() {
                     font-weight: 700;
                     margin-bottom: 8px;
                 ">
-                    If Work Hours &gt; 0:
-                    <br>
-                    Work Hours - PBM Total Downtime
-
-                    <br><br>
-
-                    If Work Hours = 0:
-                    <br>
                     Required Hours - PBM Total Downtime
                 </div>
 
                 <div>
-                    The result cannot be below 0 or above the
-                    shift's Required Hours. A machine can therefore
-                    have Shift Available Hours even when it recorded
-                    zero Work Hours.
+                    Shift Available Hours represents the required
+                    production hours remaining after PBM downtime.
+                    The result cannot be below 0.
                 </div>
             </div>
 
@@ -1101,17 +1046,12 @@ function show_utilisation_formula() {
                     font-size:16px;
                     font-weight:700;
                 ">
-                    Utilisation Work Hours
+                    Work Hours
                     ÷
-                    Utilisation Available Hours
+                    Shift Available Hours
                     × 100
                     × A&amp;U Percentage
                 </div>
-
-                <div style="margin-top:10px;">
-                    Utilisation shows how much of the machine's
-                    available production opportunity was actually used.
-                </div>
             </div>
 
             <div style="
@@ -1121,19 +1061,12 @@ function show_utilisation_formula() {
                 padding:16px;
                 margin-bottom:12px;
             ">
-                <strong>How Utilisation Available Hours is chosen</strong>
+                <strong>Shift Available Hours</strong>
 
                 <div style="margin-top:8px;">
-                    <strong>If Work Hours are less than Required Hours:</strong>
-                    <br>
-                    Utilisation Available Hours =
-                    Required Hours - PBM Total Downtime
-                    <br><br>
-
-                    <strong>If Work Hours reach or exceed Required Hours:</strong>
-                    <br>
-                    Utilisation Available Hours =
                     Required Hours
+                    -
+                    PBM Total Downtime
                 </div>
             </div>
 
@@ -1144,117 +1077,24 @@ function show_utilisation_formula() {
                 padding:16px;
                 margin-bottom:12px;
             ">
-                <strong>Example 1 — Machine was available but did not work</strong>
+                <strong>Example</strong>
 
                 <div style="margin-top:8px;">
                     Required Hours = 9<br>
-                    Work Hours = 0<br>
-                    PBM Total Downtime = 0<br><br>
+                    PBM Total Downtime = 2<br>
+                    Work Hours = 5<br><br>
 
-                    Utilisation Available Hours =
-                    9 - 0 = <strong>9</strong><br>
-
-                    Utilisation =
-                    0 ÷ 9 =
-                    <strong>0%</strong>
-                </div>
-
-                <div style="margin-top:8px;">
-                    The machine had 9 available hours but none
-                    of them were used.
-                </div>
-            </div>
-
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
-                <strong>Example 2 — Breakdown reduced the available opportunity</strong>
-
-                <div style="margin-top:8px;">
-                    Required Hours = 9<br>
-                    Work Hours = 4<br>
-                    PBM Total Downtime = 6<br><br>
-
-                    Because Work Hours are below Required Hours:
-                    <br>
-
-                    Utilisation Available Hours =
-                    9 - 6 =
-                    <strong>3</strong><br>
+                    Shift Available Hours =
+                    9 - 2 =
+                    <strong>7</strong><br><br>
 
                     Utilisation =
-                    4 ÷ 3 =
-                    <strong>133.33%</strong>
-                </div>
+                    5 ÷ 7 × 100 =
+                    <strong>71.43%</strong><br><br>
 
-                <div style="margin-top:8px;">
-                    Utilisation can be above 100% because the
-                    machine worked more hours than the calculated
-                    available production opportunity.
-                </div>
-            </div>
-
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
-                <strong>Example 3 — Machine worked beyond Required Hours</strong>
-
-                <div style="margin-top:8px;">
-                    Required Hours = 9<br>
-                    Work Hours = 10<br>
-                    PBM Total Downtime = 1<br><br>
-
-                    Because Work Hours reached or exceeded Required Hours:
-                    <br>
-
-                    Utilisation Available Hours =
-                    <strong>9</strong><br>
-
-                    Utilisation =
-                    10 ÷ 9 =
-                    <strong>111.11%</strong>
-                </div>
-
-                <div style="margin-top:8px;">
-                    The mine required 9 hours, but the machine
-                    worked 10 hours, so Utilisation is above 100%.
-                </div>
-            </div>
-
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
-                <strong>Example 4 — Machine was unavailable for the whole required period</strong>
-
-                <div style="margin-top:8px;">
-                    Required Hours = 9<br>
-                    Work Hours = 0<br>
-                    PBM Total Downtime = 9<br><br>
-
-                    Utilisation Available Hours =
-                    9 - 9 =
-                    <strong>0</strong><br>
-
-                    Utilisation =
-                    <strong>N/A</strong>
-                </div>
-
-                <div style="margin-top:8px;">
-                    There were no available hours to utilise,
-                    so the shift does not contribute to the
-                    combined Utilisation denominator.
+                    At 85% A&amp;U =
+                    71.43% × 85% =
+                    <strong>60.71%</strong>
                 </div>
             </div>
 
@@ -1267,25 +1107,11 @@ function show_utilisation_formula() {
                 <strong>Combined / Total Utilisation</strong>
 
                 <div style="margin-top:8px;">
-                    Total Utilisation is not an average of the
-                    individual shift percentages.
-                    <br><br>
-
-                    It uses:
-                    <br>
-
-                    <strong>
-                        SUM(Utilisation Work Hours)
-                        ÷
-                        SUM(Utilisation Available Hours)
-                        × 100
-                        × A&amp;U Percentage
-                    </strong>
-                    <br><br>
-
-                    This correctly weights every valid shift by
-                    the number of Utilisation Available Hours
-                    that shift contributed.
+                    Total Work Hours
+                    ÷
+                    Total Shift Available Hours
+                    × 100
+                    × A&amp;U Percentage
                 </div>
             </div>
         </div>
@@ -1293,6 +1119,7 @@ function show_utilisation_formula() {
 
     dialog.show();
 }
+
 
 
 function apply_engine_shift_highlight(value, shift) {
