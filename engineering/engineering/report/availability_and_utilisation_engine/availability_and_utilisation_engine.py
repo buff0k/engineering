@@ -172,20 +172,21 @@ def get_columns():
             "precision": 2,
             "width": 125,
         },
-        {
-            "label": "Utilisation Work Hrs",
-            "fieldname": "utilisation_work_hours",
-            "fieldtype": "Float",
-            "precision": 3,
-            "width": 160,
-        },
-        {
-            "label": "Utilisation Available Hrs",
-            "fieldname": "utilisation_available_hours",
-            "fieldtype": "Float",
-            "precision": 3,
-            "width": 180,
-        },
+        # OLD UTILISATION SUPPORT COLUMNS
+        # {
+        #     "label": "Utilisation Work Hrs",
+        #     "fieldname": "utilisation_work_hours",
+        #     "fieldtype": "Float",
+        #     "precision": 3,
+        #     "width": 160,
+        # },
+        # {
+        #     "label": "Utilisation Available Hrs",
+        #     "fieldname": "utilisation_available_hours",
+        #     "fieldtype": "Float",
+        #     "precision": 3,
+        #     "width": 180,
+        # },
         {
             "label": "Utilisation %",
             "fieldname": "utilisation_percentage",
@@ -617,28 +618,35 @@ def calculate_availability_values(row):
         0,
     )
 
-    if work_hours > 0:
-        uncapped_available_hours = max(
-            work_hours
-            - pbm_total_downtime,
-            0,
-        )
 
-        if uncapped_available_hours <= 0:
-            uncapped_available_hours = min(
-                work_hours,
-                required_hours,
-            )
-    else:
-        uncapped_available_hours = max(
-            required_hours
-            - pbm_total_downtime,
-            0,
-        )
+    # OLD AVAILABLE HOURS CALCULATION
+    # if work_hours > 0:
+    #     uncapped_available_hours = max(
+    #         work_hours
+    #         - pbm_total_downtime,
+    #         0,
+    #     )
+    #
+    #     if uncapped_available_hours <= 0:
+    #         uncapped_available_hours = min(
+    #             work_hours,
+    #             required_hours,
+    #         )
+    # else:
+    #     uncapped_available_hours = max(
+    #         required_hours
+    #         - pbm_total_downtime,
+    #         0,
+    #     )
+    #
+    # shift_available_hours = min(
+    #     uncapped_available_hours,
+    #     required_hours,
+    # )
 
-    shift_available_hours = min(
-        uncapped_available_hours,
-        required_hours,
+    shift_available_hours = max(
+        required_hours - pbm_total_downtime,
+        0,
     )
 
     available_hours_above_100 = max(
@@ -656,40 +664,51 @@ def calculate_availability_values(row):
         else None
     )
 
-    if required_hours > 0:
-        if work_hours >= required_hours:
-            utilisation_available_hours = required_hours
-        else:
-            utilisation_available_hours = max(
-                required_hours
-                - pbm_total_downtime,
-                0,
-            )
-    else:
-        utilisation_available_hours = 0.0
-
-    utilisation_work_hours = (
-        work_hours
-        if utilisation_available_hours > 0
-        else 0.0
-    )
+    # OLD UTILISATION CALCULATION
+    # if required_hours > 0:
+    #     if work_hours >= required_hours:
+    #         utilisation_available_hours = required_hours
+    #     else:
+    #         utilisation_available_hours = max(
+    #             required_hours
+    #             - pbm_total_downtime,
+    #             0,
+    #         )
+    # else:
+    #     utilisation_available_hours = 0.0
+    #
+    # utilisation_work_hours = (
+    #     work_hours
+    #     if utilisation_available_hours > 0
+    #     else 0.0
+    # )
+    #
+    # utilisation_percentage = (
+    #     (
+    #         utilisation_work_hours
+    #         / utilisation_available_hours
+    #     )
+    #     * 100
+    #     if utilisation_available_hours > 0
+    #     else None
+    # )
+    #
+    # row["utilisation_work_hours"] = (
+    #     utilisation_work_hours
+    # )
+    #
+    # row["utilisation_available_hours"] = (
+    #     utilisation_available_hours
+    # )
 
     utilisation_percentage = (
         (
-            utilisation_work_hours
-            / utilisation_available_hours
+            work_hours
+            / shift_available_hours
         )
         * 100
-        if utilisation_available_hours > 0
+        if shift_available_hours > 0
         else None
-    )
-
-    row["utilisation_work_hours"] = (
-        utilisation_work_hours
-    )
-
-    row["utilisation_available_hours"] = (
-        utilisation_available_hours
     )
 
     row["shift_available_hours"] = (
@@ -707,7 +726,6 @@ def calculate_availability_values(row):
     row["utilisation_percentage"] = (
         utilisation_percentage
     )
-
 
 def validate_au_row(row):
     shift_limit_hours = max(
@@ -730,14 +748,15 @@ def validate_au_row(row):
         0,
     )
 
-    utilisation_available_hours = max(
-        flt(
-            row.get(
-                "utilisation_available_hours"
-            )
-        ),
-        0,
-    )
+    # OLD UTILISATION AVAILABLE HOURS VALIDATION
+    # utilisation_available_hours = max(
+    #     flt(
+    #         row.get(
+    #             "utilisation_available_hours"
+    #         )
+    #     ),
+    #     0,
+    # )
 
     utilisation_percentage = row.get(
         "utilisation_percentage"
@@ -775,24 +794,25 @@ def validate_au_row(row):
             f"{shift_limit_hours:g}h shift"
         )
 
-    if (
-        utilisation_available_hours
-        > shift_limit_hours
-    ):
-        invalid_reasons.append(
-            f"Utilisation Available "
-            f"{utilisation_available_hours:g}h exceeds "
-            f"{shift_limit_hours:g}h shift"
-        )
-
-    if (
-        work_hours > 0
-        and utilisation_available_hours <= 0
-    ):
-        warning_reasons.append(
-            "Machine worked but Utilisation "
-            "Available Hours is 0"
-        )
+    # OLD UTILISATION AVAILABLE HOURS VALIDATION
+    # if (
+    #     utilisation_available_hours
+    #     > shift_limit_hours
+    # ):
+    #     invalid_reasons.append(
+    #         f"Utilisation Available "
+    #         f"{utilisation_available_hours:g}h exceeds "
+    #         f"{shift_limit_hours:g}h shift"
+    #     )
+    #
+    # if (
+    #     work_hours > 0
+    #     and utilisation_available_hours <= 0
+    # ):
+    #     warning_reasons.append(
+    #         "Machine worked but Utilisation "
+    #         "Available Hours is 0"
+    #     )
 
     if (
         required_hours <= 0
@@ -848,8 +868,9 @@ def round_engine_row(row):
         "pbm_total_downtime",
         "shift_available_hours",
         "available_hours_above_100",
-        "utilisation_work_hours",
-        "utilisation_available_hours",
+        # OLD UTILISATION SUPPORT FIELDS
+        # "utilisation_work_hours",
+        # "utilisation_available_hours",
         "availability_percentage",
         "utilisation_percentage",
     ):
@@ -932,13 +953,14 @@ def build_summary_row(
         au_validation_level = "valid"
         au_validation_status = "Valid"
 
-    utilisation_rows = [
-        row
-        for row in valid_rows
-        if flt(
-            row.get("shift_available_hours")
-        ) > 0
-    ]
+    # OLD UTILISATION ROW FILTER
+    # utilisation_rows = [
+    #     row
+    #     for row in valid_rows
+    #     if flt(
+    #         row.get("shift_available_hours")
+    #     ) > 0
+    # ]
 
     summary = {
         **identity_fields,
@@ -964,8 +986,9 @@ def build_summary_row(
         "pbm_total_downtime",
         "shift_available_hours",
         "available_hours_above_100",
-        "utilisation_work_hours",
-        "utilisation_available_hours",
+        # OLD UTILISATION SUPPORT FIELDS
+        # "utilisation_work_hours",
+        # "utilisation_available_hours",
     ):
         summary[fieldname] = sum(
             flt(
@@ -984,21 +1007,32 @@ def build_summary_row(
         else None
     )
 
-    utilisation_work_hours = summary[
-        "utilisation_work_hours"
-    ]
-
-    utilisation_available_hours = summary[
-        "utilisation_available_hours"
-    ]
+    # OLD TOTAL UTILISATION CALCULATION
+    # utilisation_work_hours = summary[
+    #     "utilisation_work_hours"
+    # ]
+    #
+    # utilisation_available_hours = summary[
+    #     "utilisation_available_hours"
+    # ]
+    #
+    # summary["utilisation_percentage"] = (
+    #     (
+    #         utilisation_work_hours
+    #         / utilisation_available_hours
+    #     )
+    #     * 100
+    #     if utilisation_available_hours > 0
+    #     else None
+    # )
 
     summary["utilisation_percentage"] = (
         (
-            utilisation_work_hours
-            / utilisation_available_hours
+            summary["work_hours"]
+            / summary["shift_available_hours"]
         )
         * 100
-        if utilisation_available_hours > 0
+        if summary["shift_available_hours"] > 0
         else None
     )
 
