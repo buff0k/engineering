@@ -235,7 +235,7 @@ function add_eng_legals_report_button(frm) {
       params.set("site", frm.doc.site);
     }
 
-    const url = `/app/query-report/Engineering%20Legals%20Report?${params.toString()}`;
+    const url = `https://www.isambane.co.za/desk/query-report/Engineering%20Legals%20Report?${params.toString()}`;
     window.open(url, "_blank");
   });
 }
