@@ -80,7 +80,7 @@ NEW_SHAREPOINT_SECTION_MAPPING = {
         "Track Surveys",
     ],
     "Track Surveys": [
-        "08. Maintenance Schedules",
+        "02. Condition Monitoring",
         "Track Surveys",
     ],
 
