@@ -38,12 +38,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "21"
 
       - name: Install system deps
         run: |
@@ -55,7 +55,7 @@ jobs:
 
       - name: Init bench
         run: |
-          bench init --skip-redis-config-generation --python $(which python3) frappe-bench
+          bench init --frappe-branch version-16 --skip-redis-config-generation --python $(which python3) frappe-bench
         working-directory: /home/runner/work
 
       - name: Configure bench to use service containers
