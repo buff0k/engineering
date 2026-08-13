@@ -78,65 +78,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
 
 
     formatter: function(value, row, column, data, default_formatter) {
-        if (
-            data
-            && Number(
-                data.is_formula_row || 0
-            ) === 1
-        ) {
-            const formulas = {
-                "shift_available_hours": (
-                    "Req Hrs - PBM Total Downtime"
-                ),
-                "available_hours_above_100": (
-                    "MAX(Work Hrs, Shift Available)"
-                ),
-                "availability_percentage": (
-                    "(Above 100 / Req Hrs) × 100 × A&U"
-                ),
-                // OLD UTILISATION FORMULA COLUMNS
-                // "utilisation_work_hours": (
-                //     "Work Hrs used when Util Available > 0"
-                // ),
-                // "utilisation_available_hours": (
-                //     "IF Work >= Req: Req | ELSE: Req - PBM"
-                // ),
-                "utilisation_percentage": (
-                    "(Work Hrs / Shift Available Hrs) × 100 × A&U"
-                )
-            };
 
-            const formula = formulas[
-                column.fieldname
-            ];
-
-            if (!formula) {
-                return "";
-            }
-
-            return `
-                <div
-                    class="availability-engine-formula-cell"
-                    style="
-                    display:block;
-                    width:100%;
-                    min-height:44px;
-                    padding:6px 5px;
-                    border:1px solid #60a5fa;
-                    border-radius:4px;
-                    background:#eff6ff;
-                    color:#1d4ed8;
-                    font-size:9px;
-                    font-weight:700;
-                    line-height:1.2;
-                    text-align:center;
-                    white-space:normal;
-                    box-sizing:border-box;
-                ">
-                    ${frappe.utils.escape_html(formula)}
-                </div>
-            `;
-        }
 
         const hour_fields = [
             "actual_hours",
@@ -147,8 +89,8 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             "pbm_startup_fatigue_time",
             "pbm_sunday_time",
             "pbm_total_downtime",
-            "shift_available_hours",
-            "available_hours_above_100"
+            "utilisation_available_hours",
+            "availability_available_hours"
             // OLD UTILISATION SUPPORT FIELDS
             // "utilisation_work_hours",
             // "utilisation_available_hours"
@@ -193,6 +135,25 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             )
         ) {
             value = "N/A";
+
+            if (
+                data
+                && column.fieldname === "utilisation_percentage"
+                && data.au_validation_level === "invalid"
+            ) {
+                value = `
+                    <span style="
+                        display:inline-block;
+                        padding:3px 8px;
+                        border-radius:999px;
+                        background:#fee2e2;
+                        color:#991b1b;
+                        font-weight:700;
+                    ">
+                        N/A
+                    </span>
+                `;
+            }
         }
 
         if (
@@ -694,22 +655,29 @@ function bind_engine_formula_header_clicks(report) {
         ".dt-cell--header",
         function(event) {
             const text = (
-                $(this).text() || ""
+                $(this)
+                    .find(".dt-cell__content")
+                    .clone()
+                    .children()
+                    .remove()
+                    .end()
+                    .text()
+                    || ""
             )
                 .replace(/\s+/g, " ")
                 .trim();
 
-            if (text === "Shift Available Hours") {
+            if (text === "Utilisation Available Hours") {
                 event.preventDefault();
                 event.stopPropagation();
                 show_shift_available_formula();
                 return;
             }
 
-            if (text === "Available Hours Above 100") {
+            if (text === "Availability Available Hours") {
                 event.preventDefault();
                 event.stopPropagation();
-                show_available_hours_above_100_formula();
+                show_availability_available_hours_formula();
                 return;
             }
 
@@ -724,27 +692,109 @@ function bind_engine_formula_header_clicks(report) {
 
 
 function mark_engine_formula_headers_clickable() {
+    const formulas = {
+        "Utilisation Available Hours": (
+            "MAX(Req - PBM, MIN(Work, Req))"
+        ),
+        "Availability Available Hours": (
+            "MAX(Work, MAX(Req - PBM, 0))"
+        ),
+        "Availability %": (
+            "(Availability Available Hours / Req Hrs) × 100 × A&U"
+        ),
+        "Utilisation %": (
+            "(Work Hrs / Utilisation Available Hours) × 100 × A&U"
+        )
+    };
+
     const clickable_headers = [
-        "Shift Available Hours",
-        "Available Hours Above 100",
+        "Utilisation Available Hours",
+        "Availability Available Hours",
         "Utilisation %"
     ];
+
+    const filter_row = document.querySelector(
+        ".dt-row-filter"
+    );
+
+    if (!filter_row) {
+        return;
+    }
 
     document.querySelectorAll(
         ".dt-cell--header"
     ).forEach(function(header) {
+        const content = header.querySelector(
+            ".dt-cell__content"
+        );
+
+        if (!content) {
+            return;
+        }
+
         const text = (
-            header.innerText || ""
+            content.innerText || ""
         )
             .replace(/\s+/g, " ")
             .trim();
 
-        if (!clickable_headers.includes(text)) {
+        const formula = formulas[text];
+
+        if (!formula) {
             return;
         }
 
-        header.style.cursor = "pointer";
-        header.title = "Click to view formula";
+        const column_class = Array.from(
+            header.classList
+        ).find(function(class_name) {
+            return class_name.startsWith(
+                "dt-cell--col-"
+            );
+        });
+
+        if (!column_class) {
+            return;
+        }
+
+        const filter_cell = filter_row.querySelector(
+            `.${column_class}`
+        );
+
+        if (
+            !filter_cell
+            || filter_cell.querySelector(
+                ".availability-engine-header-formula"
+            )
+        ) {
+            return;
+        }
+
+        const filter_content = filter_cell.querySelector(
+            ".dt-cell__content"
+        );
+
+        if (!filter_content) {
+            return;
+        }
+
+        filter_content.innerHTML = "";
+
+        const formula_element = document.createElement(
+            "div"
+        );
+
+        formula_element.className = (
+            "availability-engine-header-formula"
+        );
+
+        formula_element.textContent = formula;
+
+        filter_content.prepend(formula_element);
+
+        if (clickable_headers.includes(text)) {
+            header.style.cursor = "pointer";
+            header.title = "Click to view formula";
+        }
     });
 }
 
@@ -762,7 +812,7 @@ function bind_shift_available_formula_header() {
         ).trim();
 
         if (
-            text !== "Shift Available Hours"
+            text !== "Utilisation Available Hours"
         ) {
             return;
         }
@@ -784,10 +834,9 @@ function bind_shift_available_formula_header() {
     });
 }
 
-
 function show_shift_available_formula() {
     const dialog = new frappe.ui.Dialog({
-        title: __("Shift Available Hours"),
+        title: __("Utilisation Available Hours"),
         size: "large",
         fields: [
             {
@@ -799,51 +848,131 @@ function show_shift_available_formula() {
 
     dialog.fields_dict.formula_html.$wrapper.html(`
         <div style="
-            padding: 6px 4px 12px;
-            line-height: 1.6;
+            padding:6px 4px 12px;
+            line-height:1.6;
         ">
             <div style="
-                background: #eff6ff;
-                border: 1px solid #93c5fd;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 16px;
+                background:#eff6ff;
+                border:1px solid #93c5fd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:14px;
             ">
-                <div style="
-                    color: #1d4ed8;
-                    font-size: 15px;
-                    font-weight: 700;
-                    margin-bottom: 8px;
-                ">
-                    Shift Available Hours Formula
-                </div>
+                <strong>Utilisation Available Hours Formula</strong>
 
                 <div style="
-                    color: #1d4ed8;
-                    font-size: 16px;
-                    font-weight: 700;
+                    margin-top:10px;
+                    font-size:16px;
+                    font-weight:700;
                 ">
-                    Required Hours
-                    -
-                    PBM Total Downtime
+                    MAX(
+                        Required Hours - PBM Total Downtime,
+                        MIN(Work Hours, Required Hours)
+                    )
                 </div>
             </div>
 
             <div style="
-                background: #f8fafc;
-                border: 1px solid #d1d8dd;
-                border-radius: 10px;
-                padding: 16px;
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
             ">
-                <strong>Example</strong>
+                <strong>Why is this formula used?</strong>
 
-                <div style="margin-top: 6px;">
+                <div style="margin-top:8px;">
+                    PBM downtime reduces the Required Hours available to work.
+                    However, if the machine physically records more Work Hours
+                    than that reduced amount, those Work Hours prove that the
+                    machine was available for at least that amount of time.
+                    <br><br>
+
+                    The denominator therefore cannot be lower than Work Hours
+                    while Work Hours remain below the Required Hours.
+                    <br><br>
+
+                    The denominator is capped at Required Hours so that work
+                    performed above the required target is recognised as
+                    recovery above 100%.
+                </div>
+            </div>
+
+            <div style="
+                background:#ecfdf5;
+                border:1px solid #86efac;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
+            ">
+                <strong>Example — Machine recovers during the shift</strong>
+
+                <div style="margin-top:8px;">
                     Required Hours = 9<br>
-                    PBM Total Downtime = 2<br><br>
+                    Work Hours = 8<br>
+                    PBM Total Downtime = 1.933<br><br>
 
-                    Shift Available Hours =
-                    9 - 2 =
-                    <strong>7 hours</strong>
+                    Required - PBM = 9 - 1.933 =
+                    <strong>7.067h</strong><br><br>
+
+                    But the machine physically worked
+                    <strong>8 hours</strong>, so it must have been available
+                    for at least 8 hours.<br><br>
+
+                    MIN(Work, Required) =
+                    MIN(8, 9) =
+                    <strong>8h</strong><br><br>
+
+                    Utilisation Available Hours =
+                    MAX(7.067, 8) =
+                    <strong>8h</strong><br><br>
+
+                    Utilisation =
+                    8 ÷ 8 × 100 =
+                    <strong>100%</strong>
+                </div>
+            </div>
+
+            <div style="
+                background:#ecfdf5;
+                border:1px solid #86efac;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
+            ">
+                <strong>Example — Recovery above Required Hours</strong>
+
+                <div style="margin-top:8px;">
+                    Required Hours = 9<br>
+                    Work Hours = 10<br>
+                    PBM Total Downtime = 1.933<br><br>
+
+                    MIN(Work, Required) =
+                    MIN(10, 9) =
+                    <strong>9h</strong><br><br>
+
+                    Utilisation Available Hours =
+                    <strong>9h</strong><br><br>
+
+                    Utilisation =
+                    10 ÷ 9 × 100 =
+                    <strong>111.11%</strong><br><br>
+
+                    The additional work is therefore recognised as recovery
+                    above the required target.
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+            ">
+                <strong>Important</strong>
+
+                <div style="margin-top:8px;">
+                    If Required Hours are zero, Utilisation is 0%.
                 </div>
             </div>
         </div>
@@ -865,7 +994,7 @@ function bind_available_hours_formula_header() {
         ).trim();
 
         if (
-            text !== "Available Hours Above 100"
+            text !== "Availability Available Hours"
         ) {
             return;
         }
@@ -882,15 +1011,14 @@ function bind_available_hours_formula_header() {
 
         header.addEventListener(
             "click",
-            show_available_hours_above_100_formula
+            show_availability_available_hours_formula
         );
     });
 }
 
-
-function show_available_hours_above_100_formula() {
+function show_availability_available_hours_formula() {
     const dialog = new frappe.ui.Dialog({
-        title: __("Available Hours Above 100"),
+        title: __("Availability Available Hours"),
         size: "large",
         fields: [
             {
@@ -902,103 +1030,92 @@ function show_available_hours_above_100_formula() {
 
     dialog.fields_dict.formula_html.$wrapper.html(`
         <div style="
-            padding: 6px 4px 12px;
-            line-height: 1.6;
+            padding:6px 4px 12px;
+            line-height:1.6;
         ">
             <div style="
-                background: #f8fafc;
-                border: 1px solid #d1d8dd;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 16px;
+                background:#eff6ff;
+                border:1px solid #93c5fd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:14px;
             ">
-                <div style="
-                    font-size: 15px;
-                    font-weight: 700;
-                    margin-bottom: 8px;
-                ">
-                    1. Shift Available Hours
-                </div>
+                <strong>Availability Available Hours Formula</strong>
 
                 <div style="
-                    font-size: 16px;
-                    font-weight: 700;
-                    margin-bottom: 8px;
-                ">
-                    Required Hours - PBM Total Downtime
-                </div>
-
-                <div>
-                    Shift Available Hours represents the required
-                    production hours remaining after PBM downtime.
-                    The result cannot be below 0.
-                </div>
-            </div>
-
-            <div style="
-                background: #f8fafc;
-                border: 1px solid #d1d8dd;
-                border-radius: 10px;
-                padding: 16px;
-                margin-bottom: 16px;
-            ">
-                <div style="
-                    font-size: 15px;
-                    font-weight: 700;
-                    margin-bottom: 8px;
-                ">
-                    2. Available Hours Above 100
-                </div>
-
-                <div style="
-                    font-size: 16px;
-                    font-weight: 700;
-                    margin-bottom: 10px;
+                    margin-top:8px;
+                    font-size:16px;
+                    font-weight:700;
                 ">
                     MAX(
                         Work Hours,
-                        Shift Available Hours
+                        MAX(
+                            Required Hours - PBM Total Downtime,
+                            0
+                        )
                     )
                 </div>
-
-                <div style="margin-bottom: 8px;">
-                    The higher of the two values is used.
-                </div>
-
-                <ul style="
-                    margin-bottom: 0;
-                    padding-left: 22px;
-                ">
-                    <li>
-                        If Shift Available Hours is higher,
-                        Shift Available Hours is used.
-                    </li>
-                    <li>
-                        If Work Hours is higher,
-                        Work Hours is used.
-                    </li>
-                </ul>
             </div>
 
             <div style="
-                background: #f8fafc;
-                border: 1px solid #d1d8dd;
-                border-radius: 10px;
-                padding: 16px;
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
             ">
-                <div style="
-                    font-size: 15px;
-                    font-weight: 700;
-                    margin-bottom: 8px;
-                ">
-                    3. Totals
+                <strong>Utilisation Available Hours</strong>
+
+                <div style="margin-top:8px;">
+                    Utilisation uses a separate denominator:
                 </div>
 
-                <div>
-                    Each shift is calculated separately first.
-                    Machine, day, category and main totals are
-                    then calculated by summing the individual
-                    shift results.
+                <div style="
+                    margin-top:10px;
+                    font-weight:700;
+                ">
+                    MAX(
+                        Required Hours - PBM Total Downtime,
+                        MIN(Work Hours, Required Hours)
+                    )
+                </div>
+
+                <div style="margin-top:10px;">
+                    This prevents the utilisation denominator from being lower
+                    than hours the machine actually worked, while still
+                    capping the denominator at Required Hours so recovery
+                    above 100% can be recognised.
+                </div>
+            </div>
+
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
+            ">
+                <strong>Purpose</strong>
+
+                <div style="margin-top:8px;">
+                    Availability can exceed 100% when the machine records
+                    more Work Hours than its Required Hours.
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+            ">
+                <strong>Totals</strong>
+
+                <div style="margin-top:8px;">
+                    Each valid shift is calculated first.
+                    Invalid shifts are excluded from the machine,
+                    date and category totals.
                 </div>
             </div>
         </div>
@@ -1006,7 +1123,6 @@ function show_available_hours_above_100_formula() {
 
     dialog.show();
 }
-
 
 function show_utilisation_formula() {
     const dialog = new frappe.ui.Dialog({
@@ -1048,7 +1164,7 @@ function show_utilisation_formula() {
                 ">
                     Work Hours
                     ÷
-                    Shift Available Hours
+                    Utilisation Available Hours
                     × 100
                     × A&amp;U Percentage
                 </div>
@@ -1061,12 +1177,16 @@ function show_utilisation_formula() {
                 padding:16px;
                 margin-bottom:12px;
             ">
-                <strong>Shift Available Hours</strong>
+                <strong>Utilisation Available Hours</strong>
 
-                <div style="margin-top:8px;">
-                    Required Hours
-                    -
-                    PBM Total Downtime
+                <div style="
+                    margin-top:8px;
+                    font-weight:700;
+                ">
+                    MAX(
+                        Required Hours - PBM Total Downtime,
+                        MIN(Work Hours, Required Hours)
+                    )
                 </div>
             </div>
 
@@ -1077,24 +1197,33 @@ function show_utilisation_formula() {
                 padding:16px;
                 margin-bottom:12px;
             ">
-                <strong>Example</strong>
+                <strong>Example — Why the denominator adjusts</strong>
 
                 <div style="margin-top:8px;">
                     Required Hours = 9<br>
-                    PBM Total Downtime = 2<br>
-                    Work Hours = 5<br><br>
+                    PBM Total Downtime = 1.933<br>
+                    Work Hours = 8<br><br>
 
-                    Shift Available Hours =
-                    9 - 2 =
-                    <strong>7</strong><br><br>
+                    Required - PBM =
+                    9 - 1.933 =
+                    <strong>7.067h</strong><br><br>
+
+                    The machine physically worked 8 hours, so its utilisation
+                    denominator cannot reasonably be only 7.067 hours.<br><br>
+
+                    MIN(8, 9) =
+                    <strong>8h</strong><br>
+
+                    MAX(7.067, 8) =
+                    <strong>8h</strong><br><br>
 
                     Utilisation =
-                    5 ÷ 7 × 100 =
-                    <strong>71.43%</strong><br><br>
+                    8 ÷ 8 × 100 =
+                    <strong>100%</strong><br><br>
 
-                    At 85% A&amp;U =
-                    71.43% × 85% =
-                    <strong>60.71%</strong>
+                    If the machine works 10 hours against a 9-hour requirement,
+                    the denominator remains 9 hours and Utilisation becomes
+                    <strong>111.11%</strong>, recognising recovery.
                 </div>
             </div>
 
@@ -1109,7 +1238,7 @@ function show_utilisation_formula() {
                 <div style="margin-top:8px;">
                     Total Work Hours
                     ÷
-                    Total Shift Available Hours
+                    Total Utilisation Available Hours
                     × 100
                     × A&amp;U Percentage
                 </div>
@@ -1233,9 +1362,6 @@ function format_engine_hours(hours_value) {
 }
 
 
-
-
-
 function apply_engine_freeze_columns() {
     if (
         !frappe.query_report
@@ -1271,15 +1397,36 @@ function apply_engine_styles() {
 
     style.innerHTML = `
         .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-row:has(.availability-engine-formula-cell),
+        .dt-row-filter {
+            min-height: 68px !important;
+            height: 68px !important;
+        }
+
         .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-row:has(.availability-engine-formula-cell) .dt-cell,
+        .dt-row-filter .dt-cell {
+            min-height: 68px !important;
+            height: 68px !important;
+        }
+
         .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-row:has(.availability-engine-formula-cell) .dt-cell__content {
-            min-height: 58px !important;
-            height: auto !important;
+        .dt-row-filter .dt-cell__content {
+            height: 100% !important;
             overflow: visible !important;
             white-space: normal !important;
+        }
+
+        .availability-engine-header-formula {
+            margin-bottom: 5px;
+            padding: 4px 3px;
+            border: 1px solid #60a5fa;
+            border-radius: 4px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 9px;
+            font-weight: 700;
+            line-height: 1.15;
+            text-align: center;
+            white-space: normal;
         }
 
 
