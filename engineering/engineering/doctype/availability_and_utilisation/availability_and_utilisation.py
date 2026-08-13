@@ -158,8 +158,15 @@ def _overlap_hours(a_start, a_end, b_start, b_end) -> float:
     return float(time_diff_in_hours(e, s))
 
 
-def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
-    shift_date = getdate(shift_start)
+def _exclusion_windows(
+    location: str,
+    shift: str,
+    shift_start,
+    shift_end,
+):
+    shift_date = getdate(
+        shift_start
+    )
 
     if shift_date.weekday() == 5:
         day_type = "Saturday"
@@ -168,6 +175,15 @@ def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
     else:
         day_type = "Weekday"
 
+    configuration_fields = [
+        "startup_start",
+        "startup_end",
+        "fatigue_start",
+        "fatigue_end",
+    ]
+
+    # First preference:
+    # use an explicit day-type configuration when one exists.
     configuration = frappe.db.get_value(
         "Startup and Fatigue spesification",
         {
@@ -175,77 +191,164 @@ def _exclusion_windows(location: str, shift: str, shift_start, shift_end):
             "shift": shift,
             "day_type": day_type,
         },
-        [
-            "startup_start",
-            "startup_end",
-            "fatigue_start",
-            "fatigue_end",
-        ],
+        configuration_fields,
         as_dict=True,
     )
 
+    # Backward compatibility:
+    # historically there was only one configuration per site + shift.
+    #
+    # If there is exactly one such row, use it as the generic
+    # configuration for Weekday / Saturday / Sunday.
+    #
+    # If multiple rows exist, do not choose one arbitrarily because
+    # the site is then using day-specific rules.
+    if not configuration:
+        legacy_configurations = frappe.get_all(
+            "Startup and Fatigue spesification",
+            filters={
+                "site": location,
+                "shift": shift,
+            },
+            fields=configuration_fields,
+            limit=2,
+        )
+
+        if len(legacy_configurations) == 1:
+            configuration = frappe._dict(
+                legacy_configurations[0]
+            )
+
     if not configuration:
         frappe.log_error(
-            title="Missing Startup and Fatigue specification",
-            message=f"No configuration found for {location}-{shift}-{day_type}",
+            title=(
+                "Missing Startup and Fatigue "
+                "specification"
+            ),
+            message=(
+                "No configuration found for "
+                f"{location}-{shift}-{day_type}"
+            ),
         )
         return []
 
     def time_text(value):
-        if isinstance(value, timedelta):
-            seconds = int(value.total_seconds()) % 86400
-            hours, remainder = divmod(seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        if isinstance(
+            value,
+            timedelta,
+        ):
+            seconds = (
+                int(
+                    value.total_seconds()
+                )
+                % 86400
+            )
 
-        return str(value).split(".")[0]
+            hours, remainder = divmod(
+                seconds,
+                3600,
+            )
 
-    def build_windows(start_time, end_time):
+            minutes, seconds = divmod(
+                remainder,
+                60,
+            )
+
+            return (
+                f"{hours:02d}:"
+                f"{minutes:02d}:"
+                f"{seconds:02d}"
+            )
+
+        return str(
+            value
+        ).split(".")[0]
+
+    def build_windows(
+        start_time,
+        end_time,
+    ):
         windows = []
 
-        start_time = time_text(start_time)
-        end_time = time_text(end_time)
+        start_time = time_text(
+            start_time
+        )
 
-        base_date = getdate(shift_start)
+        end_time = time_text(
+            end_time
+        )
 
-        for day_offset in (0, 1):
-            window_date = add_days(base_date, day_offset)
+        base_date = getdate(
+            shift_start
+        )
+
+        for day_offset in (
+            0,
+            1,
+        ):
+            window_date = add_days(
+                base_date,
+                day_offset,
+            )
 
             window_start = get_datetime(
-                f"{window_date} {start_time}"
+                f"{window_date} "
+                f"{start_time}"
             )
 
-            window_end_date = window_date
+            window_end_date = (
+                window_date
+            )
 
             if end_time <= start_time:
-                window_end_date = add_days(window_date, 1)
+                window_end_date = add_days(
+                    window_date,
+                    1,
+                )
 
             window_end = get_datetime(
-                f"{window_end_date} {end_time}"
+                f"{window_end_date} "
+                f"{end_time}"
             )
 
-            if window_end <= shift_start or window_start >= shift_end:
+            if (
+                window_end <= shift_start
+                or window_start >= shift_end
+            ):
                 continue
 
-            windows.append((
-                max(window_start, shift_start),
-                min(window_end, shift_end),
-            ))
+            windows.append(
+                (
+                    max(
+                        window_start,
+                        shift_start,
+                    ),
+                    min(
+                        window_end,
+                        shift_end,
+                    ),
+                )
+            )
 
         return windows
 
     windows = []
 
-    # Keep startup first and fatigue second for dashboard calculations.
-    windows.extend(build_windows(
-        configuration.startup_start,
-        configuration.startup_end,
-    ))
+    # Startup exclusion.
+    windows.extend(
+        build_windows(
+            configuration.startup_start,
+            configuration.startup_end,
+        )
+    )
 
-    windows.extend(build_windows(
-        configuration.fatigue_start,
-        configuration.fatigue_end,
-    ))
+    # Fatigue exclusion.
+    windows.extend(
+        build_windows(
+            configuration.fatigue_start,
+            configuration.fatigue_end,
+        )
+    )
 
     return windows
 

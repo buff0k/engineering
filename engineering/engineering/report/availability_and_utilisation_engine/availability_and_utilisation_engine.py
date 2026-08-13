@@ -917,6 +917,16 @@ def build_summary_row(
         rows
     )
 
+    # PBM represents actual breakdown downtime and must not disappear
+    # merely because an A&U validation rule flags the shift.
+    # We still exclude invalid Pre-Use rows, but retain PBM from
+    # invalid_au rows so Mechanical Downtime matches breakdown detail.
+    pbm_rows = [
+        row
+        for row in rows
+        if not row.get("invalid_pre_use")
+    ]
+
     problem_dates = {
         str(row.get("shift_date"))
         for row in rows
@@ -987,25 +997,52 @@ def build_summary_row(
     )
 
 
+    # KPI fields continue to use fully valid A&U rows.
     for fieldname in (
         "planned_downtime",
         "required_hours",
         "work_hours",
-        "pbm_elapsed_time",
-        "pbm_startup_fatigue_time",
-        "pbm_sunday_time",
-        "pbm_total_downtime",
         "utilisation_available_hours",
         "availability_available_hours",
-        # OLD UTILISATION SUPPORT FIELDS
-        # "utilisation_work_hours",
-        # "utilisation_available_hours",
     ):
         summary[fieldname] = sum(
             flt(
                 row.get(fieldname)
             )
             for row in valid_rows
+        )
+
+    # PBM is physical downtime. Keep it even when the shift has an
+    # A&U validation error, otherwise Breakdown Detail and Month End
+    # Mechanical Downtime no longer reconcile.
+    #
+    # PBM is reported in whole minutes by the canonical Breakdown
+    # helper. Convert each shift value back to whole minutes before
+    # summing so decimal-hour display rounding cannot accumulate over
+    # the month.
+    for fieldname in (
+        "pbm_elapsed_time",
+        "pbm_startup_fatigue_time",
+        "pbm_sunday_time",
+        "pbm_total_downtime",
+    ):
+        summary_minutes = sum(
+            int(
+                round(
+                    flt(
+                        row.get(
+                            fieldname
+                        )
+                    )
+                    * 60
+                )
+            )
+            for row in pbm_rows
+        )
+
+        summary[fieldname] = (
+            summary_minutes
+            / 60
         )
 
     summary["availability_percentage"] = (
@@ -1837,10 +1874,27 @@ def get_pbm_map(
         f"{add_days(to_date, 1)} 06:00:00"
     )
 
-    asset_names = sorted({
-        asset.asset_name
+    def normalise_asset_name(value):
+        return str(
+            value or ""
+        ).strip()
+
+    # Keep both the stored value and its trimmed equivalent in the
+    # database query, while all in-memory PBM keys use the trimmed name.
+    raw_asset_names = [
+        str(asset.asset_name)
         for asset in assets
         if asset.asset_name
+    ]
+
+    asset_names = sorted({
+        name
+        for raw_name in raw_asset_names
+        for name in (
+            raw_name,
+            normalise_asset_name(raw_name),
+        )
+        if name
     })
 
     if not asset_names:
@@ -1972,7 +2026,9 @@ def get_pbm_map(
 
     for au_row in au_rows:
         au_key = (
-            au_row.asset_name,
+            normalise_asset_name(
+                au_row.asset_name
+            ),
             au_row.location,
         )
 
@@ -2015,23 +2071,47 @@ def get_pbm_map(
         )
 
         if cache_key not in exclusion_configuration_cache:
-            exclusion_configuration_cache[
-                cache_key
-            ] = frappe.db.get_value(
+            configuration_fields = [
+                "startup_start",
+                "startup_end",
+                "fatigue_start",
+                "fatigue_end",
+            ]
+
+            # Prefer an explicit day-specific configuration.
+            configuration = frappe.db.get_value(
                 "Startup and Fatigue spesification",
                 {
                     "site": location,
                     "shift": shift,
                     "day_type": day_type,
                 },
-                [
-                    "startup_start",
-                    "startup_end",
-                    "fatigue_start",
-                    "fatigue_end",
-                ],
+                configuration_fields,
                 as_dict=True,
             )
+
+            # Backward compatibility:
+            # if this site/shift has only one configuration,
+            # use it as the generic Weekday/Saturday/Sunday rule.
+            if not configuration:
+                legacy_configurations = frappe.get_all(
+                    "Startup and Fatigue spesification",
+                    filters={
+                        "site": location,
+                        "shift": shift,
+                    },
+                    fields=configuration_fields,
+                    limit=2,
+                )
+
+                if len(legacy_configurations) == 1:
+                    configuration = frappe._dict(
+                        legacy_configurations[0]
+                    )
+
+            exclusion_configuration_cache[
+                cache_key
+            ] = configuration
 
         return exclusion_configuration_cache[
             cache_key
@@ -2196,7 +2276,9 @@ def get_pbm_map(
         candidate_rows = (
             au_rows_by_asset_location.get(
                 (
-                    asset_name,
+                    normalise_asset_name(
+                        asset_name
+                    ),
                     location,
                 ),
                 [],
@@ -2298,21 +2380,30 @@ def get_pbm_map(
                 )
 
                 sunday_hours = 0.0
+                required_downtime_hours = 0.0
 
-                if (
-                    getdate(
-                        au_row.shift_date
-                    ).weekday() == 6
-                ):
-                    sunday_hours = (
-                        valid_overlap_hours
+                # Match get_required_downtime_minutes_for_breakdown():
+                #
+                # - A shift with zero required hours contributes no
+                #   A&U mechanical downtime.
+                # - If that zero-required shift is Sunday, keep its
+                #   valid overlap in the Sunday bucket.
+                # - Otherwise PBM may never exceed the shift's
+                #   configured Required Hours.
+                if required_hours <= 0:
+                    if (
+                        getdate(
+                            au_row.shift_date
+                        ).weekday() == 6
+                    ):
+                        sunday_hours = (
+                            valid_overlap_hours
+                        )
+                else:
+                    required_downtime_hours = min(
+                        valid_overlap_hours,
+                        required_hours,
                     )
-
-                required_downtime_hours = max(
-                    valid_overlap_hours
-                    - sunday_hours,
-                    0.0,
-                )
 
                 shift_key = (
                     str(au_row.shift_date),
@@ -2350,12 +2441,141 @@ def get_pbm_map(
 
         return shift_results
 
+    def round_shift_results_to_minutes(
+        shift_results,
+    ):
+        """
+        The canonical Breakdown/Month End helper returns integer
+        minutes for each operational breakdown segment.
+
+        The optimised Engine works in fractional hours, so distribute
+        the rounded whole-minute total back to the contributing shifts
+        while preserving the exact rounded segment total.
+        """
+        if not shift_results:
+            return shift_results
+
+        fieldnames = (
+            "pbm_elapsed_time",
+            "pbm_startup_fatigue_time",
+            "pbm_sunday_time",
+            "pbm_total_downtime",
+        )
+
+        rounded_results = {
+            shift_key: {
+                fieldname: 0.0
+                for fieldname in fieldnames
+            }
+            for shift_key in shift_results
+        }
+
+        for fieldname in fieldnames:
+            minute_parts = []
+            total_exact_minutes = 0.0
+
+            for (
+                shift_key,
+                values,
+            ) in shift_results.items():
+
+                exact_minutes = (
+                    max(
+                        flt(
+                            values.get(
+                                fieldname
+                            )
+                        ),
+                        0.0,
+                    )
+                    * 60
+                )
+
+                whole_minutes = int(
+                    exact_minutes
+                )
+
+                fractional_minute = (
+                    exact_minutes
+                    - whole_minutes
+                )
+
+                total_exact_minutes += (
+                    exact_minutes
+                )
+
+                minute_parts.append([
+                    shift_key,
+                    whole_minutes,
+                    fractional_minute,
+                ])
+
+            target_minutes = int(
+                round(
+                    total_exact_minutes
+                )
+            )
+
+            assigned_minutes = sum(
+                part[1]
+                for part in minute_parts
+            )
+
+            extra_minutes = max(
+                target_minutes
+                - assigned_minutes,
+                0,
+            )
+
+            # Largest-remainder allocation keeps the total exactly
+            # equal to the canonical rounded minute total.
+            minute_parts.sort(
+                key=lambda part: (
+                    -part[2],
+                    str(part[0]),
+                )
+            )
+
+            for index in range(
+                min(
+                    extra_minutes,
+                    len(minute_parts),
+                )
+            ):
+                minute_parts[
+                    index
+                ][1] += 1
+
+            for (
+                shift_key,
+                whole_minutes,
+                fractional_minute,
+            ) in minute_parts:
+
+                rounded_results[
+                    shift_key
+                ][
+                    fieldname
+                ] = (
+                    whole_minutes
+                    / 60
+                )
+
+        return rounded_results
+
     # ------------------------------------------------------------------
     # Build PBM map.
     # ------------------------------------------------------------------
 
     pbm_map = {}
+
+    # Exact interval protection.
     seen_intervals = set()
+
+    # Popup clean_reason_details() presents breakdown timestamps at
+    # minute precision. Use the same operational-segment identity here
+    # so records that only differ by seconds are not counted twice.
+    seen_segments = set()
 
     for row in rows:
         start_dt = get_datetime(
@@ -2384,7 +2604,9 @@ def get_pbm_map(
             continue
 
         interval_key = (
-            row.asset_name,
+            normalise_asset_name(
+                row.asset_name
+            ),
             row.location,
             str(clipped_start),
             str(clipped_end),
@@ -2435,12 +2657,35 @@ def get_pbm_map(
             )
 
             if segment_end > segment_start:
+                segment_key = (
+                    normalise_asset_name(
+                        row.asset_name
+                    ),
+                    row.location,
+                    str(current_date),
+                    str(segment_start)[:16],
+                    str(segment_end)[:16],
+                )
+
+                if segment_key in seen_segments:
+                    current_date = add_days(
+                        current_date,
+                        1,
+                    )
+                    continue
+
+                seen_segments.add(
+                    segment_key
+                )
+
                 calculated_by_shift = (
-                    calculate_required_downtime(
-                        row.asset_name,
-                        row.location,
-                        segment_start,
-                        segment_end,
+                    round_shift_results_to_minutes(
+                        calculate_required_downtime(
+                            row.asset_name,
+                            row.location,
+                            segment_start,
+                            segment_end,
+                        )
                     )
                 )
 
@@ -2451,7 +2696,9 @@ def get_pbm_map(
                     shift_date, shift = shift_key
 
                     key = (
-                        row.asset_name,
+                        normalise_asset_name(
+                            row.asset_name
+                        ),
                         shift_date,
                         row.location,
                         shift,
@@ -2483,6 +2730,50 @@ def get_pbm_map(
                 current_date,
                 1,
             )
+
+    # Backward-compatible aliases for historical A&U records
+    # whose asset_name contains leading/trailing whitespace.
+    for au_row in au_rows:
+        raw_asset_name = str(
+            au_row.asset_name or ""
+        )
+
+        clean_asset_name = (
+            normalise_asset_name(
+                raw_asset_name
+            )
+        )
+
+        if (
+            not clean_asset_name
+            or raw_asset_name
+            == clean_asset_name
+        ):
+            continue
+
+        clean_key = (
+            clean_asset_name,
+            str(au_row.shift_date),
+            au_row.location,
+            au_row.shift,
+        )
+
+        raw_key = (
+            raw_asset_name,
+            str(au_row.shift_date),
+            au_row.location,
+            au_row.shift,
+        )
+
+        if (
+            clean_key in pbm_map
+            and raw_key not in pbm_map
+        ):
+            pbm_map[
+                raw_key
+            ] = pbm_map[
+                clean_key
+            ]
 
     return pbm_map
 
