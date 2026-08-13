@@ -152,15 +152,15 @@ def get_columns():
             "width": 165,
         },
         {
-            "label": "Shift Available Hours",
-            "fieldname": "shift_available_hours",
+            "label": "Utilisation Available Hours",
+            "fieldname": "utilisation_available_hours",
             "fieldtype": "Float",
             "precision": 3,
             "width": 175,
         },
         {
-            "label": "Available Hours Above 100",
-            "fieldname": "available_hours_above_100",
+            "label": "Availability Available Hours",
+            "fieldname": "availability_available_hours",
             "fieldtype": "Float",
             "precision": 3,
             "width": 205,
@@ -390,8 +390,7 @@ def get_data(filters):
                         ),
                         "actual_hours": (
                             get_shift_actual_hours(
-                                location,
-                                current_date,
+                                planning,
                                 shift,
                             )
                         ),
@@ -483,14 +482,6 @@ def get_data(filters):
         filters.get(
             "au_percentage_basis"
         ),
-    )
-
-    data.insert(
-        0,
-        {
-            "is_formula_row": 1,
-            "indent": 0,
-        },
     )
 
     return data
@@ -639,24 +630,35 @@ def calculate_availability_values(row):
     #         0,
     #     )
     #
-    # shift_available_hours = min(
+    # utilisation_available_hours = min(
     #     uncapped_available_hours,
     #     required_hours,
     # )
 
-    shift_available_hours = max(
+    remaining_required_hours = max(
         required_hours - pbm_total_downtime,
         0,
     )
 
-    available_hours_above_100 = max(
+    utilisation_available_hours = max(
+        remaining_required_hours,
+        min(
+            work_hours,
+            required_hours,
+        ),
+    )
+
+    availability_available_hours = max(
         work_hours,
-        shift_available_hours,
+        max(
+            required_hours - pbm_total_downtime,
+            0,
+        ),
     )
 
     availability_percentage = (
         (
-            available_hours_above_100
+            availability_available_hours
             / required_hours
         )
         * 100
@@ -704,19 +706,22 @@ def calculate_availability_values(row):
     utilisation_percentage = (
         (
             work_hours
-            / shift_available_hours
+            / utilisation_available_hours
         )
         * 100
-        if shift_available_hours > 0
-        else None
+        if (
+            required_hours > 0
+            and utilisation_available_hours > 0
+        )
+        else 0.0
     )
 
-    row["shift_available_hours"] = (
-        shift_available_hours
+    row["utilisation_available_hours"] = (
+        utilisation_available_hours
     )
 
-    row["available_hours_above_100"] = (
-        available_hours_above_100
+    row["availability_available_hours"] = (
+        availability_available_hours
     )
 
     row["availability_percentage"] = (
@@ -838,6 +843,7 @@ def validate_au_row(row):
             "Invalid A&U: "
             + "; ".join(invalid_reasons)
         )
+        row["utilisation_percentage"] = None
     elif warning_reasons:
         row["invalid_au"] = 0
         row["au_validation_level"] = "warning"
@@ -857,8 +863,8 @@ def round_engine_row(row):
         "utilisation_percentage",
     }
 
+
     for fieldname in (
-        "actual_hours",
         "planned_downtime",
         "required_hours",
         "work_hours",
@@ -866,8 +872,8 @@ def round_engine_row(row):
         "pbm_startup_fatigue_time",
         "pbm_sunday_time",
         "pbm_total_downtime",
-        "shift_available_hours",
-        "available_hours_above_100",
+        "utilisation_available_hours",
+        "availability_available_hours",
         # OLD UTILISATION SUPPORT FIELDS
         # "utilisation_work_hours",
         # "utilisation_available_hours",
@@ -958,7 +964,7 @@ def build_summary_row(
     #     row
     #     for row in valid_rows
     #     if flt(
-    #         row.get("shift_available_hours")
+    #         row.get("utilisation_available_hours")
     #     ) > 0
     # ]
 
@@ -975,8 +981,13 @@ def build_summary_row(
         ),
     }
 
+    summary["actual_hours"] = sum(
+        flt(row.get("actual_hours"))
+        for row in rows
+    )
+
+
     for fieldname in (
-        "actual_hours",
         "planned_downtime",
         "required_hours",
         "work_hours",
@@ -984,8 +995,8 @@ def build_summary_row(
         "pbm_startup_fatigue_time",
         "pbm_sunday_time",
         "pbm_total_downtime",
-        "shift_available_hours",
-        "available_hours_above_100",
+        "utilisation_available_hours",
+        "availability_available_hours",
         # OLD UTILISATION SUPPORT FIELDS
         # "utilisation_work_hours",
         # "utilisation_available_hours",
@@ -999,7 +1010,7 @@ def build_summary_row(
 
     summary["availability_percentage"] = (
         (
-            summary["available_hours_above_100"]
+            summary["availability_available_hours"]
             / summary["required_hours"]
         )
         * 100
@@ -1029,10 +1040,10 @@ def build_summary_row(
     summary["utilisation_percentage"] = (
         (
             summary["work_hours"]
-            / summary["shift_available_hours"]
+            / summary["utilisation_available_hours"]
         )
         * 100
-        if summary["shift_available_hours"] > 0
+        if summary["utilisation_available_hours"] > 0
         else None
     )
 
@@ -1193,25 +1204,18 @@ def build_tree_rows(shift_rows):
 
 
 def get_shift_actual_hours(
-    location,
-    shift_date,
+    planning,
     shift,
 ):
-    planned_downtime = get_shift_planned_downtime(
-        location,
-        shift_date,
-        shift,
-    )
+    shift_system = str(
+        planning.get("shift_system")
+        or ""
+    ).strip().lower()
 
-    shift_hours = (
+    return (
         12.0
-        if shift in ("Day", "Night")
+        if shift_system == "2x12hour"
         else 8.0
-    )
-
-    return max(
-        shift_hours - planned_downtime,
-        0.0,
     )
 
 
