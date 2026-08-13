@@ -1396,16 +1396,19 @@ function apply_engine_styles() {
     style.id = style_id;
 
     style.innerHTML = `
+        .query-report[data-report-name="Availability and Utilisation Engine"]
         .dt-row-filter {
             min-height: 68px !important;
             height: 68px !important;
         }
 
+        .query-report[data-report-name="Availability and Utilisation Engine"]
         .dt-row-filter .dt-cell {
             min-height: 68px !important;
             height: 68px !important;
         }
 
+        .query-report[data-report-name="Availability and Utilisation Engine"]
         .dt-row-filter .dt-cell__content {
             height: 100% !important;
             overflow: visible !important;

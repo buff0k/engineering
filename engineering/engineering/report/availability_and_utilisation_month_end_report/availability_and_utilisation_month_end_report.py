@@ -1783,10 +1783,10 @@ def _month_end_direct_rows(filters):
                         "work_hours"
                     ),
                     au_row.get(
-                        "shift_available_hours"
+                        "utilisation_available_hours"
                     ),
                     au_row.get(
-                        "available_hours_above_100"
+                        "availability_available_hours"
                     ),
                     au_row.get(
                         "pbm_total_downtime"
@@ -1929,10 +1929,10 @@ def _month_end_direct_rows(filters):
                         "work_hours"
                     ),
                     au_scope_row.get(
-                        "shift_available_hours"
+                        "utilisation_available_hours"
                     ),
                     au_scope_row.get(
-                        "available_hours_above_100"
+                        "availability_available_hours"
                     ),
                     au_scope_row.get(
                         "pbm_total_downtime"
