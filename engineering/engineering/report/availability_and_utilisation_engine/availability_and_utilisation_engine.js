@@ -325,6 +325,9 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 apply_engine_freeze_columns();
                 mark_engine_formula_headers_clickable();
                 bind_engine_expanded_date_highlight();
+                update_invalid_au_button(
+                    frappe.query_report
+                );
             },
             200
         );
@@ -396,6 +399,27 @@ function add_engine_legend(report) {
                 Invalid A&amp;U
             </span>
 
+            <button
+                type="button"
+                class="
+                    btn
+                    btn-xs
+                    btn-default
+                    availability-engine-invalid-view
+                "
+                style="
+                    border:1px solid #dc2626;
+                    color:#991b1b;
+                    background:#fff;
+                    font-size:11px;
+                    font-weight:700;
+                    padding:3px 9px;
+                    border-radius:6px;
+                "
+            >
+                View Invalid A&amp;U (0)
+            </button>
+
             <span style="
                 display:inline-flex;
                 align-items:center;
@@ -438,6 +462,451 @@ function add_engine_legend(report) {
             "click.auInvalidLegend",
             show_au_invalid_explanation
         );
+
+    $wrapper
+        .find(".availability-engine-invalid-view")
+        .off("click.auInvalidView")
+        .on(
+            "click.auInvalidView",
+            function() {
+                show_invalid_au_rows(
+                    report
+                );
+            }
+        );
+
+    update_invalid_au_button(
+        report
+    );
+}
+
+
+function get_invalid_au_shift_rows(report) {
+    let rows = [];
+
+    if (
+        report
+        && Array.isArray(report.data)
+    ) {
+        rows = report.data;
+    } else if (
+        frappe.query_report
+        && Array.isArray(
+            frappe.query_report.data
+        )
+    ) {
+        rows = frappe.query_report.data;
+    }
+
+    return rows
+        .filter(
+            function(row) {
+                return (
+                    row
+                    && Number(
+                        row.indent || 0
+                    ) === 3
+                    && (
+                        row.shift === "Day"
+                        || row.shift === "Night"
+                    )
+                    && (
+                        row.au_validation_level
+                        === "invalid"
+                        || Number(
+                            row.invalid_au || 0
+                        ) === 1
+                    )
+                );
+            }
+        )
+        .sort(
+            function(a, b) {
+                const date_compare = String(
+                    a.shift_date || ""
+                ).localeCompare(
+                    String(
+                        b.shift_date || ""
+                    )
+                );
+
+                if (date_compare !== 0) {
+                    return date_compare;
+                }
+
+                const machine_compare = String(
+                    a.asset_name || ""
+                ).localeCompare(
+                    String(
+                        b.asset_name || ""
+                    )
+                );
+
+                if (machine_compare !== 0) {
+                    return machine_compare;
+                }
+
+                return String(
+                    a.shift || ""
+                ).localeCompare(
+                    String(
+                        b.shift || ""
+                    )
+                );
+            }
+        );
+}
+
+
+function update_invalid_au_button(report) {
+    if (
+        !report
+        || !report.page
+        || !report.page.wrapper
+    ) {
+        return;
+    }
+
+    const rows = get_invalid_au_shift_rows(
+        report
+    );
+
+    const $button = $(
+        report.page.wrapper
+    ).find(
+        ".availability-engine-invalid-view"
+    );
+
+    if (!$button.length) {
+        return;
+    }
+
+    $button.text(
+        `View Invalid A&U (${rows.length})`
+    );
+
+    $button.prop(
+        "disabled",
+        rows.length === 0
+    );
+
+    $button.css(
+        "opacity",
+        rows.length === 0
+            ? "0.55"
+            : "1"
+    );
+
+    $button.attr(
+        "title",
+        rows.length
+            ? (
+                `${rows.length} invalid A&U `
+                + "shift(s) in the current report"
+            )
+            : "No invalid A&U shifts in the current report"
+    );
+}
+
+
+function format_invalid_au_date(value) {
+    const text = String(
+        value || ""
+    ).slice(
+        0,
+        10
+    );
+
+    const match = text.match(
+        /^(\d{4})-(\d{2})-(\d{2})$/
+    );
+
+    if (!match) {
+        return text;
+    }
+
+    return (
+        `${match[3]}/${match[2]}/${match[1]}`
+    );
+}
+
+
+function get_invalid_au_reason(row) {
+    return String(
+        row.au_validation_status || ""
+    )
+        .replace(
+            /^Invalid A&U:\s*/,
+            ""
+        )
+        .trim();
+}
+
+
+function show_invalid_au_rows(report) {
+    const rows = get_invalid_au_shift_rows(
+        report
+    );
+
+    if (!rows.length) {
+        frappe.msgprint({
+            title: __("Invalid A&U"),
+            message: __(
+                "There are no invalid A&U shifts "
+                + "in the current report."
+            ),
+            indicator: "green"
+        });
+
+        return;
+    }
+
+    const body_rows = rows
+        .map(
+            function(row) {
+                const date = (
+                    frappe.utils.escape_html(
+                        format_invalid_au_date(
+                            row.shift_date
+                        )
+                    )
+                );
+
+                const shift = (
+                    frappe.utils.escape_html(
+                        String(
+                            row.shift || ""
+                        )
+                    )
+                );
+
+                const machine = (
+                    frappe.utils.escape_html(
+                        String(
+                            row.asset_name || ""
+                        )
+                    )
+                );
+
+                const work_hours = (
+                    frappe.utils.escape_html(
+                        format_engine_hours(
+                            row.work_hours
+                        )
+                    )
+                );
+
+                const pbm_hours = (
+                    frappe.utils.escape_html(
+                        format_engine_hours(
+                            row.pbm_total_downtime
+                        )
+                    )
+                );
+
+                const required_hours = (
+                    frappe.utils.escape_html(
+                        format_engine_hours(
+                            row.required_hours
+                        )
+                    )
+                );
+
+                const reason = (
+                    frappe.utils.escape_html(
+                        get_invalid_au_reason(
+                            row
+                        )
+                    )
+                );
+
+                return `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${shift}</td>
+                        <td>
+                            <strong>
+                                ${machine}
+                            </strong>
+                        </td>
+                        <td>${work_hours}</td>
+                        <td>${pbm_hours}</td>
+                        <td>${required_hours}</td>
+                        <td
+                            style="
+                                color:#991b1b;
+                                min-width:280px;
+                            "
+                        >
+                            ${reason}
+                        </td>
+                    </tr>
+                `;
+            }
+        )
+        .join("");
+
+    const dialog = new frappe.ui.Dialog({
+        title: __(
+            `Invalid A&U Shifts (${rows.length})`
+        ),
+        size: "extra-large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "invalid_rows_html"
+            }
+        ]
+    });
+
+    dialog
+        .fields_dict
+        .invalid_rows_html
+        .$wrapper
+        .html(`
+            <div style="
+                padding:4px 2px 12px;
+            ">
+                <div style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:space-between;
+                    gap:12px;
+                    flex-wrap:wrap;
+                    margin-bottom:12px;
+                    padding:12px 14px;
+                    background:#fee2e2;
+                    border:1px solid #dc2626;
+                    border-radius:8px;
+                ">
+                    <div>
+                        <strong style="
+                            color:#991b1b;
+                            font-size:14px;
+                        ">
+                            ${rows.length}
+                            invalid A&amp;U shift(s)
+                        </strong>
+
+                        <div style="
+                            margin-top:3px;
+                            color:#7f1d1d;
+                            font-size:12px;
+                        ">
+                            Current report filters only
+                        </div>
+                    </div>
+
+                    <div style="
+                        color:#7f1d1d;
+                        font-size:12px;
+                    ">
+                        Invalid shifts are excluded from
+                        A&amp;U KPI totals.
+                    </div>
+                </div>
+
+                <div style="
+                    max-height:60vh;
+                    overflow:auto;
+                    border:1px solid #d1d8dd;
+                    border-radius:8px;
+                ">
+                    <table
+                        class="table table-bordered"
+                        style="
+                            margin:0;
+                            width:100%;
+                            font-size:12px;
+                            background:#fff;
+                        "
+                    >
+                        <thead>
+                            <tr style="
+                                background:#f8fafc;
+                            ">
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Date
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Shift
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Machine
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Work Hours
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    PBM Total Downtime
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Required Hours
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Invalid Reason
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${body_rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `);
+
+    dialog.show();
 }
 
 
