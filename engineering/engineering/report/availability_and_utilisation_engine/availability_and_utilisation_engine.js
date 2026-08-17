@@ -606,6 +606,26 @@ function add_engine_legend(report) {
                 show_invalid_au_rows(
                     report
                 );
+
+                // Insert the PBM drill-down column after the
+                // Invalid A&U dialog has been rendered.
+                [
+                    50,
+                    200,
+                    500,
+                    1000
+                ].forEach(
+                    function(delay) {
+                        setTimeout(
+                            function() {
+                                add_invalid_au_pbm_view_column(
+                                    report
+                                );
+                            },
+                            delay
+                        );
+                    }
+                );
             }
         );
 
@@ -2161,3 +2181,655 @@ function apply_engine_styles() {
 
     document.head.appendChild(style);
 }
+// BEGIN INVALID AU PBM DRILLDOWN
+
+function get_open_invalid_au_dialog() {
+    let $match = $();
+
+    $(".modal:visible").each(
+        function() {
+            const $modal = $(this);
+
+            const modal_text = (
+                $modal.text()
+                || ""
+            );
+
+            let has_pbm_header = false;
+
+            $modal
+                .find("thead th")
+                .each(
+                    function() {
+                        if (
+                            (
+                                $(this).text()
+                                || ""
+                            ).trim()
+                            === "PBM Total Downtime"
+                        ) {
+                            has_pbm_header = true;
+                        }
+                    }
+                );
+
+            if (
+                modal_text.indexOf(
+                    "Invalid A&U Shifts"
+                ) !== -1
+                && has_pbm_header
+            ) {
+                $match = $modal;
+            }
+        }
+    );
+
+    return $match;
+}
+
+
+function add_invalid_au_pbm_view_column(
+    report
+) {
+    const rows = (
+        get_invalid_au_shift_rows(
+            report
+        )
+        || []
+    );
+
+    if (!rows.length) {
+        return;
+    }
+
+    const $modal = (
+        get_open_invalid_au_dialog()
+    );
+
+    if (!$modal.length) {
+        return;
+    }
+
+    const $table = (
+        $modal
+            .find("table")
+            .first()
+    );
+
+    if (!$table.length) {
+        return;
+    }
+
+    if (
+        $table.find(
+            ".availability-engine-invalid-pbm-header"
+        ).length
+    ) {
+        return;
+    }
+
+    let pbm_column_index = -1;
+    let $pbm_header = $();
+
+    $table
+        .find("thead tr")
+        .first()
+        .children("th")
+        .each(
+            function(index) {
+                const heading = (
+                    $(this).text()
+                    || ""
+                ).trim();
+
+                if (
+                    heading
+                    === "PBM Total Downtime"
+                ) {
+                    pbm_column_index = index;
+                    $pbm_header = $(this);
+                }
+            }
+        );
+
+    if (
+        pbm_column_index < 0
+        || !$pbm_header.length
+    ) {
+        return;
+    }
+
+    $pbm_header.after(`
+        <th
+            class="
+                availability-engine-invalid-pbm-header
+            "
+            style="
+                position:sticky;
+                top:0;
+                background:#f8fafc;
+                z-index:1;
+                min-width:165px;
+                white-space:nowrap;
+            "
+        >
+            PBM Total Downtime View
+        </th>
+    `);
+
+    $table
+        .find("tbody tr")
+        .each(
+            function(index) {
+                const row = rows[index];
+
+                if (!row) {
+                    return;
+                }
+
+                const $cells = (
+                    $(this).children("td")
+                );
+
+                if (
+                    $cells.length
+                    <= pbm_column_index
+                ) {
+                    return;
+                }
+
+                const $button = $(`
+                    <button
+                        type="button"
+                        class="
+                            btn
+                            btn-xs
+                            btn-primary
+                            availability-engine-invalid-pbm-view
+                        "
+                        style="
+                            min-width:70px;
+                            border-radius:12px;
+                            font-weight:600;
+                        "
+                    >
+                        View
+                    </button>
+                `);
+
+                $button.on(
+                    "click",
+                    function() {
+                        open_invalid_au_pbm_records(
+                            row
+                        );
+                    }
+                );
+
+                const $view_cell = $(`
+                    <td
+                        style="
+                            text-align:center;
+                            vertical-align:middle;
+                            white-space:nowrap;
+                        "
+                    ></td>
+                `);
+
+                $view_cell.append(
+                    $button
+                );
+
+                $cells
+                    .eq(
+                        pbm_column_index
+                    )
+                    .after(
+                        $view_cell
+                    );
+            }
+        );
+}
+
+
+function open_invalid_au_pbm_records(
+    row
+) {
+    if (!row) {
+        return;
+    }
+
+    let location = (
+        row.location
+        || ""
+    );
+
+    if (
+        !location
+        && frappe.query_report
+        && frappe.query_report
+            .get_filter_value
+    ) {
+        location = (
+            frappe.query_report
+                .get_filter_value(
+                    "location"
+                )
+            || ""
+        );
+    }
+
+    frappe.call({
+        method:
+            "engineering.engineering.report.availability_and_utilisation_engine.availability_and_utilisation_engine.get_invalid_au_pbm_records",
+
+        args: {
+            asset_name: (
+                row.asset_name
+                || ""
+            ),
+            location: location,
+            shift_date: (
+                row.shift_date
+                || ""
+            ),
+            shift: (
+                row.shift
+                || ""
+            ),
+        },
+
+        freeze: true,
+
+        freeze_message:
+            __(
+                "Loading PBM records..."
+            ),
+
+        callback(response) {
+            const result = (
+                response.message
+                || {}
+            );
+
+            const records = (
+                result.records
+                || []
+            );
+
+            if (!records.length) {
+                frappe.msgprint({
+                    title:
+                        __(
+                            "PBM Total Downtime"
+                        ),
+                    indicator:
+                        "orange",
+                    message:
+                        __(
+                            "No contributing Plant Breakdown or Maintenance record was found for this shift."
+                        ),
+                });
+
+                return;
+            }
+
+            if (records.length === 1) {
+                frappe.set_route(
+                    "Form",
+                    "Plant Breakdown or Maintenance",
+                    records[0].name
+                );
+
+                return;
+            }
+
+            show_invalid_au_pbm_record_dialog(
+                row,
+                records
+            );
+        },
+    });
+}
+
+
+function format_invalid_au_pbm_datetime(
+    value
+) {
+    if (!value) {
+        return "-";
+    }
+
+    try {
+        if (
+            frappe.datetime
+            && frappe.datetime
+                .str_to_user
+        ) {
+            return (
+                frappe.datetime
+                    .str_to_user(
+                        String(value)
+                    )
+            );
+        }
+    } catch (error) {
+        // Fall back to source value.
+    }
+
+    return String(value);
+}
+
+
+function format_invalid_au_pbm_minutes(
+    minutes
+) {
+    const total_minutes = Math.max(
+        0,
+        Math.round(
+            Number(
+                minutes
+                || 0
+            )
+        )
+    );
+
+    const hours = Math.floor(
+        total_minutes / 60
+    );
+
+    const mins = (
+        total_minutes % 60
+    );
+
+    if (
+        hours
+        && mins
+    ) {
+        return (
+            `${hours}h ${mins}m`
+        );
+    }
+
+    if (hours) {
+        return `${hours}h`;
+    }
+
+    return `${mins}m`;
+}
+
+
+function show_invalid_au_pbm_record_dialog(
+    row,
+    records
+) {
+    const date_text = (
+        typeof format_invalid_au_date
+            === "function"
+        ? format_invalid_au_date(
+            row.shift_date
+        )
+        : String(
+            row.shift_date
+            || ""
+        )
+    );
+
+    const machine_text = (
+        row.asset_name
+        || ""
+    );
+
+    const shift_text = (
+        row.shift
+        || ""
+    );
+
+    const body_rows = records
+        .map(
+            function(record) {
+                return `
+                    <tr>
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                font-weight:600;
+                                white-space:nowrap;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                String(
+                                    record.name
+                                    || ""
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                String(
+                                    record.breakdown_reason
+                                    || ""
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                format_invalid_au_pbm_datetime(
+                                    record.breakdown_start_datetime
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                format_invalid_au_pbm_datetime(
+                                    record.resolved_datetime
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                                font-weight:600;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                format_invalid_au_pbm_minutes(
+                                    record.contributing_minutes
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                text-align:center;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                            "
+                        >
+                            <button
+                                type="button"
+                                class="
+                                    btn
+                                    btn-xs
+                                    btn-primary
+                                    availability-engine-open-pbm
+                                "
+                            >
+                                Open PBM
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+        )
+        .join("");
+
+    const dialog = new frappe.ui.Dialog({
+        title:
+            __(
+                "PBM Total Downtime - {0} - {1} {2}",
+                [
+                    machine_text,
+                    date_text,
+                    shift_text,
+                ]
+            ),
+
+        size: "extra-large",
+
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname:
+                    "invalid_au_pbm_html",
+            },
+        ],
+    });
+
+    dialog
+        .fields_dict
+        .invalid_au_pbm_html
+        .$wrapper
+        .html(`
+            <div
+                style="
+                    max-height:65vh;
+                    overflow:auto;
+                "
+            >
+                <table
+                    class="
+                        table
+                        table-bordered
+                        table-hover
+                    "
+                    style="
+                        margin-bottom:0;
+                    "
+                >
+                    <thead>
+                        <tr>
+                            <th>PBM Record</th>
+                            <th>Breakdown Reason</th>
+                            <th>Breakdown Start</th>
+                            <th>Resolved</th>
+                            <th>A&U PBM Time</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${body_rows}
+                    </tbody>
+                </table>
+            </div>
+        `);
+
+    dialog
+        .fields_dict
+        .invalid_au_pbm_html
+        .$wrapper
+        .find(
+            ".availability-engine-open-pbm"
+        )
+        .each(
+            function(index) {
+                $(this).on(
+                    "click",
+                    function() {
+                        const record = (
+                            records[index]
+                        );
+
+                        if (
+                            !record
+                            || !record.name
+                        ) {
+                            return;
+                        }
+
+                        dialog.hide();
+
+                        frappe.set_route(
+                            "Form",
+                            "Plant Breakdown or Maintenance",
+                            record.name
+                        );
+                    }
+                );
+            }
+        );
+
+    dialog.show();
+}
+
+
+/*
+ * Wrap the existing Invalid A&U dialog rather than rewriting it.
+ * The existing calculation/table code remains untouched.
+ */
+(function install_invalid_au_pbm_drilldown() {
+    if (
+        window
+            .__availability_engine_invalid_pbm_drilldown_installed
+    ) {
+        return;
+    }
+
+    window
+        .__availability_engine_invalid_pbm_drilldown_installed = true;
+
+    const original_show_invalid_au_rows = (
+        show_invalid_au_rows
+    );
+
+    show_invalid_au_rows = function(
+        report
+    ) {
+        const result = (
+            original_show_invalid_au_rows
+                .apply(
+                    this,
+                    arguments
+                )
+        );
+
+        window.setTimeout(
+            function() {
+                add_invalid_au_pbm_view_column(
+                    report
+                );
+            },
+            100
+        );
+
+        return result;
+    };
+})();
+
+// END INVALID AU PBM DRILLDOWN
