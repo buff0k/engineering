@@ -1,3 +1,119 @@
+function get_daily_au_dashboard_date(
+    storage_key,
+    fallback_value
+) {
+    try {
+        const value = localStorage.getItem(
+            storage_key
+        );
+
+        if (
+            value
+            && /^\\d{4}-\\d{2}-\\d{2}$/.test(
+                value
+            )
+        ) {
+            return value;
+        }
+    } catch (error) {
+        // Browser storage may be unavailable.
+    }
+
+    return fallback_value;
+}
+
+
+function sync_engine_dates_from_daily_dashboard(report) {
+    if (!report) {
+        return;
+    }
+
+    let from_date = "";
+    let to_date = "";
+
+    try {
+        from_date = (
+            localStorage.getItem(
+                "daily_au_engine_dashboard_from_date"
+            )
+            || ""
+        );
+
+        to_date = (
+            localStorage.getItem(
+                "daily_au_engine_dashboard_to_date"
+            )
+            || ""
+        );
+    } catch (error) {
+        return;
+    }
+
+    const valid_date = function(value) {
+        return /^\d{4}-\d{2}-\d{2}$/.test(
+            String(value || "")
+        );
+    };
+
+    if (
+        !valid_date(from_date)
+        || !valid_date(to_date)
+    ) {
+        return;
+    }
+
+    const from_filter = report.get_filter(
+        "from_date"
+    );
+
+    const to_filter = report.get_filter(
+        "to_date"
+    );
+
+    if (
+        !from_filter
+        || !to_filter
+    ) {
+        return;
+    }
+
+    const current_from = String(
+        from_filter.get_value() || ""
+    );
+
+    const current_to = String(
+        to_filter.get_value() || ""
+    );
+
+    if (
+        current_from === from_date
+        && current_to === to_date
+    ) {
+        return;
+    }
+
+    from_filter.set_value(
+        from_date
+    );
+
+    to_filter.set_value(
+        to_date
+    );
+
+    setTimeout(
+        function() {
+            if (
+                report
+                && typeof report.refresh === "function"
+            ) {
+                report.refresh();
+            }
+        },
+        150
+    );
+}
+
+
 frappe.query_reports["Availability and Utilisation Engine"] = {
     initial_depth: 0,
 
@@ -7,14 +123,20 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             label: __("From Date"),
             fieldtype: "Date",
             reqd: 1,
-            default: frappe.datetime.month_start()
+            default: get_daily_au_dashboard_date(
+                "daily_au_engine_dashboard_from_date",
+                frappe.datetime.month_start()
+            )
         },
         {
             fieldname: "to_date",
             label: __("To Date"),
             fieldtype: "Date",
             reqd: 1,
-            default: frappe.datetime.month_end()
+            default: get_daily_au_dashboard_date(
+                "daily_au_engine_dashboard_to_date",
+                frappe.datetime.month_end()
+            )
         },
         {
             fieldname: "locations",
@@ -307,6 +429,18 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     onload: function(report) {
         bind_engine_formula_header_clicks(report);
         add_engine_legend(report);
+
+        // Query Report can restore old filter values after the
+        // field defaults are created. Apply the Daily A&U Engine
+        // Dashboard date range after the report has initialised.
+        setTimeout(
+            function() {
+                sync_engine_dates_from_daily_dashboard(
+                    report
+                );
+            },
+            250
+        );
 
         setTimeout(
             apply_engine_freeze_columns,
