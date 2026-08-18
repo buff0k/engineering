@@ -377,6 +377,11 @@ def get_data(filters):
                             ).strip().lower() == "2x12hour"
                             else 8.0
                         ),
+                        "saturday_shift_hours": flt(
+                            planning.get(
+                                "saturday_shift_hours"
+                            )
+                        ),
                         "is_spare_swing_unit": (
                             1
                             if (
@@ -532,7 +537,26 @@ def get_shifts_for_row(
     )
 
 
+# ISAMBANE SATURDAY A&U PRE-USE LIMITS
 def mark_invalid_preuse_rows(rows):
+    """
+    Validate Pre-Use working hours used by the A&U report.
+
+    Existing/default rule:
+        Shift maximum = 12 hours
+        Daily maximum = 24 hours
+
+    Saturday rule is driven by Monthly Production Planning:
+
+        saturday_shift_hours = 9
+            Shift maximum = 12 hours
+            Daily maximum = 24 hours
+
+        saturday_shift_hours = 7
+            Shift maximum = 9 hours
+            Daily maximum = 18 hours
+    """
+
     daily_hours = defaultdict(float)
 
     for row in rows:
@@ -555,36 +579,77 @@ def mark_invalid_preuse_rows(rows):
             row.get("asset_name"),
         )
 
+        work_hours = flt(
+            row.get("work_hours")
+        )
+
+        total_daily_hours = flt(
+            daily_hours.get(key)
+        )
+
+        shift_date = getdate(
+            row.get("shift_date")
+        )
+
+        max_shift_hours = 12.0
+        max_daily_hours = 24.0
+
+        saturday_plan_hours = None
+        invalid_configuration = False
+
+        if (
+            shift_date
+            and shift_date.weekday() == 5
+        ):
+            saturday_plan_hours = flt(
+                row.get("saturday_shift_hours")
+            )
+
+            if saturday_plan_hours == 7:
+                max_shift_hours = 9.0
+                max_daily_hours = 18.0
+
+            elif saturday_plan_hours == 9:
+                max_shift_hours = 12.0
+                max_daily_hours = 24.0
+
+            else:
+                invalid_configuration = True
+
         shift_invalid = (
-            flt(
-                row.get("work_hours")
-            ) > 12
+            work_hours > max_shift_hours
         )
 
         daily_invalid = (
-            flt(
-                daily_hours.get(key)
-            ) > 24
+            total_daily_hours > max_daily_hours
         )
 
-        row["invalid_pre_use"] = (
-            1
-            if shift_invalid or daily_invalid
-            else 0
-        )
-
-        if shift_invalid:
+        if invalid_configuration:
+            row["invalid_pre_use"] = 1
             row["invalid_pre_use_status"] = (
-                "Invalid: Shift > 12h"
+                "Invalid Config: Saturday Hours "
+                f"{saturday_plan_hours:g}"
             )
+
+        elif shift_invalid:
+            row["invalid_pre_use"] = 1
+            row["invalid_pre_use_status"] = (
+                "Invalid: Shift > "
+                f"{max_shift_hours:g}h"
+            )
+
         elif daily_invalid:
+            row["invalid_pre_use"] = 1
             row["invalid_pre_use_status"] = (
-                "Invalid: Day > 24h"
+                "Invalid: Day > "
+                f"{max_daily_hours:g}h"
             )
+
         else:
+            row["invalid_pre_use"] = 0
             row["invalid_pre_use_status"] = "Valid"
 
-
+    return rows
 
 
 def calculate_availability_values(row):
@@ -1446,6 +1511,9 @@ def build_planning_map(planning_rows):
             ] = {
                 "shift_system": (
                     planning_row.shift_system
+                ),
+                "saturday_shift_hours": flt(
+                    planning_doc.saturday_shift_hours
                 ),
                 "shift_day_hours": flt(
                     day.shift_day_hours
