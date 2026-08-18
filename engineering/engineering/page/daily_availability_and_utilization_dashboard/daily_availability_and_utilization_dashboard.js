@@ -429,6 +429,22 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             return;
         }
 
+        // Keep the A&U Engine aligned with the date range selected
+        // on the Daily A&U Engine Dashboard.
+        try {
+            localStorage.setItem(
+                "daily_au_engine_dashboard_from_date",
+                values.start_date || ""
+            );
+
+            localStorage.setItem(
+                "daily_au_engine_dashboard_to_date",
+                values.end_date || ""
+            );
+        } catch (error) {
+            // Continue normally when browser storage is unavailable.
+        }
+
         if (this.loading) {
             this.pending_reload = true;
             return;
