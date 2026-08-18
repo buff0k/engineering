@@ -1201,16 +1201,13 @@ function show_au_invalid_explanation() {
                     padding-left:22px;
                 ">
                     <li>
-                        Work Hours exceed the physical shift length.
+                        Work Hours exceed Required Hours + Planned Downtime.
                     </li>
                     <li>
-                        PBM Total Downtime exceeds the physical shift length.
+                        PBM Total Downtime exceeds Required Hours + Planned Downtime.
                     </li>
                     <li>
-                        Work Hours + PBM Total Downtime exceed the physical shift length.
-                    </li>
-                    <li>
-                        Required Hours exceed the physical shift length.
+                        Work Hours + PBM Total Downtime exceed Required Hours + Planned Downtime.
                     </li>
                     <!-- OLD UTILISATION AVAILABLE HOURS VALIDATION
                     <li>
@@ -1230,12 +1227,14 @@ function show_au_invalid_explanation() {
                 <strong>Example</strong>
 
                 <div style="margin-top:8px;">
-                    12-hour shift<br>
-                    Work Hours = 8<br>
-                    PBM Total Downtime = 5<br><br>
+                    Required Hours = 7<br>
+                    Planned Downtime = 2<br>
+                    Validation Limit = 9 hours<br>
+                    Work Hours = 6<br>
+                    PBM Total Downtime = 4<br><br>
 
-                    Work + PBM = 13 hours.<br>
-                    This cannot physically fit inside a 12-hour shift,
+                    Work + PBM = 10 hours.<br>
+                    10 hours exceeds the 9-hour planned shift limit,
                     so the shift is flagged red.
                 </div>
             </div>
@@ -1249,8 +1248,11 @@ function show_au_invalid_explanation() {
                 <strong>Important</strong>
 
                 <div style="margin-top:8px;">
-                    The 12-hour or 8-hour validation limit applies to
-                    individual shifts only.
+                    The validation limit for each individual shift is:
+                    Required Hours + Planned Downtime.
+
+                    This allows the validation to follow the actual production
+                    plan for weekdays, Saturdays and other planned shift changes.
 
                     Date, machine and category rows may naturally total
                     more than one shift.

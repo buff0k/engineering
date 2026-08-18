@@ -798,14 +798,19 @@ def calculate_availability_values(row):
     )
 
 def validate_au_row(row):
-    shift_limit_hours = max(
-        flt(row.get("shift_limit_hours")),
-        0,
-    )
-
     required_hours = max(
         flt(row.get("required_hours")),
         0,
+    )
+
+    planned_downtime = max(
+        flt(row.get("planned_downtime")),
+        0,
+    )
+
+    validation_limit_hours = (
+        required_hours
+        + planned_downtime
     )
 
     work_hours = max(
@@ -835,33 +840,27 @@ def validate_au_row(row):
     invalid_reasons = []
     warning_reasons = []
 
-    if work_hours > shift_limit_hours:
+    if work_hours > validation_limit_hours:
         invalid_reasons.append(
             f"Work {work_hours:g}h exceeds "
-            f"{shift_limit_hours:g}h shift"
+            f"{validation_limit_hours:g}h planned shift limit"
         )
 
-    if pbm_total_downtime > shift_limit_hours:
+    if pbm_total_downtime > validation_limit_hours:
         invalid_reasons.append(
             f"PBM {pbm_total_downtime:g}h exceeds "
-            f"{shift_limit_hours:g}h shift"
+            f"{validation_limit_hours:g}h planned shift limit"
         )
 
     if (
         work_hours
         + pbm_total_downtime
-        > shift_limit_hours
+        > validation_limit_hours
     ):
         invalid_reasons.append(
             f"Work + PBM = "
             f"{work_hours + pbm_total_downtime:g}h "
-            f"exceeds {shift_limit_hours:g}h shift"
-        )
-
-    if required_hours > shift_limit_hours:
-        invalid_reasons.append(
-            f"Required {required_hours:g}h exceeds "
-            f"{shift_limit_hours:g}h shift"
+            f"exceeds {validation_limit_hours:g}h planned shift limit"
         )
 
     # OLD UTILISATION AVAILABLE HOURS VALIDATION
