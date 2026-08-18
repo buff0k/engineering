@@ -377,6 +377,11 @@ def get_data(filters):
                             ).strip().lower() == "2x12hour"
                             else 8.0
                         ),
+                        "saturday_shift_hours": flt(
+                            planning.get(
+                                "saturday_shift_hours"
+                            )
+                        ),
                         "is_spare_swing_unit": (
                             1
                             if (
@@ -532,7 +537,26 @@ def get_shifts_for_row(
     )
 
 
+# ISAMBANE SATURDAY A&U PRE-USE LIMITS
 def mark_invalid_preuse_rows(rows):
+    """
+    Validate Pre-Use working hours used by the A&U report.
+
+    Existing/default rule:
+        Shift maximum = 12 hours
+        Daily maximum = 24 hours
+
+    Saturday rule is driven by Monthly Production Planning:
+
+        saturday_shift_hours = 9
+            Shift maximum = 12 hours
+            Daily maximum = 24 hours
+
+        saturday_shift_hours = 7
+            Shift maximum = 9 hours
+            Daily maximum = 18 hours
+    """
+
     daily_hours = defaultdict(float)
 
     for row in rows:
@@ -555,36 +579,77 @@ def mark_invalid_preuse_rows(rows):
             row.get("asset_name"),
         )
 
+        work_hours = flt(
+            row.get("work_hours")
+        )
+
+        total_daily_hours = flt(
+            daily_hours.get(key)
+        )
+
+        shift_date = getdate(
+            row.get("shift_date")
+        )
+
+        max_shift_hours = 12.0
+        max_daily_hours = 24.0
+
+        saturday_plan_hours = None
+        invalid_configuration = False
+
+        if (
+            shift_date
+            and shift_date.weekday() == 5
+        ):
+            saturday_plan_hours = flt(
+                row.get("saturday_shift_hours")
+            )
+
+            if saturday_plan_hours == 7:
+                max_shift_hours = 9.0
+                max_daily_hours = 18.0
+
+            elif saturday_plan_hours == 9:
+                max_shift_hours = 12.0
+                max_daily_hours = 24.0
+
+            else:
+                invalid_configuration = True
+
         shift_invalid = (
-            flt(
-                row.get("work_hours")
-            ) > 12
+            work_hours > max_shift_hours
         )
 
         daily_invalid = (
-            flt(
-                daily_hours.get(key)
-            ) > 24
+            total_daily_hours > max_daily_hours
         )
 
-        row["invalid_pre_use"] = (
-            1
-            if shift_invalid or daily_invalid
-            else 0
-        )
-
-        if shift_invalid:
+        if invalid_configuration:
+            row["invalid_pre_use"] = 1
             row["invalid_pre_use_status"] = (
-                "Invalid: Shift > 12h"
+                "Invalid Config: Saturday Hours "
+                f"{saturday_plan_hours:g}"
             )
+
+        elif shift_invalid:
+            row["invalid_pre_use"] = 1
+            row["invalid_pre_use_status"] = (
+                "Invalid: Shift > "
+                f"{max_shift_hours:g}h"
+            )
+
         elif daily_invalid:
+            row["invalid_pre_use"] = 1
             row["invalid_pre_use_status"] = (
-                "Invalid: Day > 24h"
+                "Invalid: Day > "
+                f"{max_daily_hours:g}h"
             )
+
         else:
+            row["invalid_pre_use"] = 0
             row["invalid_pre_use_status"] = "Valid"
 
-
+    return rows
 
 
 def calculate_availability_values(row):
@@ -1446,6 +1511,9 @@ def build_planning_map(planning_rows):
             ] = {
                 "shift_system": (
                     planning_row.shift_system
+                ),
+                "saturday_shift_hours": flt(
+                    planning_doc.saturday_shift_hours
                 ),
                 "shift_day_hours": flt(
                     day.shift_day_hours
@@ -2776,5 +2844,339 @@ def get_pbm_map(
             ]
 
     return pbm_map
+# BEGIN INVALID AU PBM DRILLDOWN
+@frappe.whitelist()
+def get_invalid_au_pbm_records(
+    asset_name=None,
+    location=None,
+    shift_date=None,
+    shift=None,
+):
+    """
+    Return the actual Plant Breakdown or Maintenance records that
+    contribute PBM downtime to one A&U shift.
 
+    This is a read-only drill-down helper for the Invalid A&U dialog.
+    It does not alter any A&U or PBM calculations.
+    """
 
+    from frappe.utils import (
+        flt,
+        get_datetime,
+        getdate,
+    )
+
+    from engineering.engineering.doctype.availability_and_utilisation import (
+        availability_and_utilisation as au,
+    )
+
+    from engineering.engineering.report.availability_and_utilisation_month_end_report import (
+        availability_and_utilisation_month_end_report as month_end,
+    )
+
+    asset_name = str(
+        asset_name or ""
+    ).strip()
+
+    location = str(
+        location or ""
+    ).strip()
+
+    shift = str(
+        shift or ""
+    ).strip()
+
+    shift_date_text = str(
+        shift_date or ""
+    ).strip()
+
+    if not asset_name:
+        frappe.throw(
+            "Machine is required."
+        )
+
+    if not shift_date_text:
+        frappe.throw(
+            "Shift Date is required."
+        )
+
+    if shift not in (
+        "Day",
+        "Night",
+        "Morning",
+        "Afternoon",
+    ):
+        frappe.throw(
+            f"Unsupported shift: {shift}"
+        )
+
+    shift_date_value = getdate(
+        shift_date_text
+    )
+
+    # ---------------------------------------------------------
+    # Find the exact A&U shift row so that the same shift
+    # system used by A&U is used for the PBM drill-down.
+    # ---------------------------------------------------------
+
+    au_conditions = [
+        (
+            "TRIM(IFNULL(asset_name, '')) "
+            "= %(asset_name)s"
+        ),
+        "shift_date = %(shift_date)s",
+        "shift = %(shift)s",
+    ]
+
+    au_values = {
+        "asset_name": asset_name,
+        "shift_date": shift_date_value,
+        "shift": shift,
+    }
+
+    if location:
+        au_conditions.append(
+            "location = %(location)s"
+        )
+
+        au_values[
+            "location"
+        ] = location
+
+    au_rows = frappe.db.sql(
+        f"""
+        SELECT
+            name,
+            shift_system,
+            location,
+            asset_name
+        FROM `tabAvailability and Utilisation`
+        WHERE {" AND ".join(au_conditions)}
+        ORDER BY modified DESC
+        LIMIT 2
+        """,
+        au_values,
+        as_dict=True,
+    )
+
+    if not au_rows:
+        frappe.throw(
+            (
+                "No Availability and Utilisation shift "
+                f"was found for {asset_name} on "
+                f"{shift_date_value} {shift}."
+            )
+        )
+
+    if (
+        not location
+        and len(au_rows) > 1
+    ):
+        frappe.throw(
+            (
+                "More than one A&U shift was found. "
+                "Please select a Location in the report."
+            )
+        )
+
+    au_row = au_rows[0]
+
+    location = str(
+        au_row.get("location") or location or ""
+    ).strip()
+
+    shift_system = str(
+        au_row.get("shift_system") or ""
+    ).strip()
+
+    shift_start, shift_end = (
+        au.get_shift_timings(
+            shift_system,
+            shift,
+            str(shift_date_value),
+        )
+    )
+
+    if (
+        not shift_start
+        or not shift_end
+    ):
+        frappe.throw(
+            (
+                "Could not determine the A&U shift "
+                f"window for {asset_name} "
+                f"{shift_date_value} {shift}."
+            )
+        )
+
+    # ---------------------------------------------------------
+    # Load actual PBM documents overlapping this shift.
+    # ---------------------------------------------------------
+
+    pbm_rows = frappe.db.sql(
+        """
+        SELECT
+            name,
+            asset_name,
+            location,
+            breakdown_reason,
+            breakdown_start_datetime,
+            resolved_datetime
+        FROM `tabPlant Breakdown or Maintenance`
+        WHERE
+            TRIM(IFNULL(asset_name, ''))
+                = %(asset_name)s
+            AND location = %(location)s
+            AND IFNULL(breakdown_reason, '') != ''
+            AND IFNULL(exclude_from_au, 0) = 0
+            AND breakdown_start_datetime
+                < %(shift_end)s
+            AND (
+                resolved_datetime
+                    > %(shift_start)s
+                OR resolved_datetime IS NULL
+            )
+        ORDER BY
+            breakdown_start_datetime ASC,
+            name ASC
+        """,
+        {
+            "asset_name": asset_name,
+            "location": location,
+            "shift_start": shift_start,
+            "shift_end": shift_end,
+        },
+        as_dict=True,
+    )
+
+    records = []
+    seen_segments = set()
+
+    for pbm_row in pbm_rows:
+        start_datetime = pbm_row.get(
+            "breakdown_start_datetime"
+        )
+
+        resolved_datetime = pbm_row.get(
+            "resolved_datetime"
+        )
+
+        if not start_datetime:
+            continue
+
+        start_dt = get_datetime(
+            start_datetime
+        )
+
+        end_dt = (
+            get_datetime(
+                resolved_datetime
+            )
+            if resolved_datetime
+            else shift_end
+        )
+
+        clipped_start = max(
+            start_dt,
+            shift_start,
+        )
+
+        clipped_end = min(
+            end_dt,
+            shift_end,
+        )
+
+        if clipped_end <= clipped_start:
+            continue
+
+        # Match the Engine's minute-level duplicate protection.
+        segment_key = (
+            asset_name,
+            location,
+            str(shift_date_value),
+            str(clipped_start)[:16],
+            str(clipped_end)[:16],
+        )
+
+        if segment_key in seen_segments:
+            continue
+
+        seen_segments.add(
+            segment_key
+        )
+
+        calculated = (
+            month_end
+            .get_required_downtime_minutes_for_breakdown(
+                frappe._dict({
+                    "location": location,
+                    "start_date": (
+                        str(shift_date_value)
+                    ),
+                    "end_date": (
+                        str(shift_date_value)
+                    ),
+                }),
+                asset_name,
+                clipped_start,
+                clipped_end,
+            )
+        )
+
+        contributing_minutes = int(
+            round(
+                flt(
+                    calculated.get(
+                        "required_downtime_minutes"
+                    )
+                )
+            )
+        )
+
+        # Do not show PBMs that overlap the physical shift but
+        # contribute zero time to PBM Total Downtime.
+        if contributing_minutes <= 0:
+            continue
+
+        records.append({
+            "name": (
+                pbm_row.get("name")
+                or ""
+            ),
+            "breakdown_reason": (
+                pbm_row.get(
+                    "breakdown_reason"
+                )
+                or ""
+            ),
+            "breakdown_start_datetime": (
+                str(
+                    pbm_row.get(
+                        "breakdown_start_datetime"
+                    )
+                    or ""
+                )
+            ),
+            "resolved_datetime": (
+                str(
+                    pbm_row.get(
+                        "resolved_datetime"
+                    )
+                    or ""
+                )
+            ),
+            "contributing_minutes": (
+                contributing_minutes
+            ),
+        })
+
+    return {
+        "asset_name": asset_name,
+        "location": location,
+        "shift_date": str(
+            shift_date_value
+        ),
+        "shift": shift,
+        "records": records,
+    }
+# END INVALID AU PBM DRILLDOWN
