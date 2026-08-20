@@ -1467,10 +1467,32 @@ def build_dashboard_html(
     )
     trend_html = build_trend_html(location, start_date, end_date, machine_scope)
 
+    legend_target = 85 if au_target_filter == "85% A & U" else 100
+    legend_warning = legend_target - 10
+
     return f'''
 <div class="isd-hourly-dashboard isd-daily-availability-dashboard">
     <div class="isd-note">
         Showing: {summary_type_safe} | {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
+    </div>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin:8px 0;border:1px solid #d8dde2;border-radius:8px;background:#ffffff;font-size:12px;font-weight:700;">
+        <strong>Colour Legend ({esc(au_target_filter)}):</strong>
+
+        <span>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dcfce7;border:2px solid #1e8e3e;vertical-align:middle;margin-right:5px;"></span>
+            Green: ≥ {legend_target}%
+        </span>
+
+        <span>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dbeafe;border:2px solid #1a73e8;vertical-align:middle;margin-right:5px;"></span>
+            Blue: {legend_warning}% – &lt;{legend_target}%
+        </span>
+
+        <span>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#fee2e2;border:2px solid #d93025;vertical-align:middle;margin-right:5px;"></span>
+            Red: &lt;{legend_warning}%
+        </span>
     </div>
 
     <div class="isd-site">
