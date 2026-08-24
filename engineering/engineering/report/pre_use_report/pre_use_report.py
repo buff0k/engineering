@@ -18,9 +18,9 @@ def execute(filters=None):
         {"label": "Date", "fieldname": "shift_date", "fieldtype": "Date", "width": 120},
         {"label": "Machine No.", "fieldname": "asset_name", "fieldtype": "Data", "width": 130},
         {"label": "Make/Model", "fieldname": "item_name", "fieldtype": "Data", "width": 170},
-        {"label": "Start Hours", "fieldname": "start_hours", "fieldtype": "Float", "width": 120},
-        {"label": "End Hours", "fieldname": "end_hours", "fieldtype": "Float", "width": 120},
-        {"label": "Working Hours", "fieldname": "working_hours", "fieldtype": "Float", "width": 140},
+        {"label": "Start Hours", "fieldname": "start_hours", "fieldtype": "Float", "precision": 0, "width": 120},
+        {"label": "End Hours", "fieldname": "end_hours", "fieldtype": "Float", "precision": 0, "width": 120},
+        {"label": "Working Hours", "fieldname": "working_hours", "fieldtype": "Float", "precision": 0, "width": 140},
     ]
 
     conditions = [
