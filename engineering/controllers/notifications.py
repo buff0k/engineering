@@ -13,52 +13,9 @@ OEM_BOOKING_RECIPIENTS = ["juan@isambane.co.za", "renier@isambane.co.za"]
 
 
 # ---------------------------------------------------------------------
-# Plant Breakdown / Maintenance digest recipients per site/location
-# NOTE: "msani@isambane.co.za" must always be included for all sites
+# Plant Breakdown / Maintenance recipients
+# Configured in Plant Breakdown Settings -> Recipients Per Site
 # ---------------------------------------------------------------------
-OPEN_BREAKDOWN_SITE_RECIPIENTS = {
-    "Koppie": [
-        "wimpie@isambane.co.za",
-        "dian@isambane.co.za",
-        "msani@isambane.co.za",
-        "juan@isambane.co.za",
-        "koppie.control@isambane.co.za",
-    ],
-    "Klipfontein": [
-        "kobus@isambane.co.za",
-        "richard@isambane.co.za",
-        "werner.french@isambane.co.za",
-        "msani@isambane.co.za",
-    ],
-    "Uitgevallen": [
-        "charles@excavo.co.za",
-        "saul@isambane.co.za",
-        "juan@isambane.co.za",
-        "msani@isambane.co.za",
-        "uitcontrol@isambane.co.za",
-    ],
-    "Gwab": [
-        "bongani@isambane.co.za",
-        "matimba@isambane.co.za",
-        "msani@isambane.co.za",
-    ],
-    "Bankfontein": [
-        "noel@isambane.co.za",
-        "j.semelane@excavo.co.za",
-        "msani@isambane.co.za",
-        "bankfontein.control@isambane.co.za",
-        "juan@isambane.co.za",
-    ],
-    "Kriel Rehabilitation": [
-        "carel@isambane.co.za",
-        "xolani@isambane.co.za",
-        "ishmael@isambane.co.za",
-        "msani@isambane.co.za",
-    ],
-}
-
-# Fallback if a Location name does not match any key above
-OPEN_BREAKDOWN_DEFAULT_RECIPIENTS = ["msani@isambane.co.za"]
 
 
 # ---------------------------------------------------------------------
@@ -97,6 +54,45 @@ def _dedupe_keep_order(values):
         output.append(value)
 
     return output
+
+
+def _get_open_breakdown_recipient_emails(location):
+    settings = frappe.get_single("Plant Breakdown Settings")
+    location = _norm(location)
+
+    emails = []
+
+    for row in settings.get("recipients_per_site") or []:
+        row_location = _norm(getattr(row, "location", None))
+        user = _norm(getattr(row, "user", None))
+
+        if not user or row_location != location:
+            continue
+
+        email = frappe.db.get_value("User", user, "email") or user
+
+        if email:
+            emails.append(email)
+
+    return _dedupe_keep_order(emails)
+
+
+def _get_all_open_breakdown_recipient_emails():
+    settings = frappe.get_single("Plant Breakdown Settings")
+    emails = []
+
+    for row in settings.get("recipients_per_site") or []:
+        user = _norm(getattr(row, "user", None))
+
+        if not user:
+            continue
+
+        email = frappe.db.get_value("User", user, "email") or user
+
+        if email:
+            emails.append(email)
+
+    return _dedupe_keep_order(emails)
 
 
 def _get_outgoing_email_account(match_by_doctype=None):
@@ -153,8 +149,7 @@ def send_open_breakdowns_digest(dry_run: bool = False):
     )
 
     def _recipients_for_location(location_name: str):
-        location_name = (location_name or "").strip()
-        return OPEN_BREAKDOWN_SITE_RECIPIENTS.get(location_name) or OPEN_BREAKDOWN_DEFAULT_RECIPIENTS
+        return _get_open_breakdown_recipient_emails(location_name)
 
     by_location = {}
 
@@ -177,7 +172,7 @@ def send_open_breakdowns_digest(dry_run: bool = False):
         message = "<br>".join(lines)
 
         payloads["__default__"] = {
-            "recipients": OPEN_BREAKDOWN_DEFAULT_RECIPIENTS,
+            "recipients": _get_all_open_breakdown_recipient_emails(),
             "subject": subject,
             "message": message,
         }
@@ -198,7 +193,7 @@ def send_open_breakdowns_digest(dry_run: bool = False):
 
         try:
             frappe.sendmail(
-                recipients=OPEN_BREAKDOWN_DEFAULT_RECIPIENTS,
+                recipients=_get_all_open_breakdown_recipient_emails(),
                 sender=email_account.email_id,
                 subject=subject,
                 message=message,
