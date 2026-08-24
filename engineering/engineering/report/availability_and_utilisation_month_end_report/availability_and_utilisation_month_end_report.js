@@ -25,7 +25,75 @@ window.au_month_end_format_hours_minutes = function(hours_value) {
 };
 
 
+window.au_month_end_update_target_legend = function() {
+	const report = frappe.query_report;
+
+	if (!report || !report.page) {
+		return;
+	}
+
+	const target_filter =
+		report.get_filter_value("au_target_filter") ||
+		"85% A & U";
+
+	const target =
+		target_filter === "85% A & U" ? 85 : 100;
+
+	const warning = target - 10;
+
+	let legend = report.page.main.find(
+		".au-target-colour-legend"
+	);
+
+	if (!legend.length) {
+		legend = $(`
+			<div class="au-target-colour-legend"></div>
+		`).prependTo(report.page.main);
+	}
+
+	legend.html(`
+		<div style="
+			display:flex;
+			gap:16px;
+			flex-wrap:wrap;
+			align-items:center;
+			padding:10px 12px;
+			margin:10px 0;
+			border:1px solid #d8dde2;
+			border-radius:8px;
+			background:#ffffff;
+			font-size:12px;
+			font-weight:700;
+		">
+			<strong>Colour Legend (${target_filter}):</strong>
+
+			<span>
+				<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dcfce7;border:2px solid #1e8e3e;vertical-align:middle;margin-right:5px;"></span>
+				Green: ≥ ${target}%
+			</span>
+
+			<span>
+				<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dbeafe;border:2px solid #1a73e8;vertical-align:middle;margin-right:5px;"></span>
+				Blue: ${warning}% – <${target}%
+			</span>
+
+			<span>
+				<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#fee2e2;border:2px solid #d93025;vertical-align:middle;margin-right:5px;"></span>
+				Red: <${warning}%
+			</span>
+		</div>
+	`);
+};
+
+
 frappe.query_reports["Availability and Utilisation Month End Report"] = {
+	onload: function() {
+		setTimeout(
+			window.au_month_end_update_target_legend,
+			0
+		);
+	},
+
 	filters: [
 		{
 			fieldname: "from_date",
@@ -89,6 +157,7 @@ Loader`
 			default: "85% A & U",
 			reqd: 1,
 			on_change: function() {
+				window.au_month_end_update_target_legend();
 				frappe.query_report.refresh();
 			}
 		}
@@ -308,30 +377,21 @@ Loader`
 			let bg = "#fee2e2";
 			let color = "#991b1b";
 
-			if (column.fieldname === "avail_percent") {
-				if (raw_value >= 85) {
-					bg = "#dcfce7";
-					color = "#166534";
-				} else if (raw_value >= 75) {
-					bg = "#fef9c3";
-					color = "#854d0e";
-				}
-			} else if (column.fieldname === "util_percent") {
-				if (raw_value >= 80) {
-					bg = "#dcfce7";
-					color = "#166534";
-				} else if (raw_value >= 70) {
-					bg = "#fef9c3";
-					color = "#854d0e";
-				}
-			} else if (column.fieldname === "emp_avail_percent") {
-				if (raw_value >= 85) {
-					bg = "#dcfce7";
-					color = "#166534";
-				} else if (raw_value >= 75) {
-					bg = "#fef9c3";
-					color = "#854d0e";
-				}
+			const target_filter =
+				frappe.query_report.get_filter_value("au_target_filter") ||
+				"85% A & U";
+
+			const target =
+				target_filter === "85% A & U" ? 85 : 100;
+
+			const warning = target - 10;
+
+			if (raw_value >= target) {
+				bg = "#dcfce7";
+				color = "#166534";
+			} else if (raw_value >= warning) {
+				bg = "#dbeafe";
+				color = "#1d4ed8";
 			}
 
 			return `
