@@ -51,7 +51,7 @@ frappe.query_reports["Availability and Utilisation Month End Report"] = {
 			fieldname: "asset_category",
 			label: __("Asset Category"),
 			fieldtype: "Select",
-			options: `
+			options: `All Equipment
 ADT
 Dozer
 Excavator
@@ -61,7 +61,8 @@ TLB
 Water Bowser
 Diesel Bowsers
 Drills
-Loader`
+Loader`,
+                        default: "All Equipment"
 		},
 		{
 			fieldname: "machine_scope",
