@@ -86,9 +86,9 @@ def execute(filters=None):
                 "shift_date": r.shift_date,
                 "asset_name": r.asset_name,
                 "item_name": r.item_name,
-                "start_hours": r.eng_hrs_start,
-                "end_hours": r.eng_hrs_end,
-                "working_hours": working_hours
+                "start_hours": round(float(r.eng_hrs_start)) if r.eng_hrs_start is not None else None,
+                "end_hours": round(float(r.eng_hrs_end)) if r.eng_hrs_end is not None else None,
+                "working_hours": round(float(working_hours)) if working_hours is not None else None
             })
 
     else:
