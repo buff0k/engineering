@@ -168,27 +168,43 @@ frappe.query_reports["Pre-Use Report"] = {
         }
 
         if (column.fieldname === "start_hours") {
-            return `<span class="pre-use-number">${value}</span>`;
+            const display_value =
+                data.start_hours === null || data.start_hours === undefined
+                    ? ""
+                    : Math.round(Number(data.start_hours)).toLocaleString("en-ZA");
+
+            return `<span class="pre-use-number">${display_value}</span>`;
         }
 
         if (column.fieldname === "end_hours") {
+            const display_value =
+                data.end_hours === null || data.end_hours === undefined
+                    ? ""
+                    : Math.round(Number(data.end_hours)).toLocaleString("en-ZA");
+
             if (Number(data.end_hours) === 0) {
-                return `<span class="pre-use-pill pre-use-pill-orange">${value}</span>`;
+                return `<span class="pre-use-pill pre-use-pill-orange">${display_value}</span>`;
             }
-            return `<span class="pre-use-number">${value}</span>`;
+
+            return `<span class="pre-use-number">${display_value}</span>`;
         }
 
         if (column.fieldname === "working_hours") {
+            const display_value =
+                data.working_hours === null || data.working_hours === undefined
+                    ? ""
+                    : Math.round(Number(data.working_hours)).toLocaleString("en-ZA");
+
             if (Number(data.working_hours) === 0) {
-                return `<span class="pre-use-pill pre-use-pill-red">${value}</span>`;
+                return `<span class="pre-use-pill pre-use-pill-red">${display_value}</span>`;
             }
 
             if (Number(data.working_hours) > 24) {
-                return `<span class="pre-use-pill pre-use-pill-red">${value}</span>`;
+                return `<span class="pre-use-pill pre-use-pill-red">${display_value}</span>`;
             }
 
             if (data.working_hours !== null && data.working_hours !== undefined) {
-                return `<span class="pre-use-pill pre-use-pill-green">${value}</span>`;
+                return `<span class="pre-use-pill pre-use-pill-green">${display_value}</span>`;
             }
         }
 
