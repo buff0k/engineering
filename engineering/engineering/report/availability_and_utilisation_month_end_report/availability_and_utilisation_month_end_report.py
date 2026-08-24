@@ -135,6 +135,10 @@ def apply_au_target(value, filters):
 def execute(filters=None):
 	filters = filters or {}
 
+	# "All Equipment" means no Asset Category filter.
+	if filters.get("asset_category") == "All Equipment":
+	    filters["asset_category"] = None
+
 	columns = get_columns()
 	data = get_data(filters)
 
