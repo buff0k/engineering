@@ -98,6 +98,68 @@ function add_open_downtime_button() {
 
 
 function bind_downtime_correction_dashboard_events() {
+        // ----------------------------------------------------
+        // CLICK MACHINE NUMBER -> OPEN MATCHING PBM
+        // ----------------------------------------------------
+        $(document)
+                .off("click", ".dcd-fleet-link")
+                .on("click", ".dcd-fleet-link", function () {
+                        const badge = $(this);
+
+                        const fleet = badge.attr("data-fleet") || "";
+                        const site = badge.attr("data-site") || "";
+                        const correction_date =
+                                badge.attr("data-date") || "";
+
+                        frappe.call({
+                                method:
+                                        "engineering.engineering.report." +
+                                        "downtime_correction_dashboard." +
+                                        "downtime_correction_dashboard." +
+                                        "get_commented_breakdown_name",
+
+                                args: {
+                                        fleet: fleet,
+                                        site: site,
+                                        correction_date: correction_date,
+                                },
+
+                                freeze: true,
+                                freeze_message: __("Opening PBM..."),
+
+                                callback: function (response) {
+                                        const breakdown_name =
+                                                response.message || "";
+
+                                        if (!breakdown_name) {
+                                                frappe.msgprint({
+                                                        title: __(
+                                                                "PBM Not Found"
+                                                        ),
+                                                        indicator: "orange",
+                                                        message:
+                                                                __("No Plant Breakdown or Maintenance record was found for ") +
+                                                                "<b>" +
+                                                                frappe.utils.escape_html(fleet) +
+                                                                "</b> on " +
+                                                                frappe.utils.escape_html(correction_date) +
+                                                                " at " +
+                                                                frappe.utils.escape_html(site) +
+                                                                ".",
+                                                });
+
+                                                return;
+                                        }
+
+                                        frappe.set_route(
+                                                "Form",
+                                                "Plant Breakdown or Maintenance",
+                                                breakdown_name
+                                        );
+                                },
+                        });
+                });
+
 	$(document).off("click", ".dcd-view").on("click", ".dcd-view", function () {
 		const btn = $(this);
 		const comments = JSON.parse(btn.attr("data-comments") || "[]");
