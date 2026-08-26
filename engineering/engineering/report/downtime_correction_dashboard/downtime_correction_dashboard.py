@@ -151,6 +151,58 @@ def get_items(from_date, to_date, site=None):
 	return items
 
 
+
+@frappe.whitelist()
+def get_commented_breakdown_name(fleet, site, correction_date):
+        fleet = str(fleet or "").strip()
+        site = str(site or "").strip()
+
+        if not fleet or not site or not correction_date:
+                return ""
+
+        correction_date = getdate(correction_date)
+
+        day_start = f"{correction_date} 00:00:00"
+        day_end = f"{add_days(correction_date, 1)} 00:00:00"
+
+        rows = frappe.db.sql(
+                """
+                SELECT name
+                FROM `tabPlant Breakdown or Maintenance`
+                WHERE UPPER(TRIM(asset_name)) = UPPER(TRIM(%(fleet)s))
+                  AND location = %(site)s
+                  AND COALESCE(
+                        NULLIF(breakdown_start_datetime, ''),
+                        creation
+                  ) < %(day_end)s
+                  AND (
+                        resolved_datetime IS NULL
+                        OR resolved_datetime = ''
+                        OR resolved_datetime >= %(day_start)s
+                  )
+                ORDER BY
+                        CASE
+                                WHEN breakdown_start_datetime IS NOT NULL
+                                        THEN breakdown_start_datetime
+                                WHEN resolved_datetime IS NOT NULL
+                                        THEN resolved_datetime
+                                ELSE creation
+                        END DESC,
+                        modified DESC
+                LIMIT 1
+                """,
+                {
+                        "fleet": fleet,
+                        "site": site,
+                        "day_start": day_start,
+                        "day_end": day_end,
+                },
+                as_dict=True,
+        )
+
+        return rows[0].name if rows else ""
+
+
 def get_dashboard_html(items):
 	if not items:
 		return """
@@ -180,7 +232,15 @@ def get_card_html(item):
 	return f"""
 		<div class="dcd-card {card_class}">
 			<div class="dcd-top">
-				<div class="dcd-fleet">{frappe.utils.escape_html(item["fleet"])}</div>
+				<button type="button"
+                                        class="dcd-fleet dcd-fleet-link"
+                                        data-fleet="{frappe.utils.escape_html(item["fleet"])}"
+                                        data-site="{frappe.utils.escape_html(item["site"] or "")}"
+                                        data-date="{item["date"]}"
+                                        title="Open Plant Breakdown or Maintenance"
+                                        style="cursor:pointer;font-family:inherit;">
+                                        {frappe.utils.escape_html(item["fleet"])}
+                                </button>
 				<div class="dcd-status {status_class}">{status_text}</div>
 			</div>
 

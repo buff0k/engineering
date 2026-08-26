@@ -1,0 +1,2565 @@
+function get_daily_au_dashboard_date(
+    storage_key,
+    fallback_value
+) {
+    try {
+        const value = localStorage.getItem(
+            storage_key
+        );
+
+        if (
+            value
+            && /^\\d{4}-\\d{2}-\\d{2}$/.test(
+                value
+            )
+        ) {
+            return value;
+        }
+    } catch (error) {
+        // Browser storage may be unavailable.
+    }
+
+    return fallback_value;
+}
+
+
+function sync_engine_dates_from_daily_dashboard(report) {
+    if (!report) {
+        return;
+    }
+
+    let from_date = "";
+    let to_date = "";
+
+    try {
+        from_date = (
+            localStorage.getItem(
+                "daily_au_engine_dashboard_from_date"
+            )
+            || ""
+        );
+
+        to_date = (
+            localStorage.getItem(
+                "daily_au_engine_dashboard_to_date"
+            )
+            || ""
+        );
+    } catch (error) {
+        return;
+    }
+
+    const valid_date = function(value) {
+        return /^\d{4}-\d{2}-\d{2}$/.test(
+            String(value || "")
+        );
+    };
+
+    if (
+        !valid_date(from_date)
+        || !valid_date(to_date)
+    ) {
+        return;
+    }
+
+    const from_filter = report.get_filter(
+        "from_date"
+    );
+
+    const to_filter = report.get_filter(
+        "to_date"
+    );
+
+    if (
+        !from_filter
+        || !to_filter
+    ) {
+        return;
+    }
+
+    const current_from = String(
+        from_filter.get_value() || ""
+    );
+
+    const current_to = String(
+        to_filter.get_value() || ""
+    );
+
+    if (
+        current_from === from_date
+        && current_to === to_date
+    ) {
+        return;
+    }
+
+    from_filter.set_value(
+        from_date
+    );
+
+    to_filter.set_value(
+        to_date
+    );
+
+    setTimeout(
+        function() {
+            if (
+                report
+                && typeof report.refresh === "function"
+            ) {
+                report.refresh();
+            }
+        },
+        150
+    );
+}
+
+
+frappe.query_reports["Actual Availability & Utilisation Engine"] = {
+    initial_depth: 0,
+
+    filters: [
+        {
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+            reqd: 1,
+            default: get_daily_au_dashboard_date(
+                "daily_au_engine_dashboard_from_date",
+                frappe.datetime.month_start()
+            )
+        },
+        {
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
+            reqd: 1,
+            default: get_daily_au_dashboard_date(
+                "daily_au_engine_dashboard_to_date",
+                frappe.datetime.month_end()
+            )
+        },
+        {
+            fieldname: "locations",
+            label: __("Location"),
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.db.get_link_options("Location", txt);
+            }
+        },
+        {
+            fieldname: "assets",
+            label: __("Asset"),
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.db.get_link_options("Asset", txt);
+            }
+        },
+        {
+            fieldname: "companies",
+            label: __("Company"),
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.db.get_link_options("Company", txt);
+            }
+        },
+        {
+            fieldname: "free_hours",
+            label: __("Free Hours"),
+            fieldtype: "Float",
+            default: 0
+        },
+        {
+            fieldname: "production_machines_only",
+            label: __("Production Machines Only"),
+            fieldtype: "Check",
+            default: 0
+        },
+        {
+            fieldname: "au_percentage_basis",
+            label: __("A & U Percentage"),
+            fieldtype: "Select",
+            options: [
+                "85% A & U",
+                "100% A & U"
+            ].join("\n"),
+            default: "85% A & U",
+            reqd: 1
+        }
+    ],
+
+
+    get_datatable_options: function(options) {
+        return Object.assign(
+            options,
+            {
+                freezeColumns: 8
+            }
+        );
+    },
+
+
+
+    formatter: function(value, row, column, data, default_formatter) {
+
+
+        const hour_fields = [
+            "required_hours",
+            "work_hours",
+            "pbm_elapsed_time",
+            "pbm_startup_fatigue_time",
+            "pbm_sunday_time",
+            "pbm_total_downtime",
+            "utilisation_available_hours",
+            "availability_available_hours"
+            // OLD UTILISATION SUPPORT FIELDS
+            // "utilisation_work_hours",
+            // "utilisation_available_hours"
+        ];
+
+        const raw_value = data
+            ? data[column.fieldname]
+            : 0;
+
+        value = default_formatter(
+            value,
+            row,
+            column,
+            data
+        );
+
+        if (hour_fields.includes(column.fieldname)) {
+            if (
+                column.fieldname === "availability_available_hours"
+                && (
+                    raw_value === null
+                    || raw_value === undefined
+                    || raw_value === ""
+                )
+            ) {
+                value = "";
+            } else {
+                value = format_engine_hours(raw_value);
+            }
+        }
+
+        if (
+            data
+            && Number(data.indent || 0) === 1
+            && column.fieldname === "shift_date"
+        ) {
+            value = `
+                <span class="availability-engine-date-label">
+                    ${value}
+                </span>
+            `;
+        }
+
+        if (
+            [
+                "availability_percentage",
+                "utilisation_percentage"
+            ].includes(column.fieldname)
+            && (
+                raw_value === null
+                || raw_value === undefined
+                || raw_value === ""
+            )
+        ) {
+            value = "N/A";
+
+            if (
+                data
+                && column.fieldname === "utilisation_percentage"
+                && data.au_validation_level === "invalid"
+            ) {
+                value = `
+                    <span style="
+                        display:inline-block;
+                        padding:3px 8px;
+                        border-radius:999px;
+                        background:#fee2e2;
+                        color:#991b1b;
+                        font-weight:700;
+                    ">
+                        N/A
+                    </span>
+                `;
+            }
+        }
+
+        if (
+            data
+            && Number(data.indent || 0) === 0
+            && column.fieldname === "asset_category"
+            && Number(
+                data.au_problem_day_count || 0
+            ) > 0
+        ) {
+            const problem_day_count = Number(
+                data.au_problem_day_count || 0
+            );
+
+            value = `
+                ${value}
+                <span
+                    title="${problem_day_count} day(s) contain A&U warnings or invalid shifts"
+                    style="
+                        display:inline-flex;
+                        align-items:center;
+                        justify-content:center;
+                        min-width:18px;
+                        height:18px;
+                        margin-left:6px;
+                        padding:0 5px;
+                        border-radius:9px;
+                        background:#f97316;
+                        color:#ffffff;
+                        font-size:10px;
+                        font-weight:700;
+                        line-height:18px;
+                    "
+                >
+                    ${problem_day_count}
+                </span>
+            `;
+        }
+
+
+        if (
+            data
+            && Number(data.indent || 0) === 3
+            && (
+                data.shift === "Day"
+                || data.shift === "Night"
+            )
+        ) {
+            value = apply_engine_shift_highlight(
+                value,
+                data.shift
+            );
+        }
+
+        if (
+            data
+            && Number(
+                data.is_spare_swing_unit || 0
+            ) === 1
+        ) {
+            value = apply_engine_spare_highlight(
+                value,
+                data.spare_swing_reason
+            );
+        }
+
+        if (
+            data
+            && column.fieldname === "invalid_pre_use_status"
+            && data.invalid_pre_use_status
+        ) {
+            const invalid = String(
+                data.invalid_pre_use_status
+            ).startsWith("Invalid");
+
+            const contains_invalid = (
+                data.invalid_pre_use_status
+                === "Contains Invalid Shift"
+            );
+
+            if (invalid || contains_invalid) {
+                value = `
+                    <span style="
+                        display:inline-block;
+                        padding:3px 8px;
+                        border-radius:999px;
+                        background:#fee2e2;
+                        color:#991b1b;
+                        font-weight:700;
+                    ">
+                        ${frappe.utils.escape_html(
+                            data.invalid_pre_use_status
+                        )}
+                    </span>
+                `;
+            }
+        }
+
+        if (
+            data
+            && [1, 2, 3].includes(
+                Number(data.indent || 0)
+            )
+            && (
+                data.au_validation_level === "invalid"
+                || data.au_validation_level === "warning"
+            )
+        ) {
+            const is_invalid = (
+                data.au_validation_level === "invalid"
+            );
+
+            const background = (
+                is_invalid
+                ? "#fee2e2"
+                : "#ffedd5"
+            );
+
+            const border = (
+                is_invalid
+                ? "#dc2626"
+                : "#f97316"
+            );
+
+            const safe_status = (
+                frappe.utils.escape_html(
+                    data.au_validation_status || ""
+                )
+            );
+
+            value = `
+                <span
+                    title="${safe_status}"
+                    style="
+                        display:block;
+                        min-height:100%;
+                        margin:-8px -10px;
+                        padding:8px 10px;
+                        background:${background} !important;
+                        border-left:3px solid ${border} !important;
+                    "
+                >
+                    ${value || ""}
+                </span>
+            `;
+        }
+
+        return value;
+    },
+
+    onload: function(report) {
+        bind_engine_formula_header_clicks(report);
+        add_engine_legend(report);
+
+        // Query Report can restore old filter values after the
+        // field defaults are created. Apply the Daily A&U Engine
+        // Dashboard date range after the report has initialised.
+        setTimeout(
+            function() {
+                sync_engine_dates_from_daily_dashboard(
+                    report
+                );
+            },
+            250
+        );
+
+        setTimeout(
+            apply_engine_freeze_columns,
+            500
+        );
+
+        setTimeout(
+            apply_engine_freeze_columns,
+            1500
+        );
+    },
+
+    after_datatable_render: function() {
+        setTimeout(
+            function() {
+                apply_engine_freeze_columns();
+                mark_engine_formula_headers_clickable();
+                bind_engine_expanded_date_highlight();
+                update_invalid_au_button(
+                    frappe.query_report
+                );
+            },
+            200
+        );
+    }
+};
+
+
+function add_engine_legend(report) {
+    const $wrapper = $(report.page.wrapper);
+
+    if (
+        $wrapper.find(
+            ".availability-engine-legend"
+        ).length
+    ) {
+        return;
+    }
+
+    const legend = `
+        <div
+            class="availability-engine-legend"
+            style="
+                display:flex;
+                align-items:center;
+                gap:14px;
+                flex-wrap:wrap;
+                margin:6px 0 8px;
+                font-size:11px;
+                font-weight:600;
+            "
+        >
+            <span
+                class="availability-engine-warning-legend"
+                title="Click to view warning rules"
+                style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:5px;
+                    cursor:pointer;
+                "
+            >
+                <span style="
+                    width:12px;
+                    height:12px;
+                    border-radius:3px;
+                    background:#ffedd5;
+                    border-left:3px solid #f97316;
+                "></span>
+                A&amp;U Warning
+            </span>
+
+            <span
+                class="availability-engine-invalid-legend"
+                title="Click to view invalid rules"
+                style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:5px;
+                    cursor:pointer;
+                "
+            >
+                <span style="
+                    width:12px;
+                    height:12px;
+                    border-radius:3px;
+                    background:#fee2e2;
+                    border-left:3px solid #dc2626;
+                "></span>
+                Invalid A&amp;U
+            </span>
+
+            <button
+                type="button"
+                class="
+                    btn
+                    btn-xs
+                    btn-default
+                    availability-engine-invalid-view
+                "
+                style="
+                    border:1px solid #dc2626;
+                    color:#991b1b;
+                    background:#fff;
+                    font-size:11px;
+                    font-weight:700;
+                    padding:3px 9px;
+                    border-radius:6px;
+                "
+            >
+                View Invalid A&amp;U (0)
+            </button>
+
+            <span style="
+                display:inline-flex;
+                align-items:center;
+                gap:5px;
+            ">
+                <span style="
+                    width:12px;
+                    height:12px;
+                    border-radius:3px;
+                    background:#e6d6ff;
+                    border-left:3px solid #7b2cbf;
+                "></span>
+                Spare / Swing Machine
+            </span>
+        </div>
+    `;
+
+    const $filter_area = $wrapper.find(
+        ".page-form"
+    ).first();
+
+    if ($filter_area.length) {
+        $filter_area.append(legend);
+    } else {
+        $wrapper.prepend(legend);
+    }
+
+    $wrapper
+        .find(".availability-engine-warning-legend")
+        .off("click.auWarningLegend")
+        .on(
+            "click.auWarningLegend",
+            show_au_warning_explanation
+        );
+
+    $wrapper
+        .find(".availability-engine-invalid-legend")
+        .off("click.auInvalidLegend")
+        .on(
+            "click.auInvalidLegend",
+            show_au_invalid_explanation
+        );
+
+    $wrapper
+        .find(".availability-engine-invalid-view")
+        .off("click.auInvalidView")
+        .on(
+            "click.auInvalidView",
+            function() {
+                show_invalid_au_rows(
+                    report
+                );
+
+                // Insert the PBM drill-down column after the
+                // Invalid A&U dialog has been rendered.
+                [
+                    50,
+                    200,
+                    500,
+                    1000
+                ].forEach(
+                    function(delay) {
+                        setTimeout(
+                            function() {
+                                add_invalid_au_pbm_view_column(
+                                    report
+                                );
+                            },
+                            delay
+                        );
+                    }
+                );
+            }
+        );
+
+    update_invalid_au_button(
+        report
+    );
+}
+
+
+function get_invalid_au_shift_rows(report) {
+    let rows = [];
+
+    if (
+        report
+        && Array.isArray(report.data)
+    ) {
+        rows = report.data;
+    } else if (
+        frappe.query_report
+        && Array.isArray(
+            frappe.query_report.data
+        )
+    ) {
+        rows = frappe.query_report.data;
+    }
+
+    return rows
+        .filter(
+            function(row) {
+                return (
+                    row
+                    && Number(
+                        row.indent || 0
+                    ) === 3
+                    && (
+                        row.shift === "Day"
+                        || row.shift === "Night"
+                    )
+                    && (
+                        row.au_validation_level
+                        === "invalid"
+                        || Number(
+                            row.invalid_au || 0
+                        ) === 1
+                    )
+                );
+            }
+        )
+        .sort(
+            function(a, b) {
+                const date_compare = String(
+                    a.shift_date || ""
+                ).localeCompare(
+                    String(
+                        b.shift_date || ""
+                    )
+                );
+
+                if (date_compare !== 0) {
+                    return date_compare;
+                }
+
+                const machine_compare = String(
+                    a.asset_name || ""
+                ).localeCompare(
+                    String(
+                        b.asset_name || ""
+                    )
+                );
+
+                if (machine_compare !== 0) {
+                    return machine_compare;
+                }
+
+                return String(
+                    a.shift || ""
+                ).localeCompare(
+                    String(
+                        b.shift || ""
+                    )
+                );
+            }
+        );
+}
+
+
+function update_invalid_au_button(report) {
+    if (
+        !report
+        || !report.page
+        || !report.page.wrapper
+    ) {
+        return;
+    }
+
+    const rows = get_invalid_au_shift_rows(
+        report
+    );
+
+    const $button = $(
+        report.page.wrapper
+    ).find(
+        ".availability-engine-invalid-view"
+    );
+
+    if (!$button.length) {
+        return;
+    }
+
+    $button.text(
+        `View Invalid A&U (${rows.length})`
+    );
+
+    $button.prop(
+        "disabled",
+        rows.length === 0
+    );
+
+    $button.css(
+        "opacity",
+        rows.length === 0
+            ? "0.55"
+            : "1"
+    );
+
+    $button.attr(
+        "title",
+        rows.length
+            ? (
+                `${rows.length} invalid A&U `
+                + "shift(s) in the current report"
+            )
+            : "No invalid A&U shifts in the current report"
+    );
+}
+
+
+function format_invalid_au_date(value) {
+    const text = String(
+        value || ""
+    ).slice(
+        0,
+        10
+    );
+
+    const match = text.match(
+        /^(\d{4})-(\d{2})-(\d{2})$/
+    );
+
+    if (!match) {
+        return text;
+    }
+
+    return (
+        `${match[3]}/${match[2]}/${match[1]}`
+    );
+}
+
+
+function get_invalid_au_reason(row) {
+    return String(
+        row.au_validation_status || ""
+    )
+        .replace(
+            /^Invalid A&U:\s*/,
+            ""
+        )
+        .trim();
+}
+
+
+function show_invalid_au_rows(report) {
+    const rows = get_invalid_au_shift_rows(
+        report
+    );
+
+    if (!rows.length) {
+        frappe.msgprint({
+            title: __("Invalid A&U"),
+            message: __(
+                "There are no invalid A&U shifts "
+                + "in the current report."
+            ),
+            indicator: "green"
+        });
+
+        return;
+    }
+
+    const body_rows = rows
+        .map(
+            function(row) {
+                const date = (
+                    frappe.utils.escape_html(
+                        format_invalid_au_date(
+                            row.shift_date
+                        )
+                    )
+                );
+
+                const shift = (
+                    frappe.utils.escape_html(
+                        String(
+                            row.shift || ""
+                        )
+                    )
+                );
+
+                const machine = (
+                    frappe.utils.escape_html(
+                        String(
+                            row.asset_name || ""
+                        )
+                    )
+                );
+
+                const work_hours = (
+                    frappe.utils.escape_html(
+                        format_engine_hours(
+                            row.work_hours
+                        )
+                    )
+                );
+
+                const pbm_hours = (
+                    frappe.utils.escape_html(
+                        format_engine_hours(
+                            row.pbm_total_downtime
+                        )
+                    )
+                );
+
+                const required_hours = (
+                    frappe.utils.escape_html(
+                        format_engine_hours(
+                            row.required_hours
+                        )
+                    )
+                );
+
+                const reason = (
+                    frappe.utils.escape_html(
+                        get_invalid_au_reason(
+                            row
+                        )
+                    )
+                );
+
+                return `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${shift}</td>
+                        <td>
+                            <strong>
+                                ${machine}
+                            </strong>
+                        </td>
+                        <td>${work_hours}</td>
+                        <td>${pbm_hours}</td>
+                        <td>${required_hours}</td>
+                        <td
+                            style="
+                                color:#991b1b;
+                                min-width:280px;
+                            "
+                        >
+                            ${reason}
+                        </td>
+                    </tr>
+                `;
+            }
+        )
+        .join("");
+
+    const dialog = new frappe.ui.Dialog({
+        title: __(
+            `Invalid A&U Shifts (${rows.length})`
+        ),
+        size: "extra-large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "invalid_rows_html"
+            }
+        ]
+    });
+
+    dialog
+        .fields_dict
+        .invalid_rows_html
+        .$wrapper
+        .html(`
+            <div style="
+                padding:4px 2px 12px;
+            ">
+                <div style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:space-between;
+                    gap:12px;
+                    flex-wrap:wrap;
+                    margin-bottom:12px;
+                    padding:12px 14px;
+                    background:#fee2e2;
+                    border:1px solid #dc2626;
+                    border-radius:8px;
+                ">
+                    <div>
+                        <strong style="
+                            color:#991b1b;
+                            font-size:14px;
+                        ">
+                            ${rows.length}
+                            invalid A&amp;U shift(s)
+                        </strong>
+
+                        <div style="
+                            margin-top:3px;
+                            color:#7f1d1d;
+                            font-size:12px;
+                        ">
+                            Current report filters only
+                        </div>
+                    </div>
+
+                    <div style="
+                        color:#7f1d1d;
+                        font-size:12px;
+                    ">
+                        Invalid shifts are excluded from
+                        A&amp;U KPI totals.
+                    </div>
+                </div>
+
+                <div style="
+                    max-height:60vh;
+                    overflow:auto;
+                    border:1px solid #d1d8dd;
+                    border-radius:8px;
+                ">
+                    <table
+                        class="table table-bordered"
+                        style="
+                            margin:0;
+                            width:100%;
+                            font-size:12px;
+                            background:#fff;
+                        "
+                    >
+                        <thead>
+                            <tr style="
+                                background:#f8fafc;
+                            ">
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Date
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Shift
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Machine
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Work Hours
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    PBM Total Downtime
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Required Hours
+                                </th>
+                                <th
+                                    style="
+                                        position:sticky;
+                                        top:0;
+                                        background:#f8fafc;
+                                        z-index:1;
+                                    "
+                                >
+                                    Invalid Reason
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${body_rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `);
+
+    dialog.show();
+}
+
+
+function show_au_warning_explanation() {
+    const dialog = new frappe.ui.Dialog({
+        title: __("A&U Warning"),
+        size: "large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "warning_html"
+            }
+        ]
+    });
+
+    dialog.fields_dict.warning_html.$wrapper.html(`
+        <div style="
+            padding:6px 4px 12px;
+            line-height:1.6;
+        ">
+            <div style="
+                background:#ffedd5;
+                border:1px solid #f97316;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:14px;
+            ">
+                <strong style="
+                    color:#9a3412;
+                    font-size:15px;
+                ">
+                    What does an A&amp;U Warning mean?
+                </strong>
+
+                <div style="margin-top:8px;">
+                    The record is mathematically possible, but the
+                    underlying hours are unusual and should be reviewed.
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
+            ">
+                <strong>Warning rules</strong>
+
+                <ul style="
+                    margin-top:8px;
+                    margin-bottom:0;
+                    padding-left:22px;
+                ">
+                    <!-- OLD UTILISATION AVAILABLE HOURS WARNING
+                    <li>
+                        Work Hours &gt; 0 while Available Hours = 0.
+                    </li>
+                    -->
+                    <li>
+                        Required Hours = 0 while the machine still recorded Work Hours.
+                    </li>
+                    <li>
+                        Utilisation is greater than 150%.
+                    </li>
+                </ul>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+            ">
+                <strong>Important</strong>
+
+                <div style="margin-top:8px;">
+                    Warning rows are still included in the A&amp;U totals.
+                    Orange does not automatically mean the data is wrong.
+                </div>
+            </div>
+        </div>
+    `);
+
+    dialog.show();
+}
+
+
+function show_au_invalid_explanation() {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Invalid A&U"),
+        size: "large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "invalid_html"
+            }
+        ]
+    });
+
+    dialog.fields_dict.invalid_html.$wrapper.html(`
+        <div style="
+            padding:6px 4px 12px;
+            line-height:1.6;
+        ">
+            <div style="
+                background:#fee2e2;
+                border:1px solid #dc2626;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:14px;
+            ">
+                <strong style="
+                    color:#991b1b;
+                    font-size:15px;
+                ">
+                    What does Invalid A&amp;U mean?
+                </strong>
+
+                <div style="margin-top:8px;">
+                    The individual shift contains a physically impossible
+                    or invalid combination of hours.
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
+            ">
+                <strong>Invalid rules</strong>
+
+                <ul style="
+                    margin-top:8px;
+                    margin-bottom:0;
+                    padding-left:22px;
+                ">
+                    <li>
+                        Work Hours exceed Required Hours.
+                    </li>
+                    <li>
+                        PBM Total Downtime exceeds Required Hours.
+                    </li>
+                    <li>
+                        Work Hours + PBM Total Downtime exceed Required Hours.
+                    </li>
+                    <!-- OLD UTILISATION AVAILABLE HOURS VALIDATION
+                    <li>
+                        Available Hours exceed the physical shift length.
+                    </li>
+                    -->
+                </ul>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:12px;
+            ">
+                <strong>Example</strong>
+
+                <div style="margin-top:8px;">
+                    Required Hours = 12<br>
+                    Validation Limit = 12 hours<br>
+                    Work Hours = 9<br>
+                    PBM Total Downtime = 4<br><br>
+
+                    Work + PBM = 13 hours.<br>
+                    13 hours exceeds the 12-hour required shift limit,
+                    so the shift is flagged red.
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+            ">
+                <strong>Important</strong>
+
+                <div style="margin-top:8px;">
+                    The validation limit for each individual shift is:
+                    Required Hours.
+
+                    For 2x12 operations, Required Hours is fixed at 12 hours per
+                    shift, so Day + Night totals 24 hours.
+
+                    Date, machine and category rows may naturally total
+                    more than one shift.
+
+                    Invalid shift rows are excluded from A&amp;U totals.
+                </div>
+            </div>
+        </div>
+    `);
+
+    dialog.show();
+}
+
+
+function bind_engine_formula_header_clicks(report) {
+    const $wrapper = $(report.page.wrapper);
+
+    $wrapper.off(
+        "click.availabilityFormulaHeaders",
+        ".dt-cell--header"
+    );
+
+    $wrapper.on(
+        "click.availabilityFormulaHeaders",
+        ".dt-cell--header",
+        function(event) {
+            const text = (
+                $(this)
+                    .find(".dt-cell__content")
+                    .clone()
+                    .children()
+                    .remove()
+                    .end()
+                    .text()
+                    || ""
+            )
+                .replace(/\s+/g, " ")
+                .trim();
+
+            if (text === "Available Hours") {
+                event.preventDefault();
+                event.stopPropagation();
+
+                show_availability_available_hours_formula();
+
+                return;
+            }
+
+            if (text === "Utilisation %") {
+                event.preventDefault();
+                event.stopPropagation();
+
+                show_utilisation_formula();
+            }
+        }
+    );
+}
+
+
+function mark_engine_formula_headers_clickable() {
+    const formulas = {
+        "Available Hours": (
+            "Req Hrs - PBM Total Downtime"
+        ),
+
+        "Availability %": (
+            "(Available Hours / Req Hrs) × 100 × A&U"
+        ),
+
+        "Utilisation %": (
+            "(Work Hrs / Available Hours) × 100 × A&U"
+        )
+    };
+
+    const clickable_headers = [
+        "Available Hours",
+        "Utilisation %"
+    ];
+
+    const filter_row = document.querySelector(
+        ".dt-row-filter"
+    );
+
+    if (!filter_row) {
+        return;
+    }
+
+    document.querySelectorAll(
+        ".dt-cell--header"
+    ).forEach(function(header) {
+        const content = header.querySelector(
+            ".dt-cell__content"
+        );
+
+        if (!content) {
+            return;
+        }
+
+        const text = (
+            content.innerText || ""
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const formula = formulas[text];
+
+        if (!formula) {
+            return;
+        }
+
+        const column_class = Array.from(
+            header.classList
+        ).find(function(class_name) {
+            return class_name.startsWith(
+                "dt-cell--col-"
+            );
+        });
+
+        if (!column_class) {
+            return;
+        }
+
+        const filter_cell = filter_row.querySelector(
+            `.${column_class}`
+        );
+
+        if (
+            !filter_cell
+            || filter_cell.querySelector(
+                ".availability-engine-header-formula"
+            )
+        ) {
+            return;
+        }
+
+        const filter_content = filter_cell.querySelector(
+            ".dt-cell__content"
+        );
+
+        if (!filter_content) {
+            return;
+        }
+
+        filter_content.innerHTML = "";
+
+        const formula_element = document.createElement(
+            "div"
+        );
+
+        formula_element.className = (
+            "availability-engine-header-formula"
+        );
+
+        formula_element.textContent = formula;
+
+        filter_content.prepend(
+            formula_element
+        );
+
+        if (
+            clickable_headers.includes(text)
+        ) {
+            header.style.cursor = "pointer";
+
+            header.title = (
+                "Click to view formula"
+            );
+        }
+    });
+}
+
+
+function bind_available_hours_formula_header() {
+    const headers = document.querySelectorAll(
+        ".dt-cell--header"
+    );
+
+
+    headers.forEach(function(header) {
+        const text = (
+            header.innerText || ""
+        ).trim();
+
+        if (
+            text !== "Available Hours"
+        ) {
+            return;
+        }
+
+        if (
+            header.dataset.formulaBound === "1"
+        ) {
+            return;
+        }
+
+        header.dataset.formulaBound = "1";
+        header.style.cursor = "pointer";
+        header.title = "Click to view formula";
+
+        header.addEventListener(
+            "click",
+            show_availability_available_hours_formula
+        );
+    });
+}
+
+function show_availability_available_hours_formula() {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Available Hours"),
+        size: "large",
+
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "formula_html"
+            }
+        ]
+    });
+
+    dialog.fields_dict.formula_html.$wrapper.html(`
+        <div style="
+            padding:6px 4px 12px;
+            line-height:1.6;
+        ">
+            <div style="
+                background:#eff6ff;
+                border:1px solid #93c5fd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:14px;
+            ">
+                <strong>
+                    Available Hours Formula
+                </strong>
+
+                <div style="
+                    margin-top:10px;
+                    font-size:16px;
+                    font-weight:700;
+                ">
+                    Required Hours
+                    -
+                    PBM Total Downtime
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+            ">
+                <strong>Validation</strong>
+
+                <div style="margin-top:8px;">
+                    If Work Hours + PBM Total Downtime
+                    exceeds Required Hours, the shift is
+                    invalid and Available Hours is left blank.
+                    <br><br>
+
+                    For a 2x12 shift the Required Hours
+                    limit is 12 hours.
+                </div>
+            </div>
+        </div>
+    `);
+
+    dialog.show();
+}
+
+
+function show_utilisation_formula() {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Utilisation %"),
+        size: "large",
+
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "formula_html"
+            }
+        ]
+    });
+
+    dialog.fields_dict.formula_html.$wrapper.html(`
+        <div style="
+            padding:6px 4px 12px;
+            line-height:1.6;
+        ">
+            <div style="
+                background:#eff6ff;
+                border:1px solid #93c5fd;
+                border-radius:10px;
+                padding:16px;
+                margin-bottom:14px;
+            ">
+                <strong>
+                    Utilisation Formula
+                </strong>
+
+                <div style="
+                    margin-top:10px;
+                    font-size:16px;
+                    font-weight:700;
+                ">
+                    Work Hours
+                    ÷
+                    Available Hours
+                    × 100
+                    × A&amp;U Percentage
+                </div>
+            </div>
+
+            <div style="
+                background:#f8fafc;
+                border:1px solid #d1d8dd;
+                border-radius:10px;
+                padding:16px;
+            ">
+                <strong>Available Hours</strong>
+
+                <div style="
+                    margin-top:8px;
+                    font-weight:700;
+                ">
+                    Required Hours
+                    -
+                    PBM Total Downtime
+                </div>
+
+                <div style="margin-top:10px;">
+                    If Work Hours + PBM Total Downtime
+                    exceeds Required Hours, Available Hours
+                    and Utilisation are left blank.
+                </div>
+            </div>
+        </div>
+    `);
+
+    dialog.show();
+}
+
+
+function apply_engine_shift_highlight(value, shift) {
+    const background = (
+        shift === "Day"
+        ? "#eaf4ff"
+        : "#f3f4f6"
+    );
+
+    return `
+        <span
+            class="availability-engine-shift-cell"
+            style="
+                display:block;
+                min-height:100%;
+                margin:-8px -10px;
+                padding:8px 10px;
+                background:${background} !important;
+            "
+        >
+            ${value || ""}
+        </span>
+    `;
+}
+
+
+function bind_engine_expanded_date_highlight() {
+    const report = document.querySelector(
+        '.query-report[data-report-name="Actual Availability & Utilisation Engine"]'
+    );
+
+    if (
+        !report
+        || report.dataset.expandedDateBound === "1"
+    ) {
+        return;
+    }
+
+    report.dataset.expandedDateBound = "1";
+
+    report.addEventListener("click", function(event) {
+        const toggle = event.target.closest(
+            ".dt-cell__toggle, .dt-cell__tree-node, .dt-tree-node"
+        );
+
+        if (!toggle) {
+            return;
+        }
+
+        const row = toggle.closest(".dt-row");
+
+        if (!row) {
+            return;
+        }
+
+        row.classList.toggle(
+            "availability-engine-row-expanded"
+        );
+    });
+}
+
+
+
+
+function apply_engine_spare_highlight(value, reason) {
+    const safe_reason = frappe.utils.escape_html(
+        reason
+        || "Spare/Swing unit in Monthly Production Planning"
+    );
+
+    return `
+        <span
+            class="availability-engine-spare-cell"
+            title="${safe_reason}"
+            style="
+                display:block;
+                min-height:100%;
+                margin:-8px -10px;
+                padding:8px 10px;
+                background:#e6d6ff !important;
+                color:#4b0082 !important;
+                font-weight:600 !important;
+                border-left:3px solid #7b2cbf !important;
+            "
+        >
+            ${value || ""}
+        </span>
+    `;
+}
+
+function format_engine_hours(hours_value) {
+    const total_minutes = Math.round(
+        flt(hours_value || 0) * 60
+    );
+
+    const hours = Math.floor(
+        total_minutes / 60
+    );
+
+    const minutes = total_minutes % 60;
+
+    if (hours && minutes) {
+        return `${hours}h ${minutes}m`;
+    }
+
+    if (hours) {
+        return `${hours}h`;
+    }
+
+    return `${minutes}m`;
+}
+
+
+function apply_engine_freeze_columns() {
+    if (
+        !frappe.query_report
+        || !frappe.query_report.datatable
+    ) {
+        return;
+    }
+
+    if (
+        frappe.query_report.report_name
+        !== "Actual Availability & Utilisation Engine"
+    ) {
+        return;
+    }
+
+    frappe.query_report.datatable.options.freezeColumns = 8;
+
+    apply_engine_styles();
+}
+
+
+function apply_engine_styles() {
+    const style_id = "availability-utilisation-engine-style";
+    const old_style = document.getElementById(style_id);
+
+    if (old_style) {
+        old_style.remove();
+    }
+
+    const style = document.createElement("style");
+
+    style.id = style_id;
+
+    style.innerHTML = `
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-row-filter {
+            min-height: 68px !important;
+            height: 68px !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-row-filter .dt-cell {
+            min-height: 68px !important;
+            height: 68px !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-row-filter .dt-cell__content {
+            height: 100% !important;
+            overflow: visible !important;
+            white-space: normal !important;
+        }
+
+        .availability-engine-header-formula {
+            margin-bottom: 5px;
+            padding: 4px 3px;
+            border: 1px solid #60a5fa;
+            border-radius: 4px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 9px;
+            font-weight: 700;
+            line-height: 1.15;
+            text-align: center;
+            white-space: normal;
+        }
+
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-cell--header {
+            background: #dcfce7 !important;
+            color: #166534 !important;
+            font-weight: 800 !important;
+            border-bottom: 2px solid #16a34a !important;
+        }
+
+
+        .dt-cell--col-0,
+        .dt-cell--col-1,
+        .dt-cell--col-2,
+        .dt-cell--col-3,
+        .dt-cell--col-4,
+        .dt-cell--col-5,
+        .dt-cell--col-6,
+        .dt-cell--col-7 {
+            position: sticky !important;
+            background: #ffffff !important;
+            z-index: 30 !important;
+            box-shadow: 1px 0 0 #d1d8dd !important;
+        }
+
+        .dt-header .dt-cell--col-0,
+        .dt-header .dt-cell--col-1,
+        .dt-header .dt-cell--col-2,
+        .dt-header .dt-cell--col-3,
+        .dt-header .dt-cell--col-4,
+        .dt-header .dt-cell--col-5,
+        .dt-header .dt-cell--col-6,
+        .dt-header .dt-cell--col-7,
+        .dt-cell--header.dt-cell--col-0,
+        .dt-cell--header.dt-cell--col-1,
+        .dt-cell--header.dt-cell--col-2,
+        .dt-cell--header.dt-cell--col-3,
+        .dt-cell--header.dt-cell--col-4,
+        .dt-cell--header.dt-cell--col-5,
+        .dt-cell--header.dt-cell--col-6,
+        .dt-cell--header.dt-cell--col-7 {
+            position: sticky !important;
+            background: #dcfce7 !important;
+            z-index: 60 !important;
+        }
+
+        .dt-cell--col-0 {
+            left: 0 !important;
+        }
+
+        .dt-cell--col-1 {
+            left: 38px !important;
+        }
+
+        .dt-cell--col-2 {
+            left: 168px !important;
+        }
+
+        .dt-cell--col-3 {
+            left: 268px !important;
+        }
+
+        .dt-cell--col-4 {
+            left: 383px !important;
+        }
+
+        .dt-cell--col-5 {
+            left: 468px !important;
+        }
+
+        .dt-cell--col-6 {
+            left: 603px !important;
+        }
+
+        .dt-cell--col-7 {
+            left: 723px !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .availability-engine-spare-cell {
+            display: block;
+            min-height: 100%;
+            margin: -8px -10px;
+            padding: 8px 10px;
+            background: #e6d6ff !important;
+            color: #4b0082 !important;
+            font-weight: 600 !important;
+            border-left: 3px solid #7b2cbf !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-cell__tree-node,
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-tree-node,
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .dt-cell__toggle {
+            position: relative !important;
+            z-index: 20 !important;
+            color: #111111 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .availability-engine-date-label {
+            font-weight: 600;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .availability-engine-row-expanded
+        .dt-cell {
+            border-top: 2px solid #22c55e !important;
+            border-bottom: 2px solid #22c55e !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .availability-engine-row-expanded
+        .dt-cell:first-child {
+            border-left: 3px solid #16a34a !important;
+        }
+
+        .query-report[data-report-name="Actual Availability & Utilisation Engine"]
+        .availability-engine-row-expanded
+        .dt-cell:last-child {
+            border-right: 2px solid #22c55e !important;
+        }
+    `;
+
+    document.head.appendChild(style);
+}
+// BEGIN INVALID AU PBM DRILLDOWN
+
+function get_open_invalid_au_dialog() {
+    let $match = $();
+
+    $(".modal:visible").each(
+        function() {
+            const $modal = $(this);
+
+            const modal_text = (
+                $modal.text()
+                || ""
+            );
+
+            let has_pbm_header = false;
+
+            $modal
+                .find("thead th")
+                .each(
+                    function() {
+                        if (
+                            (
+                                $(this).text()
+                                || ""
+                            ).trim()
+                            === "PBM Total Downtime"
+                        ) {
+                            has_pbm_header = true;
+                        }
+                    }
+                );
+
+            if (
+                modal_text.indexOf(
+                    "Invalid A&U Shifts"
+                ) !== -1
+                && has_pbm_header
+            ) {
+                $match = $modal;
+            }
+        }
+    );
+
+    return $match;
+}
+
+
+function add_invalid_au_pbm_view_column(
+    report
+) {
+    const rows = (
+        get_invalid_au_shift_rows(
+            report
+        )
+        || []
+    );
+
+    if (!rows.length) {
+        return;
+    }
+
+    const $modal = (
+        get_open_invalid_au_dialog()
+    );
+
+    if (!$modal.length) {
+        return;
+    }
+
+    const $table = (
+        $modal
+            .find("table")
+            .first()
+    );
+
+    if (!$table.length) {
+        return;
+    }
+
+    if (
+        $table.find(
+            ".availability-engine-invalid-pbm-header"
+        ).length
+    ) {
+        return;
+    }
+
+    let pbm_column_index = -1;
+    let $pbm_header = $();
+
+    $table
+        .find("thead tr")
+        .first()
+        .children("th")
+        .each(
+            function(index) {
+                const heading = (
+                    $(this).text()
+                    || ""
+                ).trim();
+
+                if (
+                    heading
+                    === "PBM Total Downtime"
+                ) {
+                    pbm_column_index = index;
+                    $pbm_header = $(this);
+                }
+            }
+        );
+
+    if (
+        pbm_column_index < 0
+        || !$pbm_header.length
+    ) {
+        return;
+    }
+
+    $pbm_header.after(`
+        <th
+            class="
+                availability-engine-invalid-pbm-header
+            "
+            style="
+                position:sticky;
+                top:0;
+                background:#f8fafc;
+                z-index:1;
+                min-width:165px;
+                white-space:nowrap;
+            "
+        >
+            PBM Total Downtime View
+        </th>
+    `);
+
+    $table
+        .find("tbody tr")
+        .each(
+            function(index) {
+                const row = rows[index];
+
+                if (!row) {
+                    return;
+                }
+
+                const $cells = (
+                    $(this).children("td")
+                );
+
+                if (
+                    $cells.length
+                    <= pbm_column_index
+                ) {
+                    return;
+                }
+
+                const $button = $(`
+                    <button
+                        type="button"
+                        class="
+                            btn
+                            btn-xs
+                            btn-primary
+                            availability-engine-invalid-pbm-view
+                        "
+                        style="
+                            min-width:70px;
+                            border-radius:12px;
+                            font-weight:600;
+                        "
+                    >
+                        View
+                    </button>
+                `);
+
+                $button.on(
+                    "click",
+                    function() {
+                        open_invalid_au_pbm_records(
+                            row
+                        );
+                    }
+                );
+
+                const $view_cell = $(`
+                    <td
+                        style="
+                            text-align:center;
+                            vertical-align:middle;
+                            white-space:nowrap;
+                        "
+                    ></td>
+                `);
+
+                $view_cell.append(
+                    $button
+                );
+
+                $cells
+                    .eq(
+                        pbm_column_index
+                    )
+                    .after(
+                        $view_cell
+                    );
+            }
+        );
+}
+
+
+function open_invalid_au_pbm_records(
+    row
+) {
+    if (!row) {
+        return;
+    }
+
+    let location = (
+        row.location
+        || ""
+    );
+
+    if (
+        !location
+        && frappe.query_report
+        && frappe.query_report
+            .get_filter_value
+    ) {
+        location = (
+            frappe.query_report
+                .get_filter_value(
+                    "location"
+                )
+            || ""
+        );
+    }
+
+    frappe.call({
+        method:
+            "engineering.engineering.report.actual_availability_&_utilisation_engine.actual_availability_&_utilisation_engine.get_invalid_au_pbm_records",
+
+        args: {
+            asset_name: (
+                row.asset_name
+                || ""
+            ),
+            location: location,
+            shift_date: (
+                row.shift_date
+                || ""
+            ),
+            shift: (
+                row.shift
+                || ""
+            ),
+        },
+
+        freeze: true,
+
+        freeze_message:
+            __(
+                "Loading PBM records..."
+            ),
+
+        callback(response) {
+            const result = (
+                response.message
+                || {}
+            );
+
+            const records = (
+                result.records
+                || []
+            );
+
+            if (!records.length) {
+                frappe.msgprint({
+                    title:
+                        __(
+                            "PBM Total Downtime"
+                        ),
+                    indicator:
+                        "orange",
+                    message:
+                        __(
+                            "No contributing Plant Breakdown or Maintenance record was found for this shift."
+                        ),
+                });
+
+                return;
+            }
+
+            if (records.length === 1) {
+                frappe.set_route(
+                    "Form",
+                    "Plant Breakdown or Maintenance",
+                    records[0].name
+                );
+
+                return;
+            }
+
+            show_invalid_au_pbm_record_dialog(
+                row,
+                records
+            );
+        },
+    });
+}
+
+
+function format_invalid_au_pbm_datetime(
+    value
+) {
+    if (!value) {
+        return "-";
+    }
+
+    try {
+        if (
+            frappe.datetime
+            && frappe.datetime
+                .str_to_user
+        ) {
+            return (
+                frappe.datetime
+                    .str_to_user(
+                        String(value)
+                    )
+            );
+        }
+    } catch (error) {
+        // Fall back to source value.
+    }
+
+    return String(value);
+}
+
+
+function format_invalid_au_pbm_minutes(
+    minutes
+) {
+    const total_minutes = Math.max(
+        0,
+        Math.round(
+            Number(
+                minutes
+                || 0
+            )
+        )
+    );
+
+    const hours = Math.floor(
+        total_minutes / 60
+    );
+
+    const mins = (
+        total_minutes % 60
+    );
+
+    if (
+        hours
+        && mins
+    ) {
+        return (
+            `${hours}h ${mins}m`
+        );
+    }
+
+    if (hours) {
+        return `${hours}h`;
+    }
+
+    return `${mins}m`;
+}
+
+
+function show_invalid_au_pbm_record_dialog(
+    row,
+    records
+) {
+    const date_text = (
+        typeof format_invalid_au_date
+            === "function"
+        ? format_invalid_au_date(
+            row.shift_date
+        )
+        : String(
+            row.shift_date
+            || ""
+        )
+    );
+
+    const machine_text = (
+        row.asset_name
+        || ""
+    );
+
+    const shift_text = (
+        row.shift
+        || ""
+    );
+
+    const body_rows = records
+        .map(
+            function(record) {
+                return `
+                    <tr>
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                font-weight:600;
+                                white-space:nowrap;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                String(
+                                    record.name
+                                    || ""
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                String(
+                                    record.breakdown_reason
+                                    || ""
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                format_invalid_au_pbm_datetime(
+                                    record.breakdown_start_datetime
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                format_invalid_au_pbm_datetime(
+                                    record.resolved_datetime
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                                font-weight:600;
+                            "
+                        >
+                            ${frappe.utils.escape_html(
+                                format_invalid_au_pbm_minutes(
+                                    record.contributing_minutes
+                                )
+                            )}
+                        </td>
+
+                        <td
+                            style="
+                                padding:8px 10px;
+                                text-align:center;
+                                vertical-align:middle;
+                                white-space:nowrap;
+                            "
+                        >
+                            <button
+                                type="button"
+                                class="
+                                    btn
+                                    btn-xs
+                                    btn-primary
+                                    availability-engine-open-pbm
+                                "
+                            >
+                                Open PBM
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+        )
+        .join("");
+
+    const dialog = new frappe.ui.Dialog({
+        title:
+            __(
+                "PBM Total Downtime - {0} - {1} {2}",
+                [
+                    machine_text,
+                    date_text,
+                    shift_text,
+                ]
+            ),
+
+        size: "extra-large",
+
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname:
+                    "invalid_au_pbm_html",
+            },
+        ],
+    });
+
+    dialog
+        .fields_dict
+        .invalid_au_pbm_html
+        .$wrapper
+        .html(`
+            <div
+                style="
+                    max-height:65vh;
+                    overflow:auto;
+                "
+            >
+                <table
+                    class="
+                        table
+                        table-bordered
+                        table-hover
+                    "
+                    style="
+                        margin-bottom:0;
+                    "
+                >
+                    <thead>
+                        <tr>
+                            <th>PBM Record</th>
+                            <th>Breakdown Reason</th>
+                            <th>Breakdown Start</th>
+                            <th>Resolved</th>
+                            <th>A&U PBM Time</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${body_rows}
+                    </tbody>
+                </table>
+            </div>
+        `);
+
+    dialog
+        .fields_dict
+        .invalid_au_pbm_html
+        .$wrapper
+        .find(
+            ".availability-engine-open-pbm"
+        )
+        .each(
+            function(index) {
+                $(this).on(
+                    "click",
+                    function() {
+                        const record = (
+                            records[index]
+                        );
+
+                        if (
+                            !record
+                            || !record.name
+                        ) {
+                            return;
+                        }
+
+                        dialog.hide();
+
+                        frappe.set_route(
+                            "Form",
+                            "Plant Breakdown or Maintenance",
+                            record.name
+                        );
+                    }
+                );
+            }
+        );
+
+    dialog.show();
+}
+
+
+/*
+ * Wrap the existing Invalid A&U dialog rather than rewriting it.
+ * The existing calculation/table code remains untouched.
+ */
+(function install_invalid_au_pbm_drilldown() {
+    if (
+        window
+            .__availability_engine_invalid_pbm_drilldown_installed
+    ) {
+        return;
+    }
+
+    window
+        .__availability_engine_invalid_pbm_drilldown_installed = true;
+
+    const original_show_invalid_au_rows = (
+        show_invalid_au_rows
+    );
+
+    show_invalid_au_rows = function(
+        report
+    ) {
+        const result = (
+            original_show_invalid_au_rows
+                .apply(
+                    this,
+                    arguments
+                )
+        );
+
+        window.setTimeout(
+            function() {
+                add_invalid_au_pbm_view_column(
+                    report
+                );
+            },
+            100
+        );
+
+        return result;
+    };
+})();
+
+// END INVALID AU PBM DRILLDOWN

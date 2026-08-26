@@ -2210,6 +2210,21 @@ def build_chart_html(
             label_class = "isd-machinelab"
             label_style = ""
 
+            # Keep graph labels at 1 decimal, but rotate them vertically
+            # so they fit clearly inside the narrow 30px bars.
+            # This changes display only; KPI calculations stay unchanged.
+            av_graph_label = (
+                ""
+                if av is None
+                else f"{float(av):.1f}%"
+            )
+
+            ut_graph_label = (
+                ""
+                if ut is None
+                else f"{float(ut):.1f}%"
+            )
+
             bars.append(
                 f"<div class='{av_class} "
                 f"daily-availability-clickable-bar' "
@@ -2219,15 +2234,28 @@ def build_chart_html(
                 f"style='height:{height(av)}px;"
                 f"position:relative;"
                 f"overflow:visible;'>"
-                f"<span style='position:absolute;"
-                f"top:2px;"
+                f"<span style='"
+                f"position:absolute;"
+                f"top:18px;"
                 f"left:50%;"
-                f"transform:translateX(-50%);"
-                f"font-size:9px;"
-                f"font-weight:800;"
+                f"transform:translate(-50%,-50%) rotate(-90deg);"
+                f"transform-origin:center center;"
+                f"z-index:50;"
+                f"display:inline-block;"
+                f"font-family:Arial,sans-serif;"
+                f"font-size:8px;"
+                f"font-weight:900;"
+                f"line-height:1;"
+                f"letter-spacing:0;"
+                f"text-align:center;"
                 f"color:#ffffff;"
-                f"white-space:nowrap;'>"
-                f"{fmt_percent(av)}"
+                f"text-shadow:"
+                f"0 1px 1px rgba(0,0,0,0.95),"
+                f"1px 0 1px rgba(0,0,0,0.95),"
+                f"-1px 0 1px rgba(0,0,0,0.95);"
+                f"white-space:nowrap;"
+                f"pointer-events:none;'>"
+                f"{av_graph_label}"
                 f"</span>"
                 f"</div>"
             )
@@ -2241,15 +2269,28 @@ def build_chart_html(
                 f"style='height:{height(ut)}px;"
                 f"position:relative;"
                 f"overflow:visible;'>"
-                f"<span style='position:absolute;"
-                f"top:2px;"
+                f"<span style='"
+                f"position:absolute;"
+                f"top:18px;"
                 f"left:50%;"
-                f"transform:translateX(-50%);"
-                f"font-size:9px;"
-                f"font-weight:800;"
+                f"transform:translate(-50%,-50%) rotate(-90deg);"
+                f"transform-origin:center center;"
+                f"z-index:50;"
+                f"display:inline-block;"
+                f"font-family:Arial,sans-serif;"
+                f"font-size:8px;"
+                f"font-weight:900;"
+                f"line-height:1;"
+                f"letter-spacing:0;"
+                f"text-align:center;"
                 f"color:#ffffff;"
-                f"white-space:nowrap;'>"
-                f"{fmt_percent(ut)}"
+                f"text-shadow:"
+                f"0 1px 1px rgba(0,0,0,0.95),"
+                f"1px 0 1px rgba(0,0,0,0.95),"
+                f"-1px 0 1px rgba(0,0,0,0.95);"
+                f"white-space:nowrap;"
+                f"pointer-events:none;'>"
+                f"{ut_graph_label}"
                 f"</span>"
                 f"</div>"
             )
