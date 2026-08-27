@@ -303,8 +303,8 @@ function add_mobile_downtime_styles() {
                 background: #ffffff;
                 border: 1px solid #e5e7eb;
                 border-radius: 12px;
-                padding: 14px;
-                font-size: 12px;
+                padding: 18px;
+                font-size: 14px;
                 color: #6b7280;
                 box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
             }
@@ -348,7 +348,7 @@ function add_mobile_downtime_styles() {
                 background: #fff7e6;
                 border: 1px solid #ffd591;
                 border-radius: 9px;
-                font-size: 14px;
+                font-size: 18px;
                 font-weight: 700;
                 cursor: pointer;
             }
@@ -631,7 +631,7 @@ function add_mobile_downtime_styles() {
                 background: #fafafa;
                 border: 1px solid #e5e7eb;
                 border-radius: 8px;
-                padding: 8px 10px;
+                padding: 10px 12px;
                 font-size: 12px;
                 color: #6b7280;
             }
@@ -1277,3 +1277,792 @@ function all_downtime_records_verified() {
 
     return all_verified;
 }
+
+// === DOWNTIME SELECTED DATE PRINT PREVIEW V3 START ===
+
+(function () {
+    const settings =
+        frappe.query_reports["Down Time"];
+
+    if (!settings) {
+        return;
+    }
+
+    if (
+        settings.__downtime_selected_print_v3
+    ) {
+        return;
+    }
+
+    settings.__downtime_selected_print_v3 = true;
+
+    const original_onload = settings.onload;
+
+
+    settings.onload = function (report) {
+        if (
+            typeof original_onload === "function"
+        ) {
+            original_onload.apply(
+                this,
+                arguments
+            );
+        }
+
+        setTimeout(function () {
+            install_downtime_export_button(
+                report
+            );
+
+            install_downtime_print_button(
+                report
+            );
+        }, 300);
+    };
+
+
+    function get_filter_value(
+        report,
+        names
+    ) {
+        for (const name of names) {
+            try {
+                if (
+                    report &&
+                    typeof report.get_filter ===
+                        "function"
+                ) {
+                    const filter =
+                        report.get_filter(name);
+
+                    if (filter) {
+                        const value =
+                            filter.get_value();
+
+                        if (
+                            value !== undefined &&
+                            value !== null &&
+                            String(value).trim() !== ""
+                        ) {
+                            return value;
+                        }
+                    }
+                }
+            } catch (e) {
+                // Continue.
+            }
+
+            try {
+                if (
+                    frappe.query_report &&
+                    typeof frappe.query_report
+                        .get_filter_value ===
+                        "function"
+                ) {
+                    const value =
+                        frappe.query_report
+                            .get_filter_value(
+                                name
+                            );
+
+                    if (
+                        value !== undefined &&
+                        value !== null &&
+                        String(value).trim() !== ""
+                    ) {
+                        return value;
+                    }
+                }
+            } catch (e) {
+                // Continue.
+            }
+        }
+
+        return "";
+    }
+
+
+    function get_current_filters(report) {
+        return {
+            report_date:
+                get_filter_value(
+                    report,
+                    [
+                        "report_date",
+                        "date",
+                    ]
+                ),
+
+            site:
+                get_filter_value(
+                    report,
+                    [
+                        "site",
+                        "location",
+                        "location1",
+                    ]
+                ),
+
+            asset_category:
+                get_filter_value(
+                    report,
+                    [
+                        "asset_category",
+                    ]
+                ),
+
+            shift:
+                get_filter_value(
+                    report,
+                    ["shift"]
+                ),
+        };
+    }
+
+
+    function install_downtime_export_button(
+        report
+    ) {
+        if (
+            !report ||
+            !report.page
+        ) {
+            return;
+        }
+
+        const $wrapper =
+            report.page.$wrapper ||
+            $(
+                report.page.wrapper ||
+                document.body
+            );
+
+        if (
+            $wrapper.find(
+                ".dt-selected-export-v3"
+            ).length
+        ) {
+            return;
+        }
+
+        const $button =
+            report.page.add_inner_button(
+                __("Export Excel"),
+                function () {
+                    const filters =
+                        get_current_filters(
+                            report
+                        );
+
+                    if (!filters.report_date) {
+                        frappe.msgprint(
+                            __(
+                                "Please select a date first."
+                            )
+                        );
+
+                        return;
+                    }
+
+                    const params =
+                        new URLSearchParams();
+
+                    params.set(
+                        "report_date",
+                        filters.report_date
+                    );
+
+                    params.set(
+                        "site",
+                        filters.site || ""
+                    );
+
+                    params.set(
+                        "asset_category",
+                        filters.asset_category || ""
+                    );
+
+                    params.set(
+                        "shift",
+                        filters.shift || ""
+                    );
+
+                    const method =
+                        "engineering.engineering.report." +
+                        "down_time.down_time." +
+                        "export_selected_downtime_excel";
+
+                    window.location.href =
+                        "/api/method/" +
+                        method +
+                        "?" +
+                        params.toString();
+                }
+            );
+
+        if ($button && $button.addClass) {
+            $button.addClass(
+                "dt-selected-export-v3"
+            );
+        }
+    }
+
+
+    function install_downtime_print_button(
+        report
+    ) {
+        if (
+            !report ||
+            !report.page
+        ) {
+            return;
+        }
+
+        const $wrapper =
+            report.page.$wrapper ||
+            $(
+                report.page.wrapper ||
+                document.body
+            );
+
+        if (
+            $wrapper.find(
+                ".dt-print-preview-v3"
+            ).length
+        ) {
+            return;
+        }
+
+        const $button =
+            report.page.add_inner_button(
+                "🖨",
+                function () {
+                    open_downtime_print_preview(
+                        report
+                    );
+                }
+            );
+
+        if ($button && $button.addClass) {
+            $button.addClass(
+                "dt-print-preview-v3"
+            );
+
+            $button.attr(
+                "title",
+                __("Print / Screenshot")
+            );
+
+            $button.css({
+                "min-width": "46px",
+                "min-height": "36px",
+                "padding-left": "10px",
+                "padding-right": "10px",
+                "font-size": "22px",
+                "line-height": "1",
+                "display": "inline-flex",
+                "align-items": "center",
+                "justify-content": "center",
+            });
+        }
+    }
+
+
+    function open_downtime_print_preview(
+        report
+    ) {
+        const filters =
+            get_current_filters(report);
+
+        if (!filters.report_date) {
+            frappe.msgprint(
+                __(
+                    "Please select a date first."
+                )
+            );
+
+            return;
+        }
+
+        frappe.call({
+            method:
+                "engineering.engineering.report." +
+                "down_time.down_time." +
+                "get_selected_downtime_print_data",
+
+            args: {
+                report_date:
+                    filters.report_date,
+
+                site:
+                    filters.site || "",
+
+                asset_category:
+                    filters.asset_category || "",
+
+                shift:
+                    filters.shift || "",
+            },
+
+            freeze: true,
+
+            freeze_message:
+                __("Loading downtime..."),
+
+            callback: function (r) {
+                const data =
+                    r.message || {};
+
+                show_downtime_print_dialog(
+                    data
+                );
+            },
+        });
+    }
+
+
+    function escape_html(value) {
+        return frappe.utils.escape_html(
+            String(
+                value === undefined ||
+                value === null
+                    ? ""
+                    : value
+            )
+        );
+    }
+
+
+    function build_downtime_preview_html(
+        data
+    ) {
+        const rows =
+            Array.isArray(data.rows)
+                ? data.rows
+                : [];
+
+        const body = rows.length
+            ? rows.map(function (row) {
+                const status =
+                    String(
+                        row.status || ""
+                    );
+
+                const status_class =
+                    status.toLowerCase() ===
+                    "closed"
+                        ? "dtp-status-closed"
+                        : "dtp-status-open";
+
+                return `
+                    <tr>
+                        <td class="dtp-fleet">
+                            ${escape_html(row.fleet_no)}
+                        </td>
+
+                        <td class="dtp-reason">
+                            ${escape_html(row.reason)}
+                        </td>
+
+                        <td class="${status_class}">
+                            ${escape_html(row.status)}
+                        </td>
+
+                        <td class="dtp-center dtp-downtime">
+                            ${escape_html(row.downtime)}
+                        </td>
+
+                        <td class="dtp-center">
+                            ${escape_html(row.start)}
+                        </td>
+
+                        <td class="dtp-center">
+                            ${escape_html(
+                                row.back_in_production
+                            )}
+                        </td>
+                    </tr>
+                `;
+            }).join("")
+            : `
+                <tr>
+                    <td colspan="6"
+                        class="dtp-empty">
+                        No downtime records found
+                        for this selected date and shift.
+                    </td>
+                </tr>
+            `;
+
+        return `
+            <style>
+                .dt-print-preview-shell {
+                    background: #ffffff;
+                    padding: 14px;
+                    font-family:
+                        Arial,
+                        Helvetica,
+                        sans-serif;
+                    color: #111;
+                }
+
+                .dtp-report {
+                    border:
+                        1px solid #a9c9ad;
+                    border-radius: 7px;
+                    overflow: hidden;
+                    background: #ffffff;
+                }
+
+                .dtp-title {
+                    padding:
+                        12px 12px 5px 12px;
+                    text-align: center;
+                    font-weight: 700;
+                    font-size: 14px;
+                    color: #16812c;
+                    background: #f4fbf4;
+                }
+
+                .dtp-window {
+                    padding:
+                        5px 12px 11px 12px;
+                    text-align: center;
+                    font-weight: 700;
+                    font-size: 12px;
+                    color: #16812c;
+                    background: #f4fbf4;
+                    border-bottom:
+                        1px solid #a9c9ad;
+                }
+
+                .dtp-meta {
+                    text-align: center;
+                    padding: 7px 10px;
+                    font-size: 12px;
+                    color: #555;
+                    border-bottom:
+                        1px solid #d7e5d8;
+                }
+
+                .dtp-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-size: 12px;
+                    color: #111;
+                    font-weight: 600;
+                }
+
+                .dtp-table th {
+                    padding: 9px 6px;
+                    border-right:
+                        1px solid #d5dfd6;
+                    border-bottom:
+                        1px solid #c7d5c8;
+                    background: #fafafa;
+                    text-align: center;
+                    font-weight: 700;
+                    font-size: 11px;
+                }
+
+                .dtp-table th:last-child {
+                    border-right: none;
+                }
+
+                .dtp-table td {
+                    padding: 9px 7px;
+                    border-right:
+                        1px solid #dfe6df;
+                    border-bottom:
+                        1px solid #dfe6df;
+                    vertical-align: middle;
+                    line-height: 1.35;
+                    font-size: 11px;
+                    font-weight: 600;
+                    word-wrap: break-word;
+                }
+
+                .dtp-table td:last-child {
+                    border-right: none;
+                }
+
+                .dtp-table tr:last-child td {
+                    border-bottom: none;
+                }
+
+                .dtp-fleet {
+                    width: 10%;
+                    font-weight: 800;
+                    text-align: center;
+                }
+
+                .dtp-reason {
+                    width: 28%;
+                }
+
+                .dtp-center {
+                    text-align: center;
+                    white-space: nowrap;
+                }
+
+                .dtp-downtime {
+                    font-weight: 700;
+                }
+
+                .dtp-status-closed {
+                    text-align: center;
+                    color: #222;
+                }
+
+                .dtp-status-open {
+                    text-align: center;
+                    font-weight: 800;
+                    color: #a25000;
+                }
+
+                .dtp-footer {
+                    padding: 8px 10px;
+                    text-align: center;
+                    color: #16812c;
+                    background: #f4fbf4;
+                    border-top:
+                        1px solid #a9c9ad;
+                    font-weight: 700;
+                    font-size: 12px;
+                }
+
+                .dtp-empty {
+                    padding: 32px !important;
+                    text-align: center;
+                    color: #777;
+                    font-style: italic;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+
+                .dtp-col-fleet {
+                    width: 10%;
+                }
+
+                .dtp-col-reason {
+                    width: 27%;
+                }
+
+                .dtp-col-status {
+                    width: 10%;
+                }
+
+                .dtp-col-downtime {
+                    width: 10%;
+                }
+
+                .dtp-col-start {
+                    width: 21.5%;
+                }
+
+                .dtp-col-back {
+                    width: 21.5%;
+                }
+
+                @media print {
+                    body {
+                        margin: 0;
+                    }
+
+                    .dt-print-preview-shell {
+                        padding: 0;
+                    }
+                }
+            </style>
+
+            <div class="dt-print-preview-shell">
+                <div class="dtp-report">
+
+                    <div class="dtp-title">
+                        ${escape_html(data.heading || "DOWNTIME")}
+                    </div>
+
+                    <div class="dtp-window">
+                        ${escape_html(data.window_start)}
+                        &nbsp;&rarr;&nbsp;
+                        ${escape_html(data.window_end)}
+                    </div>
+
+                    <div class="dtp-meta">
+                        ${escape_html(data.site || "")}
+                        ${
+                            data.asset_category &&
+                            data.asset_category !==
+                                "All Equipment"
+                                ? " | " +
+                                  escape_html(
+                                      data.asset_category
+                                  )
+                                : ""
+                        }
+                    </div>
+
+                    <table class="dtp-table">
+                        <colgroup>
+                            <col class="dtp-col-fleet">
+                            <col class="dtp-col-reason">
+                            <col class="dtp-col-status">
+                            <col class="dtp-col-downtime">
+                            <col class="dtp-col-start">
+                            <col class="dtp-col-back">
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th>Fleet No.</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Downtime</th>
+                                <th>Start</th>
+                                <th>Back in Production</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${body}
+                        </tbody>
+                    </table>
+
+                    <div class="dtp-footer">
+                        (${escape_html(data.footer || "")})
+                    </div>
+
+                </div>
+            </div>
+        `;
+    }
+
+
+    function show_downtime_print_dialog(
+        data
+    ) {
+        const html =
+            build_downtime_preview_html(
+                data
+            );
+
+        const dialog =
+            new frappe.ui.Dialog({
+                title:
+                    __("Downtime Print / Screenshot"),
+
+                size: "extra-large",
+
+                fields: [
+                    {
+                        fieldtype: "HTML",
+                        fieldname:
+                            "downtime_print_preview",
+                    },
+                ],
+
+                primary_action_label:
+                    __("Print"),
+
+                primary_action:
+                    function () {
+                        print_downtime_preview(
+                            data
+                        );
+                    },
+            });
+
+        dialog.fields_dict
+            .downtime_print_preview
+            .$wrapper
+            .html(html);
+
+        dialog.show();
+
+        setTimeout(function () {
+            dialog.$wrapper
+                .find(".modal-dialog")
+                .css(
+                    "max-width",
+                    "1280px"
+                );
+
+            dialog.$wrapper
+                .find(".modal-body")
+                .css({
+                    "padding": "12px",
+                    "background": "#f7f7f7",
+                });
+        }, 50);
+    }
+
+
+    function print_downtime_preview(
+        data
+    ) {
+        const preview_html =
+            build_downtime_preview_html(
+                data
+            );
+
+        const print_window =
+            window.open(
+                "",
+                "_blank",
+                "width=1200,height=800"
+            );
+
+        if (!print_window) {
+            frappe.msgprint(
+                __(
+                    "Please allow pop-ups to print this report."
+                )
+            );
+
+            return;
+        }
+
+        print_window.document.open();
+
+        print_window.document.write(`
+            <!doctype html>
+            <html>
+                <head>
+                    <meta charset="utf-8">
+
+                    <title>
+                        Downtime
+                    </title>
+
+                    <style>
+                        @page {
+                            size: A4 landscape;
+                            margin: 10mm;
+                        }
+
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            background: #ffffff;
+                        }
+                    </style>
+                </head>
+
+                <body>
+                    ${preview_html}
+                </body>
+            </html>
+        `);
+
+        print_window.document.close();
+
+        print_window.focus();
+
+        setTimeout(function () {
+            print_window.print();
+        }, 350);
+    }
+})();
+
+// === DOWNTIME SELECTED DATE PRINT PREVIEW V3 END ===
