@@ -1434,19 +1434,479 @@ def send_daily_downtime_day_shift():
 def send_daily_downtime_night_shift():
     return create_daily_downtime_summaries("Night Shift")
 
+# === DOWNTIME SELECTED DATE PRINT PREVIEW V3 START ===
+
+def _dt_v3_filter_is_set(value):
+    value = str(value or "").strip()
+
+    if not value:
+        return False
+
+    return value.lower() not in (
+        "all",
+        "all sites",
+        "all equipment",
+        "undefined",
+        "none",
+        "null",
+        "site",
+        "asset category",
+    )
 
 
+def _dt_v3_normalise_shift(shift):
+    value = str(shift or "").strip().lower()
+
+    if value in ("day", "day shift"):
+        return "Day"
+
+    if value in ("night", "night shift"):
+        return "Night"
+
+    return ""
 
 
+def _dt_v3_selected_window(report_date, shift=None):
+    from datetime import timedelta as _timedelta
+    from frappe.utils import (
+        getdate as _getdate,
+        get_datetime as _get_datetime,
+    )
+
+    selected_date = _getdate(report_date)
+    next_date = selected_date + _timedelta(days=1)
+
+    shift_key = _dt_v3_normalise_shift(shift)
+
+    if shift_key == "Day":
+        start = _get_datetime(
+            f"{selected_date} 06:00:00"
+        )
+
+        end = _get_datetime(
+            f"{selected_date} 18:00:00"
+        )
+
+        heading = "DAY SHIFT SELECTED"
+        shift_label = "Day Shift"
+
+        footer = (
+            "Downtime after 18:00 not included "
+            "in Day Shift"
+        )
+
+    elif shift_key == "Night":
+        start = _get_datetime(
+            f"{selected_date} 18:00:00"
+        )
+
+        end = _get_datetime(
+            f"{next_date} 06:00:00"
+        )
+
+        heading = "NIGHT SHIFT SELECTED"
+        shift_label = "Night Shift"
+
+        footer = (
+            "Night Shift includes downtime from "
+            "18:00 to 06:00 next day"
+        )
+
+    else:
+        start = _get_datetime(
+            f"{selected_date} 06:00:00"
+        )
+
+        end = _get_datetime(
+            f"{next_date} 06:00:00"
+        )
+
+        heading = "BOTH SHIFTS SELECTED"
+        shift_label = "Both Shifts"
+
+        footer = (
+            "24 Hour Cycle: 06:00 to 06:00 next day"
+        )
+
+    return {
+        "selected_date": selected_date,
+        "shift": shift_label,
+        "heading": heading,
+        "footer": footer,
+        "window_start": start,
+        "window_end": end,
+    }
 
 
+def _dt_v3_hmm(minutes):
+    try:
+        minutes = int(round(float(minutes or 0)))
+    except Exception:
+        minutes = 0
+
+    minutes = max(minutes, 0)
+
+    hours = minutes // 60
+    remainder = minutes % 60
+
+    return f"{hours}:{remainder:02d}"
 
 
+def _dt_v3_datetime_text(value):
+    if not value:
+        return ""
+
+    from frappe.utils import get_datetime as _get_datetime
+
+    return _get_datetime(value).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
 
+def _dt_v3_get_selected_rows(
+    report_date=None,
+    site=None,
+    asset_category=None,
+    shift=None,
+):
+    import frappe as _frappe
+
+    from frappe.utils import (
+        getdate as _getdate,
+        get_datetime as _get_datetime,
+        now_datetime as _now_datetime,
+    )
+
+    if report_date:
+        report_date = _getdate(report_date)
+    else:
+        report_date = _getdate(
+            _now_datetime()
+        )
+
+    window = _dt_v3_selected_window(
+        report_date,
+        shift,
+    )
+
+    window_start = window["window_start"]
+    window_end = window["window_end"]
+
+    conditions = [
+        """
+        (
+            coalesce(
+                nullif(
+                    pbm.breakdown_start_datetime,
+                    ''
+                ),
+                pbm.creation
+            ) < %(window_end)s
+
+            and
+
+            (
+                pbm.resolved_datetime is null
+                or pbm.resolved_datetime = ''
+                or pbm.resolved_datetime > %(window_start)s
+            )
+        )
+        """
+    ]
+
+    values = {
+        "window_start": window_start,
+        "window_end": window_end,
+    }
+
+    if _dt_v3_filter_is_set(site):
+        conditions.append(
+            "pbm.location = %(site)s"
+        )
+
+        values["site"] = site
+
+    if _dt_v3_filter_is_set(asset_category):
+        conditions.append(
+            "pbm.asset_category = %(asset_category)s"
+        )
+
+        values["asset_category"] = asset_category
+
+    raw_rows = _frappe.db.sql(
+        f"""
+        select
+            pbm.name as pbm_document,
+            pbm.location as site,
+            pbm.asset_name as fleet_no,
+            pbm.asset_category as asset_category,
+            pbm.breakdown_reason as reason,
+            pbm.open_closed as open_closed,
+            pbm.breakdown_start_datetime
+                as breakdown_start_datetime,
+            pbm.resolved_datetime
+                as resolved_datetime,
+            pbm.creation as creation
+        from `tabPlant Breakdown or Maintenance` pbm
+        where {" and ".join(conditions)}
+        order by
+            coalesce(
+                nullif(
+                    pbm.breakdown_start_datetime,
+                    ''
+                ),
+                pbm.creation
+            ) asc,
+            pbm.asset_name asc,
+            pbm.name asc
+        """,
+        values,
+        as_dict=True,
+    )
+
+    rows = []
+
+    for row in raw_rows:
+        actual_start = (
+            row.get("breakdown_start_datetime")
+            or row.get("creation")
+        )
+
+        if not actual_start:
+            continue
+
+        actual_start_dt = _get_datetime(
+            actual_start
+        )
+
+        actual_resolved = row.get(
+            "resolved_datetime"
+        )
+
+        resolved_dt = (
+            _get_datetime(actual_resolved)
+            if actual_resolved
+            else None
+        )
+
+        effective_end = (
+            resolved_dt
+            if resolved_dt
+            else window_end
+        )
+
+        clipped_start = max(
+            actual_start_dt,
+            window_start,
+        )
+
+        clipped_end = min(
+            effective_end,
+            window_end,
+        )
+
+        if clipped_end <= clipped_start:
+            continue
+
+        seconds = (
+            clipped_end - clipped_start
+        ).total_seconds()
+
+        minutes = int(
+            round(seconds / 60.0)
+        )
+
+        if minutes <= 0:
+            continue
+
+        status = str(
+            row.get("open_closed") or ""
+        ).strip()
+
+        if not status:
+            status = (
+                "Closed"
+                if resolved_dt
+                else "Open"
+            )
+
+        rows.append({
+            "pbm_document":
+                row.get("pbm_document") or "",
+
+            "fleet_no":
+                row.get("fleet_no") or "",
+
+            "reason":
+                row.get("reason") or "",
+
+            "status":
+                status,
+
+            "downtime":
+                _dt_v3_hmm(minutes),
+
+            "downtime_minutes":
+                minutes,
+
+            "start":
+                _dt_v3_datetime_text(
+                    row.get(
+                        "breakdown_start_datetime"
+                    )
+                ),
+
+            "back_in_production":
+                _dt_v3_datetime_text(
+                    actual_resolved
+                ),
+
+            "site":
+                row.get("site") or "",
+
+            "asset_category":
+                row.get("asset_category") or "",
+        })
+
+    return {
+        "selected_date":
+            str(window["selected_date"]),
+
+        "site":
+            (
+                str(site).strip()
+                if _dt_v3_filter_is_set(site)
+                else "All Sites"
+            ),
+
+        "asset_category":
+            (
+                str(asset_category).strip()
+                if _dt_v3_filter_is_set(
+                    asset_category
+                )
+                else "All Equipment"
+            ),
+
+        "shift":
+            window["shift"],
+
+        "heading":
+            window["heading"],
+
+        "footer":
+            window["footer"],
+
+        "window_start":
+            _dt_v3_datetime_text(
+                window_start
+            ),
+
+        "window_end":
+            _dt_v3_datetime_text(
+                window_end
+            ),
+
+        "rows":
+            rows,
+    }
 
 
+@frappe.whitelist()
+def get_selected_downtime_print_data(
+    report_date=None,
+    site=None,
+    asset_category=None,
+    shift=None,
+):
+    return _dt_v3_get_selected_rows(
+        report_date=report_date,
+        site=site,
+        asset_category=asset_category,
+        shift=shift,
+    )
 
 
+@frappe.whitelist()
+def export_selected_downtime_excel(
+    report_date=None,
+    site=None,
+    asset_category=None,
+    shift=None,
+):
+    import frappe as _frappe
+
+    from frappe.utils.xlsxutils import (
+        make_xlsx as _make_xlsx,
+    )
+
+    data = _dt_v3_get_selected_rows(
+        report_date=report_date,
+        site=site,
+        asset_category=asset_category,
+        shift=shift,
+    )
+
+    excel_rows = [
+        [data["heading"]],
+        [
+            "{} -> {}".format(
+                data["window_start"],
+                data["window_end"],
+            )
+        ],
+        [],
+        [
+            "Fleet No.",
+            "Reason",
+            "Status",
+            "Downtime",
+            "Start",
+            "Back in Production",
+        ],
+    ]
+
+    for row in data["rows"]:
+        excel_rows.append([
+            row["fleet_no"],
+            row["reason"],
+            row["status"],
+            row["downtime"],
+            row["start"],
+            row["back_in_production"],
+        ])
+
+    excel_rows.extend([
+        [],
+        [f"({data['footer']})"],
+    ])
+
+    workbook = _make_xlsx(
+        excel_rows,
+        "Downtime",
+    )
+
+    shift_file = (
+        data["shift"]
+        .replace("/", "-")
+        .replace("\\", "-")
+        .replace(" ", "_")
+    )
+
+    filename = (
+        "Downtime_{}_{}.xlsx".format(
+            data["selected_date"],
+            shift_file,
+        )
+    )
+
+    _frappe.local.response.filename = filename
+
+    _frappe.local.response.filecontent = (
+        workbook.getvalue()
+    )
+
+    _frappe.local.response.type = "binary"
 
 
+# === DOWNTIME SELECTED DATE PRINT PREVIEW V3 END ===
