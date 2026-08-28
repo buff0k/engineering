@@ -1334,6 +1334,196 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 
 
 
+def build_hours_based_performance_html(source_rows, start_date, end_date):
+    machine_days = {}
+
+    for summary_row in source_rows or []:
+        if not isinstance(summary_row, dict):
+            continue
+
+        category = get_category(summary_row)
+        machine = get_machine(summary_row)
+
+        if category not in UI_CATEGORIES or not machine:
+            continue
+
+        for row in summary_row.get("_au_source_rows") or []:
+            if not isinstance(row, dict):
+                continue
+
+            date_value = get_row_date(row)
+            if not date_value:
+                continue
+
+            bucket = (
+                machine_days
+                .setdefault(category, {})
+                .setdefault(machine, {})
+                .setdefault(date_value, {"work": 0.0, "breakdown": 0.0, "required": 0.0})
+            )
+            bucket["work"] += flt(row.get("work_hours"))
+            bucket["breakdown"] += flt(row.get("pbm_total_downtime"))
+            bucket["required"] += flt(row.get("required_hours"))
+
+    if not machine_days:
+        return '<div class="frappe-card" style="padding:18px;">No hours data found for the selected filters.</div>'
+
+    start = getdate(start_date)
+    end = getdate(end_date)
+    all_dates = [
+        str(add_days(start, offset))
+        for offset in range(max(date_diff(end, start) + 1, 0))
+    ]
+
+    category_daily = {}
+    for category, machines in machine_days.items():
+        category_daily[category] = {}
+
+        for date_value in all_dates:
+            valid = [
+                dates[date_value]
+                for dates in machines.values()
+                if date_value in dates and dates[date_value]["required"] > 0
+            ]
+
+            count = len(valid)
+            category_daily[category][date_value] = {
+                "work": sum(value["work"] for value in valid) / count if count else 0.0,
+                "breakdown": sum(value["breakdown"] for value in valid) / count if count else 0.0,
+                "required": sum(value["required"] for value in valid) / count if count else 0.0,
+                "machines": count,
+            }
+
+    category_period_averages = {}
+
+    for category, daily_values in category_daily.items():
+        displayed_days = [
+            value
+            for value in daily_values.values()
+            if value["machines"] > 0
+        ]
+        category_period_averages[category] = {
+            "work": (
+                sum(value["work"] for value in displayed_days) / len(displayed_days)
+                if displayed_days else 0.0
+            ),
+            "breakdown": (
+                sum(value["breakdown"] for value in displayed_days) / len(displayed_days)
+                if displayed_days else 0.0
+            ),
+        }
+
+    charts = []
+    width = max(760, len(all_dates) * 82)
+    height = 310
+    left, right, top, bottom = 58, 24, 38, 48
+    plot_width = width - left - right
+    plot_height = height - top - bottom
+
+    for category in UI_CATEGORIES:
+        if category not in category_daily:
+            continue
+
+        values = [category_daily[category][date_value] for date_value in all_dates]
+        period_avg_work = category_period_averages[category]["work"]
+        period_avg_breakdown = category_period_averages[category]["breakdown"]
+
+        maximum = max(
+            [12.0]
+            + [value[key] for value in values for key in ("work", "breakdown", "required")]
+        )
+        axis_max = max(12.0, float(int((maximum + 2.999) / 3.0) * 3))
+
+        def x_at(index):
+            return left + plot_width / 2 if len(all_dates) <= 1 else left + index * plot_width / (len(all_dates) - 1)
+
+        def y_at(value):
+            return top + plot_height - max(0.0, flt(value)) / axis_max * plot_height
+
+        def points(key):
+            return " ".join(
+                f"{x_at(index):.1f},{y_at(value[key]):.1f}"
+                for index, value in enumerate(values)
+            )
+
+        grid = []
+        for step in range(5):
+            axis_value = axis_max * step / 4
+            y = y_at(axis_value)
+            grid.append(
+                f'<line x1="{left}" y1="{y:.1f}" x2="{width-right}" y2="{y:.1f}" stroke="#e5e7eb" />'
+                f'<text x="{left-8}" y="{y+4:.1f}" text-anchor="end" font-size="10" fill="#6b7280">{axis_value:g}h</text>'
+            )
+
+        labels = []
+        marks = []
+        for index, (date_value, value) in enumerate(zip(all_dates, values)):
+            x = x_at(index)
+            labels.append(
+                f'<text x="{x:.1f}" y="{height-17}" text-anchor="middle" font-size="10" fill="#4b5563">{esc(date_value[5:])}</text>'
+            )
+
+            for key, colour, title, label_offset in (
+                ("work", "#2563eb", "Utilisation / Average Working", -11),
+                ("breakdown", "#dc2626", "Availability / Average Breakdown", 17),
+                ("required", "#6b7280", "Average Required", -11),
+            ):
+                y = y_at(value[key])
+                marks.append(
+                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.5" fill="{colour}">'
+                    f'<title>{esc(date_value)} {title}: {value[key]:.2f}h across {value["machines"]} machines</title></circle>'
+                )
+
+                if key in ("work", "breakdown") and value["machines"]:
+                    marks.append(
+                        f'<text x="{x:.1f}" y="{y+label_offset:.1f}" text-anchor="middle" font-size="10" font-weight="700" fill="{colour}">{value[key]:.2f}h</text>'
+                    )
+
+        category_title = esc(UI_TITLES.get(category, category))
+
+        charts.append(f'''
+<div style="margin-bottom:28px;">
+    <div style="font-size:14px;font-weight:900;margin-bottom:10px;">{category_title} — Daily Average per Machine</div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+        <div class="frappe-card" style="padding:14px;border-left:5px solid #2563eb;">
+            <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Working Hours — Selected Period</div>
+            <div style="font-size:26px;font-weight:900;color:#2563eb;">{period_avg_work:.2f}h</div>
+        </div>
+        <div class="frappe-card" style="padding:14px;border-left:5px solid #dc2626;">
+            <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Breakdown Hours — Selected Period</div>
+            <div style="font-size:26px;font-weight:900;color:#dc2626;">{period_avg_breakdown:.2f}h</div>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:18px;flex-wrap:wrap;padding:9px 12px;margin-bottom:12px;border:1px solid #d8dde2;border-radius:8px;background:#fff;font-size:12px;font-weight:700;">
+        <span style="color:#2563eb;">━━ Working Hours — Day + Night</span>
+        <span style="color:#dc2626;">━━ Breakdown Hours — Day + Night</span>
+        <span style="color:#6b7280;">┅┅ Required Hours</span>
+    </div>
+
+    <div class="frappe-card" style="padding:14px;overflow-x:auto;">
+    <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="Daily average hours per machine for {esc(category)}">
+        {''.join(grid)}
+        <polyline points="{points('required')}" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 5" />
+        <polyline points="{points('work')}" fill="none" stroke="#2563eb" stroke-width="3" />
+        <polyline points="{points('breakdown')}" fill="none" stroke="#dc2626" stroke-width="3" />
+        {''.join(marks)}
+        {''.join(labels)}
+    </svg>
+    </div>
+</div>
+''')
+
+    return f'''
+<div style="padding-top:10px;">
+    {''.join(charts)}
+</div>
+'''
+
+
+
+
 def build_dashboard_html(
     location,
     start_date,
@@ -1470,7 +1660,7 @@ def build_dashboard_html(
     legend_target = 85 if au_target_filter == "85% A & U" else 100
     legend_warning = legend_target - 10
 
-    return f'''
+    au_dashboard_html = f'''
 <div class="isd-hourly-dashboard isd-daily-availability-dashboard">
     <div class="isd-note">
         Showing: {summary_type_safe} | {site_safe} | {start_date} to {end_date}. Averages and graphs are read from Availability and Utilisation Month End Report.
@@ -1553,6 +1743,19 @@ def build_dashboard_html(
         </div>
     </div>
 </div>
+'''
+
+    hours_dashboard_html = build_hours_based_performance_html(
+        source_rows or [], start_date, end_date
+    )
+
+    return f'''
+<div class="daily-dashboard-tabs" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
+    <button type="button" class="btn btn-primary daily-dashboard-tab-button" data-tab="au">A&amp;U Performance</button>
+    <button type="button" class="btn btn-default daily-dashboard-tab-button" data-tab="hours">Hours Based Performance</button>
+</div>
+<div class="daily-dashboard-tab-panel" data-panel="au">{au_dashboard_html}</div>
+<div class="daily-dashboard-tab-panel" data-panel="hours" style="display:none;">{hours_dashboard_html}</div>
 '''
 
 

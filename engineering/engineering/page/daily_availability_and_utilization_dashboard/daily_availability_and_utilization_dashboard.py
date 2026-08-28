@@ -3537,7 +3537,7 @@ def get_daily_dashboard_pdf_override_css():
         background: rgba(30, 142, 62, 0.16) !important;
     }
 
-    .isd-mbubble-yellow {
+    .isd-mbubble-blue {
         border: 2px solid #1a73e8 !important;
         background: rgba(26, 115, 232, 0.16) !important;
     }

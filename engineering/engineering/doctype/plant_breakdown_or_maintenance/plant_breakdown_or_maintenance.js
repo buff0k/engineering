@@ -13,6 +13,68 @@ function set_asset_name_query(frm) {
 // Copyright (c) 2025, Isambane Mining (Pty) Ltd
 // For license information, please see license.txt
 
+function render_breakdown_duration(frm) {
+  const field = frm.fields_dict.breakdown_duration_display;
+  const wrapper = field && field.$wrapper;
+
+  if (!wrapper) return;
+
+  const start = frm.doc.breakdown_start_datetime;
+  const end = frm.doc.resolved_datetime;
+
+  let totalMinutes = 0;
+
+  if (start) {
+    const startTime = moment(start);
+    const endTime = end ? moment(end) : moment();
+
+    if (
+      startTime.isValid() &&
+      endTime.isValid() &&
+      !endTime.isBefore(startTime)
+    ) {
+      totalMinutes = Math.max(
+        0,
+        endTime.diff(startTime, "minutes")
+      );
+    }
+  }
+
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  wrapper.html(`
+    <div style="
+      margin-bottom:12px;
+      padding:12px 15px;
+      border:1px solid #d1d8dd;
+      border-radius:6px;
+      background:#f8f9fa;
+    ">
+      <div style="
+        color:#6c7680;
+        font-size:12px;
+        margin-bottom:4px;
+      ">
+        ${__("Breakdown/Maintenance Duration")}
+      </div>
+
+      <div style="
+        color:#1f272e;
+        font-size:18px;
+        font-weight:600;
+      ">
+        ${days} ${days === 1 ? __("day") : __("days")}
+        -
+        ${hours} ${hours === 1 ? __("hour") : __("hours")}
+        -
+        ${minutes} ${__("mins")}
+      </div>
+    </div>
+  `);
+}
+
 frappe.ui.form.on("Plant Breakdown or Maintenance", {
   setup(frm) {
     set_asset_name_query(frm);
@@ -32,10 +94,12 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
   breakdown_start_datetime(frm) {
     frm.trigger("set_breakdown_start_key");
     frm.trigger("calculate_hours");
+    render_breakdown_duration(frm);
   },
 
   resolved_datetime(frm) {
     frm.trigger("calculate_hours");
+    render_breakdown_duration(frm);
     frm.trigger("set_open_closed");
   },
 
@@ -128,6 +192,7 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     // Make open_closed read-only + sync value
     frm.set_df_property("open_closed", "read_only", 1);
     frm.trigger("set_open_closed");
+    render_breakdown_duration(frm);
 
     // Show alert if excluded from A&U
     if (frm.doc.exclude_from_au) {
