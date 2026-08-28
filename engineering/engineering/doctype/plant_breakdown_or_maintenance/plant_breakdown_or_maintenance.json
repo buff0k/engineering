@@ -15,6 +15,7 @@
   "asset_category",
   "exclude_from_au",
   "section_break_sbau",
+  "breakdown_duration_display",
   "breakdown_hours",
   "site_breakdown_situation_section",
   "hours_breakdown_starts",
@@ -91,6 +92,11 @@
   {
    "fieldname": "section_break_sbau",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "breakdown_duration_display",
+   "fieldtype": "HTML",
+   "label": "Breakdown/Maintenance Duration"
   },
   {
    "fieldname": "breakdown_hours",
