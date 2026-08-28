@@ -477,6 +477,16 @@ class DailyAvailabilityDashboardPage {
 
     bind_dashboard_actions() {
         this.body
+            .off("click.daily_dashboard_tab", ".daily-dashboard-tab-button")
+            .on("click.daily_dashboard_tab", ".daily-dashboard-tab-button", (event) => {
+                const tab = $(event.currentTarget).data("tab");
+                this.body.find(".daily-dashboard-tab-button").removeClass("btn-primary").addClass("btn-default");
+                $(event.currentTarget).removeClass("btn-default").addClass("btn-primary");
+                this.body.find(".daily-dashboard-tab-panel").hide();
+                this.body.find(`.daily-dashboard-tab-panel[data-panel="${tab}"]`).show();
+            });
+
+        this.body
             .off("click.daily_availability_bar", ".daily-availability-clickable-bar")
             .on(
                 "click.daily_availability_bar",

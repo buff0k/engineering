@@ -2477,10 +2477,12 @@ function open_invalid_au_pbm_records(
             }
 
             if (records.length === 1) {
-                frappe.set_route(
-                    "Form",
-                    "Plant Breakdown or Maintenance",
-                    records[0].name
+                window.open(
+                    frappe.utils.get_form_link(
+                        "Plant Breakdown or Maintenance",
+                        records[0].name
+                    ),
+                    "_blank"
                 );
 
                 return;
@@ -2777,10 +2779,12 @@ function show_invalid_au_pbm_record_dialog(
 
                         dialog.hide();
 
-                        frappe.set_route(
-                            "Form",
-                            "Plant Breakdown or Maintenance",
-                            record.name
+                        window.open(
+                            frappe.utils.get_form_link(
+                                "Plant Breakdown or Maintenance",
+                                record.name
+                            ),
+                            "_blank"
                         );
                     }
                 );

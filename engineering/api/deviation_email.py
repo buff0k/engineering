@@ -49,6 +49,7 @@ def send_open_deviation_emails():
             "fleet_number",
             "machine_type",
             "machine_model",
+            "pre_use_no",
             "reported_by_name_and_surname",
             "action_status",
         ],
@@ -84,6 +85,7 @@ def build_email_table(site, rows):
         html_rows += f"""
         <tr>
             <td>{d.get('name', '')}</td>
+            <td>{d.get('pre_use_no', '')}</td>
             <td>{d.get('report_datetime', '')}</td>
             <td>{d.get('fleet_number', '')}</td>
             <td>{d.get('machine_type', '')}</td>
@@ -102,6 +104,7 @@ def build_email_table(site, rows):
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Pre-Use No.</th>
                 <th>Reported At</th>
                 <th>Fleet Number</th>
                 <th>Machine Type</th>
