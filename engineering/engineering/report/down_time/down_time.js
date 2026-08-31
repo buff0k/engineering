@@ -112,11 +112,6 @@ function add_signoff_button(report) {
             return;
         }
 
-        if (!$(".downtime-au-verify-checkbox").is(":checked")) {
-            frappe.throw(__("Please verify the previous day Availability and Utilisation before signing off."));
-            return;
-        }
-
         const engineering_roles = [
             "Engineering Area Manager",
             "Engineering Foreman",
