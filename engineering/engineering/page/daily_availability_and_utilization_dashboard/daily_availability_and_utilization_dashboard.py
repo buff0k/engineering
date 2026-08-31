@@ -1155,7 +1155,7 @@ def bubble_colour(metric, value):
 def fmt_percent(value):
     if value is None:
         return "0.0%"
-    return f"{float(value):.1f}%"
+    return f"{min(100.0, max(0.0, float(value))):.1f}%"
 
 def esc(value):
     return frappe.utils.escape_html(str(value or ""))
@@ -2216,13 +2216,13 @@ def build_chart_html(
             av_graph_label = (
                 ""
                 if av is None
-                else f"{float(av):.1f}%"
+                else fmt_percent(av)
             )
 
             ut_graph_label = (
                 ""
                 if ut is None
-                else f"{float(ut):.1f}%"
+                else fmt_percent(ut)
             )
 
             bars.append(
