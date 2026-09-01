@@ -6,6 +6,9 @@ from datetime import timedelta
 from engineering.engineering.report.availability_and_utilisation_engine import (
     availability_and_utilisation_engine as au_engine,
 )
+from engineering.engineering.page.daily_availability_dashboard.daily_availability_dashboard import (
+    build_hours_based_performance_html,
+)
 
 
 _ = frappe._
@@ -1147,7 +1150,7 @@ def bubble_colour(metric, value):
         return "isd-mbubble-green"
 
     if value >= warning:
-        return "isd-mbubble-blue"
+        return "isd-mbubble-blue" + chr(34) + " style=" + chr(34) + "background:#bfdbfe !important;border-color:#1d4ed8 !important;"
 
     return "isd-mbubble-red"
 
@@ -1691,7 +1694,7 @@ def build_dashboard_html(
     legend_target = 85 if au_target_filter == "85% A & U" else 100
     legend_warning = legend_target - 10
 
-    return f'''
+    au_dashboard_html = f'''
 <div class="isd-hourly-dashboard isd-daily-availability-dashboard">
     <div class="isd-note">
         Showing: {summary_type_safe} | {site_safe} | {start_date} to {end_date}. Averages and graphs are calculated by the Availability and Utilisation Engine.
@@ -1774,6 +1777,48 @@ def build_dashboard_html(
         </div>
     </div>
 </div>
+'''
+
+    hours_groups = {}
+
+    for row in source_rows or []:
+        if (
+            not isinstance(row, dict)
+            or get_indent(row) != 3
+            or row.get("is_formula_row")
+        ):
+            continue
+
+        category = get_category(row)
+        machine = get_machine(row)
+
+        if category not in UI_CATEGORIES or not machine:
+            continue
+
+        hours_groups.setdefault((category, machine), []).append(row)
+
+    hours_source_rows = [
+        {
+            "asset_category": category,
+            "asset_name": machine,
+            "_au_source_rows": rows,
+        }
+        for (category, machine), rows in hours_groups.items()
+    ]
+
+    hours_dashboard_html = build_hours_based_performance_html(
+        hours_source_rows,
+        start_date,
+        end_date,
+    )
+
+    return f'''
+<div class="daily-dashboard-tabs" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
+    <button type="button" class="btn btn-primary daily-dashboard-tab-button" data-tab="au">A&amp;U Performance</button>
+    <button type="button" class="btn btn-default daily-dashboard-tab-button" data-tab="hours">Hours Based Performance</button>
+</div>
+<div class="daily-dashboard-tab-panel" data-panel="au">{au_dashboard_html}</div>
+<div class="daily-dashboard-tab-panel" data-panel="hours" style="display:none;">{hours_dashboard_html}</div>
 '''
 
 
@@ -3538,8 +3583,8 @@ def get_daily_dashboard_pdf_override_css():
     }
 
     .isd-mbubble-blue {
-        border: 2px solid #1a73e8 !important;
-        background: rgba(26, 115, 232, 0.16) !important;
+        border: 2px solid #1d4ed8 !important;
+        background: #bfdbfe !important;
     }
 
     .isd-mbubble-red {
