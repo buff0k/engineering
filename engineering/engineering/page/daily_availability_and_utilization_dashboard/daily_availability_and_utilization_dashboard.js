@@ -249,6 +249,42 @@ class DailyAvailabilityAndUtilizationDashboardPage {
         });
 
 
+        this.hours_display = this.page.add_field({
+            fieldname: "hours_display",
+            label: __("Hours Display"),
+            fieldtype: "Select",
+            options: [
+                "Hours Average per Category",
+                "Hours per Asset"
+            ].join("\n"),
+            default: "Hours Average per Category",
+            change: () => {
+                if (!this.initializing && this.active_dashboard_tab === "hours") {
+                    this.load_dashboard();
+                }
+            }
+        });
+
+        this.hours_asset = this.page.add_field({
+            fieldname: "hours_asset",
+            label: __("Asset"),
+            fieldtype: "Link",
+            options: "Asset",
+            get_query: () => ({
+                filters: {
+                    location: this.location.get_value(),
+                    docstatus: 1
+                }
+            }),
+            change: () => {
+                if (!this.initializing && this.active_dashboard_tab === "hours") {
+                    this.load_dashboard();
+                }
+            }
+        });
+
+        this.hours_display.$wrapper.hide();
+        this.hours_asset.$wrapper.hide();
     }
 
     make_body() {
@@ -283,6 +319,8 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             "Production + Swing/Spare Machines"
         );
         await this.au_target_filter.set_value("85% A & U");
+        await this.hours_display.set_value("Hours Average per Category");
+        await this.hours_asset.set_value(null);
 
         let saved_site = "";
 
@@ -401,7 +439,9 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             site: this.location.get_value(),
             summary_type: this.summary_type.get_value() || "Average Per Machine",
             machine_scope: this.machine_scope.get_value() || "Production + Swing/Spare Machines",
-            au_target_filter: this.au_target_filter.get_value() || "85% A & U"
+            au_target_filter: this.au_target_filter.get_value() || "85% A & U",
+            hours_display: this.hours_display.get_value() || "Hours Average per Category",
+            hours_asset: this.hours_asset.get_value() || ""
         };
     }
 
@@ -523,6 +563,9 @@ class DailyAvailabilityAndUtilizationDashboardPage {
                 ).html(html);
 
                 this.bind_dashboard_actions();
+                this.body
+                    .find(".daily-dashboard-tab-button[data-tab=\"" + (this.active_dashboard_tab || "au") + "\"]")
+                    .trigger("click");
 
                 finish_request();
             },
@@ -549,6 +592,19 @@ class DailyAvailabilityAndUtilizationDashboardPage {
 
 
     bind_dashboard_actions() {
+        this.body
+            .off("click.daily_dashboard_tab", ".daily-dashboard-tab-button")
+            .on("click.daily_dashboard_tab", ".daily-dashboard-tab-button", (event) => {
+                const tab = $(event.currentTarget).data("tab");
+                this.active_dashboard_tab = tab;
+                this.hours_display.$wrapper.toggle(tab === "hours");
+                this.hours_asset.$wrapper.toggle(tab === "hours");
+                this.body.find(".daily-dashboard-tab-button").removeClass("btn-primary").addClass("btn-default");
+                $(event.currentTarget).removeClass("btn-default").addClass("btn-primary");
+                this.body.find(".daily-dashboard-tab-panel").hide();
+                this.body.find(`.daily-dashboard-tab-panel[data-panel="${tab}"]`).show();
+            });
+
         this.body
             .off("click.daily_availability_bar", ".daily-availability-clickable-bar")
             .on(

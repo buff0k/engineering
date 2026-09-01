@@ -657,6 +657,7 @@ function get_invalid_au_shift_rows(report) {
             function(row) {
                 return (
                     row
+                    && Number(row.invalid_au_excluded || 0) !== 1
                     && Number(
                         row.indent || 0
                     ) === 3
@@ -2391,6 +2392,10 @@ function add_invalid_au_pbm_view_column(
                     );
             }
         );
+
+    window.setTimeout(function() {
+        add_invalid_au_exclusion_column(report);
+    }, 0);
 }
 
 
@@ -2839,3 +2844,225 @@ function show_invalid_au_pbm_record_dialog(
 })();
 
 // END INVALID AU PBM DRILLDOWN
+
+// BEGIN INVALID AU PERMANENT EXCLUSION
+
+function can_exclude_invalid_au_shift() {
+    return (
+        frappe.session.user === "Administrator"
+        || frappe.user.has_role("Engineering Manager")
+        || frappe.user.has_role("Production Manager")
+    );
+}
+
+function open_invalid_au_exclusion_dialog(
+    report,
+    invalid_dialog,
+    row
+) {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Exclude Invalid A&U Flag"),
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "shift_summary"
+            },
+            {
+                fieldtype: "Small Text",
+                fieldname: "exclusion_comment",
+                label: __("Reason for Exclusion"),
+                reqd: 1,
+                description: __(
+                    "This comment becomes part of the permanent audit record."
+                )
+            }
+        ],
+        primary_action_label: __("Permanently Exclude Flag"),
+        primary_action(values) {
+            const comment = String(
+                values.exclusion_comment || ""
+            ).trim();
+
+            if (comment.length < 5) {
+                frappe.msgprint(
+                    __("Please provide a meaningful exclusion comment.")
+                );
+                return;
+            }
+
+            frappe.call({
+                method: (
+                    "engineering.engineering.doctype."
+                    + "au_invalid_shift_exclusion."
+                    + "au_invalid_shift_exclusion."
+                    + "exclude_invalid_au_shift"
+                ),
+                args: {
+                    location: row.location,
+                    shift_date: row.shift_date,
+                    shift: row.shift,
+                    asset_name: row.asset_name,
+                    asset_category: row.asset_category,
+                    company: row.company,
+                    work_hours: row.work_hours,
+                    pbm_total_downtime: row.pbm_total_downtime,
+                    required_hours: row.required_hours,
+                    invalid_reason: get_invalid_au_reason(row),
+                    exclusion_comment: comment
+                },
+                freeze: true,
+                freeze_message: __("Saving permanent exclusion..."),
+                callback(response) {
+                    const result = response.message || {};
+
+                    dialog.hide();
+
+                    if (
+                        invalid_dialog
+                        && invalid_dialog.length
+                    ) {
+                        invalid_dialog.modal("hide");
+                    }
+
+                    frappe.show_alert({
+                        message: result.message || __(
+                            "Invalid A&U flag excluded."
+                        ),
+                        indicator: "green"
+                    }, 7);
+
+                    report.refresh();
+                }
+            });
+        }
+    });
+
+    dialog.fields_dict.shift_summary.$wrapper.html(`
+        <div style="
+            padding:12px;
+            margin-bottom:12px;
+            border:1px solid #d1d8dd;
+            border-radius:8px;
+            background:#f8fafc;
+            line-height:1.7;
+        ">
+            <strong>${frappe.utils.escape_html(String(row.asset_name || ""))}</strong><br>
+            Site: ${frappe.utils.escape_html(String(row.location || ""))}<br>
+            Date: ${frappe.utils.escape_html(format_invalid_au_date(row.shift_date))}<br>
+            Shift: ${frappe.utils.escape_html(String(row.shift || ""))}<br>
+            Work Hours: ${frappe.utils.escape_html(format_engine_hours(row.work_hours))}<br>
+            PBM: ${frappe.utils.escape_html(format_engine_hours(row.pbm_total_downtime))}<br>
+            Required Hours: ${frappe.utils.escape_html(format_engine_hours(row.required_hours))}
+        </div>
+    `);
+
+    dialog.show();
+}
+
+
+function add_invalid_au_exclusion_column(report) {
+    if (!can_exclude_invalid_au_shift()) {
+        return;
+    }
+
+    const rows = get_invalid_au_shift_rows(report);
+    const $modal = get_open_invalid_au_dialog();
+
+    if (!$modal.length || !rows.length) {
+        return;
+    }
+
+    const $table = $modal.find("table").first();
+
+    if (
+        !$table.length
+        || $table.find(
+            ".availability-engine-invalid-exclusion-header"
+        ).length
+    ) {
+        return;
+    }
+
+    $table.find("thead tr").first().append(`
+        <th
+            class="availability-engine-invalid-exclusion-header"
+            style="
+                position:sticky;
+                top:0;
+                background:#f8fafc;
+                z-index:1;
+                min-width:130px;
+                white-space:nowrap;
+            "
+        >
+            Flag Action
+        </th>
+    `);
+
+    $table.find("tbody tr").each(function(index) {
+        const row = rows[index];
+
+        if (!row) {
+            return;
+        }
+
+        const $button = $(`
+            <button
+                type="button"
+                class="btn btn-xs btn-danger"
+                style="
+                    min-width:105px;
+                    border-radius:12px;
+                    font-weight:700;
+                "
+            >
+                Exclude Flag
+            </button>
+        `);
+
+        $button.on("click", function() {
+            open_invalid_au_exclusion_dialog(
+                report,
+                $modal,
+                row
+            );
+        });
+
+        const $cell = $(`
+            <td style="
+                text-align:center;
+                vertical-align:middle;
+                white-space:nowrap;
+            "></td>
+        `);
+
+        $cell.append($button);
+        $(this).append($cell);
+    });
+}
+
+
+(function install_invalid_au_exclusion_action() {
+    if (
+        typeof show_invalid_au_rows !== "function"
+        || show_invalid_au_rows
+            .__invalid_au_exclusion_installed
+    ) {
+        return;
+    }
+
+    const original_show_invalid_au_rows = show_invalid_au_rows;
+
+    show_invalid_au_rows = function(report) {
+        original_show_invalid_au_rows(report);
+
+        window.setTimeout(function() {
+            add_invalid_au_exclusion_column(report);
+        }, 100);
+    };
+
+    show_invalid_au_rows
+        .__invalid_au_exclusion_installed = true;
+})();
+
+// END INVALID AU PERMANENT EXCLUSION

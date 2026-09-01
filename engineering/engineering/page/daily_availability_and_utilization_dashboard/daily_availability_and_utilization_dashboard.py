@@ -6,6 +6,9 @@ from datetime import timedelta
 from engineering.engineering.report.availability_and_utilisation_engine import (
     availability_and_utilisation_engine as au_engine,
 )
+from engineering.engineering.page.daily_availability_dashboard.daily_availability_dashboard import (
+    build_hours_based_performance_html,
+)
 
 
 _ = frappe._
@@ -711,6 +714,8 @@ def execute(filters=None):
     end_date = filters.get("end_date") or filters.get("to_date")
     location = filters.get("location") or filters.get("site")
     machine_scope = filters.get("machine_scope") or "Production + Swing/Spare Machines"
+    hours_display = filters.get("hours_display") or "Hours Average per Category"
+    hours_asset = filters.get("hours_asset") or ""
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -773,6 +778,8 @@ def execute(filters=None):
         spare_swing_asset_map,
         production_avgs,
         spare_avgs,
+        hours_display,
+        hours_asset,
     )
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
@@ -1147,7 +1154,7 @@ def bubble_colour(metric, value):
         return "isd-mbubble-green"
 
     if value >= warning:
-        return "isd-mbubble-blue"
+        return "isd-mbubble-blue" + chr(34) + " style=" + chr(34) + "background:#bfdbfe !important;border-color:#1d4ed8 !important;"
 
     return "isd-mbubble-red"
 
@@ -1562,6 +1569,8 @@ def build_dashboard_html(
     spare_swing_asset_map=None,
     production_avgs=None,
     spare_avgs=None,
+    hours_display="Hours Average per Category",
+    hours_asset=None,
 ):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Average Per Machine")
@@ -1691,7 +1700,7 @@ def build_dashboard_html(
     legend_target = 85 if au_target_filter == "85% A & U" else 100
     legend_warning = legend_target - 10
 
-    return f'''
+    au_dashboard_html = f'''
 <div class="isd-hourly-dashboard isd-daily-availability-dashboard">
     <div class="isd-note">
         Showing: {summary_type_safe} | {site_safe} | {start_date} to {end_date}. Averages and graphs are calculated by the Availability and Utilisation Engine.
@@ -1774,6 +1783,122 @@ def build_dashboard_html(
         </div>
     </div>
 </div>
+'''
+
+    hours_groups = {}
+
+    for row in source_rows or []:
+        if (
+            not isinstance(row, dict)
+            or get_indent(row) != 3
+            or row.get("is_formula_row")
+        ):
+            continue
+
+        category = get_category(row)
+        machine = get_machine(row)
+
+        if category not in UI_CATEGORIES or not machine:
+            continue
+
+        hours_groups.setdefault((category, machine), []).append(row)
+
+    hours_source_rows = [
+        {
+            "asset_category": category,
+            "asset_name": machine,
+            "_au_source_rows": rows,
+        }
+        for (category, machine), rows in hours_groups.items()
+    ]
+
+    if hours_asset:
+        hours_source_rows = [
+            row
+            for row in hours_source_rows
+            if get_machine(row) == hours_asset
+        ]
+
+    if hours_display == "Hours per Asset":
+        if hours_asset and hours_source_rows:
+            source_row = hours_source_rows[0]
+            machine = get_machine(source_row)
+            category = get_category(source_row)
+
+            hours_dashboard_html = build_hours_based_performance_html(
+                [source_row],
+                start_date,
+                end_date,
+                heading_override=(
+                    f"{machine} — "
+                    f"{UI_TITLES.get(category, category)}"
+                ),
+            )
+        elif hours_source_rows:
+            category_groups = {}
+
+            for source_row in hours_source_rows:
+                category = get_category(source_row)
+                category_groups.setdefault(
+                    category,
+                    [],
+                ).append(source_row)
+
+            grouped_sections = []
+
+            for category in UI_CATEGORIES:
+                category_rows = category_groups.get(category) or []
+
+                if not category_rows:
+                    continue
+
+                category_title = esc(
+                    UI_TITLES.get(category, category)
+                )
+
+                asset_sections = []
+
+                for source_row in sorted(
+                    category_rows,
+                    key=lambda row: get_machine(row),
+                ):
+                    machine = get_machine(source_row)
+
+                    asset_sections.append(
+                        build_hours_based_performance_html(
+                            [source_row],
+                            start_date,
+                            end_date,
+                            heading_override=machine,
+                        )
+                    )
+
+                grouped_sections.append(f"""
+<div style="margin:8px 0 18px;padding:10px 14px;background:#dbeafe;color:#1e3a8a;font-size:14px;font-weight:900;">
+    {category_title} · {len(category_rows)} asset(s)
+</div>
+<div style="padding-left:16px;">
+    {"".join(asset_sections)}
+</div>
+""")
+
+            hours_dashboard_html = "".join(grouped_sections)
+        else:
+            hours_dashboard_html = '<div class="frappe-card" style="padding:18px;">No hours data found for the selected asset.</div>'
+    else:
+        hours_dashboard_html = build_hours_based_performance_html(
+            hours_source_rows,
+            start_date,
+            end_date,
+        )
+
+    return f'''
+<div class="daily-dashboard-tabs" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
+    <button type="button" class="btn btn-primary daily-dashboard-tab-button" data-tab="au">A&amp;U Performance</button>
+    <button type="button" class="btn btn-default daily-dashboard-tab-button" data-tab="hours">Hours Based Performance</button>
+</div>
+<div class="daily-dashboard-tab-panel" data-panel="au">{au_dashboard_html}</div>
+<div class="daily-dashboard-tab-panel" data-panel="hours" style="display:none;">{hours_dashboard_html}</div>
 '''
 
 
@@ -3364,6 +3489,8 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
             "summary_type": summary_type,
             "machine_scope": machine_scope,
             "au_target_filter": au_target_filter or "85% A & U",
+            "hours_display": hours_display or "Hours Average per Category",
+            "hours_asset": hours_asset or "",
         })
     )
 
@@ -3372,7 +3499,7 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
 
 
 @frappe.whitelist()
-def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
+def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None, hours_display=None, hours_asset=None):
     location = location or site
     summary_type = summary_type or "Average Per Machine"
     machine_scope = machine_scope or "Production + Swing/Spare Machines"
@@ -3397,6 +3524,8 @@ def get_dashboard_html(start_date=None, end_date=None, location=None, site=None,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
             "au_target_filter": au_target_filter or "85% A & U",
+            "hours_display": hours_display or "Hours Average per Category",
+            "hours_asset": hours_asset or "",
         })
     )
 
@@ -3538,8 +3667,8 @@ def get_daily_dashboard_pdf_override_css():
     }
 
     .isd-mbubble-blue {
-        border: 2px solid #1a73e8 !important;
-        background: rgba(26, 115, 232, 0.16) !important;
+        border: 2px solid #1d4ed8 !important;
+        background: #bfdbfe !important;
     }
 
     .isd-mbubble-red {

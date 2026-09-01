@@ -1334,7 +1334,12 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 
 
 
-def build_hours_based_performance_html(source_rows, start_date, end_date):
+def build_hours_based_performance_html(
+    source_rows,
+    start_date,
+    end_date,
+    heading_override=None,
+):
     machine_days = {}
 
     for summary_row in source_rows or []:
@@ -1479,7 +1484,10 @@ def build_hours_based_performance_html(source_rows, start_date, end_date):
                         f'<text x="{x:.1f}" y="{y+label_offset:.1f}" text-anchor="middle" font-size="10" font-weight="700" fill="{colour}">{value[key]:.2f}h</text>'
                     )
 
-        category_title = esc(UI_TITLES.get(category, category))
+        category_title = esc(
+            heading_override
+            or UI_TITLES.get(category, category)
+        )
 
         charts.append(f'''
 <div style="margin-bottom:28px;">
