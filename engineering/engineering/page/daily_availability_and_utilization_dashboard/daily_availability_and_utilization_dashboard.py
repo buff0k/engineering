@@ -2300,6 +2300,25 @@ def build_chart_html(
 
         count = max(len(items), 1)
 
+        # PDF_COMPACT_MACHINE_GRAPHS_V12
+        #
+        # PDF only marker class.
+        #
+        # Small machine fleets get a compact PDF width.
+        # Large fleets (>18 machines) keep the existing
+        # full-page horizontal fit.
+        pdf_compact_count = (
+            count
+            if count <= 18
+            else 0
+        )
+        
+        pdf_chart_class = (
+            f"isd-chart isd-pdf-compact-{pdf_compact_count}"
+            if pdf_compact_count
+            else "isd-chart"
+        )
+
         grid_template = (
             f"repeat({count * 2}, minmax(18px, 1fr))"
         )
@@ -2441,7 +2460,7 @@ def build_chart_html(
     </div>
 
     <div
-        class="isd-chart"
+        class="{pdf_chart_class}"
         style="min-width:{min_width}px;"
     >
         <div class="isd-yaxis">
@@ -3169,7 +3188,7 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
 
         <style>
             @page {{
-                size: A4 landscape;
+                size: A3 landscape;
                 margin: 6mm;
             }}
 
@@ -3206,11 +3225,94 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
     </html>
     """
 
+
+    # PDF_GRID_FIT_LIVE_V3
+    # PDF only: reduce minimum graph column widths before get_pdf().
+    if (summary_type or "Average Per Machine") == "Average Per Machine":
+        full_html = full_html.replace(
+            "minmax(18px, 1fr)",
+            "minmax(6px, 1fr)",
+        )
+        full_html = full_html.replace(
+            "minmax(54px, 2fr)",
+            "minmax(18px, 1fr)",
+        )
+
+    # PDF_MACHINE_BAR_SCALE_V11
+    #
+    # Machine bars are generated from a 216px source bar scale.
+    #
+    # Final PDF graph scale:
+    #     100% = 170px
+    #
+    # Therefore:
+    #     PDF bar height = source height * 170 / 216
+    #
+    # Example:
+    #     90.7%:
+    #     source = 90.7 x 2.16 = 195.91px
+    #     PDF    = 195.91 x 170 / 216 = 154.19px
+    #     154.19 / 170 = 90.7%
+    #
+    # PDF only. Browser dashboard is unchanged.
+    if (summary_type or "Average Per Machine") == "Average Per Machine":
+        import re as _pdf_bar_re
+
+        _machine_bar_pattern = _pdf_bar_re.compile(
+            r"""(
+                <div
+                \s+
+                class=['"]isd-bar\s+(?:avail|util)[^'"]*['"]
+                [^>]*?
+                style=['"]
+                [^'"]*?
+                height:
+            )
+            ([0-9]+(?:\.[0-9]+)?)
+            (px)
+            """,
+            _pdf_bar_re.IGNORECASE | _pdf_bar_re.VERBOSE,
+        )
+
+        def _scale_pdf_machine_bar(match):
+            source_height = float(match.group(2))
+
+            scaled_height = (
+                source_height
+                * 170.0
+                / 216.0
+            )
+
+            scaled_height = max(
+                1.0,
+                min(
+                    170.0,
+                    scaled_height,
+                ),
+            )
+
+            scaled_text = (
+                f"{scaled_height:.2f}"
+                .rstrip("0")
+                .rstrip(".")
+            )
+
+            return (
+                match.group(1)
+                + scaled_text
+                + match.group(3)
+            )
+
+        full_html = _machine_bar_pattern.sub(
+            _scale_pdf_machine_bar,
+            full_html,
+        )
+
     pdf = get_pdf(
         full_html,
         options={
             "orientation": "Landscape",
-            "page-size": "A4",
+            "page-size": "A3",
             "margin-top": "6mm",
             "margin-right": "6mm",
             "margin-bottom": "6mm",
@@ -3903,4 +4005,722 @@ def get_daily_dashboard_pdf_override_css():
         font-weight: 700 !important;
         color: #475569 !important;
     }
-    """
+    
+
+    /* PDF_HORIZONTAL_FIT_V3
+
+       PDF ONLY.
+       Fit the complete machine fleet on one landscape page.
+    */
+
+    .isd-chart-section {
+        overflow: hidden !important;
+        max-width: 100% !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section) .isd-chart {
+        width: 147.0588235% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        -webkit-transform: scaleX(0.68) !important;
+        transform: scaleX(0.68) !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart-grid {
+        height: 185px !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis {
+        height: 185px !important;
+        min-height: 185px !important;
+        max-height: 185px !important;
+
+        font-size: 9px !important;
+        font-weight: 900 !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-machinelab {
+        font-size: 9px !important;
+        font-weight: 900 !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar {
+        overflow: visible !important;
+    }
+
+    /* END PDF_HORIZONTAL_FIT_V3 */
+
+
+    /* PDF_VERTICAL_PERCENT_LABELS_V4
+
+       PDF ONLY.
+       Percentage labels vertical.
+       Orange and grey percentages both white.
+    */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar {
+        position: relative !important;
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar > span,
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar .isd-bar-label,
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar .isd-bar-value {
+
+        position: absolute !important;
+
+        left: 50% !important;
+        top: 8px !important;
+
+        display: inline-block !important;
+
+        white-space: nowrap !important;
+        line-height: 1 !important;
+
+        font-size: 9px !important;
+        font-weight: 800 !important;
+
+        color: #ffffff !important;
+
+        text-shadow:
+            1px 1px 2px rgba(0,0,0,0.85) !important;
+
+        transform:
+            translateX(-50%) rotate(-90deg) !important;
+
+        -webkit-transform:
+            translateX(-50%) rotate(-90deg) !important;
+
+        transform-origin:
+            center center !important;
+
+        -webkit-transform-origin:
+            center center !important;
+
+        z-index: 30 !important;
+
+        pointer-events: none !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar.avail > span,
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar.avail .isd-bar-label,
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar.avail .isd-bar-value {
+
+        color: #ffffff !important;
+
+        text-shadow:
+            1px 1px 2px rgba(0,0,0,0.85) !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar.util > span,
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar.util .isd-bar-label,
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-bar.util .isd-bar-value {
+
+        color: #ffffff !important;
+
+        text-shadow:
+            1px 1px 2px rgba(0,0,0,0.85) !important;
+    }
+
+    /* END PDF_VERTICAL_PERCENT_LABELS_V4 */
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+    /* PDF_FINAL_PERCENT_GEOMETRY_V10
+
+       FINAL PDF GRAPH SCALE FIX
+
+       Keep the working horizontal fit and vertical percentage labels.
+       Keep the bars bottom-anchored at 0%.
+       Only correct the graph scale so bar height matches its percentage.
+
+       IMPORTANT:
+       The graph must use the original 170px plotting height.
+       That is the scale that matches the percentage bar heights.
+    */
+
+
+    /* ========================================================
+       CHART CONTAINER
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart {
+
+        position: relative !important;
+
+        padding-top: 10px !important;
+        padding-bottom: 44px !important;
+
+        overflow: visible !important;
+    }
+
+
+    /* ========================================================
+       PLOT AREA = 170PX
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart-grid {
+
+        display: block !important;
+        white-space: nowrap !important;
+
+        width: auto !important;
+        max-width: none !important;
+
+        height: 170px !important;
+        min-height: 170px !important;
+        max-height: 170px !important;
+
+        line-height: 170px !important;
+        font-size: 0 !important;
+
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+
+        position: relative !important;
+        overflow: visible !important;
+
+        border-bottom: 2px solid #94a3b8 !important;
+
+        background:
+            linear-gradient(
+                to top,
+                rgba(100,116,139,0.18) 1px,
+                transparent 1px
+            ) !important;
+
+        background-size: 100% 17px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+    }
+
+
+    /* ========================================================
+       BARS
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart-grid > .isd-bar {
+
+        display: inline-block !important;
+        vertical-align: bottom !important;
+
+        position: relative !important;
+
+        top: auto !important;
+        bottom: auto !important;
+
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+
+        line-height: normal !important;
+
+        max-height: 170px !important;
+
+        box-sizing: border-box !important;
+        overflow: visible !important;
+    }
+
+
+    /* ========================================================
+       Y AXIS = SAME 170PX
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis {
+
+        position: absolute !important;
+
+        left: 8px !important;
+        top: 10px !important;
+        bottom: auto !important;
+
+        width: 44px !important;
+
+        height: 170px !important;
+        min-height: 170px !important;
+        max-height: 170px !important;
+
+        display: block !important;
+
+        margin: 0 !important;
+        padding: 0 5px 0 0 !important;
+
+        box-sizing: border-box !important;
+
+        font-size: 9px !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+
+        text-align: right !important;
+
+        color: #475569 !important;
+        background: transparent !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        z-index: 20 !important;
+    }
+
+
+    /* ========================================================
+       Y AXIS LABELS
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div {
+
+        position: absolute !important;
+        right: 5px !important;
+        width: 36px !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+
+        line-height: 1 !important;
+        white-space: nowrap !important;
+
+        -webkit-transform: translateY(-50%) !important;
+        transform: translateY(-50%) !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(1)  { top: 0%   !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(2)  { top: 10%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(3)  { top: 20%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(4)  { top: 30%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(5)  { top: 40%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(6)  { top: 50%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(7)  { top: 60%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(8)  { top: 70%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(9)  { top: 80%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(10) { top: 90%  !important; }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-yaxis > div:nth-child(11) { top: 100% !important; }
+
+
+    /* ========================================================
+       TARGET LINES
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-avgline.isd-avg-85 {
+        top: calc(10px + 170px * 0.15) !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-avgline.isd-avg-80 {
+        top: calc(10px + 170px * 0.20) !important;
+    }
+
+
+    /* ========================================================
+       MACHINE LABELS
+       ======================================================== */
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-machinelabels {
+
+        margin-top: 7px !important;
+        padding-top: 0 !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+    }
+
+
+    /* END PDF_FINAL_PERCENT_GEOMETRY_V10 */
+
+
+
+    /* PDF_COMPACT_MACHINE_GRAPHS_V12
+
+       PDF ONLY.
+
+       Small machine graphs use only the width they need.
+
+       Large machine graphs continue using:
+           PDF_HORIZONTAL_FIT_V3
+
+       No percentage, baseline or bar-height logic changes.
+    */
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-1 {
+
+        width: 360px !important;
+        min-width: 360px !important;
+        max-width: 360px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-2 {
+
+        width: 360px !important;
+        min-width: 360px !important;
+        max-width: 360px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-3 {
+
+        width: 360px !important;
+        min-width: 360px !important;
+        max-width: 360px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-4 {
+
+        width: 360px !important;
+        min-width: 360px !important;
+        max-width: 360px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-5 {
+
+        width: 380px !important;
+        min-width: 380px !important;
+        max-width: 380px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-6 {
+
+        width: 438px !important;
+        min-width: 438px !important;
+        max-width: 438px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-7 {
+
+        width: 496px !important;
+        min-width: 496px !important;
+        max-width: 496px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-8 {
+
+        width: 554px !important;
+        min-width: 554px !important;
+        max-width: 554px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-9 {
+
+        width: 612px !important;
+        min-width: 612px !important;
+        max-width: 612px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-10 {
+
+        width: 670px !important;
+        min-width: 670px !important;
+        max-width: 670px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-11 {
+
+        width: 728px !important;
+        min-width: 728px !important;
+        max-width: 728px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-12 {
+
+        width: 786px !important;
+        min-width: 786px !important;
+        max-width: 786px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-13 {
+
+        width: 844px !important;
+        min-width: 844px !important;
+        max-width: 844px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-14 {
+
+        width: 902px !important;
+        min-width: 902px !important;
+        max-width: 902px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-15 {
+
+        width: 960px !important;
+        min-width: 960px !important;
+        max-width: 960px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-16 {
+
+        width: 1018px !important;
+        min-width: 1018px !important;
+        max-width: 1018px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-17 {
+
+        width: 1076px !important;
+        min-width: 1076px !important;
+        max-width: 1076px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-18 {
+
+        width: 1134px !important;
+        min-width: 1134px !important;
+        max-width: 1134px !important;
+
+        -webkit-transform: none !important;
+        transform: none !important;
+
+        -webkit-transform-origin: left top !important;
+        transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+
+    /* END PDF_COMPACT_MACHINE_GRAPHS_V12 */
+"""
