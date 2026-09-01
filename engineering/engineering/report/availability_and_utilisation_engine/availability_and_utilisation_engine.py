@@ -3,6 +3,10 @@ from collections import defaultdict
 from datetime import timedelta
 
 import frappe
+from engineering.engineering.doctype.au_invalid_shift_exclusion.au_invalid_shift_exclusion import (
+    apply_invalid_shift_exclusions,
+)
+
 from frappe.utils import (
     add_days,
     flt,
@@ -477,6 +481,10 @@ def get_data(filters):
         calculate_availability_values(row)
         validate_au_row(row)
         round_engine_row(row)
+
+    apply_invalid_shift_exclusions(
+        shift_rows
+    )
 
     data = build_tree_rows(
         shift_rows
@@ -997,6 +1005,7 @@ def build_summary_row(
         if row.get("shift_date")
         and row.get("au_validation_level")
         in ("warning", "invalid")
+        and not row.get("invalid_au_excluded")
     }
 
     problem_day_count = len(
@@ -1008,6 +1017,7 @@ def build_summary_row(
         for row in rows
         if row.get("au_validation_level")
         == "invalid"
+        and not row.get("invalid_au_excluded")
     ]
 
     warning_au_rows = [
