@@ -2061,3 +2061,1121 @@ function all_downtime_records_verified() {
 })();
 
 // === DOWNTIME SELECTED DATE PRINT PREVIEW V3 END ===
+
+
+// === SAVED HOURLY / DAILY DOWNTIME REPORTS START ===
+
+(function install_saved_downtime_reports() {
+    const settings = frappe.query_reports["Down Time"];
+
+    if (!settings || settings.__saved_downtime_reports) {
+        return;
+    }
+
+    settings.__saved_downtime_reports = true;
+
+    const original_onload = settings.onload;
+    const original_refresh = settings.refresh;
+
+    settings.onload = function(report) {
+        if (typeof original_onload === "function") {
+            original_onload.apply(this, arguments);
+        }
+
+        window.setTimeout(() => setup_saved_reports(report), 200);
+    };
+
+    settings.refresh = function(report) {
+        if (typeof original_refresh === "function") {
+            original_refresh.apply(this, arguments);
+        }
+
+        window.setTimeout(() => {
+            setup_saved_reports(report);
+
+            const $main =
+                report.page.main || report.page.$wrapper;
+
+            load_saved_report_options($main);
+
+            show_downtime_tab(
+                report,
+                report.__active_downtime_tab || "signoff"
+            );
+        }, 200);
+    };
+
+
+    function setup_saved_reports(report) {
+        if (!report || !report.page) {
+            return;
+        }
+
+        const $main = report.page.main || report.page.$wrapper;
+
+        if (!$main || $main.find(".dt-report-tabs").length) {
+            return;
+        }
+
+        report.__active_downtime_tab = "signoff";
+
+        const html = `
+            <style>
+                .dt-report-tabs {
+                    display:flex;
+                    gap:8px;
+                    margin:12px 0;
+                    flex-wrap:wrap;
+                }
+
+                .dt-saved-reports-panel {
+                    display:none;
+                    background:#f5f7fa;
+                    border:1px solid #d8dce3;
+                    border-radius:8px;
+                    padding:16px;
+                    margin-bottom:16px;
+                }
+
+                .dt-saved-filter-grid {
+                    display:grid;
+                    grid-template-columns:
+                        repeat(auto-fit, minmax(260px, 1fr));
+                    gap:12px;
+                    align-items:end;
+                }
+
+                .dt-saved-filter label {
+                    display:block;
+                    font-weight:700;
+                    margin-bottom:6px;
+                }
+
+                .dt-saved-filter select {
+                    width:100%;
+                    min-height:36px;
+                }
+
+                .dt-saved-report-preview {
+                    margin-top:16px;
+                    background:#fff;
+                    border:1px solid #cfd5dd;
+                    border-radius:8px;
+                    padding:24px;
+                    color:#111;
+                }
+
+                .dt-saved-report-title {
+                    text-align:center;
+                    font-size:22px;
+                    font-weight:800;
+                    color:#173f73;
+                    margin-bottom:6px;
+                }
+
+                .dt-saved-report-meta {
+                    text-align:center;
+                    color:#52606d;
+                    font-weight:600;
+                    padding-bottom:14px;
+                    margin-bottom:16px;
+                    border-bottom:2px solid #dbeafe;
+                }
+
+                .dt-saved-report-message {
+                    white-space:pre-wrap;
+                    font-family:Arial, sans-serif;
+                    font-size:15px;
+                    line-height:1.55;
+                    margin:0;
+                }
+
+                .dt-saved-actions {
+                    display:flex;
+                    gap:8px;
+                    margin-top:14px;
+                    flex-wrap:wrap;
+                }
+            </style>
+
+            <div class="dt-report-tabs">
+                <button
+                    type="button"
+                    class="btn btn-primary dt-report-tab"
+                    data-tab="signoff">
+                    ${__("Downtime Sign-Off")}
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-default dt-report-tab"
+                    data-tab="saved">
+                    ${__("Hourly/Daily Reports")}
+                </button>
+            </div>
+
+            <div class="dt-saved-reports-panel">
+                <div class="dt-saved-filter-grid">
+                    <div class="dt-saved-filter dt-hourly-filter">
+                        <label>${__("Hourly Downtime Report")}</label>
+                        <select class="form-control dt-hourly-select">
+                            <option value="">
+                                ${__("Select Hourly Report")}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="dt-saved-filter dt-daily-filter">
+                        <label>${__("Daily Downtime Report")}</label>
+                        <select class="form-control dt-daily-select">
+                            <option value="">
+                                ${__("Select Daily Report")}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dt-saved-actions">
+                    <button
+                        type="button"
+                        class="btn btn-default dt-clear-saved-report">
+                        ${__("Clear Selection")}
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-primary dt-download-saved-jpeg"
+                        style="display:none;">
+                        ${__("Download JPEG")}
+                    </button>
+                </div>
+
+                <div
+                    class="dt-saved-report-preview"
+                    style="display:none;">
+                </div>
+            </div>
+        `;
+
+        const $report_wrapper = $main.find(".report-wrapper").first();
+
+        if ($report_wrapper.length) {
+            $report_wrapper.before(html);
+        } else {
+            $main.prepend(html);
+        }
+
+        bind_saved_report_actions(report, $main);
+        load_saved_report_options($main);
+    }
+
+
+    function show_downtime_tab(report, tab) {
+        const $main = report.page.main || report.page.$wrapper;
+        const saved = tab === "saved";
+
+        report.__active_downtime_tab = tab;
+
+        $main.find(".dt-report-tab")
+            .removeClass("btn-primary")
+            .addClass("btn-default");
+
+        $main.find(
+            `.dt-report-tab[data-tab="${tab}"]`
+        )
+            .removeClass("btn-default")
+            .addClass("btn-primary");
+
+        $main.find(".dt-saved-reports-panel").toggle(saved);
+        $main.find(".report-wrapper").toggle(!saved);
+
+        $(".downtime-signoff-action-wrapper").toggle(!saved);
+        $(".mobile-downtime-wrapper").toggle(!saved);
+        $(".downtime-avail-util-wrapper").toggle(!saved);
+    }
+
+
+    function bind_saved_report_actions(report, $main) {
+        $main
+            .off("click.dt_report_tab", ".dt-report-tab")
+            .on("click.dt_report_tab", ".dt-report-tab", function() {
+                show_downtime_tab(
+                    report,
+                    $(this).data("tab")
+                );
+            });
+
+        $main
+            .off("change.dt_hourly", ".dt-hourly-select")
+            .on("change.dt_hourly", ".dt-hourly-select", function() {
+                const name = $(this).val();
+
+                if (!name) {
+                    reset_saved_report_filters($main);
+                    return;
+                }
+
+                $main.find(".dt-daily-filter").hide();
+
+                load_saved_report(
+                    $main,
+                    "Hourly Downtime Summary",
+                    name
+                );
+            });
+
+        $main
+            .off("change.dt_daily", ".dt-daily-select")
+            .on("change.dt_daily", ".dt-daily-select", function() {
+                const name = $(this).val();
+
+                if (!name) {
+                    reset_saved_report_filters($main);
+                    return;
+                }
+
+                $main.find(".dt-hourly-filter").hide();
+
+                load_saved_report(
+                    $main,
+                    "Daily Downtime Summary",
+                    name
+                );
+            });
+
+        $main
+            .off("click.dt_clear", ".dt-clear-saved-report")
+            .on("click.dt_clear", ".dt-clear-saved-report", function() {
+                reset_saved_report_filters($main);
+            });
+
+        $main
+            .off("click.dt_jpeg", ".dt-download-saved-jpeg")
+            .on("click.dt_jpeg", ".dt-download-saved-jpeg", function() {
+                download_saved_report_jpeg($main);
+            });
+    }
+
+
+    function load_saved_report_options($main) {
+        const site = frappe.query_report.get_filter_value("site");
+
+        const $hourly = $main.find(".dt-hourly-select");
+        const $daily = $main.find(".dt-daily-select");
+
+        $hourly.html(
+            `<option value="">${__("Select Hourly Report")}</option>`
+        );
+
+        $daily.html(
+            `<option value="">${__("Select Daily Report")}</option>`
+        );
+
+        reset_saved_report_filters($main);
+
+        if (!site) {
+            return;
+        }
+
+        frappe.call({
+            method:
+                "engineering.engineering.report.down_time.down_time." +
+                "get_saved_downtime_summary_options",
+
+            args: {
+                site: site
+            },
+
+            callback: function(response) {
+                const data = response.message || {};
+
+                populate_summary_select(
+                    $hourly,
+                    data.hourly || [],
+                    "hourly"
+                );
+
+                populate_summary_select(
+                    $daily,
+                    data.daily || [],
+                    "daily"
+                );
+            }
+        });
+    }
+
+    function populate_summary_select($select, rows, type) {
+        rows.forEach(row => {
+            const extra = type === "hourly"
+                ? row.hour_slot || ""
+                : row.shift || "";
+
+            const label = [
+                row.report_date,
+                row.site,
+                extra
+            ].filter(Boolean).join(" | ");
+
+            $("<option>")
+                .val(row.name)
+                .text(label)
+                .appendTo($select);
+        });
+    }
+
+
+    function load_saved_report($main, doctype, name) {
+        frappe.call({
+            method:
+                "engineering.engineering.report.down_time.down_time." +
+                "get_saved_downtime_summary",
+
+            args: {
+                doctype: doctype,
+                name: name
+            },
+
+            freeze: true,
+            freeze_message: __("Loading saved report..."),
+
+            callback: function(response) {
+                const data = response.message || {};
+
+                render_saved_report($main, data);
+            }
+        });
+    }
+
+
+    function render_saved_report($main, data) {
+        const hourly =
+            data.doctype === "Hourly Downtime Summary";
+
+        const title = hourly
+            ? __("Hourly Downtime Report")
+            : __("Daily Downtime Report");
+
+        const period = hourly
+            ? data.hour_slot || ""
+            : data.shift || "";
+
+        const all_rows = Array.isArray(data.report_rows)
+            ? data.report_rows.map(row => ({
+                plant:
+                    row.plant_no
+                    || row.asset_name
+                    || "-",
+
+                category:
+                    row.category_group
+                    || row.asset_category
+                    || "Other",
+
+                status:
+                    row.status_key
+                    || row.open_closed
+                    || row.status
+                    || "",
+
+                hours: Number(
+                    hourly
+                        ? row.open_hours || 0
+                        : row.breakdown_hours || 0
+                ),
+
+                reason:
+                    row.reason
+                    || row.breakdown_reason
+                    || "-",
+
+                start:
+                    row.start_time
+                    || row.breakdown_start_datetime
+                    || "-",
+
+                resolved:
+                    row.resolved_time
+                    || row.resolved_datetime
+                    || "OPEN"
+            }))
+            : [];
+
+        const rows = all_rows.filter(row =>
+            String(row.status).toLowerCase().includes("open")
+        );
+
+        const open_rows = rows;
+
+        const available_rows =
+            all_rows.length - open_rows.length;
+
+        const total_hours = open_rows.reduce(
+            (total, row) => total + row.hours,
+            0
+        );
+
+        const row_html = rows.length
+            ? rows.map(row => {
+                const is_open = String(row.status)
+                    .toLowerCase()
+                    .includes("open");
+
+                return `
+                    <div class="dt-modern-row ${is_open ? "is-open" : "is-available"}">
+                        <div class="dt-modern-machine">
+                            <span class="dt-modern-machine-icon">
+                                ${is_open ? "⚠" : "✓"}
+                            </span>
+
+                            <div>
+                                <strong>${frappe.utils.escape_html(row.plant)}</strong>
+                                <small>${frappe.utils.escape_html(row.category)}</small>
+                            </div>
+                        </div>
+
+                        <div class="dt-modern-reason">
+                            <span>${__("Reason")}</span>
+                            <strong>${frappe.utils.escape_html(row.reason)}</strong>
+                        </div>
+
+                        <div class="dt-modern-time">
+                            <span>${__("Start")}</span>
+                            <strong>${frappe.utils.escape_html(row.start)}</strong>
+                        </div>
+
+                        <div class="dt-modern-hours">
+                            <span>${__("Downtime")}</span>
+                            <strong>${row.hours.toFixed(2)}h</strong>
+                        </div>
+
+                        <div>
+                            <span class="dt-modern-status ${is_open ? "open" : "available"}">
+                                ${is_open ? __("OPEN") : __("AVAILABLE")}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join("")
+            : `
+                <div class="dt-modern-empty">
+                    ${__("No downtime information found.")}
+                </div>
+            `;
+
+        const meta = [
+            data.site,
+            data.report_date,
+            period
+        ].filter(Boolean).join(" • ");
+
+        $main.find(".dt-saved-report-preview")
+            .html(`
+                <style>
+                    .dt-modern-report {
+                        overflow:hidden;
+                        border-radius:16px;
+                        background:#f4f7fb;
+                        box-shadow:0 10px 35px rgba(15,23,42,.12);
+                    }
+
+                    .dt-modern-header {
+                        padding:28px;
+                        color:#fff;
+                        background:
+                            linear-gradient(135deg,#0f172a,#1d4ed8);
+                    }
+
+                    .dt-modern-header h2 {
+                        margin:0 0 8px;
+                        color:#fff;
+                        font-size:25px;
+                        font-weight:900;
+                    }
+
+                    .dt-modern-header p {
+                        margin:0;
+                        color:#dbeafe;
+                        font-size:14px;
+                        font-weight:600;
+                    }
+
+                    .dt-modern-kpis {
+                        display:grid;
+                        grid-template-columns:repeat(4,minmax(130px,1fr));
+                        gap:12px;
+                        padding:18px;
+                    }
+
+                    .dt-modern-kpi {
+                        padding:16px;
+                        border-radius:12px;
+                        background:#fff;
+                        border-left:5px solid #2563eb;
+                        box-shadow:0 3px 12px rgba(15,23,42,.07);
+                    }
+
+                    .dt-modern-kpi.red {
+                        border-left-color:#dc2626;
+                    }
+
+                    .dt-modern-kpi.green {
+                        border-left-color:#16a34a;
+                    }
+
+                    .dt-modern-kpi.orange {
+                        border-left-color:#f59e0b;
+                    }
+
+                    .dt-modern-kpi span {
+                        display:block;
+                        color:#64748b;
+                        font-size:11px;
+                        font-weight:800;
+                        text-transform:uppercase;
+                    }
+
+                    .dt-modern-kpi strong {
+                        display:block;
+                        margin-top:5px;
+                        color:#0f172a;
+                        font-size:24px;
+                    }
+
+                    .dt-modern-body {
+                        padding:0 18px 20px;
+                    }
+
+                    .dt-modern-row {
+                        display:grid;
+                        grid-template-columns:
+                            minmax(150px,1fr)
+                            minmax(220px,2fr)
+                            minmax(170px,1.2fr)
+                            110px
+                            110px;
+                        gap:14px;
+                        align-items:center;
+                        margin-bottom:10px;
+                        padding:15px;
+                        background:#fff;
+                        border:1px solid #e2e8f0;
+                        border-radius:12px;
+                    }
+
+                    .dt-modern-row.is-open {
+                        border-left:5px solid #ef4444;
+                    }
+
+                    .dt-modern-row.is-available {
+                        border-left:5px solid #22c55e;
+                    }
+
+                    .dt-modern-machine {
+                        display:flex;
+                        align-items:center;
+                        gap:10px;
+                    }
+
+                    .dt-modern-machine-icon {
+                        display:flex;
+                        width:34px;
+                        height:34px;
+                        align-items:center;
+                        justify-content:center;
+                        border-radius:50%;
+                        background:#fee2e2;
+                        color:#b91c1c;
+                        font-weight:900;
+                    }
+
+                    .is-available .dt-modern-machine-icon {
+                        background:#dcfce7;
+                        color:#15803d;
+                    }
+
+                    .dt-modern-machine strong,
+                    .dt-modern-reason strong,
+                    .dt-modern-time strong,
+                    .dt-modern-hours strong {
+                        display:block;
+                        color:#172033;
+                    }
+
+                    .dt-modern-machine small,
+                    .dt-modern-row span:not(.dt-modern-status):not(.dt-modern-machine-icon) {
+                        display:block;
+                        color:#64748b;
+                        font-size:11px;
+                        font-weight:700;
+                    }
+
+                    .dt-modern-reason strong {
+                        font-size:12px;
+                    }
+
+                    .dt-modern-status {
+                        display:inline-block;
+                        padding:7px 11px;
+                        border-radius:20px;
+                        font-size:11px;
+                        font-weight:900;
+                    }
+
+                    .dt-modern-status.open {
+                        color:#991b1b;
+                        background:#fee2e2;
+                    }
+
+                    .dt-modern-status.available {
+                        color:#166534;
+                        background:#dcfce7;
+                    }
+
+                    .dt-modern-empty {
+                        padding:35px;
+                        text-align:center;
+                        color:#64748b;
+                        background:#fff;
+                        border-radius:12px;
+                    }
+
+                    @media (max-width:900px) {
+                        .dt-modern-kpis {
+                            grid-template-columns:repeat(2,1fr);
+                        }
+
+                        .dt-modern-row {
+                            grid-template-columns:1fr;
+                        }
+                    }
+                </style>
+
+                <div class="dt-modern-report">
+                    <div class="dt-modern-header">
+                        <h2>${frappe.utils.escape_html(title)}</h2>
+                        <p>${frappe.utils.escape_html(meta)}</p>
+                    </div>
+
+                    <div class="dt-modern-kpis">
+                        <div class="dt-modern-kpi">
+                            <span>${__("Breakdown Records")}</span>
+                            <strong>${rows.length}</strong>
+                        </div>
+
+                        <div class="dt-modern-kpi red">
+                            <span>${__("Open Breakdowns")}</span>
+                            <strong>${open_rows.length}</strong>
+                        </div>
+
+                        <div class="dt-modern-kpi green">
+                            <span>${hourly ? __("Available") : __("Closed")}</span>
+                            <strong>${available_rows}</strong>
+                        </div>
+
+                        <div class="dt-modern-kpi orange">
+                            <span>${__("Total Downtime")}</span>
+                            <strong>${total_hours.toFixed(2)}h</strong>
+                        </div>
+                    </div>
+
+                    <div class="dt-modern-body">
+                        ${row_html}
+                    </div>
+                </div>
+            `)
+            .show()
+            .data("report", {
+                title: title,
+                meta: meta,
+                message: data.summary_message || "",
+                name: data.name,
+                rows: rows,
+                all_count: all_rows.length,
+                available_count: available_rows
+            });
+
+        $main.find(".dt-download-saved-jpeg").show();
+    }
+
+    function reset_saved_report_filters($main) {
+        $main.find(".dt-hourly-select").val("");
+        $main.find(".dt-daily-select").val("");
+        $main.find(".dt-hourly-filter").show();
+        $main.find(".dt-daily-filter").show();
+        $main.find(".dt-saved-report-preview").hide().empty();
+        $main.find(".dt-download-saved-jpeg").hide();
+    }
+
+
+    function download_saved_report_jpeg($main) {
+        const report =
+            $main.find(".dt-saved-report-preview").data("report");
+
+        if (!report) {
+            frappe.msgprint(__("Please select a report first."));
+            return;
+        }
+
+        const rows = Array.isArray(report.rows)
+            ? report.rows
+            : [];
+
+        const open_rows = rows.filter(row =>
+            String(row.status).toLowerCase().includes("open")
+        );
+
+        const available_count =
+            Number(report.available_count || 0);
+
+        const total_hours = open_rows.reduce(
+            (total, row) => total + Number(row.hours || 0),
+            0
+        );
+
+        const width = 1600;
+        const padding = 55;
+        const row_height = 125;
+        const header_height = 190;
+        const kpi_height = 145;
+
+        const height = Math.max(
+            760,
+            header_height
+                + kpi_height
+                + 90
+                + (rows.length * row_height)
+        );
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#f4f7fb";
+        ctx.fillRect(0, 0, width, height);
+
+        const gradient = ctx.createLinearGradient(
+            0,
+            0,
+            width,
+            header_height
+        );
+
+        gradient.addColorStop(0, "#0f172a");
+        gradient.addColorStop(1, "#1d4ed8");
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, header_height);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 48px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(report.title, padding, 78);
+
+        ctx.fillStyle = "#dbeafe";
+        ctx.font = "bold 25px Arial";
+        ctx.fillText(report.meta, padding, 125);
+
+        const kpis = [
+            {
+                label: "BREAKDOWN RECORDS",
+                value: String(rows.length),
+                colour: "#2563eb"
+            },
+            {
+                label: "OPEN BREAKDOWNS",
+                value: String(open_rows.length),
+                colour: "#dc2626"
+            },
+            {
+                label: "AVAILABLE / CLOSED",
+                value: String(available_count),
+                colour: "#16a34a"
+            },
+            {
+                label: "TOTAL DOWNTIME",
+                value: `${total_hours.toFixed(2)}h`,
+                colour: "#f59e0b"
+            }
+        ];
+
+        const gap = 20;
+        const card_width =
+            (width - (padding * 2) - (gap * 3)) / 4;
+
+        kpis.forEach((kpi, index) => {
+            const x = padding + index * (card_width + gap);
+            const y = header_height + 28;
+
+            draw_canvas_round_rect(
+                ctx,
+                x,
+                y,
+                card_width,
+                105,
+                14,
+                "#ffffff"
+            );
+
+            ctx.fillStyle = kpi.colour;
+            ctx.fillRect(x, y, 8, 105);
+
+            ctx.fillStyle = "#64748b";
+            ctx.font = "bold 17px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(kpi.label, x + 28, y + 35);
+
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 35px Arial";
+            ctx.fillText(kpi.value, x + 28, y + 78);
+        });
+
+        let y = header_height + kpi_height;
+
+        rows.forEach(row => {
+            const is_open = String(row.status)
+                .toLowerCase()
+                .includes("open");
+
+            draw_canvas_round_rect(
+                ctx,
+                padding,
+                y,
+                width - (padding * 2),
+                105,
+                14,
+                "#ffffff"
+            );
+
+            ctx.fillStyle = is_open
+                ? "#ef4444"
+                : "#22c55e";
+
+            ctx.fillRect(padding, y, 8, 105);
+
+            ctx.fillStyle = is_open
+                ? "#fee2e2"
+                : "#dcfce7";
+
+            ctx.beginPath();
+            ctx.arc(padding + 47, y + 52, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = is_open
+                ? "#991b1b"
+                : "#166534";
+
+            ctx.font = "bold 24px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                is_open ? "!" : "✓",
+                padding + 47,
+                y + 61
+            );
+
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 24px Arial";
+            ctx.fillText(row.plant, padding + 90, y + 38);
+
+            ctx.fillStyle = "#64748b";
+            ctx.font = "bold 16px Arial";
+            ctx.fillText(row.category, padding + 90, y + 68);
+
+            ctx.fillStyle = "#64748b";
+            ctx.font = "bold 14px Arial";
+            ctx.fillText("REASON", padding + 330, y + 27);
+
+            ctx.fillStyle = "#172033";
+            ctx.font = "bold 17px Arial";
+
+            draw_wrapped_canvas_text(
+                ctx,
+                row.reason || "-",
+                padding + 330,
+                y + 52,
+                570,
+                21,
+                2
+            );
+
+            ctx.fillStyle = "#64748b";
+            ctx.font = "bold 14px Arial";
+            ctx.fillText("START", padding + 930, y + 27);
+
+            ctx.fillStyle = "#172033";
+            ctx.font = "bold 16px Arial";
+            ctx.fillText(
+                String(row.start || "-").slice(0, 19),
+                padding + 930,
+                y + 55
+            );
+
+            ctx.fillStyle = "#64748b";
+            ctx.font = "bold 14px Arial";
+            ctx.fillText("DOWNTIME", padding + 1220, y + 27);
+
+            ctx.fillStyle = is_open
+                ? "#dc2626"
+                : "#16a34a";
+
+            ctx.font = "bold 24px Arial";
+            ctx.fillText(
+                `${Number(row.hours || 0).toFixed(2)}h`,
+                padding + 1220,
+                y + 59
+            );
+
+            ctx.fillStyle = is_open
+                ? "#fee2e2"
+                : "#dcfce7";
+
+            draw_canvas_round_rect(
+                ctx,
+                padding + 1380,
+                y + 31,
+                105,
+                40,
+                20,
+                ctx.fillStyle
+            );
+
+            ctx.fillStyle = is_open
+                ? "#991b1b"
+                : "#166534";
+
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                is_open ? "OPEN" : "AVAILABLE",
+                padding + 1432,
+                y + 57
+            );
+
+            ctx.textAlign = "left";
+            y += row_height;
+        });
+
+        if (!rows.length) {
+            ctx.fillStyle = "#64748b";
+            ctx.font = "bold 26px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                "No downtime information found.",
+                width / 2,
+                y + 80
+            );
+        }
+
+        const link = document.createElement("a");
+
+        link.download =
+            String(report.name || "downtime-report")
+                .replace(/[^a-z0-9_-]+/gi, "_") +
+            ".jpg";
+
+        link.href = canvas.toDataURL("image/jpeg", 0.95);
+        link.click();
+    }
+
+
+    function draw_canvas_round_rect(
+        ctx,
+        x,
+        y,
+        width,
+        height,
+        radius,
+        colour
+    ) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+        ctx.fillStyle = colour;
+        ctx.fill();
+    }
+
+
+    function draw_wrapped_canvas_text(
+        ctx,
+        text,
+        x,
+        y,
+        max_width,
+        line_height,
+        max_lines
+    ) {
+        const words = String(text || "").split(/\s+/);
+        const lines = [];
+        let line = "";
+
+        words.forEach(word => {
+            const candidate = line
+                ? `${line} ${word}`
+                : word;
+
+            if (
+                ctx.measureText(candidate).width > max_width
+                && line
+            ) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = candidate;
+            }
+        });
+
+        if (line) {
+            lines.push(line);
+        }
+
+        lines.slice(0, max_lines).forEach(
+            (current_line, index) => {
+                let output = current_line;
+
+                if (
+                    index === max_lines - 1
+                    && lines.length > max_lines
+                ) {
+                    output += "…";
+                }
+
+                ctx.fillText(
+                    output,
+                    x,
+                    y + (index * line_height)
+                );
+            }
+        );
+    }
+
+    function wrap_canvas_line(context, text, max_width, output) {
+        if (!text) {
+            output.push("");
+            return;
+        }
+
+        const words = String(text).split(/\s+/);
+        let line = "";
+
+        words.forEach(word => {
+            const candidate = line
+                ? `${line} ${word}`
+                : word;
+
+            if (
+                context.measureText(candidate).width > max_width &&
+                line
+            ) {
+                output.push(line);
+                line = word;
+            } else {
+                line = candidate;
+            }
+        });
+
+        output.push(line);
+    }
+})();
+
+// === SAVED HOURLY / DAILY DOWNTIME REPORTS END ===
