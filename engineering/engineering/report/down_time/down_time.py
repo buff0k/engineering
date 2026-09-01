@@ -1,3 +1,4 @@
+import json
 # Copyright (c) 2026, Isambane Mining (Pty) Ltd
 # For license information, please see license.txt
 
@@ -469,7 +470,7 @@ def get_data(filters):
             if is_open:
                 clipped_start = max(
                     get_datetime(breakdown_start),
-                    START_LOOKUP_DATETIME,
+                    window_start,
                 )
 
                 clipped_end = min(
@@ -1910,3 +1911,84 @@ def export_selected_downtime_excel(
 
 
 # === DOWNTIME SELECTED DATE PRINT PREVIEW V3 END ===
+
+
+@frappe.whitelist()
+def get_saved_downtime_summary(doctype, name):
+    """Return one saved Hourly or Daily Downtime Summary."""
+
+    allowed_doctypes = {
+        "Hourly Downtime Summary",
+        "Daily Downtime Summary",
+    }
+
+    if doctype not in allowed_doctypes:
+        frappe.throw("Invalid downtime summary type.")
+
+    if not name:
+        frappe.throw("Please select a downtime report.")
+
+    doc = frappe.get_doc(doctype, name)
+    doc.check_permission("read")
+
+    try:
+        report_rows = json.loads(
+            doc.get("report_data_json") or "[]"
+        )
+    except (TypeError, ValueError):
+        report_rows = []
+
+    return {
+        "name": doc.name,
+        "doctype": doctype,
+        "site": doc.get("site"),
+        "report_date": doc.get("report_date"),
+        "hour_slot": doc.get("hour_slot"),
+        "shift": doc.get("shift"),
+        "summary_message": doc.get("summary_message") or "",
+        "report_rows": report_rows,
+    }
+
+
+@frappe.whitelist()
+def get_saved_downtime_summary_options(site):
+    """Return saved Hourly and Daily reports for one site only."""
+
+    site = str(site or "").strip()
+
+    if not site:
+        return {
+            "hourly": [],
+            "daily": [],
+        }
+
+    hourly = frappe.get_list(
+        "Hourly Downtime Summary",
+        filters={"site": site},
+        fields=[
+            "name",
+            "site",
+            "report_date",
+            "hour_slot",
+        ],
+        order_by="report_date desc, creation desc",
+        limit_page_length=200,
+    )
+
+    daily = frappe.get_list(
+        "Daily Downtime Summary",
+        filters={"site": site},
+        fields=[
+            "name",
+            "site",
+            "report_date",
+            "shift",
+        ],
+        order_by="report_date desc, creation desc",
+        limit_page_length=100,
+    )
+
+    return {
+        "hourly": hourly,
+        "daily": daily,
+    }
