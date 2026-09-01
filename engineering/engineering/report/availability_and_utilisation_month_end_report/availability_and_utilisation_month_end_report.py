@@ -603,6 +603,13 @@ def get_required_downtime_minutes_for_breakdown(
     start_datetime,
     resolved_datetime,
 ):
+    """Calculate PBM overlap using Engine planning data.
+
+    Shift system and required hours come from Monthly Production
+    Planning. Startup/fatigue exclusions come from the configured
+    Startup and Fatigue specification.
+    """
+
     empty_result = {
         "total_minutes": 0,
         "required_downtime_minutes": 0,
@@ -611,13 +618,6 @@ def get_required_downtime_minutes_for_breakdown(
     }
 
     if not start_datetime or not resolved_datetime:
-        return empty_result
-
-    try:
-        from engineering.engineering.doctype.availability_and_utilisation import (
-            availability_and_utilisation as au,
-        )
-    except Exception:
         return empty_result
 
     filters = frappe._dict(filters or {})
@@ -629,68 +629,151 @@ def get_required_downtime_minutes_for_breakdown(
         "production_site",
     )
 
+    if not location:
+        return empty_result
+
     start_dt = get_datetime(start_datetime)
     end_dt = get_datetime(resolved_datetime)
 
     if not start_dt or not end_dt or end_dt <= start_dt:
         return empty_result
 
-    au_rows = frappe.db.sql(
-        """
-        SELECT
-            name,
-            shift_date,
-            shift,
-            shift_system,
-            location,
-            asset_name,
-            shift_required_hours
-        FROM `tabAvailability and Utilisation`
-        WHERE asset_name = %(asset_name)s
-          AND shift_date >= DATE(%(start_datetime)s) - INTERVAL 1 DAY
-          AND shift_date <= DATE(%(resolved_datetime)s) + INTERVAL 1 DAY
-          AND (%(location)s = '' OR location = %(location)s)
-        ORDER BY
-            shift_date ASC,
-            FIELD(
-                shift,
-                'Day',
-                'Morning',
-                'Afternoon',
-                'Night'
-            ) ASC
-        """,
-        {
-            "asset_name": asset_name,
-            "location": location or "",
-            "start_datetime": start_dt,
-            "resolved_datetime": end_dt,
-        },
-        as_dict=True,
+    from engineering.engineering.report.availability_and_utilisation_engine import (
+        availability_and_utilisation_engine as engine,
     )
+
+    # This helper reads Startup and Fatigue specification records.
+    # It does not read Availability and Utilisation shift records.
+    from engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation import (
+        _exclusion_windows,
+    )
+
+    planning_from_date = (
+        getdate(start_dt)
+        - timedelta(days=1)
+    )
+
+    planning_to_date = (
+        getdate(end_dt)
+        + timedelta(days=1)
+    )
+
+    planning_rows = engine.get_planning_rows(
+        planning_from_date,
+        planning_to_date,
+        [location],
+    )
+
+    planning_map = engine.build_planning_map(
+        planning_rows
+    )
+
+    def overlap_hours(
+        first_start,
+        first_end,
+        second_start,
+        second_end,
+    ):
+        overlap_start = max(
+            first_start,
+            second_start,
+        )
+
+        overlap_end = min(
+            first_end,
+            second_end,
+        )
+
+        if overlap_end <= overlap_start:
+            return 0.0
+
+        return (
+            overlap_end - overlap_start
+        ).total_seconds() / 3600.0
+
+    def get_shift_window(
+        shift_system,
+        shift,
+        shift_date,
+    ):
+        shift_system = str(
+            shift_system or ""
+        ).strip().lower()
+
+        shift_date = getdate(shift_date)
+
+        if shift_system == "2x12hour":
+            timings = {
+                "Day": (6, 18, 0),
+                "Night": (18, 6, 1),
+            }
+        else:
+            timings = {
+                "Morning": (6, 14, 0),
+                "Afternoon": (14, 22, 0),
+                "Night": (22, 6, 1),
+            }
+
+        timing = timings.get(shift)
+
+        if not timing:
+            return None, None
+
+        start_hour, end_hour, end_day_offset = timing
+
+        shift_start = get_datetime(
+            f"{shift_date} {start_hour:02d}:00:00"
+        )
+
+        shift_end_date = (
+            shift_date
+            + timedelta(days=end_day_offset)
+        )
+
+        shift_end = get_datetime(
+            f"{shift_end_date} {end_hour:02d}:00:00"
+        )
+
+        return shift_start, shift_end
 
     raw_overlap_hours = 0.0
     required_downtime_hours = 0.0
     excluded_overlap_hours = 0.0
     sunday_overlap_hours = 0.0
 
-    for row in au_rows:
-        try:
-            required_hours = max(
-                flt(row.shift_required_hours),
-                0,
-            )
+    current_date = planning_from_date
 
-            shift_start, shift_end = au.get_shift_timings(
-                row.shift_system,
-                row.shift,
-                str(row.shift_date),
+    while current_date <= planning_to_date:
+        planning = planning_map.get(
+            (
+                location,
+                str(current_date),
+            )
+        )
+
+        if not planning:
+            current_date += timedelta(days=1)
+            continue
+
+        shift_system = planning.get(
+            "shift_system"
+        )
+
+        for shift in engine.get_shifts(
+            shift_system
+        ):
+            shift_start, shift_end = (
+                get_shift_window(
+                    shift_system,
+                    shift,
+                    current_date,
+                )
             )
 
             if not shift_start or not shift_end:
                 continue
 
-            shift_overlap_hours = au._overlap_hours(
+            shift_overlap_hours = overlap_hours(
                 start_dt,
                 end_dt,
                 shift_start,
@@ -702,38 +785,55 @@ def get_required_downtime_minutes_for_breakdown(
 
             raw_overlap_hours += shift_overlap_hours
 
-            shift_excluded_hours = 0.0
+            excluded_hours = 0.0
 
-            for window_start, window_end in au._exclusion_windows(
-                row.location,
-                row.shift,
-                shift_start,
-                shift_end,
+            for window_start, window_end in (
+                _exclusion_windows(
+                    location,
+                    shift,
+                    shift_start,
+                    shift_end,
+                )
             ):
-                shift_excluded_hours += au._overlap_hours(
+                excluded_hours += overlap_hours(
                     start_dt,
                     end_dt,
                     window_start,
                     window_end,
                 )
 
-            shift_excluded_hours = min(
-                shift_excluded_hours,
+            excluded_hours = min(
+                excluded_hours,
                 shift_overlap_hours,
             )
 
             valid_overlap_hours = max(
-                shift_overlap_hours - shift_excluded_hours,
+                shift_overlap_hours
+                - excluded_hours,
                 0,
             )
 
-            excluded_overlap_hours += shift_excluded_hours
+            excluded_overlap_hours += (
+                excluded_hours
+            )
+
+            required_hours = max(
+                flt(
+                    engine.get_required_hours(
+                        planning,
+                        shift,
+                    )
+                ),
+                0,
+            )
 
             if (
-                getdate(row.shift_date).weekday() == 6
+                current_date.weekday() == 6
                 and required_hours <= 0
             ):
-                sunday_overlap_hours += valid_overlap_hours
+                sunday_overlap_hours += (
+                    valid_overlap_hours
+                )
                 continue
 
             if required_hours <= 0:
@@ -744,8 +844,7 @@ def get_required_downtime_minutes_for_breakdown(
                 required_hours,
             )
 
-        except Exception:
-            continue
+        current_date += timedelta(days=1)
 
     return {
         "total_minutes": int(round(
