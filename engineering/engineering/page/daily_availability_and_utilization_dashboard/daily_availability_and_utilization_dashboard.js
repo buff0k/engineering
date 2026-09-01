@@ -523,6 +523,9 @@ class DailyAvailabilityAndUtilizationDashboardPage {
                 ).html(html);
 
                 this.bind_dashboard_actions();
+                this.body
+                    .find(".daily-dashboard-tab-button[data-tab=\"" + (this.active_dashboard_tab || "au") + "\"]")
+                    .trigger("click");
 
                 finish_request();
             },
@@ -553,6 +556,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             .off("click.daily_dashboard_tab", ".daily-dashboard-tab-button")
             .on("click.daily_dashboard_tab", ".daily-dashboard-tab-button", (event) => {
                 const tab = $(event.currentTarget).data("tab");
+                this.active_dashboard_tab = tab;
                 this.body.find(".daily-dashboard-tab-button").removeClass("btn-primary").addClass("btn-default");
                 $(event.currentTarget).removeClass("btn-default").addClass("btn-primary");
                 this.body.find(".daily-dashboard-tab-panel").hide();
