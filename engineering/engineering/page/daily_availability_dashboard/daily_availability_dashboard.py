@@ -1334,11 +1334,62 @@ def get_adt_dozer_excavator_cards_all_summary_types(location, start_date, end_da
 
 
 
+
+def get_monthly_production_shift_hours(
+    location,
+    start_date,
+    end_date,
+):
+    """Return planned Day/Night hours by production date."""
+
+    if not location or not start_date or not end_date:
+        return {}
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            days.shift_start_date,
+            days.shift_day_hours,
+            days.shift_night_hours
+        FROM `tabMonthly Production Days` days
+        INNER JOIN `tabMonthly Production Planning` planning
+            ON planning.name = days.parent
+        WHERE planning.location = %(location)s
+          AND planning.docstatus < 2
+          AND days.parenttype = 'Monthly Production Planning'
+          AND days.parentfield = 'month_prod_days'
+          AND days.shift_start_date BETWEEN %(start_date)s AND %(end_date)s
+        ORDER BY
+            planning.modified ASC,
+            days.idx ASC
+        """,
+        {
+            "location": location,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+        as_dict=True,
+    )
+
+    planned_hours = {}
+
+    for row in rows:
+        date_value = str(row.shift_start_date)
+
+        # Later/most recently modified planning records overwrite older ones.
+        planned_hours[date_value] = {
+            "day": flt(row.shift_day_hours),
+            "night": flt(row.shift_night_hours),
+        }
+
+    return planned_hours
+
 def build_hours_based_performance_html(
     source_rows,
     start_date,
     end_date,
     heading_override=None,
+    planned_shift_hours=None,
 ):
     machine_days = {}
 
@@ -1360,6 +1411,39 @@ def build_hours_based_performance_html(
             if not date_value:
                 continue
 
+            if planned_shift_hours is not None:
+                planning = planned_shift_hours.get(
+                    str(date_value)
+                )
+
+                if not planning:
+                    continue
+
+                shift_value = str(
+                    get_any(
+                        row,
+                        [
+                            "shift",
+                            "Shift",
+                            "shift_type",
+                            "Shift Type",
+                        ],
+                    )
+                    or ""
+                ).strip().lower()
+
+                if "night" in shift_value:
+                    if flt(planning.get("night")) <= 0:
+                        continue
+                elif "day" in shift_value:
+                    if flt(planning.get("day")) <= 0:
+                        continue
+                elif (
+                    flt(planning.get("day")) <= 0
+                    and flt(planning.get("night")) <= 0
+                ):
+                    continue
+
             bucket = (
                 machine_days
                 .setdefault(category, {})
@@ -1379,6 +1463,31 @@ def build_hours_based_performance_html(
         str(add_days(start, offset))
         for offset in range(max(date_diff(end, start) + 1, 0))
     ]
+
+    if planned_shift_hours is not None:
+        all_dates = [
+            date_value
+            for date_value in all_dates
+            if (
+                flt(
+                    planned_shift_hours
+                    .get(date_value, {})
+                    .get("day")
+                ) > 0
+                or flt(
+                    planned_shift_hours
+                    .get(date_value, {})
+                    .get("night")
+                ) > 0
+            )
+        ]
+
+    if not all_dates:
+        return (
+            '<div class="frappe-card" style="padding:18px;">'
+            'No planned production shifts found for the selected period.'
+            '</div>'
+        )
 
     category_daily = {}
     for category, machines in machine_days.items():
