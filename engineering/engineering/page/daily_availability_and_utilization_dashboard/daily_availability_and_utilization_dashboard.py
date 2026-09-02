@@ -4413,31 +4413,72 @@ def get_daily_dashboard_pdf_override_css():
 
 
 
-    /* PDF_COMPACT_MACHINE_GRAPHS_V12
+    
+
+
+    /* PDF_COMPACT_MACHINE_GRAPHS_V13
 
        PDF ONLY.
 
-       Small machine graphs use only the width they need.
+       Small machine graphs need a little more right-side space
+       so the final fleet and bars are not clipped.
 
-       Large machine graphs continue using:
-           PDF_HORIZONTAL_FIT_V3
+       This fixes cases like:
+       - ADT IS553
+       - DOZER IS340
+       - EXC IS343
 
-       No percentage, baseline or bar-height logic changes.
+       No changes to:
+       - percentage heights
+       - 0% baseline
+       - vertical white percentages
+       - A3 page size
     */
 
 
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-1 {
 
-        width: 360px !important;
-        min-width: 360px !important;
-        max-width: 360px !important;
+        width: 430px !important;
+        min-width: 430px !important;
+        max-width: 430px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-1 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-1 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4446,15 +4487,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-2 {
 
-        width: 360px !important;
-        min-width: 360px !important;
-        max-width: 360px !important;
+        width: 430px !important;
+        min-width: 430px !important;
+        max-width: 430px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-2 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-2 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4463,15 +4535,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-3 {
 
-        width: 360px !important;
-        min-width: 360px !important;
-        max-width: 360px !important;
+        width: 430px !important;
+        min-width: 430px !important;
+        max-width: 430px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-3 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-3 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4480,15 +4583,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-4 {
 
-        width: 360px !important;
-        min-width: 360px !important;
-        max-width: 360px !important;
+        width: 430px !important;
+        min-width: 430px !important;
+        max-width: 430px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-4 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-4 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4497,15 +4631,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-5 {
 
-        width: 380px !important;
-        min-width: 380px !important;
-        max-width: 380px !important;
+        width: 440px !important;
+        min-width: 440px !important;
+        max-width: 440px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-5 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-5 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4514,15 +4679,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-6 {
 
-        width: 438px !important;
-        min-width: 438px !important;
-        max-width: 438px !important;
+        width: 504px !important;
+        min-width: 504px !important;
+        max-width: 504px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-6 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-6 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4531,15 +4727,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-7 {
 
-        width: 496px !important;
-        min-width: 496px !important;
-        max-width: 496px !important;
+        width: 568px !important;
+        min-width: 568px !important;
+        max-width: 568px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-7 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-7 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4548,15 +4775,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-8 {
 
-        width: 554px !important;
-        min-width: 554px !important;
-        max-width: 554px !important;
+        width: 632px !important;
+        min-width: 632px !important;
+        max-width: 632px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-8 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-8 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4565,15 +4823,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-9 {
 
-        width: 612px !important;
-        min-width: 612px !important;
-        max-width: 612px !important;
+        width: 696px !important;
+        min-width: 696px !important;
+        max-width: 696px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-9 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-9 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4582,15 +4871,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-10 {
 
-        width: 670px !important;
-        min-width: 670px !important;
-        max-width: 670px !important;
+        width: 760px !important;
+        min-width: 760px !important;
+        max-width: 760px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-10 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-10 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4599,15 +4919,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-11 {
 
-        width: 728px !important;
-        min-width: 728px !important;
-        max-width: 728px !important;
+        width: 824px !important;
+        min-width: 824px !important;
+        max-width: 824px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-11 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-11 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4616,15 +4967,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-12 {
 
-        width: 786px !important;
-        min-width: 786px !important;
-        max-width: 786px !important;
+        width: 888px !important;
+        min-width: 888px !important;
+        max-width: 888px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-12 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-12 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4633,15 +5015,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-13 {
 
-        width: 844px !important;
-        min-width: 844px !important;
-        max-width: 844px !important;
+        width: 952px !important;
+        min-width: 952px !important;
+        max-width: 952px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-13 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-13 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4650,15 +5063,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-14 {
 
-        width: 902px !important;
-        min-width: 902px !important;
-        max-width: 902px !important;
+        width: 1016px !important;
+        min-width: 1016px !important;
+        max-width: 1016px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-14 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-14 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4667,15 +5111,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-15 {
 
-        width: 960px !important;
-        min-width: 960px !important;
-        max-width: 960px !important;
+        width: 1080px !important;
+        min-width: 1080px !important;
+        max-width: 1080px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-15 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-15 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4684,15 +5159,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-16 {
 
-        width: 1018px !important;
-        min-width: 1018px !important;
-        max-width: 1018px !important;
+        width: 1144px !important;
+        min-width: 1144px !important;
+        max-width: 1144px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-16 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-16 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4701,15 +5207,46 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-17 {
 
-        width: 1076px !important;
-        min-width: 1076px !important;
-        max-width: 1076px !important;
+        width: 1208px !important;
+        min-width: 1208px !important;
+        max-width: 1208px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
 
         -webkit-transform-origin: left top !important;
         transform-origin: left top !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-17 .isd-chart-grid {
+
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-17 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
 
         overflow: visible !important;
     }
@@ -4718,9 +5255,12 @@ def get_daily_dashboard_pdf_override_css():
     .isd-chart-section:not(.isd-daily-summary-section)
     .isd-chart.isd-pdf-compact-18 {
 
-        width: 1134px !important;
-        min-width: 1134px !important;
-        max-width: 1134px !important;
+        width: 1272px !important;
+        min-width: 1272px !important;
+        max-width: 1272px !important;
+
+        padding-right: 42px !important;
+        box-sizing: border-box !important;
 
         -webkit-transform: none !important;
         transform: none !important;
@@ -4731,6 +5271,1125 @@ def get_daily_dashboard_pdf_override_css():
         overflow: visible !important;
     }
 
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-18 .isd-chart-grid {
 
-    /* END PDF_COMPACT_MACHINE_GRAPHS_V12 */
+        display: inline-block !important;
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-18 .isd-machinelabels {
+
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        padding-right: 28px !important;
+        margin-right: 0 !important;
+
+        overflow: visible !important;
+    }
+
+
+    /* END PDF_COMPACT_MACHINE_GRAPHS_V13 */
+
+
+
+    /* PDF_COMPACT_LABEL_ROW_V15
+
+       PDF ONLY.
+
+       Fix ONLY the machine-name row on compact graphs.
+
+       Bars are already correct.
+
+       The Python renderer creates:
+         2 bars per machine
+         1 label per machine
+
+       This gives the label row one exact slot per machine
+       so the final fleet name is not clipped.
+
+       Expected fixes:
+         ADT       IS553
+         DOZER     IS340
+         EXCAVATOR IS343
+
+       DO NOT alter graph/bar geometry here.
+    */
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-1
+    .isd-machinelabels {
+
+        width: 58px !important;
+        min-width: 58px !important;
+        max-width: 58px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                1,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-1
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-1
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-2
+    .isd-machinelabels {
+
+        width: 116px !important;
+        min-width: 116px !important;
+        max-width: 116px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-2
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-2
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-3
+    .isd-machinelabels {
+
+        width: 174px !important;
+        min-width: 174px !important;
+        max-width: 174px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-3
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-3
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-4
+    .isd-machinelabels {
+
+        width: 232px !important;
+        min-width: 232px !important;
+        max-width: 232px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-4
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-4
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-5
+    .isd-machinelabels {
+
+        width: 290px !important;
+        min-width: 290px !important;
+        max-width: 290px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                5,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-5
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-5
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-6
+    .isd-machinelabels {
+
+        width: 348px !important;
+        min-width: 348px !important;
+        max-width: 348px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                6,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-6
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-6
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-7
+    .isd-machinelabels {
+
+        width: 406px !important;
+        min-width: 406px !important;
+        max-width: 406px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                7,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-7
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-7
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-8
+    .isd-machinelabels {
+
+        width: 464px !important;
+        min-width: 464px !important;
+        max-width: 464px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                8,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-8
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-8
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-9
+    .isd-machinelabels {
+
+        width: 522px !important;
+        min-width: 522px !important;
+        max-width: 522px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                9,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-9
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-9
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-10
+    .isd-machinelabels {
+
+        width: 580px !important;
+        min-width: 580px !important;
+        max-width: 580px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                10,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-10
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-10
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-11
+    .isd-machinelabels {
+
+        width: 638px !important;
+        min-width: 638px !important;
+        max-width: 638px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                11,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-11
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-11
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-12
+    .isd-machinelabels {
+
+        width: 696px !important;
+        min-width: 696px !important;
+        max-width: 696px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                12,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-12
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-12
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-13
+    .isd-machinelabels {
+
+        width: 754px !important;
+        min-width: 754px !important;
+        max-width: 754px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                13,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-13
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-13
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-14
+    .isd-machinelabels {
+
+        width: 812px !important;
+        min-width: 812px !important;
+        max-width: 812px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                14,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-14
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-14
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-15
+    .isd-machinelabels {
+
+        width: 870px !important;
+        min-width: 870px !important;
+        max-width: 870px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                15,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-15
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-15
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-16
+    .isd-machinelabels {
+
+        width: 928px !important;
+        min-width: 928px !important;
+        max-width: 928px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                16,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-16
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-16
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-17
+    .isd-machinelabels {
+
+        width: 986px !important;
+        min-width: 986px !important;
+        max-width: 986px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                17,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-17
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-17
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-18
+    .isd-machinelabels {
+
+        width: 1044px !important;
+        min-width: 1044px !important;
+        max-width: 1044px !important;
+
+        margin-left: 54px !important;
+        margin-right: 0 !important;
+
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+
+        grid-template-columns:
+            repeat(
+                18,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-18
+    .isd-machinelab {
+
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+
+        text-align: center !important;
+
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+
+    .isd-chart-section:not(.isd-daily-summary-section)
+    .isd-chart.isd-pdf-compact-18
+    .isd-machinelab:last-child {
+
+        padding-right: 4px !important;
+
+        overflow: visible !important;
+    }
+
+
+
+    /* END PDF_COMPACT_LABEL_ROW_V15 */
+
 """
