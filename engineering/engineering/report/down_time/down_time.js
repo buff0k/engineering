@@ -2246,7 +2246,7 @@ function all_downtime_records_verified() {
                         type="button"
                         class="btn btn-primary dt-download-saved-jpeg"
                         style="display:none;">
-                        ${__("Download JPEG")}
+                        ${__("Download Report")}
                     </button>
                 </div>
 
@@ -2800,7 +2800,13 @@ function all_downtime_records_verified() {
                 available_count: available_rows
             });
 
-        $main.find(".dt-download-saved-jpeg").show();
+        $main.find(".dt-download-saved-jpeg")
+            .text(
+                hourly
+                    ? __("Download Hourly Report")
+                    : __("Download Daily Report")
+            )
+            .show();
     }
 
     function reset_saved_report_filters($main) {
@@ -2858,8 +2864,8 @@ function all_downtime_records_verified() {
 
         const ctx = canvas.getContext("2d");
 
-        ctx.fillStyle = "#f4f7fb";
-        ctx.fillRect(0, 0, width, height);
+        // Keep the outer canvas transparent for presentations.
+        ctx.clearRect(0, 0, width, height);
 
         const gradient = ctx.createLinearGradient(
             0,
@@ -3079,9 +3085,9 @@ function all_downtime_records_verified() {
         link.download =
             String(report.name || "downtime-report")
                 .replace(/[^a-z0-9_-]+/gi, "_") +
-            ".jpg";
+            ".png";
 
-        link.href = canvas.toDataURL("image/jpeg", 0.95);
+        link.href = canvas.toDataURL("image/png");
         link.click();
     }
 
