@@ -86,12 +86,12 @@ def get_category_group(asset_category):
 def get_data(filters):
     site = filters.get("site")
     hour_end = get_hour_end(filters)
+    hour_start = hour_end - timedelta(hours=1)
 
     conditions = [
         "a.docstatus = 1",
         "ifnull(a.location, '') != ''",
     ]
-
     values = {}
 
     if site:
@@ -100,17 +100,14 @@ def get_data(filters):
 
     assets = frappe.db.sql(
         f"""
-        select
+        SELECT
             a.name,
             a.location,
             a.asset_category,
             a.item_name
-        from `tabAsset` a
-        where {" and ".join(conditions)}
-        order by
-            a.location,
-            a.asset_category,
-            a.name
+        FROM `tabAsset` a
+        WHERE {" AND ".join(conditions)}
+        ORDER BY a.location, a.asset_category, a.name
         """,
         values,
         as_dict=True,
@@ -119,35 +116,80 @@ def get_data(filters):
     filtered_assets = []
 
     for asset in assets:
-        category_group = get_category_group(asset.asset_category)
+        category_group = get_category_group(
+            asset.asset_category
+        )
 
         if not category_group:
             continue
 
         asset.category_group = category_group
-        asset.category_order = CATEGORY_ORDER.get(category_group, 999)
+        asset.category_order = CATEGORY_ORDER.get(
+            category_group,
+            999,
+        )
         filtered_assets.append(asset)
 
-    asset_names = [a.name for a in filtered_assets]
-    active_breakdown_map = get_active_breakdowns_at_hour_end(asset_names, hour_end)
+    asset_names = [
+        asset.name for asset in filtered_assets
+    ]
+
+    event_map = get_breakdowns_for_hour(
+        asset_names,
+        hour_start,
+        hour_end,
+    )
 
     data = []
 
     for asset in filtered_assets:
-        breakdown = active_breakdown_map.get(asset.name)
+        breakdown = event_map.get(asset.name)
 
         if breakdown:
-            open_hours = 0
+            breakdown_start = get_datetime(
+                breakdown.breakdown_start_datetime
+            )
+            resolved = (
+                get_datetime(breakdown.resolved_datetime)
+                if breakdown.resolved_datetime
+                else None
+            )
 
-            if breakdown.breakdown_start_datetime:
-                open_hours = round(
-                    float(time_diff_in_hours(hour_end, breakdown.breakdown_start_datetime)),
-                    2
-                )
+            overlap_start = max(
+                breakdown_start,
+                hour_start,
+            )
+            overlap_end = min(
+                resolved or hour_end,
+                hour_end,
+            )
+
+            hours = round(
+                max(
+                    (
+                        overlap_end - overlap_start
+                    ).total_seconds() / 3600,
+                    0,
+                ),
+                2,
+            )
+
+            is_open_at_end = (
+                not resolved
+                or resolved > hour_end
+            )
 
             data.append({
-                "status": "❌ OPEN",
-                "status_key": "open",
+                "status": (
+                    "❌ OPEN"
+                    if is_open_at_end
+                    else "✅ CLOSED"
+                ),
+                "status_key": (
+                    "open"
+                    if is_open_at_end
+                    else "closed"
+                ),
                 "site": asset.location,
                 "plant_no": asset.name,
                 "asset_category": asset.asset_category,
@@ -157,7 +199,7 @@ def get_data(filters):
                 "reason": breakdown.breakdown_reason or "-",
                 "start_time": breakdown.breakdown_start_datetime,
                 "resolved_time": breakdown.resolved_datetime,
-                "open_hours": open_hours,
+                "open_hours": hours,
                 "breakdown_docname": breakdown.name,
             })
         else:
@@ -179,52 +221,85 @@ def get_data(filters):
 
     data.sort(key=lambda row: (
         row.get("category_order") or 999,
-        row.get("plant_no") or ""
+        row.get("plant_no") or "",
     ))
 
     return data
 
 
-def get_active_breakdowns_at_hour_end(asset_names, hour_end):
+def get_breakdowns_for_hour(
+    asset_names,
+    hour_start,
+    hour_end,
+):
     if not asset_names:
         return {}
 
-    rows = frappe.get_all(
-        "Plant Breakdown or Maintenance",
-        filters={
-            "asset_name": ["in", asset_names],
-            "breakdown_start_datetime": ["<=", hour_end],
+    rows = frappe.db.sql(
+        """
+        SELECT
+            name,
+            asset_name,
+            breakdown_reason,
+            breakdown_start_datetime,
+            resolved_datetime
+        FROM `tabPlant Breakdown or Maintenance`
+        WHERE asset_name IN %(asset_names)s
+          AND breakdown_start_datetime < %(hour_end)s
+          AND (
+              resolved_datetime IS NULL
+              OR resolved_datetime > %(hour_start)s
+          )
+        ORDER BY
+            asset_name,
+            breakdown_start_datetime DESC,
+            modified DESC
+        """,
+        {
+            "asset_names": tuple(asset_names),
+            "hour_start": hour_start,
+            "hour_end": hour_end,
         },
-        fields=[
-            "name",
-            "asset_name",
-            "breakdown_reason",
-            "breakdown_start_datetime",
-            "resolved_datetime",
-        ],
-        order_by="breakdown_start_datetime desc, modified desc",
-        limit=5000,
+        as_dict=True,
     )
 
-    active_map = {}
+    event_map = {}
 
     for row in rows:
-        if not row.asset_name:
+        start_time = get_datetime(
+            row.breakdown_start_datetime
+        )
+        resolved = (
+            get_datetime(row.resolved_datetime)
+            if row.resolved_datetime
+            else None
+        )
+
+        if (
+            not resolved
+            and start_time
+            < STALE_BREAKDOWN_CUTOFF_DATETIME
+        ):
             continue
 
-        start_time = get_datetime(row.breakdown_start_datetime) if row.breakdown_start_datetime else None
-        resolved_time = get_datetime(row.resolved_datetime) if row.resolved_datetime else None
+        current = event_map.get(row.asset_name)
 
-        if not start_time:
-            continue
+        # Prefer a breakdown open at the period end.
+        is_open_at_end = (
+            not resolved
+            or resolved > hour_end
+        )
 
-        # Ignore old dirty open records before 2026-03-01
-        if not resolved_time and start_time < STALE_BREAKDOWN_CUTOFF_DATETIME:
-            continue
+        if (
+            current is None
+            or (
+                is_open_at_end
+                and current.get("_status") != "open"
+            )
+        ):
+            row["_status"] = (
+                "open" if is_open_at_end else "closed"
+            )
+            event_map[row.asset_name] = row
 
-        # Asset was on breakdown at selected hour end
-        if start_time <= hour_end and (not resolved_time or resolved_time > hour_end):
-            if row.asset_name not in active_map:
-                active_map[row.asset_name] = row
-
-    return active_map
+    return event_map
