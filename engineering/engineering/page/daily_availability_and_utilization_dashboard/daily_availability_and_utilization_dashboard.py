@@ -8,6 +8,7 @@ from engineering.engineering.report.availability_and_utilisation_engine import (
 )
 from engineering.engineering.page.daily_availability_dashboard.daily_availability_dashboard import (
     build_hours_based_performance_html,
+  get_monthly_production_shift_hours,
 )
 
 
@@ -1812,6 +1813,12 @@ def build_dashboard_html(
         for (category, machine), rows in hours_groups.items()
     ]
 
+    planned_shift_hours = get_monthly_production_shift_hours(
+        location,
+        start_date,
+        end_date,
+    )
+
     if hours_asset:
         hours_source_rows = [
             row
@@ -1833,6 +1840,7 @@ def build_dashboard_html(
                     f"{machine} — "
                     f"{UI_TITLES.get(category, category)}"
                 ),
+                planned_shift_hours=planned_shift_hours,
             )
         elif hours_source_rows:
             category_groups = {}
@@ -1870,6 +1878,7 @@ def build_dashboard_html(
                             start_date,
                             end_date,
                             heading_override=machine,
+                            planned_shift_hours=planned_shift_hours,
                         )
                     )
 
@@ -1890,6 +1899,7 @@ def build_dashboard_html(
             hours_source_rows,
             start_date,
             end_date,
+            planned_shift_hours=planned_shift_hours,
         )
 
     return f'''
