@@ -3,6 +3,43 @@
 
 let downtime_mobile_comment_cache = {};
 
+function refresh_downtime_signoff_report() {
+    const report = frappe.query_report;
+
+    if (!report) {
+        return;
+    }
+
+    report.__active_downtime_tab = "signoff";
+
+    const $main =
+        report.page
+            ? report.page.main || report.page.$wrapper
+            : null;
+
+    if ($main && $main.length) {
+        $main.find(".dt-saved-reports-panel").hide();
+        $main.find(".report-wrapper").show();
+
+        $main.find(".dt-report-tab")
+            .removeClass("btn-primary")
+            .addClass("btn-default");
+
+        $main.find(
+            '.dt-report-tab[data-tab="signoff"]'
+        )
+            .removeClass("btn-default")
+            .addClass("btn-primary");
+    }
+
+    $(".downtime-signoff-action-wrapper").show();
+    $(".mobile-downtime-wrapper").show();
+    $(".downtime-avail-util-wrapper").show();
+
+    report.refresh();
+}
+
+
 frappe.query_reports["Down Time"] = {
     filters: [
         {
@@ -12,7 +49,7 @@ frappe.query_reports["Down Time"] = {
             reqd: 1,
             default: frappe.datetime.get_today(),
             onchange: function () {
-                frappe.query_report.refresh();
+                refresh_downtime_signoff_report();
             }
         },
         {
@@ -21,7 +58,7 @@ frappe.query_reports["Down Time"] = {
             fieldtype: "Link",
             options: "Location",
             onchange: function () {
-                frappe.query_report.refresh();
+                refresh_downtime_signoff_report();
             }
         },
         {
@@ -30,7 +67,7 @@ frappe.query_reports["Down Time"] = {
             fieldtype: "Link",
             options: "Asset Category",
             onchange: function () {
-                frappe.query_report.refresh();
+                refresh_downtime_signoff_report();
             }
         },
         {
@@ -39,7 +76,7 @@ frappe.query_reports["Down Time"] = {
             fieldtype: "Select",
             options: "\nDay Shift\nNight Shift",
             onchange: function () {
-                frappe.query_report.refresh();
+                refresh_downtime_signoff_report();
             }
         }
     ],
@@ -2093,15 +2130,16 @@ function all_downtime_records_verified() {
         window.setTimeout(() => {
             setup_saved_reports(report);
 
-            const $main =
-                report.page.main || report.page.$wrapper;
-
-            load_saved_report_options($main);
+            // Main filters belong to Downtime Sign-Off.
+            // Keep its report visible while Frappe renders.
+            report.__active_downtime_tab = "signoff";
 
             show_downtime_tab(
                 report,
-                report.__active_downtime_tab || "signoff"
+                "signoff"
             );
+
+            render_downtime_cards(report);
         }, 200);
     };
 
@@ -2515,6 +2553,77 @@ function all_downtime_records_verified() {
         const available_rows =
             all_rows.length - open_rows.length;
 
+        const category_map = {};
+
+        all_rows.forEach(row => {
+            const category = row.category || "Other";
+
+            if (!category_map[category]) {
+                category_map[category] = {
+                    category: category,
+                    total: 0,
+                    available: 0,
+                    down: 0
+                };
+            }
+
+            category_map[category].total += 1;
+
+            if (
+                String(row.status)
+                    .toLowerCase()
+                    .includes("open")
+            ) {
+                category_map[category].down += 1;
+            } else {
+                category_map[category].available += 1;
+            }
+        });
+
+        const category_summaries = Object.values(
+            category_map
+        )
+            .map(summary => {
+                const percentage = summary.total
+                    ? (summary.available / summary.total) * 100
+                    : 0;
+
+                return {
+                    ...summary,
+                    percentage: percentage,
+                    colour:
+                        percentage >= 85
+                            ? "green"
+                            : percentage >= 80
+                                ? "yellow"
+                                : "red"
+                };
+            })
+            .sort((a, b) =>
+                a.category.localeCompare(b.category)
+            );
+
+        const category_html = category_summaries
+            .map(summary => `
+                <div class="dt-modern-category-card ${summary.colour}">
+                    <div>
+                        <strong>
+                            ${summary.available}/${summary.total}
+                        </strong>
+                        <span>${frappe.utils.escape_html(summary.category)}</span>
+                    </div>
+
+                    <small class="${
+                        summary.down > 0
+                            ? "has-down"
+                            : "all-clear"
+                    }">
+                        ${summary.down} ${__("down")}
+                    </small>
+                </div>
+            `)
+            .join("");
+
         const total_hours = open_rows.reduce(
             (total, row) => total + row.hours,
             0
@@ -2551,7 +2660,7 @@ function all_downtime_records_verified() {
 
                         <div class="dt-modern-hours">
                             <span>${__("Downtime")}</span>
-                            <strong>${row.hours.toFixed(2)}h</strong>
+                            <strong>${format_saved_duration(row.hours)}</strong>
                         </div>
 
                         <div>
@@ -2645,6 +2754,80 @@ function all_downtime_records_verified() {
                         margin-top:5px;
                         color:#0f172a;
                         font-size:24px;
+                    }
+
+                    .dt-modern-category-section {
+                        padding:0 18px 18px;
+                    }
+
+                    .dt-modern-category-title {
+                        margin-bottom:9px;
+                        color:#475569;
+                        font-size:12px;
+                        font-weight:900;
+                        text-transform:uppercase;
+                    }
+
+                    .dt-modern-category-grid {
+                        display:grid;
+                        grid-template-columns:
+                            repeat(auto-fit,minmax(150px,1fr));
+                        gap:10px;
+                    }
+
+                    .dt-modern-category-card {
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        padding:12px 14px;
+                        border-radius:11px;
+                        background:#fff;
+                        border:1px solid #dbe4ef;
+                        border-top:4px solid #2563eb;
+                    }
+
+                    .dt-modern-category-card.green {
+                        border-top-color:#16a34a;
+                        background:#f0fdf4;
+                    }
+
+                    .dt-modern-category-card.yellow {
+                        border-top-color:#f59e0b;
+                        background:#fffbeb;
+                    }
+
+                    .dt-modern-category-card.red {
+                        border-top-color:#dc2626;
+                        background:#fef2f2;
+                    }
+
+                    .dt-modern-category-card strong {
+                        display:block;
+                        color:#0f172a;
+                        font-size:22px;
+                    }
+
+                    .dt-modern-category-card span {
+                        display:block;
+                        color:#475569;
+                        font-size:12px;
+                        font-weight:800;
+                    }
+
+                    .dt-modern-category-card small {
+                        padding:5px 8px;
+                        border-radius:15px;
+                        font-weight:800;
+                    }
+
+                    .dt-modern-category-card small.has-down {
+                        color:#991b1b;
+                        background:#fee2e2;
+                    }
+
+                    .dt-modern-category-card small.all-clear {
+                        color:#166534;
+                        background:#dcfce7;
                     }
 
                     .dt-modern-body {
@@ -2780,7 +2963,17 @@ function all_downtime_records_verified() {
 
                         <div class="dt-modern-kpi orange">
                             <span>${__("Total Downtime")}</span>
-                            <strong>${total_hours.toFixed(2)}h</strong>
+                            <strong>${format_saved_duration(total_hours)}</strong>
+                        </div>
+                    </div>
+
+                    <div class="dt-modern-category-section">
+                        <div class="dt-modern-category-title">
+                            ${__("Fleet availability by category")}
+                        </div>
+
+                        <div class="dt-modern-category-grid">
+                            ${category_html}
                         </div>
                     </div>
 
@@ -2797,7 +2990,8 @@ function all_downtime_records_verified() {
                 name: data.name,
                 rows: rows,
                 all_count: all_rows.length,
-                available_count: available_rows
+                available_count: available_rows,
+                category_summaries: category_summaries
             });
 
         $main.find(".dt-download-saved-jpeg")
@@ -2844,6 +3038,19 @@ function all_downtime_records_verified() {
             0
         );
 
+        const category_summaries =
+            Array.isArray(report.category_summaries)
+                ? report.category_summaries
+                : [];
+
+        const category_rows = Math.ceil(
+            category_summaries.length / 4
+        );
+
+        const fleet_height = category_summaries.length
+            ? 65 + (category_rows * 105)
+            : 0;
+
         const width = 1600;
         const padding = 55;
         const row_height = 125;
@@ -2854,6 +3061,7 @@ function all_downtime_records_verified() {
             760,
             header_height
                 + kpi_height
+                + fleet_height
                 + 90
                 + (rows.length * row_height)
         );
@@ -2907,7 +3115,7 @@ function all_downtime_records_verified() {
             },
             {
                 label: "TOTAL DOWNTIME",
-                value: `${total_hours.toFixed(2)}h`,
+                value: format_saved_duration(total_hours),
                 colour: "#f59e0b"
             }
         ];
@@ -2944,6 +3152,94 @@ function all_downtime_records_verified() {
         });
 
         let y = header_height + kpi_height;
+
+        if (category_summaries.length) {
+            ctx.fillStyle = "#475569";
+            ctx.font = "bold 18px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(
+                "FLEET AVAILABILITY BY CATEGORY",
+                padding,
+                y + 22
+            );
+
+            y += 45;
+
+            const category_gap = 15;
+            const category_width =
+                (
+                    width
+                    - (padding * 2)
+                    - (category_gap * 3)
+                ) / 4;
+
+            category_summaries.forEach(
+                (summary, index) => {
+                    const column = index % 4;
+                    const row_index = Math.floor(index / 4);
+
+                    const x =
+                        padding
+                        + column
+                        * (category_width + category_gap);
+
+                    const card_y =
+                        y + (row_index * 105);
+
+                    draw_canvas_round_rect(
+                        ctx,
+                        x,
+                        card_y,
+                        category_width,
+                        85,
+                        12,
+                        "#ffffff"
+                    );
+
+                    ctx.fillStyle =
+                        summary.colour === "green"
+                            ? "#16a34a"
+                            : summary.colour === "yellow"
+                                ? "#f59e0b"
+                                : "#dc2626";
+
+                    ctx.fillRect(
+                        x,
+                        card_y,
+                        category_width,
+                        5
+                    );
+
+                    ctx.fillStyle = "#0f172a";
+                    ctx.font = "bold 30px Arial";
+                    ctx.textAlign = "left";
+                    ctx.fillText(
+                        `${summary.available}/${summary.total}`,
+                        x + 18,
+                        card_y + 42
+                    );
+
+                    ctx.fillStyle = "#475569";
+                    ctx.font = "bold 16px Arial";
+                    ctx.fillText(
+                        summary.category,
+                        x + 18,
+                        card_y + 69
+                    );
+
+                    ctx.fillStyle = "#991b1b";
+                    ctx.font = "bold 16px Arial";
+                    ctx.textAlign = "right";
+                    ctx.fillText(
+                        `${summary.down} down`,
+                        x + category_width - 18,
+                        card_y + 48
+                    );
+                }
+            );
+
+            y += category_rows * 105;
+        }
 
         rows.forEach(row => {
             const is_open = String(row.status)
@@ -3034,7 +3330,7 @@ function all_downtime_records_verified() {
 
             ctx.font = "bold 24px Arial";
             ctx.fillText(
-                `${Number(row.hours || 0).toFixed(2)}h`,
+                format_saved_duration(row.hours),
                 padding + 1220,
                 y + 59
             );
@@ -3089,6 +3385,34 @@ function all_downtime_records_verified() {
 
         link.href = canvas.toDataURL("image/png");
         link.click();
+    }
+
+
+    function format_saved_duration(hours_value) {
+        const total_minutes = Math.max(
+            0,
+            Math.round(Number(hours_value || 0) * 60)
+        );
+
+        const days = Math.floor(total_minutes / 1440);
+        const hours = Math.floor(
+            (total_minutes % 1440) / 60
+        );
+        const minutes = total_minutes % 60;
+
+        const parts = [];
+
+        if (days) {
+            parts.push(`${days}d`);
+        }
+
+        if (hours || days) {
+            parts.push(`${hours}h`);
+        }
+
+        parts.push(`${minutes}m`);
+
+        return parts.join(" ");
     }
 
 
