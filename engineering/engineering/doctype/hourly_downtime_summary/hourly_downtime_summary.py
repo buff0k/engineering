@@ -96,37 +96,54 @@ def create_hourly_downtime_summary(site):
     return doc.name
 
 
-def build_summary_message(site, report_date, hour_slot, data):
-    open_rows = [row for row in data if row.get("status_key") == "open"]
+def build_summary_message(
+    site,
+    report_date,
+    hour_slot,
+    data,
+):
+    open_rows = [
+        row for row in data
+        if row.get("status_key") == "open"
+    ]
+    closed_rows = [
+        row for row in data
+        if row.get("status_key") == "closed"
+    ]
+    breakdown_rows = open_rows + closed_rows
 
     total = len(data)
     open_count = len(open_rows)
+    closed_count = len(closed_rows)
     available_count = total - open_count
 
-    lines = []
+    lines = [
+        f"{site.upper()} HOURLY BREAKDOWN REPORT",
+        str(report_date),
+        hour_slot.replace("-", " TO "),
+        "",
+    ]
 
-    lines.append(f"{site.upper()} HOURLY BREAKDOWN REPORT")
-    lines.append(str(report_date))
-    lines.append(hour_slot.replace("-", " TO "))
-    lines.append("")
-
-    if not open_rows:
-        lines.append("No open breakdowns for this hour.")
-        lines.append("")
-        lines.append(f"Open: {open_count}")
-        lines.append(f"Available: {available_count}")
-        lines.append(f"Total: {total}")
+    if not breakdown_rows:
+        lines.extend([
+            "No breakdown events for this hour.",
+            "",
+            f"Open at Hour End: {open_count}",
+            f"Closed During Hour: {closed_count}",
+            f"Available at Hour End: {available_count}",
+            f"Fleet Total: {total}",
+        ])
         return "\n".join(lines)
 
     grouped = {}
 
-    for row in open_rows:
-        category = row.get("category_group") or row.get("asset_category") or "OTHER"
-
-        if category not in grouped:
-            grouped[category] = []
-
-        grouped[category].append(row)
+    for row in breakdown_rows:
+        category = (
+            row.get("category_group")
+            or row.get("asset_category")
+            or "OTHER"
+        )
+        grouped.setdefault(category, []).append(row)
 
     category_order = [
         "ADT",
@@ -140,7 +157,7 @@ def build_summary_message(site, report_date, hour_slot, data):
     ]
 
     for category in category_order:
-        rows = grouped.get(category)
+        rows = grouped.get(category) or []
 
         if not rows:
             continue
@@ -150,12 +167,24 @@ def build_summary_message(site, report_date, hour_slot, data):
         for row in rows:
             plant_no = row.get("plant_no") or "-"
             reason = row.get("reason") or "-"
-            lines.append(f"{plant_no} - {str(reason).upper()}")
+            status = str(
+                row.get("status_key") or ""
+            ).upper()
+            hours = float(row.get("open_hours") or 0)
+
+            lines.append(
+                f"{plant_no} - {status} - "
+                f"{hours:.2f} HRS - "
+                f"{str(reason).upper()}"
+            )
 
         lines.append("")
 
-    lines.append(f"Open: {open_count}")
-    lines.append(f"Available: {available_count}")
-    lines.append(f"Total: {total}")
+    lines.extend([
+        f"Open at Hour End: {open_count}",
+        f"Closed During Hour: {closed_count}",
+        f"Available at Hour End: {available_count}",
+        f"Fleet Total: {total}",
+    ])
 
     return "\n".join(lines)

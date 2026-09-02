@@ -2544,11 +2544,24 @@ function all_downtime_records_verified() {
             }))
             : [];
 
-        const rows = all_rows.filter(row =>
+        // Display breakdown events only: open and closed.
+        // Available machines remain hidden.
+        const rows = all_rows.filter(row => {
+            const status = String(row.status).toLowerCase();
+
+            return (
+                status.includes("open")
+                || status.includes("closed")
+            );
+        });
+
+        const open_rows = rows.filter(row =>
             String(row.status).toLowerCase().includes("open")
         );
 
-        const open_rows = rows;
+        const closed_rows = rows.filter(row =>
+            String(row.status).toLowerCase().includes("closed")
+        );
 
         const available_rows =
             all_rows.length - open_rows.length;
@@ -2624,7 +2637,7 @@ function all_downtime_records_verified() {
             `)
             .join("");
 
-        const total_hours = open_rows.reduce(
+        const total_hours = rows.reduce(
             (total, row) => total + row.hours,
             0
         );
@@ -2665,7 +2678,7 @@ function all_downtime_records_verified() {
 
                         <div>
                             <span class="dt-modern-status ${is_open ? "open" : "available"}">
-                                ${is_open ? __("OPEN") : __("AVAILABLE")}
+                                ${is_open ? __("OPEN") : __("CLOSED")}
                             </span>
                         </div>
                     </div>
@@ -3033,7 +3046,7 @@ function all_downtime_records_verified() {
         const available_count =
             Number(report.available_count || 0);
 
-        const total_hours = open_rows.reduce(
+        const total_hours = rows.reduce(
             (total, row) => total + Number(row.hours || 0),
             0
         );
@@ -3109,7 +3122,7 @@ function all_downtime_records_verified() {
                 colour: "#dc2626"
             },
             {
-                label: "AVAILABLE / CLOSED",
+                label: "AVAILABLE AT END",
                 value: String(available_count),
                 colour: "#16a34a"
             },
@@ -3356,7 +3369,7 @@ function all_downtime_records_verified() {
             ctx.font = "bold 14px Arial";
             ctx.textAlign = "center";
             ctx.fillText(
-                is_open ? "OPEN" : "AVAILABLE",
+                is_open ? "OPEN" : "CLOSED",
                 padding + 1432,
                 y + 57
             );
