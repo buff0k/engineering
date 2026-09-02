@@ -45,9 +45,13 @@ def get_context(context):
     context.operating_status_options = OPERATING_STATUS_OPTIONS
 
     try:
-        context.csrf_token = getattr(frappe.session, "csrf_token", "") or ""
+        context.csrf_token = frappe.sessions.get_csrf_token()
     except Exception:
-        context.csrf_token = ""
+        context.csrf_token = (
+            getattr(frappe.session, "csrf_token", "")
+            or getattr(getattr(frappe.local, "session", None), "csrf_token", "")
+            or ""
+        )
 
     context.form_values = {
         "name": doc.name if doc else "",
@@ -213,7 +217,6 @@ def _get_asset_options():
 
     for row in rows:
         fleet_no = row.get("name")
-
         if fleet_no and fleet_no not in values:
             values.append(fleet_no)
 
