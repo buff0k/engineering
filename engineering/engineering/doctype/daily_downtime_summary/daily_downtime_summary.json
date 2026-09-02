@@ -2,7 +2,7 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "format:DDS-{site}-{report_date}-{#####}",
+ "autoname": "format:DDS-{site}-{report_date}-{shift}-{#####}",
  "creation": "2026-07-07 10:40:58.480623",
  "doctype": "DocType",
  "engine": "InnoDB",

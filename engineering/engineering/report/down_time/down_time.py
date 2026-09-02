@@ -488,24 +488,11 @@ def get_data(filters):
                     window_end,
                 )
 
-            downtime_result = (
-                month_end.get_required_downtime_minutes_for_breakdown(
-                    frappe._dict({
-                        "location": row.site,
-                        "site": row.site,
-                    }),
-                    row.plant_no,
-                    clipped_start,
-                    clipped_end,
-                )
-            )
-
-            breakdown_hours = (
-                downtime_result.get(
-                    "required_downtime_minutes",
-                    0,
-                )
-                / 60
+            breakdown_hours = max(
+                (
+                    clipped_end - clipped_start
+                ).total_seconds() / 3600,
+                0,
             )
 
             hours_cache[cache_key] = round(
