@@ -2299,10 +2299,16 @@ function all_downtime_records_verified() {
         $main
             .off("click.dt_report_tab", ".dt-report-tab")
             .on("click.dt_report_tab", ".dt-report-tab", function() {
+                const tab = $(this).data("tab");
+
                 show_downtime_tab(
                     report,
-                    $(this).data("tab")
+                    tab
                 );
+
+                if (tab === "saved") {
+                    load_saved_report_options($main);
+                }
             });
 
         $main
