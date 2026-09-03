@@ -41,6 +41,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
         this.downtime_method = "engineering.engineering.page.daily_availability_and_utilization_dashboard.daily_availability_and_utilization_dashboard.get_machine_downtime_details";
         this.loading = false;
         this.initializing = true;
+        this.active_dashboard_tab = "hours";
         this.last_site_storage_key = `daily_availability_and_utilization_dashboard_last_site:${frappe.session.user || "Guest"}`;
         this.make();
     }
@@ -564,7 +565,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
 
                 this.bind_dashboard_actions();
                 this.body
-                    .find(".daily-dashboard-tab-button[data-tab=\"" + (this.active_dashboard_tab || "au") + "\"]")
+                    .find(".daily-dashboard-tab-button[data-tab=\"" + (this.active_dashboard_tab || "hours") + "\"]")
                     .trigger("click");
 
                 finish_request();
