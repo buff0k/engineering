@@ -1679,7 +1679,10 @@ def build_hours_based_performance_html(
         <div class="text-muted" style="font-size:10px;font-weight:800;text-transform:uppercase;">Selected Period Calculation</div>
 
         <div style="display:grid;grid-template-columns:minmax(270px,1fr) auto;gap:22px;align-items:center;">
-            <div style="padding:12px 14px;border:1px solid #d8dde2;border-radius:8px;background:#fff;">
+            <div style="position:relative;padding:12px 14px;border:1px solid #d8dde2;border-radius:8px;background:#fff;">
+                <div style="position:absolute;top:12px;right:14px;max-width:210px;text-align:right;font-size:9px;line-height:1.3;color:#6b7280;font-style:italic;">
+                    Note: This uses average required hours, not individual shift calculations.
+                </div>
                 <div style="font-size:12px;font-weight:900;">AVAILABILITY</div>
                 <div style="font-size:30px;font-weight:900;color:{availability_colour};">{raw_availability:.1f}%</div>
                 <div style="font-size:11px;font-weight:700;">Availability available hours</div>
