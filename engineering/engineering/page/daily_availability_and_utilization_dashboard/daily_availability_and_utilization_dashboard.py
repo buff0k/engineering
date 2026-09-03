@@ -1841,7 +1841,6 @@ def build_dashboard_html(
                     f"{UI_TITLES.get(category, category)}"
                 ),
                 planned_shift_hours=planned_shift_hours,
-                au_target_filter=au_target_filter,
             )
         elif hours_source_rows:
             category_groups = {}
@@ -1880,7 +1879,6 @@ def build_dashboard_html(
                             end_date,
                             heading_override=machine,
                             planned_shift_hours=planned_shift_hours,
-                            au_target_filter=au_target_filter,
                         )
                     )
 
@@ -1902,16 +1900,15 @@ def build_dashboard_html(
             start_date,
             end_date,
             planned_shift_hours=planned_shift_hours,
-            au_target_filter=au_target_filter,
         )
 
     return f'''
 <div class="daily-dashboard-tabs" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
-    <button type="button" class="btn btn-primary daily-dashboard-tab-button" data-tab="au">A&amp;U Performance</button>
-    <button type="button" class="btn btn-default daily-dashboard-tab-button" data-tab="hours">Hours Based Performance</button>
+    <button type="button" class="btn btn-primary daily-dashboard-tab-button" data-tab="hours">Hours Based Performance</button>
+    <button type="button" class="btn btn-default daily-dashboard-tab-button" data-tab="au">A&amp;U Performance</button>
 </div>
-<div class="daily-dashboard-tab-panel" data-panel="au">{au_dashboard_html}</div>
-<div class="daily-dashboard-tab-panel" data-panel="hours" style="display:none;">{hours_dashboard_html}</div>
+<div class="daily-dashboard-tab-panel" data-panel="hours">{hours_dashboard_html}</div>
+<div class="daily-dashboard-tab-panel" data-panel="au" style="display:none;">{au_dashboard_html}</div>
 '''
 
 

@@ -1390,7 +1390,6 @@ def build_hours_based_performance_html(
     end_date,
     heading_override=None,
     planned_shift_hours=None,
-    au_target_filter="85% A & U",
 ):
     machine_days = {}
 
@@ -1526,10 +1525,6 @@ def build_hours_based_performance_html(
                 sum(value["breakdown"] for value in displayed_days) / len(displayed_days)
                 if displayed_days else 0.0
             ),
-            "required": (
-                sum(value["required"] for value in displayed_days) / len(displayed_days)
-                if displayed_days else 0.0
-            ),
         }
 
     charts = []
@@ -1546,46 +1541,6 @@ def build_hours_based_performance_html(
         values = [category_daily[category][date_value] for date_value in all_dates]
         period_avg_work = category_period_averages[category]["work"]
         period_avg_breakdown = category_period_averages[category]["breakdown"]
-        period_avg_required = category_period_averages[category]["required"]
-
-        remaining_required_hours = max(
-            period_avg_required - period_avg_breakdown,
-            0.0,
-        )
-        utilisation_available_hours = max(
-            remaining_required_hours,
-            min(period_avg_work, period_avg_required),
-        )
-        availability_available_hours = max(
-            period_avg_work,
-            remaining_required_hours,
-        )
-
-        raw_availability = (
-            min(100.0, availability_available_hours / period_avg_required * 100.0)
-            if period_avg_required > 0 else 0.0
-        )
-        raw_utilisation = (
-            min(100.0, period_avg_work / utilisation_available_hours * 100.0)
-            if utilisation_available_hours > 0 else 0.0
-        )
-
-        target_multiplier = 0.85 if au_target_filter == "85% A & U" else 1.0
-        colour_target = 85.0 if target_multiplier == 0.85 else 100.0
-        colour_warning = colour_target - 10.0
-
-        def result_colour(value):
-            if value >= colour_target:
-                return "#16a34a"
-            if value >= colour_warning:
-                return "#1d4ed8"
-            return "#dc2626"
-
-        availability_colour = result_colour(raw_availability)
-        utilisation_colour = result_colour(raw_utilisation)
-        adjusted_availability = min(100.0, raw_availability * target_multiplier)
-        adjusted_utilisation = min(100.0, raw_utilisation * target_multiplier)
-
         maximum = max(
             [12.0]
             + [value[key] for value in values for key in ("work", "breakdown", "required")]
@@ -1663,8 +1618,7 @@ def build_hours_based_performance_html(
         <span style="color:#6b7280;">┅┅ Required Hours</span>
     </div>
 
-    <div class="frappe-card" style="padding:14px;display:flex;gap:22px;align-items:stretch;flex-wrap:wrap;">
-    <div style="flex:1 1 720px;overflow-x:auto;">
+    <div class="frappe-card" style="padding:14px;overflow-x:auto;">
     <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="Daily average hours per machine for {esc(category)}">
         {''.join(grid)}
         <polyline points="{points('required')}" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 5" />
@@ -1673,40 +1627,6 @@ def build_hours_based_performance_html(
         {''.join(marks)}
         {''.join(labels)}
     </svg>
-    </div>
-
-    <div style="flex:1 1 560px;min-width:500px;display:flex;flex-direction:column;justify-content:center;gap:10px;">
-        <div class="text-muted" style="font-size:10px;font-weight:800;text-transform:uppercase;">Selected Period Calculation</div>
-
-        <div style="display:grid;grid-template-columns:minmax(270px,1fr) auto;gap:22px;align-items:center;">
-            <div style="position:relative;padding:12px 14px;border:1px solid #d8dde2;border-radius:8px;background:#fff;">
-                <div style="position:absolute;top:12px;right:14px;max-width:210px;text-align:right;font-size:9px;line-height:1.3;color:#6b7280;font-style:italic;">
-                    Note: This uses average required hours, not individual shift calculations.
-                </div>
-                <div style="font-size:12px;font-weight:900;">AVAILABILITY</div>
-                <div style="font-size:30px;font-weight:900;color:{availability_colour};">{raw_availability:.1f}%</div>
-                <div style="font-size:11px;font-weight:700;">Availability available hours</div>
-                <div style="font-size:11px;">max({period_avg_work:.2f}h, {period_avg_required:.2f}h − {period_avg_breakdown:.2f}h) = {availability_available_hours:.2f}h</div>
-                <div style="font-size:11px;">({availability_available_hours:.2f}h ÷ {period_avg_required:.2f}h) × 100</div>
-            </div>
-            <div style="white-space:nowrap;font-size:30px;font-weight:900;color:#1f2937;">
-                × {target_multiplier:.2f} = <span style="font-size:46px;color:{availability_colour};">{adjusted_availability:.1f}%</span>
-            </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:minmax(270px,1fr) auto;gap:22px;align-items:center;">
-            <div style="padding:12px 14px;border:1px solid #d8dde2;border-radius:8px;background:#fff;">
-                <div style="font-size:12px;font-weight:900;">UTILISATION</div>
-                <div style="font-size:30px;font-weight:900;color:{utilisation_colour};">{raw_utilisation:.1f}%</div>
-                <div style="font-size:11px;font-weight:700;">Utilisation available hours</div>
-                <div style="font-size:11px;">max({remaining_required_hours:.2f}h, min({period_avg_work:.2f}h, {period_avg_required:.2f}h)) = {utilisation_available_hours:.2f}h</div>
-                <div style="font-size:11px;">({period_avg_work:.2f}h ÷ {utilisation_available_hours:.2f}h) × 100</div>
-            </div>
-            <div style="white-space:nowrap;font-size:30px;font-weight:900;color:#1f2937;">
-                × {target_multiplier:.2f} = <span style="font-size:46px;color:{utilisation_colour};">{adjusted_utilisation:.1f}%</span>
-            </div>
-        </div>
-    </div>
     </div>
 </div>
 ''')
