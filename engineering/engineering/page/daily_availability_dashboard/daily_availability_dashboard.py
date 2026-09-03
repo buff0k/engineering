@@ -1695,7 +1695,10 @@ def build_hours_based_performance_html(
         </div>
 
         <div style="display:grid;grid-template-columns:minmax(270px,1fr) auto;gap:22px;align-items:center;">
-            <div style="padding:12px 14px;border:1px solid #d8dde2;border-radius:8px;background:#fff;">
+            <div style="position:relative;padding:12px 14px;border:1px solid #d8dde2;border-radius:8px;background:#fff;">
+                <div style="position:absolute;top:12px;right:14px;max-width:230px;text-align:right;font-size:9px;line-height:1.3;color:#6b7280;font-style:italic;">
+                    Note: Breakdown hours are excluded from utilisation available hours. Utilisation measures working hours against the remaining available hours.
+                </div>
                 <div style="font-size:12px;font-weight:900;">UTILISATION</div>
                 <div style="font-size:30px;font-weight:900;color:{utilisation_colour};">{raw_utilisation:.1f}%</div>
                 <div style="font-size:11px;font-weight:700;">Utilisation available hours</div>
