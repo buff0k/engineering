@@ -243,6 +243,55 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Availability and Utilisation Capture",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns (Capture)",
+   "link_count": 0,
+   "link_to": "Plant Breakdown or Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other Lost Hours (Capture)",
+   "link_count": 0,
+   "link_to": "Daily Lost Hours Recon",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre-Use Hours (Capture)",
+   "link_count": 0,
+   "link_to": "Pre-Use Hours",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdown Records",
+   "link_count": 0,
+   "link_to": "Breakdown History",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Legals",
    "link_count": 0,
    "link_type": "DocType",
