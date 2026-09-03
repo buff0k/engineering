@@ -1841,6 +1841,7 @@ def build_dashboard_html(
                     f"{UI_TITLES.get(category, category)}"
                 ),
                 planned_shift_hours=planned_shift_hours,
+                au_target_filter=au_target_filter,
             )
         elif hours_source_rows:
             category_groups = {}
@@ -1879,6 +1880,7 @@ def build_dashboard_html(
                             end_date,
                             heading_override=machine,
                             planned_shift_hours=planned_shift_hours,
+                            au_target_filter=au_target_filter,
                         )
                     )
 
@@ -1900,6 +1902,7 @@ def build_dashboard_html(
             start_date,
             end_date,
             planned_shift_hours=planned_shift_hours,
+            au_target_filter=au_target_filter,
         )
 
     return f'''

@@ -99,7 +99,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 1,
+   "is_query_report": 0,
    "label": "Logsheet Report",
    "link_count": 0,
    "link_to": "MSR Report",
@@ -191,7 +191,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 1,
+   "is_query_report": 0,
    "label": "Logsheet Report",
    "link_count": 0,
    "link_to": "MSR Report",
@@ -236,45 +236,6 @@
    "label": "Pre Use Deviation",
    "link_count": 0,
    "link_to": "Pre Use Deviation",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Availability and Utilisation Capture",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns (Capture)",
-   "link_count": 0,
-   "link_to": "Plant Breakdown or Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Other Lost Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Daily Lost Hours Recon",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Pre-Use Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Pre-Use Hours",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -488,93 +449,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Machine Information Report",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Repaired Logsheet Report",
-   "link_count": 0,
-   "link_to": "MSR Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Mechanical Service Report",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Pre Use Deviation Dashboard",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Pre Use Deviation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Licence Expiration Report",
-   "link_count": 0,
-   "link_to": "Licence Expiration",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Licence Registration",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Pre-Use Report",
-   "link_count": 0,
-   "link_to": "Pre-Use Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Pre-Use Hours",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Oil Sample Report",
-   "link_count": 0,
-   "link_to": "Oil Sample",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "WearCheck Results",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Down Time",
-   "link_count": 0,
-   "link_to": "Down Time",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Plant Breakdown or Maintenance",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "icon": "chart",
-   "is_query_report": 0,
-   "label": "Engineering Legals Monthly Summary",
-   "link_count": 0,
-   "link_to": "engineering-legals-monthly-summary-link",
-   "link_type": "Page",
-   "onboard": 0,
-   "report_ref_doctype": "Engineering Legals",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Diesel",
    "link_count": 0,
    "link_type": "DocType",
@@ -628,55 +502,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Availability and Utilisation Reports",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Month End Report",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Month End Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Summary",
-   "link_count": 0,
-   "link_to": "Avail and Util summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Detailed per Shift Report",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Engine",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown and Standby Machine Report",
-   "link_count": 0,
-   "link_to": "Availability and utilization Asset timeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Downtime Verification and Reports",
    "link_count": 2,
    "link_type": "DocType",
@@ -702,9 +527,171 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Availability and Utilisation Capture",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breakdowns (Capture)",
+   "link_count": 0,
+   "link_to": "Plant Breakdown or Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other Lost Hours (Capture)",
+   "link_count": 0,
+   "link_to": "Daily Lost Hours Recon",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre-Use Hours (Capture)",
+   "link_count": 0,
+   "link_to": "Pre-Use Hours",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Breakdown Records",
+   "link_count": 0,
+   "link_to": "Breakdown Status History",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Availability and Utilisation Reports",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "A & U Summary",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation Month End Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability and Utilisation Engine",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation Engine",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Breakdown and Standby Machine Report",
+   "link_count": 0,
+   "link_to": "Availability and utilization Asset timeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Machine Information Report",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Repaired Logsheet Report",
+   "link_count": 0,
+   "link_to": "MSR Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Mechanical Service Report",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre Use Deviation Dashboard",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Pre Use Deviation",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Licence Expiration Report",
+   "link_count": 0,
+   "link_to": "Licence Expiration",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Licence Registration",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pre-Use Report",
+   "link_count": 0,
+   "link_to": "Pre-Use Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Pre-Use Hours",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Oil Sample Report",
+   "link_count": 0,
+   "link_to": "Oil Sample",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "WearCheck Results",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Engineering Legals Monthly Summary",
+   "link_count": 0,
+   "link_to": "engineering-legals-monthly-summary-link",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-09-02 10:03:00.226489",
+ "modified": "2026-09-03 07:17:57.208206",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
@@ -734,19 +721,19 @@
    "type": "Page"
   },
   {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Daily Availability & Utilisation Dashboard",
+   "link_to": "daily-availability-and-utilization-dashboard",
+   "type": "Page"
+  },
+  {
    "color": "Blue",
    "doc_view": "List",
    "label": "Weekly Performance Tool",
    "link_to": "Production Efficiency",
    "stats_filter": "[]",
    "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Daily Availability & Utilisation Dashboard",
-   "link_to": "daily-availability-dashboard",
-   "type": "Page"
   }
  ],
  "title": "Engineering",
