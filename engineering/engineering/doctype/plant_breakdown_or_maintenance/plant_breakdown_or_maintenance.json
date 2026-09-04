@@ -20,8 +20,8 @@
   "site_breakdown_situation_section",
   "hours_breakdown_starts",
   "breakdown_start_datetime",
-  "mechanic_breakdown_maintenance_start_time",
   "breakdown_reason",
+  "mechanic_breakdown_maintenance_start_time",
   "location1",
   "column_break_zygn",
   "resolution_summary",
@@ -78,10 +78,13 @@
    "label": "Plant Category"
   },
   {
+   "description": "Make sure you use the correct downtime discription!",
    "fieldname": "downtime_type",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Downtime type",
-   "options": "Breakdown\nPlanned Maintenance"
+   "options": "\nBreakdown\nPlanned Maintenance",
+   "reqd": 1
   },
   {
    "default": "0",
@@ -209,17 +212,19 @@
   {
    "fieldname": "hours_breakdown_starts",
    "fieldtype": "Float",
-   "label": "Hours Breakdown/Maintenance Start",
+   "label": "Hours Breakdown/Maintenance",
    "precision": "1",
    "reqd": 1
   },
   {
+   "description": "Control Room, please make sure that the start time is the time when the machine is not in production. (Be aware that it is not always the time reported)",
    "fieldname": "breakdown_start_datetime",
    "fieldtype": "Datetime",
    "label": "Breakdown/Maintenance Start Time",
    "reqd": 1
   },
   {
+   "description": "Update the reason if the problem gets more than reported.",
    "fieldname": "breakdown_reason",
    "fieldtype": "Small Text",
    "label": "Breakdown/Maintenance Reason",
@@ -230,11 +235,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "Do not only say Sorted or Fixed! Be more specific, please.",
    "fieldname": "resolution_summary",
    "fieldtype": "Small Text",
    "label": "Resolution Summary"
   },
   {
+   "description": "Capture the exact time the mechanic booked the machine back!",
    "fieldname": "resolved_datetime",
    "fieldtype": "Datetime",
    "label": "Datetime back in production"
@@ -264,12 +271,13 @@
    "fieldname": "shift",
    "fieldtype": "Select",
    "label": "Shift",
-   "options": "Day Shift\nNight Shift",
+   "options": "\nDay Shift\nNight Shift",
    "reqd": 1
   },
   {
    "fieldname": "mechanic_breakdown_maintenance_start_time",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "Mechanic Breakdown/Maintenance Start Time"
   },
   {
@@ -277,6 +285,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "description": "Specify the area of the breakdown if the site manager requires the information.",
    "fieldname": "location1",
    "fieldtype": "Data",
    "label": "Location"
@@ -285,7 +294,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 06:01:51.599291",
+ "modified": "2026-09-04 09:05:36.955318",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
