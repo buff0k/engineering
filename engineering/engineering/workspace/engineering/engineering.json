@@ -676,7 +676,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Repaired Logsheet Report",
    "link_count": 0,
    "link_to": "MSR Report",
@@ -687,7 +687,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Pre Use Deviation Dashboard",
    "link_count": 0,
    "link_to": "Pre Use Deviation Dashboard",
@@ -698,7 +698,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Licence Expiration Report",
    "link_count": 0,
    "link_to": "Licence Expiration",
@@ -709,7 +709,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Pre-Use Report",
    "link_count": 0,
    "link_to": "Pre-Use Report",
@@ -720,7 +720,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Oil Sample Report",
    "link_count": 0,
    "link_to": "Oil Sample",
