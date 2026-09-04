@@ -1448,10 +1448,21 @@ def build_hours_based_performance_html(
                 machine_days
                 .setdefault(category, {})
                 .setdefault(machine, {})
-                .setdefault(date_value, {"work": 0.0, "breakdown": 0.0, "required": 0.0})
+                .setdefault(
+                    date_value,
+                    {
+                        "work": 0.0,
+                        "breakdown": 0.0,
+                        "planned_maintenance": 0.0,
+                        "required": 0.0,
+                    },
+                )
             )
             bucket["work"] += flt(row.get("work_hours"))
             bucket["breakdown"] += flt(row.get("pbm_total_downtime"))
+            bucket["planned_maintenance"] += flt(
+                row.get("planned_maintenance_hours")
+            )
             bucket["required"] += flt(row.get("required_hours"))
 
     if not machine_days:
@@ -1504,6 +1515,10 @@ def build_hours_based_performance_html(
             category_daily[category][date_value] = {
                 "work": sum(value["work"] for value in valid) / count if count else 0.0,
                 "breakdown": sum(value["breakdown"] for value in valid) / count if count else 0.0,
+                "planned_maintenance": (
+                    sum(value["planned_maintenance"] for value in valid) / count
+                    if count else 0.0
+                ),
                 "required": sum(value["required"] for value in valid) / count if count else 0.0,
                 "machines": count,
             }
@@ -1543,7 +1558,16 @@ def build_hours_based_performance_html(
         period_avg_breakdown = category_period_averages[category]["breakdown"]
         maximum = max(
             [12.0]
-            + [value[key] for value in values for key in ("work", "breakdown", "required")]
+            + [
+                value[key]
+                for value in values
+                for key in (
+                    "work",
+                    "breakdown",
+                    "planned_maintenance",
+                    "required",
+                )
+            ]
         )
         axis_max = max(12.0, float(int((maximum + 2.999) / 3.0) * 3))
 
@@ -1578,7 +1602,8 @@ def build_hours_based_performance_html(
 
             for key, colour, title, label_offset in (
                 ("work", "#2563eb", "Utilisation / Average Working", -11),
-                ("breakdown", "#dc2626", "Availability / Average Breakdown", 17),
+                ("breakdown", "#dc2626", "Availability / Average Breakdown and Planned Maintenance", 17),
+                ("planned_maintenance", "#16a34a", "Average Planned Maintenance", -11),
                 ("required", "#6b7280", "Average Required", -11),
             ):
                 y = y_at(value[key])
@@ -1587,7 +1612,7 @@ def build_hours_based_performance_html(
                     f'<title>{esc(date_value)} {title}: {value[key]:.2f}h across {value["machines"]} machines</title></circle>'
                 )
 
-                if key in ("work", "breakdown") and value["machines"]:
+                if key in ("work", "breakdown", "planned_maintenance") and value["machines"]:
                     marks.append(
                         f'<text x="{x:.1f}" y="{y+label_offset:.1f}" text-anchor="middle" font-size="10" font-weight="700" fill="{colour}">{value[key]:.2f}h</text>'
                     )
@@ -1615,6 +1640,7 @@ def build_hours_based_performance_html(
     <div style="display:flex;gap:18px;flex-wrap:wrap;padding:9px 12px;margin-bottom:12px;border:1px solid #d8dde2;border-radius:8px;background:#fff;font-size:12px;font-weight:700;">
         <span style="color:#2563eb;">━━ Working Hours — Day + Night</span>
         <span style="color:#dc2626;">━━ Breakdown Hours/Planned Maintenance — Day + Night</span>
+        <span style="color:#16a34a;">━━ Planned Maintenance — Day + Night</span>
         <span style="color:#6b7280;">┅┅ Required Hours</span>
     </div>
 
@@ -1624,6 +1650,7 @@ def build_hours_based_performance_html(
         <polyline points="{points('required')}" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 5" />
         <polyline points="{points('work')}" fill="none" stroke="#2563eb" stroke-width="3" />
         <polyline points="{points('breakdown')}" fill="none" stroke="#dc2626" stroke-width="3" />
+        <polyline points="{points('planned_maintenance')}" fill="none" stroke="#16a34a" stroke-width="3" />
         {''.join(marks)}
         {''.join(labels)}
     </svg>
