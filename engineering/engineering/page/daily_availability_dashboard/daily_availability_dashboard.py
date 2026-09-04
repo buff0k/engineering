@@ -1600,21 +1600,88 @@ def build_hours_based_performance_html(
                 f'<text x="{x:.1f}" y="{height-17}" text-anchor="middle" font-size="10" fill="#4b5563">{esc(date_value[5:])}</text>'
             )
 
-            for key, colour, title, label_offset in (
-                ("work", "#2563eb", "Utilisation / Average Working", -11),
-                ("breakdown", "#dc2626", "Availability / Average Breakdown and Planned Maintenance", 17),
-                ("planned_maintenance", "#16a34a", "Average Planned Maintenance", -11),
-                ("required", "#6b7280", "Average Required", -11),
-            ):
+            series = (
+                ("work", "#2563eb", "Utilisation / Average Working"),
+                ("breakdown", "#dc2626", "Availability / Average Breakdown and Planned Maintenance"),
+                ("planned_maintenance", "#16a34a", "Average Planned Maintenance"),
+                ("required", "#6b7280", "Average Required"),
+            )
+
+            label_offsets = {
+                "work": -11,
+                "breakdown": 17,
+                "planned_maintenance": -11,
+            }
+
+            # Automatically separate labels whose points are close
+            # enough to make their text overlap.
+            label_points = sorted(
+                [
+                    (key, y_at(value[key]))
+                    for key in (
+                        "work",
+                        "breakdown",
+                        "planned_maintenance",
+                    )
+                ],
+                key=lambda item: item[1],
+            )
+
+            clusters = []
+            current_cluster = []
+
+            for label_point in label_points:
+                if (
+                    current_cluster
+                    and label_point[1]
+                    - current_cluster[-1][1] > 26
+                ):
+                    clusters.append(current_cluster)
+                    current_cluster = []
+
+                current_cluster.append(label_point)
+
+            if current_cluster:
+                clusters.append(current_cluster)
+
+            for cluster in clusters:
+                if len(cluster) == 2:
+                    cluster_offsets = (-14, 18)
+                elif len(cluster) >= 3:
+                    cluster_offsets = (-20, 0, 20)
+                else:
+                    continue
+
+                for (
+                    (key, point_y),
+                    label_offset,
+                ) in zip(cluster, cluster_offsets):
+                    label_offsets[key] = label_offset
+
+            for key, colour, title in series:
                 y = y_at(value[key])
                 marks.append(
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.5" fill="{colour}">'
                     f'<title>{esc(date_value)} {title}: {value[key]:.2f}h across {value["machines"]} machines</title></circle>'
                 )
 
-                if key in ("work", "breakdown", "planned_maintenance") and value["machines"]:
+                if (
+                    key in label_offsets
+                    and value["machines"]
+                ):
+                    label_y = min(
+                        max(
+                            y + label_offsets[key],
+                            top + 8,
+                        ),
+                        height - bottom + 17,
+                    )
+
                     marks.append(
-                        f'<text x="{x:.1f}" y="{y+label_offset:.1f}" text-anchor="middle" font-size="10" font-weight="700" fill="{colour}">{value[key]:.2f}h</text>'
+                        f'<text x="{x:.1f}" y="{label_y:.1f}" text-anchor="middle" '
+                        f'font-size="10" font-weight="700" fill="{colour}" '
+                        f'style="paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;">'
+                        f'{value[key]:.2f}h</text>'
                     )
 
         category_title = esc(
