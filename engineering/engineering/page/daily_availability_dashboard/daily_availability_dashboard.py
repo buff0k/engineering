@@ -1448,10 +1448,21 @@ def build_hours_based_performance_html(
                 machine_days
                 .setdefault(category, {})
                 .setdefault(machine, {})
-                .setdefault(date_value, {"work": 0.0, "breakdown": 0.0, "required": 0.0})
+                .setdefault(
+                    date_value,
+                    {
+                        "work": 0.0,
+                        "breakdown": 0.0,
+                        "planned_maintenance": 0.0,
+                        "required": 0.0,
+                    },
+                )
             )
             bucket["work"] += flt(row.get("work_hours"))
             bucket["breakdown"] += flt(row.get("pbm_total_downtime"))
+            bucket["planned_maintenance"] += flt(
+                row.get("planned_maintenance_hours")
+            )
             bucket["required"] += flt(row.get("required_hours"))
 
     if not machine_days:
@@ -1504,6 +1515,10 @@ def build_hours_based_performance_html(
             category_daily[category][date_value] = {
                 "work": sum(value["work"] for value in valid) / count if count else 0.0,
                 "breakdown": sum(value["breakdown"] for value in valid) / count if count else 0.0,
+                "planned_maintenance": (
+                    sum(value["planned_maintenance"] for value in valid) / count
+                    if count else 0.0
+                ),
                 "required": sum(value["required"] for value in valid) / count if count else 0.0,
                 "machines": count,
             }
@@ -1543,7 +1558,16 @@ def build_hours_based_performance_html(
         period_avg_breakdown = category_period_averages[category]["breakdown"]
         maximum = max(
             [12.0]
-            + [value[key] for value in values for key in ("work", "breakdown", "required")]
+            + [
+                value[key]
+                for value in values
+                for key in (
+                    "work",
+                    "breakdown",
+                    "planned_maintenance",
+                    "required",
+                )
+            ]
         )
         axis_max = max(12.0, float(int((maximum + 2.999) / 3.0) * 3))
 
@@ -1576,20 +1600,88 @@ def build_hours_based_performance_html(
                 f'<text x="{x:.1f}" y="{height-17}" text-anchor="middle" font-size="10" fill="#4b5563">{esc(date_value[5:])}</text>'
             )
 
-            for key, colour, title, label_offset in (
-                ("work", "#2563eb", "Utilisation / Average Working", -11),
-                ("breakdown", "#dc2626", "Availability / Average Breakdown", 17),
-                ("required", "#6b7280", "Average Required", -11),
-            ):
+            series = (
+                ("work", "#2563eb", "Utilisation / Average Working"),
+                ("breakdown", "#dc2626", "Availability / Average Breakdown and Planned Maintenance"),
+                ("planned_maintenance", "#16a34a", "Average Planned Maintenance"),
+                ("required", "#6b7280", "Average Required"),
+            )
+
+            label_offsets = {
+                "work": -11,
+                "breakdown": 17,
+                "planned_maintenance": -11,
+            }
+
+            # Automatically separate labels whose points are close
+            # enough to make their text overlap.
+            label_points = sorted(
+                [
+                    (key, y_at(value[key]))
+                    for key in (
+                        "work",
+                        "breakdown",
+                        "planned_maintenance",
+                    )
+                ],
+                key=lambda item: item[1],
+            )
+
+            clusters = []
+            current_cluster = []
+
+            for label_point in label_points:
+                if (
+                    current_cluster
+                    and label_point[1]
+                    - current_cluster[-1][1] > 26
+                ):
+                    clusters.append(current_cluster)
+                    current_cluster = []
+
+                current_cluster.append(label_point)
+
+            if current_cluster:
+                clusters.append(current_cluster)
+
+            for cluster in clusters:
+                if len(cluster) == 2:
+                    cluster_offsets = (-14, 18)
+                elif len(cluster) >= 3:
+                    cluster_offsets = (-20, 0, 20)
+                else:
+                    continue
+
+                for (
+                    (key, point_y),
+                    label_offset,
+                ) in zip(cluster, cluster_offsets):
+                    label_offsets[key] = label_offset
+
+            for key, colour, title in series:
                 y = y_at(value[key])
                 marks.append(
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.5" fill="{colour}">'
                     f'<title>{esc(date_value)} {title}: {value[key]:.2f}h across {value["machines"]} machines</title></circle>'
                 )
 
-                if key in ("work", "breakdown") and value["machines"]:
+                if (
+                    key in label_offsets
+                    and value["machines"]
+                ):
+                    label_y = min(
+                        max(
+                            y + label_offsets[key],
+                            top + 8,
+                        ),
+                        height - bottom + 17,
+                    )
+
                     marks.append(
-                        f'<text x="{x:.1f}" y="{y+label_offset:.1f}" text-anchor="middle" font-size="10" font-weight="700" fill="{colour}">{value[key]:.2f}h</text>'
+                        f'<text x="{x:.1f}" y="{label_y:.1f}" text-anchor="middle" '
+                        f'font-size="10" font-weight="700" fill="{colour}" '
+                        f'style="paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;">'
+                        f'{value[key]:.2f}h</text>'
                     )
 
         category_title = esc(
@@ -1615,6 +1707,7 @@ def build_hours_based_performance_html(
     <div style="display:flex;gap:18px;flex-wrap:wrap;padding:9px 12px;margin-bottom:12px;border:1px solid #d8dde2;border-radius:8px;background:#fff;font-size:12px;font-weight:700;">
         <span style="color:#2563eb;">━━ Working Hours — Day + Night</span>
         <span style="color:#dc2626;">━━ Breakdown Hours/Planned Maintenance — Day + Night</span>
+        <span style="color:#16a34a;">━━ Planned Maintenance — Day + Night</span>
         <span style="color:#6b7280;">┅┅ Required Hours</span>
     </div>
 
@@ -1624,6 +1717,7 @@ def build_hours_based_performance_html(
         <polyline points="{points('required')}" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 5" />
         <polyline points="{points('work')}" fill="none" stroke="#2563eb" stroke-width="3" />
         <polyline points="{points('breakdown')}" fill="none" stroke="#dc2626" stroke-width="3" />
+        <polyline points="{points('planned_maintenance')}" fill="none" stroke="#16a34a" stroke-width="3" />
         {''.join(marks)}
         {''.join(labels)}
     </svg>
