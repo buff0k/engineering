@@ -149,6 +149,20 @@ def get_columns():
             "width": 150,
         },
         {
+            "label": "Planned Maintenance",
+            "fieldname": "planned_maintenance_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 165,
+        },
+        {
+            "label": "Breakdowns",
+            "fieldname": "breakdown_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 125,
+        },
+        {
             "label": "PBM Total Downtime",
             "fieldname": "pbm_total_downtime",
             "fieldtype": "Float",
@@ -431,6 +445,16 @@ def get_data(filters):
                         "pbm_sunday_time": flt(
                             shift_pbm.get(
                                 "pbm_sunday_time"
+                            )
+                        ),
+                        "planned_maintenance_hours": flt(
+                            shift_pbm.get(
+                                "planned_maintenance_hours"
+                            )
+                        ),
+                        "breakdown_hours": flt(
+                            shift_pbm.get(
+                                "breakdown_hours"
                             )
                         ),
                         "pbm_total_downtime": flt(
@@ -943,6 +967,8 @@ def round_engine_row(row):
         "pbm_elapsed_time",
         "pbm_startup_fatigue_time",
         "pbm_sunday_time",
+        "planned_maintenance_hours",
+        "breakdown_hours",
         "pbm_total_downtime",
         "utilisation_available_hours",
         "availability_available_hours",
@@ -1098,6 +1124,8 @@ def build_summary_row(
         "pbm_elapsed_time",
         "pbm_startup_fatigue_time",
         "pbm_sunday_time",
+        "planned_maintenance_hours",
+        "breakdown_hours",
         "pbm_total_downtime",
     ):
         summary_minutes = sum(
@@ -2019,6 +2047,7 @@ def get_pbm_map(
             name,
             asset_name,
             location,
+            downtime_type,
             breakdown_start_datetime,
             resolved_datetime
         FROM `tabPlant Breakdown or Maintenance`
@@ -2787,6 +2816,8 @@ def get_pbm_map(
                             "pbm_elapsed_time": 0.0,
                             "pbm_startup_fatigue_time": 0.0,
                             "pbm_sunday_time": 0.0,
+                            "planned_maintenance_hours": 0.0,
+                            "breakdown_hours": 0.0,
                             "pbm_total_downtime": 0.0,
                         },
                     )
@@ -2802,6 +2833,29 @@ def get_pbm_map(
                                 fieldname
                             )
                         )
+
+                    downtime_hours = flt(
+                        calculated.get(
+                            "pbm_total_downtime"
+                        )
+                    )
+
+                    if (
+                        str(
+                            row.get("downtime_type")
+                            or ""
+                        ).strip()
+                        == "Planned Maintenance"
+                    ):
+                        bucket[
+                            "planned_maintenance_hours"
+                        ] += downtime_hours
+                    else:
+                        # Existing/blank records remain visible under
+                        # Breakdowns without changing PBM Total Downtime.
+                        bucket[
+                            "breakdown_hours"
+                        ] += downtime_hours
 
             current_date = add_days(
                 current_date,
