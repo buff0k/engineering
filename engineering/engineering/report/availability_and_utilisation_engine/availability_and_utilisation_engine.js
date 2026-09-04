@@ -210,6 +210,8 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             "pbm_elapsed_time",
             "pbm_startup_fatigue_time",
             "pbm_sunday_time",
+            "planned_maintenance_hours",
+            "breakdown_hours",
             "pbm_total_downtime",
             "utilisation_available_hours",
             "availability_available_hours"
