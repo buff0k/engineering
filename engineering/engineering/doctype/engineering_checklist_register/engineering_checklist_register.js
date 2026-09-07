@@ -1207,7 +1207,419 @@ function refresh_checklist_submission_ui(frm, update_values = false) {
     }, 200);
 }
 
+
+/* ===== MULTI-USER CHECKLIST CELL SAVE START ===== */
+
+const MULTIUSER_PARENT_DOCTYPE =
+    'Engineering Checklist Register';
+
+const MULTIUSER_UPDATE_METHOD =
+    'engineering.engineering.checklist_multiuser.update_checklist_cell';
+
+const MULTIUSER_HANDLER_KEY =
+    'engineering_checklist_register_multiuser_handlers_bound';
+
+
+function set_multiuser_save_indicator(
+    frm,
+    state
+) {
+    if (!frm || !frm.page) return;
+
+    if (state === 'saving') {
+        frm.page.set_indicator(
+            __('Saving checklist...'),
+            'orange'
+        );
+        return;
+    }
+
+    if (state === 'saved') {
+        frm.page.set_indicator(
+            __('Checklist saved'),
+            'green'
+        );
+
+        clearTimeout(
+            frm.__multiuser_indicator_timer
+        );
+
+        frm.__multiuser_indicator_timer =
+            setTimeout(() => {
+                if (
+                    (
+                        frm.__multiuser_pending_saves
+                        || 0
+                    ) === 0
+                ) {
+                    frm.page.clear_indicator();
+                }
+            }, 1200);
+
+        return;
+    }
+
+    frm.page.clear_indicator();
+}
+
+
+function save_checklist_cell_multiuser(
+    frm,
+    cdt,
+    cdn,
+    fieldname
+) {
+    if (
+        !frm
+        || frm.doctype
+            !== MULTIUSER_PARENT_DOCTYPE
+    ) {
+        return;
+    }
+
+    if (
+        frm.is_new()
+        || frm.doc.__islocal
+        || !frm.doc.name
+    ) {
+        return;
+    }
+
+    if (
+        frm.__multiuser_applying_server_update
+    ) {
+        return;
+    }
+
+    const row =
+        locals?.[cdt]?.[cdn];
+
+    if (
+        !row
+        || row.__islocal
+        || !row.name
+    ) {
+        return;
+    }
+
+    const status_fields =
+        get_status_fieldnames();
+
+    if (
+        !status_fields.includes(fieldname)
+    ) {
+        return;
+    }
+
+    const value =
+        row[fieldname] === null
+        || row[fieldname] === undefined
+            ? ''
+            : row[fieldname];
+
+    frm.__multiuser_pending_saves =
+        (
+            frm.__multiuser_pending_saves
+            || 0
+        ) + 1;
+
+    set_multiuser_save_indicator(
+        frm,
+        'saving'
+    );
+
+    const previous_chain =
+        frm.__multiuser_save_chain
+        || Promise.resolve();
+
+    frm.__multiuser_save_chain =
+        previous_chain
+            .catch(() => {
+                // Keep queue alive after
+                // a previous failed request.
+            })
+            .then(() => frappe.call({
+                method:
+                    MULTIUSER_UPDATE_METHOD,
+
+                args: {
+                    parent_doctype:
+                        MULTIUSER_PARENT_DOCTYPE,
+
+                    register_name:
+                        frm.doc.name,
+
+                    row_name:
+                        row.name,
+
+                    fieldname:
+                        fieldname,
+
+                    value:
+                        value
+                },
+
+                freeze: false,
+                silent: true
+            }))
+            .then(r => {
+                const message =
+                    r && r.message
+                        ? r.message
+                        : {};
+
+                frm.__multiuser_applying_server_update =
+                    true;
+
+                try {
+                    if (
+                        message.row_submission
+                        !== undefined
+                    ) {
+                        row.checklist_submission =
+                            message.row_submission;
+                    }
+
+                    if (
+                        message
+                            .checklist_submission_average
+                        !== undefined
+                    ) {
+                        frm.doc
+                            .checklist_submission_average =
+                            message
+                                .checklist_submission_average;
+                    }
+
+                    if (message.modified) {
+                        frm.doc.modified =
+                            message.modified;
+                    }
+
+                    snapshot_current_row_state(
+                        frm
+                    );
+
+                    const child_table_fieldname =
+                        get_child_table_fieldname(
+                            frm
+                        );
+
+                    const grid =
+                        child_table_fieldname
+                            ? frm.fields_dict[
+                                child_table_fieldname
+                            ]?.grid
+                            : null;
+
+                    const grid_row =
+                        grid
+                            ?.grid_rows_by_docname
+                            ?.[row.name];
+
+                    if (
+                        grid_row
+                        && typeof (
+                            grid_row.refresh_field
+                        ) === 'function'
+                    ) {
+                        grid_row.refresh_field(
+                            'checklist_submission'
+                        );
+                    } else if (
+                        child_table_fieldname
+                    ) {
+                        frm.refresh_field(
+                            child_table_fieldname
+                        );
+                    }
+
+                    frm.refresh_field(
+                        'checklist_submission_average'
+                    );
+
+                    /*
+                     * Do not mark the form clean
+                     * until the LAST queued cell
+                     * has reached the server.
+                     */
+                    if (
+                        (
+                            frm
+                                .__multiuser_pending_saves
+                            || 0
+                        ) <= 1
+                    ) {
+                        frm.doc.__unsaved = 0;
+
+                        if (frm.page) {
+                            frm.page
+                                .clear_indicator();
+                        }
+                    }
+
+                    refresh_checklist_submission_ui(
+                        frm,
+                        false
+                    );
+                } finally {
+                    frm.__multiuser_applying_server_update =
+                        false;
+                }
+            })
+            .catch(error => {
+                console.error(
+                    'Multi-user checklist '
+                    + 'cell save failed',
+                    error
+                );
+
+                frappe.msgprint({
+                    title:
+                        __(
+                            'Checklist Save Failed'
+                        ),
+
+                    message:
+                        __(
+                            'Your latest checklist '
+                            + 'change could not be '
+                            + 'saved. The register '
+                            + 'will reload to prevent '
+                            + 'an overwrite.'
+                        ),
+
+                    indicator: 'red'
+                });
+
+                setTimeout(
+                    () => frm.reload_doc(),
+                    300
+                );
+            })
+            .finally(() => {
+                frm.__multiuser_pending_saves =
+                    Math.max(
+                        0,
+                        (
+                            frm
+                                .__multiuser_pending_saves
+                            || 1
+                        ) - 1
+                    );
+
+                if (
+                    frm.__multiuser_pending_saves
+                    > 0
+                ) {
+                    set_multiuser_save_indicator(
+                        frm,
+                        'saving'
+                    );
+                } else {
+                    set_multiuser_save_indicator(
+                        frm,
+                        'saved'
+                    );
+                }
+            });
+}
+
+
+function bind_multiuser_status_handlers(
+    frm
+) {
+    if (
+        !frm
+        || frm.doctype
+            !== MULTIUSER_PARENT_DOCTYPE
+    ) {
+        return;
+    }
+
+    window[MULTIUSER_HANDLER_KEY] =
+        window[MULTIUSER_HANDLER_KEY]
+        || {};
+
+    const bound =
+        window[MULTIUSER_HANDLER_KEY];
+
+    get_status_fieldnames().forEach(
+        fieldname => {
+            if (bound[fieldname]) {
+                return;
+            }
+
+            bound[fieldname] = true;
+
+            frappe.ui.form.on(
+                CHECKLIST_CHILD_DOCTYPE,
+                fieldname,
+                function (
+                    event_frm,
+                    cdt,
+                    cdn
+                ) {
+                    if (
+                        !event_frm
+                        || event_frm.doctype
+                            !==
+                            MULTIUSER_PARENT_DOCTYPE
+                    ) {
+                        return;
+                    }
+
+                    save_checklist_cell_multiuser(
+                        event_frm,
+                        cdt,
+                        cdn,
+                        fieldname
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+function guard_full_save_during_multiuser_update(
+    frm
+) {
+    if (
+        !frm
+        || frm.is_new()
+    ) {
+        return false;
+    }
+
+    if (
+        (
+            frm.__multiuser_pending_saves
+            || 0
+        ) > 0
+    ) {
+        frappe.validated = false;
+
+        frappe.show_alert({
+            message:
+                __(
+                    'Checklist changes are '
+                    + 'still being saved '
+                    + 'automatically.'
+                ),
+            indicator: 'orange'
+        }, 4);
+
+        return true;
+    }
+
+    return false;
+}
+
+/* ===== MULTI-USER CHECKLIST CELL SAVE END ===== */
+
 function bind_checklist_checkbox_listener(frm) {
+    bind_multiuser_status_handlers(frm);
     if ($(frm.wrapper).data('checklist-submission-bound')) return;
 
     $(frm.wrapper).data('checklist-submission-bound', true);
@@ -1444,6 +1856,8 @@ frappe.ui.form.on('Engineering Checklist Register', {
     },
 
     before_save(frm) {
+        if (guard_full_save_during_multiuser_update(frm)) return;
+
         snapshot_current_row_state(frm);
         update_row_checklist_submission_values(frm);
         update_checklist_submission_average(frm);
