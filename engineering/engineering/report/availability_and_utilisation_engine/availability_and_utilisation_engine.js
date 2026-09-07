@@ -170,7 +170,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 "Company Assets",
                 "Supplier Assets",
                 "All Assets"
-            ].join("\\n"),
+            ].join("\n"),
             default: "Company Assets",
             reqd: 1
         },
