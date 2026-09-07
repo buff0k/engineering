@@ -250,7 +250,7 @@ def get_data(filters):
         planning_rows,
         selected_assets,
         companies,
-        filters.get("asset_ownership") or "Company Assets",
+        filters.get("asset_ownership") or "Isambane & Excavo Assets",
     )
 
     if not assets:
@@ -1574,7 +1574,7 @@ def get_assets(
     planning_rows,
     selected_assets,
     companies,
-    asset_ownership="Company Assets",
+    asset_ownership="Isambane & Excavo Assets",
 ):
     locations = sorted({
         row.location
@@ -1621,7 +1621,7 @@ def get_assets(
             companies
         )
 
-    if asset_ownership == "Company Assets":
+    if asset_ownership == "Isambane & Excavo Assets":
         conditions.append(
             "asset.asset_owner = 'Company'"
         )
