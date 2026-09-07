@@ -168,7 +168,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             fieldtype: "Select",
             options: [
                 "Isambane & Excavo Assets",
-                "Supplier Assets",
+                "Suppliers Assets",
                 "All Assets"
             ].join("\n"),
             default: "Isambane & Excavo Assets",
