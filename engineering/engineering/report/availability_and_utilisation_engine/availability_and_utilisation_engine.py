@@ -1625,7 +1625,7 @@ def get_assets(
         conditions.append(
             "asset.asset_owner = 'Company'"
         )
-    elif asset_ownership == "Supplier Assets":
+    elif asset_ownership == "Suppliers Assets":
         conditions.append(
             "asset.asset_owner = 'Supplier'"
         )
