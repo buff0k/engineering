@@ -826,6 +826,7 @@ def fetch_grouped_data(
         ),
         "assets": [],
         "companies": [],
+        "asset_ownership": "Company Assets",
         "free_hours": 0,
         "production_machines_only": 0,
         "au_percentage_basis": "100% A & U",
