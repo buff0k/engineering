@@ -273,6 +273,12 @@ def get_data(filters):
     if not assets:
         return []
 
+    required_hours_exception_map = (
+        get_required_hours_exception_map(
+            sorted({asset.location for asset in assets})
+        )
+    )
+
     preuse_map = get_preuse_map(
         filters.from_date,
         filters.to_date,
@@ -336,6 +342,17 @@ def get_data(filters):
                     required_hours = get_required_hours(
                         planning,
                         shift,
+                    )
+
+                    required_hours = (
+                        get_exception_required_hours(
+                            required_hours_exception_map,
+                            location,
+                            asset.name,
+                            current_date,
+                            shift,
+                            required_hours,
+                        )
                     )
 
                     preuse = preuse_map.get(
@@ -1776,6 +1793,71 @@ def get_shifts(shift_system):
         "Afternoon",
         "Night",
     ]
+
+
+def get_required_hours_exception_map(locations):
+    if not locations:
+        return {}
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            specification.location,
+            exception.asset,
+            exception.day_type,
+            exception.shift,
+            exception.required_hours
+        FROM `tabRequired Hours Exception Specification` specification
+        INNER JOIN `tabAsset Required Hours Exception` exception
+            ON exception.parent = specification.name
+           AND exception.parenttype = 'Required Hours Exception Specification'
+           AND exception.parentfield = 'exceptions'
+        WHERE specification.enabled = 1
+          AND specification.location IN %(locations)s
+        """,
+        {"locations": tuple(locations)},
+        as_dict=True,
+    )
+
+    return {
+        (
+            row.location,
+            row.asset,
+            row.day_type,
+            row.shift,
+        ): max(flt(row.required_hours), 0)
+        for row in rows
+    }
+
+
+def get_exception_required_hours(
+    exception_map,
+    location,
+    asset,
+    shift_date,
+    shift,
+    default_hours,
+):
+    weekday = getdate(shift_date).weekday()
+
+    if weekday == 5:
+        day_type = "Saturday"
+    elif weekday == 6:
+        day_type = "Sunday"
+    else:
+        day_type = "Weekday"
+
+    key = (
+        location,
+        asset,
+        day_type,
+        shift,
+    )
+
+    if key in exception_map:
+        return exception_map[key]
+
+    return default_hours
 
 
 def get_required_hours(
