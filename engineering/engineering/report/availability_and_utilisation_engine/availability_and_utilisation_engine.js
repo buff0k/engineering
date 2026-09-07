@@ -167,11 +167,11 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             label: __("Asset Ownership"),
             fieldtype: "Select",
             options: [
-                "Company Assets",
+                "Isambane & Excavo Assets",
                 "Supplier Assets",
                 "All Assets"
             ].join("\n"),
-            default: "Company Assets",
+            default: "Isambane & Excavo Assets",
             reqd: 1
         },
         {
