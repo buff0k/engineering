@@ -250,6 +250,7 @@ def get_data(filters):
         planning_rows,
         selected_assets,
         companies,
+        filters.get("asset_ownership") or "Company Assets",
     )
 
     if not assets:
@@ -1573,6 +1574,7 @@ def get_assets(
     planning_rows,
     selected_assets,
     companies,
+    asset_ownership="Company Assets",
 ):
     locations = sorted({
         row.location
@@ -1617,6 +1619,15 @@ def get_assets(
 
         values["companies"] = tuple(
             companies
+        )
+
+    if asset_ownership == "Company Assets":
+        conditions.append(
+            "asset.asset_owner = 'Company'"
+        )
+    elif asset_ownership == "Supplier Assets":
+        conditions.append(
+            "asset.asset_owner = 'Supplier'"
         )
 
     assets = frappe.db.sql(
