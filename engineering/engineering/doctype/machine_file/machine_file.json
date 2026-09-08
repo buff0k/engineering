@@ -1,0 +1,194 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:MF-{machine}",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "filter_section",
+  "site",
+  "machine_category",
+  "machine",
+  "asset_details_section",
+  "machine_name",
+  "item_code",
+  "serial_no",
+  "refresh_index",
+  "last_refreshed",
+  "index_section",
+  "index_dashboard",
+  "index_items",
+  "documents_section",
+  "documents"
+ ],
+ "fields": [
+  {
+   "fieldname": "filter_section",
+   "fieldtype": "Section Break",
+   "label": "Machine Selection"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Site",
+   "options": "Location",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "machine_category",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Machine Category",
+   "options": "Asset Category",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "label": "Machine",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "asset_details_section",
+   "fieldtype": "Section Break",
+   "label": "Asset Details"
+  },
+  {
+   "fieldname": "machine_name",
+   "fieldtype": "Data",
+   "label": "Machine Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "label": "Item / Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Data",
+   "label": "Serial Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refresh_index",
+   "fieldtype": "Button",
+   "label": "Refresh Machine File"
+  },
+  {
+   "fieldname": "last_refreshed",
+   "fieldtype": "Datetime",
+   "label": "Last Refreshed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "index_section",
+   "fieldtype": "Section Break",
+   "label": "Machine File Index"
+  },
+  {
+   "fieldname": "index_dashboard",
+   "fieldtype": "HTML",
+   "label": "Machine File Dashboard"
+  },
+  {
+   "fieldname": "index_items",
+   "fieldtype": "Table",
+   "label": "Machine File Index",
+   "options": "Machine File Index Item",
+   "hidden": 1
+  },
+  {
+   "fieldname": "documents_section",
+   "fieldtype": "Section Break",
+   "label": "Machine File Documents",
+   "hidden": 1
+  },
+  {
+   "fieldname": "documents",
+   "fieldtype": "Table",
+   "label": "Documents / Certificates / Reports",
+   "options": "Machine File Document",
+   "hidden": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Engineering",
+ "name": "Machine File",
+ "naming_rule": "Expression",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 0
+  },
+  {
+   "role": "Production Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 0
+  },
+  {
+   "role": "Engineering User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  },
+  {
+   "role": "Production User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 0,
+   "share": 0
+  }
+ ],
+ "search_fields": "machine,machine_name,site,machine_category",
+ "sort_field": "machine_category",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "machine",
+ "track_changes": 1,
+ "show_title_field_in_link": 1
+}
