@@ -236,6 +236,20 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             change: () => this.load_dashboard()
         });
 
+        this.asset_ownership = this.page.add_field({
+            fieldname: "asset_ownership",
+            label: __("Asset Ownership"),
+            fieldtype: "Select",
+            options: [
+                "Isambane & Excavo Assets",
+                "Suppliers Assets",
+                "All Assets"
+            ].join("\n"),
+            default: "Isambane & Excavo Assets",
+            reqd: 1,
+            change: () => this.load_dashboard()
+        });
+
         this.au_target_filter = this.page.add_field({
             fieldname: "au_target_filter",
             label: __("A & U Target"),
@@ -318,6 +332,9 @@ class DailyAvailabilityAndUtilizationDashboardPage {
         await this.summary_type.set_value("Average Per Machine");
         await this.machine_scope.set_value(
             "Production + Swing/Spare Machines"
+        );
+        await this.asset_ownership.set_value(
+            "Isambane & Excavo Assets"
         );
         await this.au_target_filter.set_value("85% A & U");
         await this.hours_display.set_value("Hours Average per Category");
@@ -440,6 +457,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             site: this.location.get_value(),
             summary_type: this.summary_type.get_value() || "Average Per Machine",
             machine_scope: this.machine_scope.get_value() || "Production + Swing/Spare Machines",
+            asset_ownership: this.asset_ownership.get_value() || "Isambane & Excavo Assets",
             au_target_filter: this.au_target_filter.get_value() || "85% A & U",
             hours_display: this.hours_display.get_value() || "Hours Average per Category",
             hours_asset: this.hours_asset.get_value() || ""
@@ -1120,6 +1138,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             site: values.site,
             summary_type: values.summary_type,
             machine_scope: values.machine_scope,
+            asset_ownership: values.asset_ownership,
             au_target_filter: values.au_target_filter
         });
 

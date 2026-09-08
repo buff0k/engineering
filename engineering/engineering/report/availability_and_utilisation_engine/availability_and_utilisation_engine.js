@@ -163,6 +163,18 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             }
         },
         {
+            fieldname: "asset_ownership",
+            label: __("Asset Ownership"),
+            fieldtype: "Select",
+            options: [
+                "Isambane & Excavo Assets",
+                "Suppliers Assets",
+                "All Assets"
+            ].join("\n"),
+            default: "Isambane & Excavo Assets",
+            reqd: 1
+        },
+        {
             fieldname: "free_hours",
             label: __("Free Hours"),
             fieldtype: "Float",

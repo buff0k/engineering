@@ -9,10 +9,8 @@ from frappe.utils import getdate, get_datetime, now_datetime, time_diff_in_hours
 from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 from datetime import timedelta
-import importlib.util
-
-from engineering.engineering.report.availability_and_utilisation_month_end_report import (
-    availability_and_utilisation_month_end_report as month_end,
+from engineering.engineering.page.daily_availability_and_utilization_dashboard import (
+    daily_availability_and_utilization_dashboard as daily_au_dashboard,
 )
 
 
@@ -20,14 +18,6 @@ from engineering.engineering.doctype.availability_and_utilisation.availability_a
     _exclusion_windows,
 )
 
-
-AVAIL_UTIL_REPORT_FILE = frappe.get_app_path(
-    "is_production",
-    "production",
-    "report",
-    "avail_and_util_report",
-    "avail_and_util_report.py",
-)
 
 START_LOOKUP_DATETIME = get_datetime("2026-05-01 00:00:00")
 
@@ -276,24 +266,6 @@ def get_open_closed_value(row):
     return "Open"
 
 
-def get_avail_util_grouped_data_method():
-    spec = importlib.util.spec_from_file_location(
-        "availability_utilisation_report_loader",
-        AVAIL_UTIL_REPORT_FILE,
-    )
-
-    if not spec or not spec.loader:
-        frappe.throw(_("Could not load Avail and Util report file."))
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    if not hasattr(module, "get_grouped_data"):
-        frappe.throw(_("Avail and Util report has no get_grouped_data method."))
-
-    return module.get_grouped_data
-
-
 def get_summary_category_key(asset_category):
     value = str(asset_category or "").strip().lower()
 
@@ -311,36 +283,102 @@ def get_summary_category_key(asset_category):
 
 def blank_avail_util_summary():
     return {
-        "adts": {"label": "ADT's", "availability": None, "utilisation": None},
-        "excavators": {"label": "Excavators", "availability": None, "utilisation": None},
-        "dozers": {"label": "Dozers", "availability": None, "utilisation": None},
+        "adts": {
+            "label": "ADT's",
+            "availability": None,
+            "utilisation": None,
+            "working_hours": None,
+            "breakdown_hours": None,
+        },
+        "excavators": {
+            "label": "Excavators",
+            "availability": None,
+            "utilisation": None,
+            "working_hours": None,
+            "breakdown_hours": None,
+        },
+        "dozers": {
+            "label": "Dozers",
+            "availability": None,
+            "utilisation": None,
+            "working_hours": None,
+            "breakdown_hours": None,
+        },
     }
 
 
 def get_avail_util_scope_summary(previous_date, site, machine_scope):
-    get_grouped_data = get_avail_util_grouped_data_method()
+    """Use the same Engine rows and aggregation as the Daily A&U Dashboard."""
+    rows = daily_au_dashboard.fetch_grouped_data(
+        site,
+        previous_date,
+        previous_date,
+        machine_scope,
+        "100% A & U",
+        "Isambane & Excavo Assets",
+    ) or []
 
-    filters = frappe._dict({
-        "start_date": previous_date,
-        "end_date": previous_date,
-        "location": site or "",
-        "machine_scope": machine_scope,
-    })
-
-    data = get_grouped_data(filters) or []
     summary = blank_avail_util_summary()
+    shift_rows = [
+        row
+        for row in rows
+        if isinstance(row, dict)
+        and int(row.get("indent") or 0) == 3
+        and not row.get("is_formula_row")
+    ]
 
-    for row in data:
-        if row.get("indent") != 0:
+    for output_key in summary:
+        category_rows = [
+            row
+            for row in shift_rows
+            if get_summary_category_key(row.get("asset_category")) == output_key
+        ]
+
+        if not category_rows:
             continue
 
-        key = get_summary_category_key(row.get("asset_category"))
+        engine_summary = daily_au_dashboard.au_engine.build_summary_row(
+            category_rows,
+            indent=0,
+            asset_category=summary[output_key]["label"],
+        )
+        daily_au_dashboard.au_engine.apply_au_percentage_basis(
+            [engine_summary],
+            "100% A & U",
+        )
 
-        if not key:
-            continue
+        machine_totals = {}
+        for row in category_rows:
+            machine = row.get("asset_name") or row.get("plant_no")
+            if not machine:
+                continue
 
-        summary[key]["availability"] = row.get("avail_target_percent")
-        summary[key]["utilisation"] = row.get("util_target_percent")
+            totals = machine_totals.setdefault(
+                machine,
+                {"required": 0.0, "work": 0.0, "breakdown": 0.0},
+            )
+            totals["required"] += float(row.get("required_hours") or 0)
+            totals["work"] += float(row.get("work_hours") or 0)
+            totals["breakdown"] += float(row.get("pbm_total_downtime") or 0)
+
+        valid_machines = [
+            values
+            for values in machine_totals.values()
+            if values["required"] > 0
+        ]
+
+        summary[output_key].update({
+            "availability": engine_summary.get("availability_percentage"),
+            "utilisation": engine_summary.get("utilisation_percentage"),
+            "working_hours": (
+                round(sum(row["work"] for row in valid_machines) / len(valid_machines), 2)
+                if valid_machines else None
+            ),
+            "breakdown_hours": (
+                round(sum(row["breakdown"] for row in valid_machines) / len(valid_machines), 2)
+                if valid_machines else None
+            ),
+        })
 
     return summary
 
