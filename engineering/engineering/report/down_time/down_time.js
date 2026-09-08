@@ -1251,7 +1251,6 @@ function format_avail_util_hours(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number.toFixed(2) + "h" : "-";
 }
-}
 
 function get_avail_util_colour_class(value, type) {
     if (value === null || value === undefined || value === "") {
