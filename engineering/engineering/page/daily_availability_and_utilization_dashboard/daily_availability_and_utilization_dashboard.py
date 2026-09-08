@@ -717,6 +717,10 @@ def execute(filters=None):
     machine_scope = filters.get("machine_scope") or "Production + Swing/Spare Machines"
     hours_display = filters.get("hours_display") or "Hours Average per Category"
     hours_asset = filters.get("hours_asset") or ""
+    asset_ownership = (
+        filters.get("asset_ownership")
+        or "Isambane & Excavo Assets"
+    )
 
     if not start_date:
         frappe.throw("Please select Start Date.")
@@ -748,6 +752,7 @@ def execute(filters=None):
         end_date,
         machine_scope,
         au_target_filter,
+        asset_ownership,
     )
 
     spare_swing_asset_map = get_engine_spare_swing_asset_map(source_rows)
@@ -795,6 +800,7 @@ def fetch_grouped_data(
     end_date,
     machine_scope=None,
     au_target_filter=None,
+    asset_ownership="Isambane & Excavo Assets",
 ):
     """Return dashboard rows calculated by the Availability and Utilisation Engine.
 
@@ -826,6 +832,7 @@ def fetch_grouped_data(
         ),
         "assets": [],
         "companies": [],
+        "asset_ownership": asset_ownership,
         "free_hours": 0,
         "production_machines_only": 0,
         "au_percentage_basis": "100% A & U",
@@ -3169,7 +3176,7 @@ def get_machine_downtime_details(
 
 
 @frappe.whitelist()
-def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
+def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, asset_ownership=None, au_target_filter=None):
     from frappe.utils.pdf import get_pdf
     from frappe.utils import now_datetime
 
@@ -3184,6 +3191,7 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
         site=site,
         summary_type=summary_type,
         machine_scope=machine_scope,
+        asset_ownership=asset_ownership or "Isambane & Excavo Assets",
         au_target_filter=au_target_filter or "85% A & U",
     )
 
@@ -3576,7 +3584,7 @@ def download_daily_dashboard_pdf_v2(start_date=None, end_date=None, location=Non
     frappe.local.response.type = "download"
 
 @frappe.whitelist()
-def get_daily_availability_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None):
+def get_daily_availability_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, asset_ownership=None, au_target_filter=None, hours_display=None, hours_asset=None):
     location = location or site
     summary_type = summary_type or "Average Per Machine"
     machine_scope = machine_scope or "Production + Swing/Spare Machines"
@@ -3600,6 +3608,7 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
             "site": location,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
+            "asset_ownership": asset_ownership or "Isambane & Excavo Assets",
             "au_target_filter": au_target_filter or "85% A & U",
             "hours_display": hours_display or "Hours Average per Category",
             "hours_asset": hours_asset or "",
@@ -3611,7 +3620,7 @@ def get_daily_availability_dashboard_html(start_date=None, end_date=None, locati
 
 
 @frappe.whitelist()
-def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, au_target_filter=None, hours_display=None, hours_asset=None):
+def get_dashboard_html(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, asset_ownership=None, au_target_filter=None, hours_display=None, hours_asset=None):
     location = location or site
     summary_type = summary_type or "Average Per Machine"
     machine_scope = machine_scope or "Production + Swing/Spare Machines"
@@ -3635,6 +3644,7 @@ def get_dashboard_html(start_date=None, end_date=None, location=None, site=None,
             "site": location,
             "summary_type": summary_type,
             "machine_scope": machine_scope,
+            "asset_ownership": asset_ownership or "Isambane & Excavo Assets",
             "au_target_filter": au_target_filter or "85% A & U",
             "hours_display": hours_display or "Hours Average per Category",
             "hours_asset": hours_asset or "",

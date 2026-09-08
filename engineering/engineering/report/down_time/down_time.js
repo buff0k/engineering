@@ -1199,7 +1199,17 @@ function get_previous_day_breakdown_report_url(previous_date, site) {
         machine_scope: "Include Swing/Spare"
     });
 
-    return window.location.origin + "/desk/query-report/Availability%20and%20Utilisation%20Month%20End%20Report?" + params.toString();
+    params.delete("from_date");
+    params.delete("to_date");
+    params.delete("location");
+    params.delete("machine_scope");
+    params.set("start_date", previous_date || "");
+    params.set("end_date", previous_date || "");
+    params.set("site", site || "");
+    params.set("summary_type", "Average Per Machine");
+    params.set("asset_ownership", "Isambane & Excavo Assets");
+
+    return window.location.origin + "/desk/daily-availability-and-utilization-dashboard?" + params.toString();
 }
 
 
@@ -1216,6 +1226,8 @@ function get_avail_util_bubble_html(row) {
 
     const availability_class = get_avail_util_colour_class(raw_availability, "availability");
     const utilisation_class = get_avail_util_colour_class(raw_utilisation, "utilisation");
+    const working_hours = format_avail_util_hours(row.working_hours);
+    const breakdown_hours = format_avail_util_hours(row.breakdown_hours);
 
     return `
         <div class="downtime-avail-util-bubble">
@@ -1224,8 +1236,20 @@ function get_avail_util_bubble_html(row) {
                 <div class="downtime-avail-util-value ${availability_class}">Avail<br>${availability}</div>
                 <div class="downtime-avail-util-value ${utilisation_class}">Util<br>${utilisation}</div>
             </div>
+            <div class="downtime-avail-util-hours">
+                Avg Work: ${working_hours} &nbsp;|&nbsp; Avg Breakdown: ${breakdown_hours}
+            </div>
         </div>
     `;
+}
+
+function format_avail_util_hours(value) {
+    if (value === null || value === undefined || value === "") {
+        return "-";
+    }
+
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(2) + "h" : "-";
 }
 
 function get_avail_util_colour_class(value, type) {
