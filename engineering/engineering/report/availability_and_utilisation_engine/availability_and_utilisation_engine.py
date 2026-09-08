@@ -1644,7 +1644,7 @@ def get_assets(
         )
     elif asset_ownership == "Suppliers Assets":
         conditions.append(
-            "asset.asset_owner = 'Supplier'"
+            "asset.asset_owner IN ('Supplier', 'Customer')"
         )
 
     assets = frappe.db.sql(
