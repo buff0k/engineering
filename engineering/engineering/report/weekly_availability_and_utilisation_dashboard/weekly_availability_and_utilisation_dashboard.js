@@ -22,6 +22,18 @@ frappe.query_reports["Weekly Availability and Utilisation Dashboard"] = {
       label: __("To Date"),
       fieldtype: "Date",
       default: frappe.datetime.add_days(frappe.datetime.get_today(), -1)
+    },
+    {
+      fieldname: "asset_ownership",
+      label: __("Asset Ownership"),
+      fieldtype: "Select",
+      options: [
+        "Isambane & Excavo Assets",
+        "Suppliers Assets",
+        "All Assets"
+      ].join("\n"),
+      default: "Isambane & Excavo Assets",
+      reqd: 1
     }
   ]
 };
