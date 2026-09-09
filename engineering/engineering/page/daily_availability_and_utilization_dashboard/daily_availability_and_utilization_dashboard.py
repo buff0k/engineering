@@ -786,6 +786,7 @@ def execute(filters=None):
         spare_avgs,
         hours_display,
         hours_asset,
+        asset_ownership,
     )
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
@@ -1579,6 +1580,7 @@ def build_dashboard_html(
     spare_avgs=None,
     hours_display="Hours Average per Category",
     hours_asset=None,
+    asset_ownership="Isambane & Excavo Assets",
 ):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Average Per Machine")
@@ -1618,6 +1620,7 @@ def build_dashboard_html(
         f"&site={quote(str(location or ''))}"
         f"&au_target_filter={quote(str(au_target_filter))}"
         f"&au_percentage_basis={quote(str(au_target_filter))}"
+        f"&asset_ownership={quote(str(asset_ownership))}"
     )
 
 

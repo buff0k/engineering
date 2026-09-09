@@ -1545,44 +1545,77 @@ def get_planning_rows(
 
 
 def build_planning_map(planning_rows):
+    planning_names = [
+        row.name
+        for row in planning_rows
+        if row.get("name")
+    ]
+
+    if not planning_names:
+        return {}
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            mpp.name AS planning_name,
+            mpp.location,
+            mpp.shift_system,
+            mpp.saturday_shift_hours,
+            mpp.prod_month_start_date,
+            day.shift_start_date,
+            day.shift_day_hours,
+            day.shift_night_hours,
+            day.shift_morning_hours,
+            day.shift_afternoon_hours
+        FROM `tabMonthly Production Planning` mpp
+        INNER JOIN `tabMonthly Production Days` day
+            ON day.parent = mpp.name
+           AND day.parenttype = 'Monthly Production Planning'
+           AND day.parentfield = 'month_prod_days'
+        WHERE mpp.name IN %(planning_names)s
+        ORDER BY
+            mpp.location,
+            mpp.prod_month_start_date,
+            day.idx
+        """,
+        {
+            "planning_names": tuple(
+                planning_names
+            )
+        },
+        as_dict=True,
+    )
+
     planning_map = {}
 
-    for planning_row in planning_rows:
-        planning_doc = frappe.get_doc(
-            "Monthly Production Planning",
-            planning_row.name,
+    for row in rows:
+        shift_date = getdate(
+            row.shift_start_date
         )
 
-        for day in planning_doc.month_prod_days:
-            shift_date = getdate(
-                day.shift_start_date
+        planning_map[
+            (
+                row.location,
+                str(shift_date),
             )
-
-            planning_map[
-                (
-                    planning_row.location,
-                    str(shift_date),
-                )
-            ] = {
-                "shift_system": (
-                    planning_row.shift_system
-                ),
-                "saturday_shift_hours": flt(
-                    planning_doc.saturday_shift_hours
-                ),
-                "shift_day_hours": flt(
-                    day.shift_day_hours
-                ),
-                "shift_night_hours": flt(
-                    day.shift_night_hours
-                ),
-                "shift_morning_hours": flt(
-                    day.shift_morning_hours
-                ),
-                "shift_afternoon_hours": flt(
-                    day.shift_afternoon_hours
-                ),
-            }
+        ] = {
+            "shift_system": row.shift_system,
+            "saturday_shift_hours": flt(
+                row.saturday_shift_hours
+            ),
+            "shift_day_hours": flt(
+                row.shift_day_hours
+            ),
+            "shift_night_hours": flt(
+                row.shift_night_hours
+            ),
+            "shift_morning_hours": flt(
+                row.shift_morning_hours
+            ),
+            "shift_afternoon_hours": flt(
+                row.shift_afternoon_hours
+            ),
+        }
 
     return planning_map
 
@@ -1679,6 +1712,8 @@ def get_preuse_map(
             "%(from_date)s AND %(to_date)s"
         ),
         "puh.docstatus < 2",
+        "preuse_asset.parenttype = 'Pre-Use Hours'",
+        "preuse_asset.parentfield = 'pre_use_assets'",
     ]
 
     values = {
@@ -1698,12 +1733,32 @@ def get_preuse_map(
     rows = frappe.db.sql(
         f"""
         SELECT
-            puh.name,
             puh.location,
             puh.shift_date,
-            puh.shift
+            puh.shift,
+            COALESCE(
+                NULLIF(
+                    TRIM(preuse_asset.plant_no),
+                    ''
+                ),
+                NULLIF(
+                    TRIM(asset.asset_name),
+                    ''
+                )
+            ) AS plant_no,
+            preuse_asset.eng_hrs_start,
+            preuse_asset.eng_hrs_end,
+            preuse_asset.pre_use_avail_status
         FROM `tabPre-Use Hours` puh
+        INNER JOIN `tabPre-use Assets` preuse_asset
+            ON preuse_asset.parent = puh.name
+        LEFT JOIN `tabAsset` asset
+            ON asset.name = preuse_asset.asset_name
         WHERE {" AND ".join(conditions)}
+        ORDER BY
+            puh.shift_date,
+            puh.name,
+            preuse_asset.idx
         """,
         values,
         as_dict=True,
@@ -1712,39 +1767,27 @@ def get_preuse_map(
     preuse_map = {}
 
     for row in rows:
-        doc = frappe.get_doc(
-            "Pre-Use Hours",
-            row.name,
-        )
+        plant_no = str(
+            row.get("plant_no") or ""
+        ).strip()
 
-        for asset_row in doc.pre_use_assets:
-            plant_no = get_preuse_plant_no(
-                asset_row
+        if not plant_no:
+            continue
+
+        preuse_map[
+            (
+                row.location,
+                str(row.shift_date),
+                row.shift,
+                plant_no,
             )
-
-            if not plant_no:
-                continue
-
-            preuse_map[
-                (
-                    row.location,
-                    str(row.shift_date),
-                    row.shift,
-                    plant_no,
-                )
-            ] = {
-                "eng_hrs_start": (
-                    asset_row.eng_hrs_start
-                ),
-                "eng_hrs_end": (
-                    asset_row.eng_hrs_end
-                ),
-                "pre_use_avail_status": getattr(
-                    asset_row,
-                    "pre_use_avail_status",
-                    None,
-                ),
-            }
+        ] = {
+            "eng_hrs_start": row.eng_hrs_start,
+            "eng_hrs_end": row.eng_hrs_end,
+            "pre_use_avail_status": (
+                row.pre_use_avail_status
+            ),
+        }
 
     return preuse_map
 
