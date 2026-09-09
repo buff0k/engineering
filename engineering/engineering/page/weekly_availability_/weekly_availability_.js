@@ -70,6 +70,22 @@ function render_weekly_availability_dashboard_page(wrapper) {
     }
   });
 
+  const asset_ownership = page.add_field({
+    fieldtype: "Select",
+    label: __("Asset Ownership"),
+    fieldname: "asset_ownership",
+    options: [
+      "Isambane & Excavo Assets",
+      "Suppliers Assets",
+      "All Assets"
+    ],
+    default: "Isambane & Excavo Assets",
+    change: () => {
+      save_filters();
+      auto_load();
+    }
+  });
+
   page.add_inner_button(__("Load Dashboard"), () => {
     save_filters();
     load_and_render(false);
@@ -83,7 +99,8 @@ function render_weekly_availability_dashboard_page(wrapper) {
     return {
       site_group: site_group.get_value(),
       from_date: from_date.get_value(),
-      to_date: to_date.get_value()
+      to_date: to_date.get_value(),
+      asset_ownership: asset_ownership.get_value()
     };
   }
 
@@ -114,6 +131,12 @@ function render_weekly_availability_dashboard_page(wrapper) {
 
     if (saved.to_date) {
       to_date.set_value(saved.to_date);
+    }
+
+    if (saved.asset_ownership) {
+      asset_ownership.set_value(
+        saved.asset_ownership
+      );
     }
   }
 

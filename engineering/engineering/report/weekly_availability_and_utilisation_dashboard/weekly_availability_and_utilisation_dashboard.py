@@ -7,8 +7,9 @@ from datetime import timedelta
 import frappe
 from frappe.utils import getdate
 
-
-DT = "Availability and Utilisation"
+from engineering.engineering.report.availability_and_utilisation_engine import (
+    availability_and_utilisation_engine as au_engine,
+)
 
 CATEGORY_MAP = {
     "ADT": "ADTs",
@@ -36,15 +37,33 @@ def execute(filters=None):
     sites = dashboard_sites(filters)
     date_list = get_date_list(from_date, to_date)
 
+    engine_rows = fetch_engine_rows(
+        sites,
+        from_date,
+        to_date,
+        filters.get("asset_ownership")
+        or "Isambane & Excavo Assets",
+    )
+
     data = []
 
     for idx, site in enumerate(sites):
-        summary_rows = fetch_site_rows(site, from_date, to_date)
-        asset_rows = fetch_asset_rows(site, from_date, to_date)
+        site_rows = [
+            row
+            for row in engine_rows
+            if row.get("location") == site
+        ]
 
-        daily_series = build_daily_series(summary_rows, date_list)
-        asset_series = build_asset_series(asset_rows)
-        avgs = build_7day_averages(daily_series)
+        daily_series = build_daily_series(
+            site_rows,
+            date_list,
+        )
+        asset_series = build_asset_series(
+            site_rows
+        )
+        avgs = build_7day_averages(
+            daily_series
+        )
 
         data.append({
             "site": site,
@@ -136,171 +155,145 @@ def is_sunday(date_value):
     return getdate(date_value).weekday() == 6
 
 
-def fetch_site_rows(site, from_date, to_date):
-    """
-    Fetch grouped report rows.
+def fetch_engine_rows(
+    sites,
+    from_date,
+    to_date,
+    asset_ownership,
+):
+    """Fetch canonical shift rows once for every selected site."""
+    if not sites:
+        return []
 
-    These rows are still used for the daily category trend and site-level averages,
-    because the existing Avail and Util summary already produces the category/day
-    summary rows we need.
-    """
-    from is_production.production.report.avail_and_util_summary.avail_and_util_summary import (
-        get_grouped_data,
-    )
+    rows = au_engine.get_data(
+        frappe._dict({
+            "from_date": from_date,
+            "to_date": to_date,
+            "locations": sites,
+            "assets": [],
+            "companies": [],
+            "asset_ownership": asset_ownership,
+            "free_hours": 0,
+            "production_machines_only": 0,
+            "au_percentage_basis": "100% A & U",
+        })
+    ) or []
 
-    return get_grouped_data({
-        "start_date": from_date,
-        "end_date": to_date,
-        "location": site,
-    })
-
-
-def fetch_asset_rows(site, from_date, to_date):
-    """
-    Fetch raw Availability and Utilisation rows.
-
-    This is required for the asset-level graph because the grouped summary rows do
-    not reliably contain the plant number. The plant number lives in `asset_name`.
-    """
-    return frappe.get_all(
-        DT,
-        filters={
-            "location": site,
-            "shift_date": ["between", [from_date, to_date]],
-            "asset_category": ["in", DB_CATEGORIES],
-        },
-        fields=[
-            "name",
-            "location",
-            "shift_date",
-            "asset_name",
-            "asset_category",
-            "plant_shift_availability",
-            "plant_shift_utilisation",
-        ],
-        order_by="asset_category asc, asset_name asc, shift_date asc",
-    )
+    return [
+        row
+        for row in rows
+        if isinstance(row, dict)
+        and int(row.get("indent") or 0) == 3
+        and not row.get("is_formula_row")
+        and row.get("asset_category")
+        in DB_CATEGORIES
+    ]
 
 
 def build_daily_series(rows, date_list):
-    bucket = {
-        db_cat: {
-            day: {
-                "avail": None,
-                "util": None,
-            }
-            for day in date_list
-        }
-        for db_cat in DB_CATEGORIES
-    }
+    grouped = {}
 
     for row in rows:
-        if not isinstance(row, dict):
+        day = str(row.get("shift_date") or "")
+        category = row.get("asset_category")
+
+        if (
+            category not in DB_CATEGORIES
+            or day not in date_list
+        ):
             continue
 
-        if row.get("indent") != 1:
-            continue
-
-        day = str(row.get("shift_date"))
-        db_cat = row.get("asset_category")
-
-        if db_cat not in bucket:
-            continue
-
-        if day not in bucket[db_cat]:
-            continue
-
-        bucket[db_cat][day]["avail"] = row.get("plant_shift_availability")
-        bucket[db_cat][day]["util"] = row.get("plant_shift_utilisation")
-
-    out = {}
-
-    for db_cat, ui_label in CATEGORY_MAP.items():
-        series = []
-
-        for day in date_list:
-            av_v = bucket[db_cat][day]["avail"]
-            ut_v = bucket[db_cat][day]["util"]
-
-            series.append({
-                "date": day,
-                "avail": float(av_v) if av_v is not None else None,
-                "util": float(ut_v) if ut_v is not None else None,
-            })
-
-        out[ui_label] = series
-
-    return out
-
-
-def build_asset_series(rows):
-    grouped = {
-        ui_label: {}
-        for ui_label in UI_CATEGORIES
-    }
-
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-
-        shift_date = row.get("shift_date")
-
-        if shift_date and is_sunday(shift_date):
-            continue
-
-        db_cat = row.get("asset_category")
-
-        if db_cat not in CATEGORY_MAP:
-            continue
-
-        ui_label = CATEGORY_MAP[db_cat]
-        plant_no = get_plant_no(row)
-
-        if not plant_no:
-            continue
-
-        availability = row.get("plant_shift_availability")
-        utilisation = row.get("plant_shift_utilisation")
-
-        if plant_no not in grouped[ui_label]:
-            grouped[ui_label][plant_no] = {
-                "plant_no": plant_no,
-                "availability_values": [],
-                "utilisation_values": [],
-            }
-
-        if availability is not None:
-            grouped[ui_label][plant_no]["availability_values"].append(float(availability))
-
-        if utilisation is not None:
-            grouped[ui_label][plant_no]["utilisation_values"].append(float(utilisation))
+        grouped.setdefault(
+            (category, day),
+            [],
+        ).append(row)
 
     output = {}
 
-    for ui_label in UI_CATEGORIES:
-        assets = []
+    for category, label in CATEGORY_MAP.items():
+        series = []
 
-        for plant_no, item in grouped.get(ui_label, {}).items():
-            availability_values = item["availability_values"]
-            utilisation_values = item["utilisation_values"]
+        for day in date_list:
+            source_rows = grouped.get(
+                (category, day),
+                [],
+            )
 
-            assets.append({
-                "plant_no": plant_no,
-                "avail": (
-                    sum(availability_values) / len(availability_values)
-                    if availability_values
-                    else None
-                ),
-                "util": (
-                    sum(utilisation_values) / len(utilisation_values)
-                    if utilisation_values
-                    else None
-                ),
+            if source_rows:
+                summary = au_engine.build_summary_row(
+                    source_rows,
+                    indent=1,
+                    asset_category=category,
+                    shift_date=day,
+                )
+                availability = summary.get(
+                    "availability_percentage"
+                )
+                utilisation = summary.get(
+                    "utilisation_percentage"
+                )
+            else:
+                availability = None
+                utilisation = None
+
+            series.append({
+                "date": day,
+                "avail": availability,
+                "util": utilisation,
             })
 
-        assets.sort(key=lambda item: natural_sort_key(item.get("plant_no")))
+        output[label] = series
 
-        output[ui_label] = assets
+    return output
+
+
+def build_asset_series(rows):
+    grouped = {}
+
+    for row in rows:
+        category = row.get("asset_category")
+        asset_name = row.get("asset_name")
+
+        if (
+            category not in DB_CATEGORIES
+            or not asset_name
+        ):
+            continue
+
+        grouped.setdefault(
+            (category, asset_name),
+            [],
+        ).append(row)
+
+    output = {
+        label: []
+        for label in UI_CATEGORIES
+    }
+
+    for (category, asset_name), source_rows in grouped.items():
+        summary = au_engine.build_summary_row(
+            source_rows,
+            indent=2,
+            asset_category=category,
+            asset_name=asset_name,
+        )
+
+        output[CATEGORY_MAP[category]].append({
+            "plant_no": asset_name,
+            "avail": summary.get(
+                "availability_percentage"
+            ),
+            "util": summary.get(
+                "utilisation_percentage"
+            ),
+        })
+
+    for label in UI_CATEGORIES:
+        output[label].sort(
+            key=lambda item: natural_sort_key(
+                item.get("plant_no")
+            )
+        )
 
     return output
 
