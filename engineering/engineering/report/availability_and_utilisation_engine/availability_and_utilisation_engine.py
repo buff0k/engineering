@@ -1640,11 +1640,11 @@ def get_assets(
 
     if asset_ownership == "Isambane & Excavo Assets":
         conditions.append(
-            "asset.asset_owner = 'Company'"
+            "(asset.asset_owner = 'Company' OR IFNULL(TRIM(asset.asset_owner), '') = '')"
         )
     elif asset_ownership == "Suppliers Assets":
         conditions.append(
-            "asset.asset_owner = 'Supplier'"
+            "asset.asset_owner IN ('Supplier', 'Customer')"
         )
 
     assets = frappe.db.sql(
