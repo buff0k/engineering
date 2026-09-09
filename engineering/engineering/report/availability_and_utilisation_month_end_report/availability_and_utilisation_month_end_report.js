@@ -148,6 +148,21 @@ Loader`,
 			}
 		},
 		{
+			fieldname: "asset_ownership",
+			label: __("Asset Ownership"),
+			fieldtype: "Select",
+			options: [
+				"Isambane & Excavo Assets",
+				"Suppliers Assets",
+				"All Assets"
+			].join("\n"),
+			default: "Isambane & Excavo Assets",
+			reqd: 1,
+			on_change: function() {
+				frappe.query_report.refresh();
+			}
+		},
+		{
 			fieldname: "au_target_filter",
 			label: __("A & U Target"),
 			fieldtype: "Select",
