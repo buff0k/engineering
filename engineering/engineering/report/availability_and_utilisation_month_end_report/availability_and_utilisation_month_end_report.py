@@ -1572,32 +1572,24 @@ def _month_end_direct_rows(filters):
         "production_site",
     )
 
-    mpp_end_date = None
-
-    if location and from_date:
-        mpp_end_date = frappe.db.get_value(
-            "Monthly Production Planning",
-            {
-                "location": location,
-                "prod_month_start_date": ("<=", from_date),
-                "prod_month_end_date": (">=", from_date),
-                "docstatus": ("<", 2),
-            },
-            "prod_month_end_date",
-            order_by="prod_month_end_date desc",
-        )
-
+    # Use the complete user-selected period. The A&U Engine already
+    # reads every Monthly Production Planning record that overlaps it.
+    # Clamping to one plan's end date can incorrectly reduce a month
+    # to a single day when plans overlap or contain partial periods.
     possible_end_dates = [
         getdate(value)
         for value in [
             selected_to_date,
-            mpp_end_date,
             nowdate(),
         ]
         if value
     ]
 
-    to_date = min(possible_end_dates) if possible_end_dates else getdate(nowdate())
+    to_date = (
+        min(possible_end_dates)
+        if possible_end_dates
+        else getdate(nowdate())
+    )
 
     filters["to_date"] = to_date
     filters["end_date"] = to_date
