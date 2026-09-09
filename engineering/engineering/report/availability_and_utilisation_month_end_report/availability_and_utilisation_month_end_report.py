@@ -1311,7 +1311,11 @@ def _asset_columns():
     return {row.Field for row in frappe.db.sql("SHOW COLUMNS FROM `tabAsset`", as_dict=True)}
 
 
-def _asset_condition_and_values(categories, location):
+def _asset_condition_and_values(
+    categories,
+    location,
+    asset_ownership=None,
+):
     columns = _asset_columns()
     conditions = ["asset_category in %(categories)s"]
     values = {"categories": tuple(categories)}
@@ -1328,6 +1332,18 @@ def _asset_condition_and_values(categories, location):
     if location and location_field:
         conditions.append(f"{location_field} = %(location)s")
         values["location"] = location
+
+    if asset_ownership == "Isambane & Excavo Assets":
+        conditions.append(
+            "("
+            "asset_owner = 'Company' "
+            "OR IFNULL(TRIM(asset_owner), '') = ''"
+            ")"
+        )
+    elif asset_ownership == "Suppliers Assets":
+        conditions.append(
+            "asset_owner IN ('Supplier', 'Customer')"
+        )
 
     return conditions, values
 
@@ -1502,13 +1518,21 @@ def apply_spare_swing_flags(row, spare_swing_asset_map):
     return row
 
 
-def _get_submitted_assets(categories, location):
+def _get_submitted_assets(
+    categories,
+    location,
+    asset_ownership=None,
+):
     columns = _asset_columns()
 
     if "asset_category" not in columns or "name" not in columns:
         return []
 
-    conditions, values = _asset_condition_and_values(categories, location)
+    conditions, values = _asset_condition_and_values(
+        categories,
+        location,
+        asset_ownership,
+    )
 
     rows = frappe.db.sql(
         f"""
@@ -1590,6 +1614,14 @@ def _month_end_direct_rows(filters):
         or "Include Swing/Spare"
     )
 
+    asset_ownership = (
+        _month_end_get_filter_value(
+            filters,
+            "asset_ownership",
+        )
+        or "Isambane & Excavo Assets"
+    )
+
     use_true_availability = (
         filters.get("au_target_filter")
         == "85% A & U"
@@ -1604,6 +1636,7 @@ def _month_end_direct_rows(filters):
     asset_rows = _get_submitted_assets(
         categories,
         location,
+        asset_ownership,
     )
 
     detailed_machine_scope = machine_scope
@@ -1640,6 +1673,7 @@ def _month_end_direct_rows(filters):
         "companies": [],
         "free_hours": 0,
         "production_machines_only": 0,
+        "asset_ownership": asset_ownership,
 
         # Build summaries from raw Engine hours first.
         # Apply the selected basis after grouping.
@@ -1726,6 +1760,7 @@ def _month_end_direct_rows(filters):
         "end_date": to_date,
         "location": location,
         "machine_scope": detailed_machine_scope,
+        "asset_ownership": asset_ownership,
         "include_excluded_asset_categories": 1,
     }
 
