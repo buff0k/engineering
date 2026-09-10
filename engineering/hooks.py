@@ -6,7 +6,7 @@ app_email = "buff0k@buff0k.co.za"
 app_license = "mit"
 required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/buff0k/engineering"
-app_logo_url = "/assets/engineering/images/is-logo.svg"
+app_logo_url = "/assets/engineering/images/is-logo.png"
 app_home = "/desk/engineering"
 
 
@@ -29,7 +29,7 @@ standard_portal_menu_items = [
 add_to_apps_screen = [
     {
         "name": app_name,
-        "logo": "/assets/engineering/images/is-logo.svg",
+        "logo": "/assets/engineering/images/is-logo.png",
         "title": app_title,
         "route": app_home,
         "has_permission": "engineering.engineering.utils.check_app_permission",
