@@ -3379,3 +3379,2014 @@ def get_invalid_au_pbm_records(
         "records": records,
     }
 # END INVALID AU PBM DRILLDOWN
+
+# AU_ENGINE_REASON_COLUMNS_START
+
+
+def _au_engine_add_reason_columns(columns):
+    """
+    Add reason columns only.
+
+    No Availability / Utilisation calculations are changed.
+    """
+
+    existing = {
+        column.get("fieldname")
+        for column in (columns or [])
+        if isinstance(column, dict)
+    }
+
+    if "breakdown_reason" not in existing:
+        columns.append({
+            "label": "Breakdown Reason",
+            "fieldname": "breakdown_reason",
+            "fieldtype": "Data",
+            "width": 145,
+        })
+
+    if "planned_maintenance_reason" not in existing:
+        columns.append({
+            "label": "Planned Maintenance Reason",
+            "fieldname": "planned_maintenance_reason",
+            "fieldtype": "Data",
+            "width": 175,
+        })
+
+    if "other_delay_reason" not in existing:
+        columns.append({
+            "label": "Other Delay Reason",
+            "fieldname": "other_delay_reason",
+            "fieldtype": "Data",
+            "width": 145,
+        })
+
+
+def _au_engine_attach_reason_markers(data, filters):
+    """
+    FINAL REASON EXPORT RULES
+
+    BREAKDOWN REASON
+    ---------------------------------------------------------
+    Use actual PBM start/resolved datetime.
+
+    If one breakdown continues across multiple shifts:
+        reason appears on every overlapping shift.
+
+    Example:
+        PBM:
+            01-09-2026 06:00
+            to
+            10-09-2026 06:00
+
+        Result:
+            01-09 Day   -> reason
+            01-09 Night -> reason
+            02-09 Day   -> reason
+            02-09 Night -> reason
+            etc.
+
+    OTHER DELAY REASON
+    ---------------------------------------------------------
+    Use captured:
+        Daily Lost Hours Recon.shift_date
+        Daily Lost Hours Recon.shift
+
+        Day   -> Day only
+        Night -> Night only
+
+    SUMMARY ROW
+    ---------------------------------------------------------
+    Blank shift -> BOTH reason columns blank.
+
+    ALL EQUIPMENT
+    ---------------------------------------------------------
+    Applies to every machine for the exact captured
+    date + shift only.
+
+    SCREEN
+    ---------------------------------------------------------
+    Existing JS formatter displays View.
+
+    EXCEL
+    ---------------------------------------------------------
+    Actual reason text is exported.
+
+    No A&U calculations are changed.
+    """
+
+    from datetime import (
+        datetime,
+        timedelta,
+    )
+
+    from frappe.utils import (
+        add_days,
+        getdate,
+        get_datetime,
+    )
+
+
+    if not data:
+        return
+
+
+    filters = frappe._dict(
+        filters or {}
+    )
+
+
+    from_date = (
+        filters.get("from_date")
+        or filters.get("start_date")
+    )
+
+
+    to_date = (
+        filters.get("to_date")
+        or filters.get("end_date")
+    )
+
+
+    filter_location = str(
+        filters.get("location")
+        or ""
+    ).strip()
+
+
+    if not from_date or not to_date:
+        return
+
+
+    # ========================================================
+    # HELPERS
+    # ========================================================
+
+    def clean(value):
+        return str(
+            value or ""
+        ).strip()
+
+
+    def norm(value):
+        return clean(
+            value
+        ).casefold()
+
+
+    def parse_date(value):
+
+        if not value:
+            return None
+
+
+        if hasattr(
+            value,
+            "year",
+        ) and not isinstance(
+            value,
+            str,
+        ):
+
+            try:
+                return getdate(
+                    value
+                )
+            except Exception:
+                pass
+
+
+        raw = clean(
+            value
+        )
+
+
+        if not raw:
+            return None
+
+
+        for fmt in (
+            "%Y-%m-%d",
+            "%d-%m-%Y",
+            "%d/%m/%Y",
+        ):
+
+            try:
+
+                return datetime.strptime(
+                    raw[:10],
+                    fmt,
+                ).date()
+
+            except Exception:
+                pass
+
+
+        try:
+
+            return getdate(
+                value
+            )
+
+        except Exception:
+
+            return None
+
+
+    def date_key(value):
+
+        parsed = parse_date(
+            value
+        )
+
+        return (
+            str(parsed)
+            if parsed
+            else ""
+        )
+
+
+    def number(value):
+
+        try:
+            return float(
+                value or 0
+            )
+
+        except Exception:
+            return 0.0
+
+
+    def add_reason(
+        mapping,
+        map_key,
+        reason,
+    ):
+
+        reason = clean(
+            reason
+        )
+
+
+        if not reason:
+            return
+
+
+        reasons = mapping.setdefault(
+            map_key,
+            []
+        )
+
+
+        if reason not in reasons:
+
+            reasons.append(
+                reason
+            )
+
+
+    # ========================================================
+    # CLEAR EXISTING VALUES AND COLLECT SHIFT ROWS
+    # ========================================================
+
+    shift_rows = []
+
+    report_asset_keys = set()
+
+
+    for row in data or []:
+
+        if not hasattr(
+            row,
+            "get",
+        ):
+            continue
+
+
+        row[
+            "breakdown_reason"
+        ] = ""
+
+        row[
+            "other_delay_reason"
+        ] = ""
+
+
+        machine = clean(
+            row.get(
+                "asset_name"
+            )
+        )
+
+
+        if not machine:
+            continue
+
+
+        report_asset_keys.add(
+            norm(
+                machine
+            )
+        )
+
+
+        shift = clean(
+            row.get(
+                "shift"
+            )
+        )
+
+
+        shift_date = parse_date(
+            row.get(
+                "shift_date"
+            )
+        )
+
+
+        # Summary row has no shift.
+        if not shift or not shift_date:
+            continue
+
+
+        shift_rows.append(
+            row
+        )
+
+
+    if not shift_rows:
+        return
+
+
+    # ========================================================
+    # BUILD ACTUAL SHIFT WINDOWS FROM ENGINE ROWS
+    #
+    # We do NOT assume every shift is always 12 hours.
+    #
+    # We use actual_hours from the Engine.
+    #
+    # This supports:
+    #   Day / Night
+    #   Morning / Afternoon / Night
+    #   Shorter Saturday shifts
+    # ========================================================
+
+    grouped_rows = {}
+
+
+    for row in shift_rows:
+
+        site = clean(
+            row.get(
+                "location"
+            )
+        )
+
+
+        if not site:
+            site = filter_location
+
+
+        group_key = (
+            norm(
+                site
+            ),
+
+            date_key(
+                row.get(
+                    "shift_date"
+                )
+            ),
+
+            norm(
+                row.get(
+                    "asset_name"
+                )
+            ),
+        )
+
+
+        grouped_rows.setdefault(
+            group_key,
+            []
+        ).append(
+            row
+        )
+
+
+    shift_order = {
+        "morning": 0,
+        "day": 0,
+        "afternoon": 1,
+        "night": 2,
+    }
+
+
+    shift_windows = {}
+
+
+    for group_key, rows in grouped_rows.items():
+
+        rows = sorted(
+            rows,
+            key=lambda r: (
+                shift_order.get(
+                    norm(
+                        r.get(
+                            "shift"
+                        )
+                    ),
+                    99,
+                ),
+                norm(
+                    r.get(
+                        "shift"
+                    )
+                ),
+            ),
+        )
+
+
+        report_date = parse_date(
+            rows[0].get(
+                "shift_date"
+            )
+        )
+
+
+        if not report_date:
+            continue
+
+
+        # Isambane operational day begins at 06:00.
+        cursor = get_datetime(
+            f"{report_date} 06:00:00"
+        )
+
+
+        row_count = len(
+            rows
+        )
+
+
+        for row in rows:
+
+            shift = norm(
+                row.get(
+                    "shift"
+                )
+            )
+
+
+            hours = number(
+                row.get(
+                    "actual_hours"
+                )
+            )
+
+
+            # Safe fallback only if actual_hours is missing.
+            if hours <= 0:
+
+                if row_count >= 3:
+                    hours = 8.0
+
+                else:
+                    hours = 12.0
+
+
+            shift_start = cursor
+
+            shift_end = (
+                shift_start
+                + timedelta(
+                    hours=hours
+                )
+            )
+
+
+            shift_windows[
+                id(row)
+            ] = (
+                shift_start,
+                shift_end,
+            )
+
+
+            cursor = shift_end
+
+
+    # ========================================================
+    # LOAD ALL BREAKDOWN PBMs ONCE
+    # ========================================================
+
+    report_start = get_datetime(
+        f"{from_date} 00:00:00"
+    )
+
+
+    report_end = get_datetime(
+        f"{add_days(to_date, 2)} 06:00:00"
+    )
+
+
+    pbm_conditions = [
+        (
+            "IFNULL(TRIM(p.asset_name), '') != ''"
+        ),
+        (
+            "IFNULL(TRIM(p.breakdown_reason), '') != ''"
+        ),
+        (
+            "p.downtime_type = 'Breakdown'"
+        ),
+        (
+            "IFNULL(p.exclude_from_au, 0) = 0"
+        ),
+        (
+            "p.breakdown_start_datetime "
+            "< %(report_end)s"
+        ),
+        (
+            "("
+            "p.resolved_datetime > %(report_start)s "
+            "OR p.resolved_datetime IS NULL"
+            ")"
+        ),
+    ]
+
+
+    pbm_values = {
+        "report_start":
+            report_start,
+
+        "report_end":
+            report_end,
+    }
+
+
+    if filter_location:
+
+        pbm_conditions.append(
+            "TRIM(p.location) = %(location)s"
+        )
+
+        pbm_values[
+            "location"
+        ] = filter_location
+
+
+    pbm_rows = frappe.db.sql(
+        f"""
+        SELECT
+            p.name,
+
+            TRIM(
+                p.asset_name
+            ) AS asset_name,
+
+            TRIM(
+                p.location
+            ) AS location,
+
+            p.breakdown_reason,
+            p.breakdown_start_datetime,
+            p.resolved_datetime
+
+        FROM `tabPlant Breakdown or Maintenance` p
+
+        WHERE
+            {" AND ".join(pbm_conditions)}
+
+        ORDER BY
+            p.asset_name ASC,
+            p.breakdown_start_datetime ASC,
+            p.name ASC
+        """,
+        pbm_values,
+        as_dict=True,
+    )
+
+
+    pbm_by_machine = {}
+
+
+    for pbm in pbm_rows:
+
+        machine_key = norm(
+            pbm.get(
+                "asset_name"
+            )
+        )
+
+
+        if (
+            not machine_key
+            or machine_key
+            not in report_asset_keys
+        ):
+            continue
+
+
+        pbm_by_machine.setdefault(
+            machine_key,
+            []
+        ).append(
+            pbm
+        )
+
+
+    # ========================================================
+    # BUILD BREAKDOWN REASONS PER ACTUAL SHIFT ROW
+    # ========================================================
+
+    breakdown_by_row = {}
+
+
+    for row in shift_rows:
+
+        window = shift_windows.get(
+            id(row)
+        )
+
+
+        if not window:
+            continue
+
+
+        shift_start, shift_end = window
+
+
+        machine_key = norm(
+            row.get(
+                "asset_name"
+            )
+        )
+
+
+        row_site = clean(
+            row.get(
+                "location"
+            )
+        )
+
+
+        if not row_site:
+            row_site = filter_location
+
+
+        row_site_key = norm(
+            row_site
+        )
+
+
+        reasons = []
+
+
+        for pbm in pbm_by_machine.get(
+            machine_key,
+            []
+        ):
+
+            pbm_site_key = norm(
+                pbm.get(
+                    "location"
+                )
+            )
+
+
+            if (
+                row_site_key
+                and pbm_site_key
+                and row_site_key
+                != pbm_site_key
+            ):
+                continue
+
+
+            start_value = pbm.get(
+                "breakdown_start_datetime"
+            )
+
+
+            if not start_value:
+                continue
+
+
+            pbm_start = get_datetime(
+                start_value
+            )
+
+
+            resolved_value = pbm.get(
+                "resolved_datetime"
+            )
+
+
+            pbm_end = (
+                get_datetime(
+                    resolved_value
+                )
+                if resolved_value
+                else report_end
+            )
+
+
+            # =================================================
+            # ACTUAL OVERLAP TEST
+            #
+            # Same principle already used by Engine PBM
+            # drill-down:
+            #
+            # start < shift_end
+            # end   > shift_start
+            # =================================================
+
+            if not (
+                pbm_start < shift_end
+                and pbm_end > shift_start
+            ):
+                continue
+
+
+            reason = clean(
+                pbm.get(
+                    "breakdown_reason"
+                )
+            )
+
+
+            if (
+                reason
+                and reason not in reasons
+            ):
+
+                reasons.append(
+                    reason
+                )
+
+
+        breakdown_by_row[
+            id(row)
+        ] = reasons
+
+
+    # ========================================================
+    # LOAD GENERAL LOST HOURS
+    #
+    # DELAYS KEEP CAPTURED DATE + SHIFT.
+    # ========================================================
+
+    delay_conditions = [
+        (
+            "r.shift_date BETWEEN "
+            "%(from_date)s AND %(to_date)s"
+        ),
+        (
+            "IFNULL(TRIM(g.machine), '') != ''"
+        ),
+        (
+            "IFNULL(TRIM(g.reason_description), '') != ''"
+        ),
+    ]
+
+
+    delay_values = {
+        "from_date":
+            from_date,
+
+        "to_date":
+            to_date,
+    }
+
+
+    if filter_location:
+
+        delay_conditions.append(
+            "TRIM(r.location) = %(location)s"
+        )
+
+        delay_values[
+            "location"
+        ] = filter_location
+
+
+    delay_rows = frappe.db.sql(
+        f"""
+        SELECT
+            TRIM(
+                r.location
+            ) AS location,
+
+            r.shift_date,
+            r.shift,
+
+            TRIM(
+                g.machine
+            ) AS machine,
+
+            g.reason_description
+
+        FROM `tabDaily Lost Hours Recon` r
+
+        INNER JOIN `tabDaily General Lost Hours` g
+            ON g.parent = r.name
+
+        WHERE
+            {" AND ".join(delay_conditions)}
+
+        ORDER BY
+            r.shift_date ASC,
+            r.shift ASC,
+            g.idx ASC
+        """,
+        delay_values,
+        as_dict=True,
+    )
+
+
+    delay_map = {}
+
+    all_equipment_map = {}
+
+
+    for delay in delay_rows:
+
+        machine = clean(
+            delay.get(
+                "machine"
+            )
+        )
+
+
+        reason = clean(
+            delay.get(
+                "reason_description"
+            )
+        )
+
+
+        shift = norm(
+            delay.get(
+                "shift"
+            )
+        )
+
+
+        day = date_key(
+            delay.get(
+                "shift_date"
+            )
+        )
+
+
+        site = norm(
+            delay.get(
+                "location"
+            )
+        )
+
+
+        if (
+            not machine
+            or not reason
+            or not day
+            or not shift
+        ):
+            continue
+
+
+        machine_key = norm(
+            machine
+        )
+
+
+        if machine_key == norm(
+            "ALL Equipment"
+        ):
+
+            add_reason(
+                all_equipment_map,
+
+                (
+                    site,
+                    day,
+                    shift,
+                ),
+
+                reason,
+            )
+
+            continue
+
+
+        add_reason(
+            delay_map,
+
+            (
+                site,
+                day,
+                machine_key,
+                shift,
+            ),
+
+            reason,
+        )
+
+
+    # ========================================================
+    # FINAL ASSIGNMENT
+    # ========================================================
+
+    for row in data or []:
+
+        if not hasattr(
+            row,
+            "get",
+        ):
+            continue
+
+
+        machine = clean(
+            row.get(
+                "asset_name"
+            )
+        )
+
+
+        if not machine:
+            continue
+
+
+        shift = clean(
+            row.get(
+                "shift"
+            )
+        )
+
+
+        # ====================================================
+        # SUMMARY ROW:
+        # ALWAYS BLANK.
+        # ====================================================
+
+        if not shift:
+
+            row[
+                "breakdown_reason"
+            ] = ""
+
+            row[
+                "other_delay_reason"
+            ] = ""
+
+            continue
+
+
+        machine_key = norm(
+            machine
+        )
+
+
+        shift_key = norm(
+            shift
+        )
+
+
+        day_key = date_key(
+            row.get(
+                "shift_date"
+            )
+        )
+
+
+        site = clean(
+            row.get(
+                "location"
+            )
+        )
+
+
+        if not site:
+            site = filter_location
+
+
+        site_key = norm(
+            site
+        )
+
+
+        # ====================================================
+        # BREAKDOWN:
+        # ACTUAL PBM OVERLAP WITH THIS SHIFT.
+        # ====================================================
+
+        breakdown_reasons = (
+            breakdown_by_row.get(
+                id(row),
+                [],
+            )
+        )
+
+
+        # ====================================================
+        # DELAY:
+        # EXACT CAPTURED DATE + SHIFT.
+        # ====================================================
+
+        delay_reasons = list(
+            delay_map.get(
+                (
+                    site_key,
+                    day_key,
+                    machine_key,
+                    shift_key,
+                ),
+                [],
+            )
+        )
+
+
+        # ALL Equipment:
+        # exact same site/date/shift.
+        for reason in (
+            all_equipment_map.get(
+                (
+                    site_key,
+                    day_key,
+                    shift_key,
+                ),
+                [],
+            )
+        ):
+
+            if reason not in delay_reasons:
+
+                delay_reasons.append(
+                    reason
+                )
+
+
+        # ====================================================
+        # RAW REPORT VALUES
+        #
+        # Browser -> View
+        # Excel   -> actual reason text
+        # ====================================================
+
+        row[
+            "breakdown_reason"
+        ] = " | ".join(
+            breakdown_reasons
+        )
+
+
+        row[
+            "other_delay_reason"
+        ] = " | ".join(
+            delay_reasons
+        )
+
+
+@frappe.whitelist()
+def get_au_engine_breakdown_reasons(
+    asset_name,
+    from_date,
+    to_date,
+    location=None,
+):
+    """
+    Breakdown reasons for one machine.
+    """
+
+    asset_name = str(
+        asset_name or ""
+    ).strip()
+
+    if not asset_name:
+        return []
+
+
+    conditions = [
+        "p.asset_name = %(asset_name)s",
+        "p.downtime_type = 'Breakdown'",
+        (
+            "p.breakdown_start_datetime "
+            "< DATE_ADD(%(to_date)s, INTERVAL 1 DAY)"
+        ),
+        (
+            "COALESCE("
+            "p.resolved_datetime, "
+            "DATE_ADD(%(to_date)s, INTERVAL 1 DAY)"
+            ") >= %(from_date)s"
+        ),
+        (
+            "IFNULL(TRIM(p.breakdown_reason), '') != ''"
+        ),
+    ]
+
+
+    values = {
+        "asset_name": asset_name,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+
+    if location:
+        conditions.append(
+            "p.location = %(location)s"
+        )
+
+        values["location"] = location
+
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            DATE(
+                p.breakdown_start_datetime
+            ) AS date,
+
+            p.breakdown_reason AS reason
+
+        FROM `tabPlant Breakdown or Maintenance` p
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            p.breakdown_start_datetime ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    return [
+        {
+            "date": str(
+                row.date or ""
+            )[:10],
+
+            "reason": (
+                row.reason
+                or ""
+            ),
+        }
+        for row in rows
+    ]
+
+
+@frappe.whitelist()
+def get_au_engine_other_delay_reasons(
+    asset_name,
+    from_date,
+    to_date,
+    location=None,
+):
+    """
+    General Lost Hour reasons for one machine.
+
+    Includes:
+        selected machine
+        ALL Equipment
+    """
+
+    asset_name = str(
+        asset_name or ""
+    ).strip()
+
+    if not asset_name:
+        return []
+
+
+    conditions = [
+        (
+            "r.shift_date BETWEEN "
+            "%(from_date)s AND %(to_date)s"
+        ),
+        (
+            "("
+            "TRIM(g.machine) = %(asset_name)s "
+            "OR LOWER(TRIM(g.machine)) = 'all equipment'"
+            ")"
+        ),
+        (
+            "IFNULL(TRIM(g.reason_description), '') != ''"
+        ),
+    ]
+
+
+    values = {
+        "asset_name": asset_name,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+
+    if location:
+        conditions.append(
+            "r.location = %(location)s"
+        )
+
+        values["location"] = location
+
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            r.shift_date,
+            r.shift,
+            g.reason_description
+
+        FROM `tabDaily Lost Hours Recon` r
+
+        INNER JOIN `tabDaily General Lost Hours` g
+            ON g.parent = r.name
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            r.shift_date ASC,
+            g.idx ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    return [
+        {
+            "date": str(
+                row.shift_date
+                or ""
+            )[:10],
+
+            "shift": (
+                row.shift
+                or ""
+            ),
+
+            "reason": (
+                row.reason_description
+                or ""
+            ),
+        }
+
+        for row in rows
+    ]
+
+
+# ------------------------------------------------------------
+# Wrap the existing report execute().
+#
+# IMPORTANT:
+# The original Engine runs first and performs all existing
+# A&U calculations.
+#
+# We then ONLY append the two reason columns + markers.
+# ------------------------------------------------------------
+
+_au_engine_original_execute = execute
+
+
+def execute(filters=None):
+
+    result = _au_engine_original_execute(
+        filters
+    )
+
+    if not result:
+        return result
+
+
+    if (
+        not isinstance(
+            result,
+            (tuple, list),
+        )
+        or len(result) < 2
+    ):
+        return result
+
+
+    columns = result[0]
+    data = result[1]
+
+
+    _au_engine_add_reason_columns(
+        columns
+    )
+
+
+    _au_engine_attach_reason_markers(
+        data,
+        filters,
+    )
+
+    _au_engine_attach_planned_maintenance_reasons(
+        data,
+        filters,
+    )
+
+
+    if isinstance(result, tuple):
+
+        return (
+            columns,
+            data,
+            *result[2:],
+        )
+
+
+    result = list(result)
+
+    result[0] = columns
+    result[1] = data
+
+    return result
+
+
+# AU_ENGINE_REASON_COLUMNS_END
+
+# ============================================================
+# AU ENGINE PLANNED MAINTENANCE REASON
+# ============================================================
+
+def _au_engine_attach_planned_maintenance_reasons(
+    data,
+    filters,
+):
+    """
+    Planned Maintenance Reason rules:
+
+    - Uses PBM downtime_type = Planned Maintenance
+    - Uses actual PBM start/resolved overlap
+    - Continuous maintenance appears on every shift it overlaps
+    - Summary/blank Shift row stays blank
+    - Excel receives actual reason text
+    - Browser formatter displays View
+    - No A&U calculations are changed
+    """
+
+    from datetime import timedelta
+
+    from frappe.utils import (
+        add_days,
+        getdate,
+        get_datetime,
+    )
+
+
+    if not data:
+        return
+
+
+    filters = frappe._dict(
+        filters or {}
+    )
+
+
+    from_date = (
+        filters.get("from_date")
+        or filters.get("start_date")
+    )
+
+
+    to_date = (
+        filters.get("to_date")
+        or filters.get("end_date")
+    )
+
+
+    filter_location = str(
+        filters.get("location")
+        or ""
+    ).strip()
+
+
+    if not from_date or not to_date:
+        return
+
+
+    def clean(value):
+        return str(
+            value or ""
+        ).strip()
+
+
+    def norm(value):
+        return clean(
+            value
+        ).casefold()
+
+
+    def parse_date(value):
+
+        if not value:
+            return None
+
+        try:
+            return getdate(
+                value
+            )
+        except Exception:
+            return None
+
+
+    def number(value):
+
+        try:
+            return float(
+                value or 0
+            )
+        except Exception:
+            return 0.0
+
+
+    # --------------------------------------------------------
+    # Clear planned-maintenance reason on every row first.
+    # --------------------------------------------------------
+
+    shift_rows = []
+
+    asset_keys = set()
+
+
+    for row in data or []:
+
+        if not hasattr(
+            row,
+            "get",
+        ):
+            continue
+
+
+        row[
+            "planned_maintenance_reason"
+        ] = ""
+
+
+        asset_name = clean(
+            row.get(
+                "asset_name"
+            )
+        )
+
+
+        if not asset_name:
+            continue
+
+
+        asset_keys.add(
+            norm(
+                asset_name
+            )
+        )
+
+
+        shift = clean(
+            row.get(
+                "shift"
+            )
+        )
+
+
+        shift_date = parse_date(
+            row.get(
+                "shift_date"
+            )
+        )
+
+
+        # Summary row stays blank.
+        if not shift or not shift_date:
+            continue
+
+
+        shift_rows.append(
+            row
+        )
+
+
+    if not shift_rows:
+        return
+
+
+    # ========================================================
+    # BUILD SHIFT WINDOWS
+    # ========================================================
+
+    grouped = {}
+
+
+    for row in shift_rows:
+
+        location = clean(
+            row.get(
+                "location"
+            )
+        )
+
+
+        if not location:
+            location = filter_location
+
+
+        group_key = (
+            norm(
+                location
+            ),
+
+            str(
+                parse_date(
+                    row.get(
+                        "shift_date"
+                    )
+                )
+            ),
+
+            norm(
+                row.get(
+                    "asset_name"
+                )
+            ),
+        )
+
+
+        grouped.setdefault(
+            group_key,
+            []
+        ).append(
+            row
+        )
+
+
+    shift_order = {
+        "morning": 0,
+        "day": 0,
+        "afternoon": 1,
+        "night": 2,
+    }
+
+
+    shift_windows = {}
+
+
+    for group_key, rows in grouped.items():
+
+        rows = sorted(
+            rows,
+            key=lambda r: (
+                shift_order.get(
+                    norm(
+                        r.get(
+                            "shift"
+                        )
+                    ),
+                    99,
+                ),
+                norm(
+                    r.get(
+                        "shift"
+                    )
+                ),
+            ),
+        )
+
+
+        report_date = parse_date(
+            rows[0].get(
+                "shift_date"
+            )
+        )
+
+
+        if not report_date:
+            continue
+
+
+        # Operational day starts 06:00.
+        cursor = get_datetime(
+            f"{report_date} 06:00:00"
+        )
+
+
+        row_count = len(
+            rows
+        )
+
+
+        for row in rows:
+
+            hours = number(
+                row.get(
+                    "actual_hours"
+                )
+            )
+
+
+            if hours <= 0:
+
+                if row_count >= 3:
+                    hours = 8.0
+                else:
+                    hours = 12.0
+
+
+            shift_start = cursor
+
+            shift_end = (
+                shift_start
+                + timedelta(
+                    hours=hours
+                )
+            )
+
+
+            shift_windows[
+                id(row)
+            ] = (
+                shift_start,
+                shift_end,
+            )
+
+
+            cursor = shift_end
+
+
+    # ========================================================
+    # LOAD PLANNED MAINTENANCE PBM RECORDS
+    # ========================================================
+
+    report_start = get_datetime(
+        f"{from_date} 00:00:00"
+    )
+
+
+    report_end = get_datetime(
+        f"{add_days(to_date, 2)} 06:00:00"
+    )
+
+
+    conditions = [
+        (
+            "IFNULL(TRIM(p.asset_name), '') != ''"
+        ),
+        (
+            "IFNULL(TRIM(p.breakdown_reason), '') != ''"
+        ),
+        (
+            "p.downtime_type = 'Planned Maintenance'"
+        ),
+        (
+            "IFNULL(p.exclude_from_au, 0) = 0"
+        ),
+        (
+            "p.breakdown_start_datetime "
+            "< %(report_end)s"
+        ),
+        (
+            "("
+            "p.resolved_datetime > %(report_start)s "
+            "OR p.resolved_datetime IS NULL"
+            ")"
+        ),
+    ]
+
+
+    values = {
+        "report_start":
+            report_start,
+
+        "report_end":
+            report_end,
+    }
+
+
+    if filter_location:
+
+        conditions.append(
+            "TRIM(p.location) = %(location)s"
+        )
+
+        values[
+            "location"
+        ] = filter_location
+
+
+    maintenance_rows = frappe.db.sql(
+        f"""
+        SELECT
+            p.name,
+
+            TRIM(
+                p.asset_name
+            ) AS asset_name,
+
+            TRIM(
+                p.location
+            ) AS location,
+
+            p.breakdown_reason,
+            p.breakdown_start_datetime,
+            p.resolved_datetime
+
+        FROM `tabPlant Breakdown or Maintenance` p
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            p.asset_name ASC,
+            p.breakdown_start_datetime ASC,
+            p.name ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    maintenance_by_machine = {}
+
+
+    for record in maintenance_rows:
+
+        machine_key = norm(
+            record.get(
+                "asset_name"
+            )
+        )
+
+
+        if (
+            not machine_key
+            or machine_key not in asset_keys
+        ):
+            continue
+
+
+        maintenance_by_machine.setdefault(
+            machine_key,
+            []
+        ).append(
+            record
+        )
+
+
+    # ========================================================
+    # APPLY TO EVERY SHIFT IT OVERLAPS
+    # ========================================================
+
+    for row in shift_rows:
+
+        window = shift_windows.get(
+            id(row)
+        )
+
+
+        if not window:
+            continue
+
+
+        shift_start, shift_end = window
+
+
+        machine_key = norm(
+            row.get(
+                "asset_name"
+            )
+        )
+
+
+        row_location = clean(
+            row.get(
+                "location"
+            )
+        )
+
+
+        if not row_location:
+            row_location = filter_location
+
+
+        location_key = norm(
+            row_location
+        )
+
+
+        reasons = []
+
+
+        for record in maintenance_by_machine.get(
+            machine_key,
+            []
+        ):
+
+            maintenance_location = norm(
+                record.get(
+                    "location"
+                )
+            )
+
+
+            if (
+                location_key
+                and maintenance_location
+                and location_key
+                != maintenance_location
+            ):
+                continue
+
+
+            start_value = record.get(
+                "breakdown_start_datetime"
+            )
+
+
+            if not start_value:
+                continue
+
+
+            maintenance_start = get_datetime(
+                start_value
+            )
+
+
+            resolved_value = record.get(
+                "resolved_datetime"
+            )
+
+
+            maintenance_end = (
+                get_datetime(
+                    resolved_value
+                )
+                if resolved_value
+                else report_end
+            )
+
+
+            # Actual shift overlap.
+            if not (
+                maintenance_start < shift_end
+                and maintenance_end > shift_start
+            ):
+                continue
+
+
+            reason = clean(
+                record.get(
+                    "breakdown_reason"
+                )
+            )
+
+
+            if (
+                reason
+                and reason not in reasons
+            ):
+
+                reasons.append(
+                    reason
+                )
+
+
+        row[
+            "planned_maintenance_reason"
+        ] = " | ".join(
+            reasons
+        )
+
+
+@frappe.whitelist()
+def get_au_engine_planned_maintenance_reasons(
+    asset_name,
+    from_date,
+    to_date,
+    location=None,
+):
+    """
+    Planned Maintenance popup records
+    for one machine.
+    """
+
+    asset_name = str(
+        asset_name or ""
+    ).strip()
+
+
+    if not asset_name:
+        return []
+
+
+    conditions = [
+        (
+            "TRIM(p.asset_name) = %(asset_name)s"
+        ),
+        (
+            "p.downtime_type = 'Planned Maintenance'"
+        ),
+        (
+            "IFNULL(TRIM(p.breakdown_reason), '') != ''"
+        ),
+        (
+            "IFNULL(p.exclude_from_au, 0) = 0"
+        ),
+        (
+            "p.breakdown_start_datetime "
+            "< DATE_ADD(%(to_date)s, INTERVAL 1 DAY)"
+        ),
+        (
+            "COALESCE("
+            "p.resolved_datetime, "
+            "DATE_ADD(%(to_date)s, INTERVAL 1 DAY)"
+            ") >= %(from_date)s"
+        ),
+    ]
+
+
+    values = {
+        "asset_name":
+            asset_name,
+
+        "from_date":
+            from_date,
+
+        "to_date":
+            to_date,
+    }
+
+
+    if location:
+
+        conditions.append(
+            "TRIM(p.location) = %(location)s"
+        )
+
+        values[
+            "location"
+        ] = location
+
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            p.name,
+            p.breakdown_reason,
+            p.breakdown_start_datetime,
+            p.resolved_datetime
+
+        FROM `tabPlant Breakdown or Maintenance` p
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            p.breakdown_start_datetime ASC,
+            p.name ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    return [
+        {
+            "name":
+                row.get(
+                    "name"
+                )
+                or "",
+
+            "reason":
+                row.get(
+                    "breakdown_reason"
+                )
+                or "",
+
+            "start":
+                str(
+                    row.get(
+                        "breakdown_start_datetime"
+                    )
+                    or ""
+                ),
+
+            "resolved":
+                str(
+                    row.get(
+                        "resolved_datetime"
+                    )
+                    or ""
+                ),
+        }
+
+        for row in rows
+    ]
+
+
+# ============================================================
+# END PLANNED MAINTENANCE REASON
+# ============================================================

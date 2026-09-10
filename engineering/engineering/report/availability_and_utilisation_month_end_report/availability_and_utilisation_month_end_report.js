@@ -468,11 +468,389 @@ Loader`,
 	}
 };
 
-window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme) {
+window.show_au_month_end_reason_dialog = async function(key, title, asset_name, theme) {
 	const payload = (window.au_month_end_reason_details || {})[key] || {};
 	const details = Array.isArray(payload) ? payload : (payload.details || []);
 
-	const colours = theme === "purple"
+        // GLH_DIRECT_POPUP_START
+
+        if (
+                title === "Other Delay Reasons"
+                && asset_name
+        ) {
+
+                const escape_value = function(value) {
+
+                        return frappe.utils.escape_html(
+                                String(
+                                        value == null
+                                                ? ""
+                                                : value
+                                )
+                        );
+                };
+
+
+                const response =
+                        await frappe.call({
+                                method:
+                                        "engineering.engineering.report." +
+                                        "availability_and_utilisation_month_end_report." +
+                                        "availability_and_utilisation_month_end_report." +
+                                        "get_general_lost_hour_popup_rows",
+
+                                args: {
+                                        asset_name:
+                                                asset_name,
+
+                                        from_date:
+                                                frappe.query_report
+                                                        .get_filter_value(
+                                                                "from_date"
+                                                        ),
+
+                                        to_date:
+                                                frappe.query_report
+                                                        .get_filter_value(
+                                                                "to_date"
+                                                        ),
+
+                                        location:
+                                                frappe.query_report
+                                                        .get_filter_value(
+                                                                "location"
+                                                        )
+                                },
+
+                                freeze:
+                                        false
+                        });
+
+
+                const glh_details =
+                        response.message
+                        || [];
+
+
+                if (glh_details.length) {
+
+                        const format_total =
+                                function(value) {
+
+                                        const number =
+                                                Number(
+                                                        value || 0
+                                                );
+
+
+                                        if (
+                                                !Number.isFinite(
+                                                        number
+                                                )
+                                        ) {
+                                                return "-";
+                                        }
+
+
+                                        return number
+                                                .toFixed(2)
+                                                .replace(
+                                                        /\.00$/,
+                                                        ""
+                                                )
+                                                .replace(
+                                                        /(\.\d)0$/,
+                                                        "$1"
+                                                );
+                                };
+
+
+                        const rows =
+                                glh_details
+                                        .map(
+                                                detail => {
+
+                                                        const raw_date =
+                                                                String(
+                                                                        detail.date
+                                                                        || ""
+                                                                );
+
+
+                                                        let display_date =
+                                                                raw_date;
+
+
+                                                        if (
+                                                                /^\d{4}-\d{2}-\d{2}$/.test(
+                                                                        raw_date
+                                                                )
+                                                        ) {
+
+                                                                const parts =
+                                                                        raw_date.split(
+                                                                                "-"
+                                                                        );
+
+
+                                                                display_date =
+                                                                        `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                                        }
+
+
+                                                        const date =
+                                                                escape_value(
+                                                                        display_date
+                                                                );
+
+
+                                                        const shift =
+                                                                escape_value(
+                                                                        detail.shift
+                                                                        || ""
+                                                                );
+
+
+                                                        const reason =
+                                                                escape_value(
+                                                                        detail.reason_description
+                                                                        || ""
+                                                                );
+
+
+                                                        const start =
+                                                                escape_value(
+                                                                        detail.start_time
+                                                                        || ""
+                                                                );
+
+
+                                                        const end =
+                                                                escape_value(
+                                                                        detail.end_time
+                                                                        || ""
+                                                                );
+
+
+                                                        const total =
+                                                                escape_value(
+                                                                        format_total(
+                                                                                detail.total_hours
+                                                                        )
+                                                                );
+
+
+                                                        const location =
+                                                                escape_value(
+                                                                        detail.location
+                                                                        || ""
+                                                                );
+
+
+                                                        return `
+                                                                <tr>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                ${date || "-"}
+                                                                        </td>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                ${shift || "-"}
+                                                                        </td>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                font-weight:600;
+                                                                                vertical-align:top;
+                                                                        ">
+                                                                                ${reason || "-"}
+                                                                        </td>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                ${start || "-"}
+                                                                        </td>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                ${end || "-"}
+                                                                        </td>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                text-align:right;
+                                                                                font-weight:700;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                ${total}
+                                                                        </td>
+
+                                                                        <td style="
+                                                                                padding:9px 10px;
+                                                                                border-bottom:1px solid #dbeafe;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                ${location || "-"}
+                                                                        </td>
+                                                                </tr>
+                                                        `;
+                                                }
+                                        )
+                                        .join("");
+
+
+                        const dialog =
+                                new frappe.ui.Dialog({
+                                        title:
+                                                `Other Delay Reasons - ${
+                                                        escape_value(
+                                                                asset_name
+                                                        )
+                                                }`,
+
+                                        size:
+                                                "extra-large"
+                                });
+
+
+                        dialog.$body.html(`
+                                <div style="
+                                        border:1px solid #2563eb;
+                                        border-radius:10px;
+                                        overflow:hidden;
+                                ">
+
+                                        <div style="
+                                                background:#dbeafe;
+                                                color:#1d4ed8;
+                                                font-weight:900;
+                                                padding:10px 12px;
+                                        ">
+                                                Other Delay Reasons for ${
+                                                        escape_value(
+                                                                asset_name
+                                                        )
+                                                }
+                                        </div>
+
+
+                                        <div style="
+                                                overflow-x:auto;
+                                        ">
+
+                                                <table style="
+                                                        width:100%;
+                                                        border-collapse:collapse;
+                                                        min-width:1050px;
+                                                ">
+
+                                                        <thead>
+
+                                                                <tr style="
+                                                                        background:#eff6ff;
+                                                                        color:#1d4ed8;
+                                                                ">
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:left;
+                                                                                width:11%;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                Date
+                                                                        </th>
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:left;
+                                                                                width:8%;
+                                                                                white-space:nowrap;
+                                                                        ">
+                                                                                Shift
+                                                                        </th>
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:left;
+                                                                                width:31%;
+                                                                        ">
+                                                                                Reason / Description
+                                                                        </th>
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:left;
+                                                                                width:14%;
+                                                                        ">
+                                                                                Start Time
+                                                                        </th>
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:left;
+                                                                                width:14%;
+                                                                        ">
+                                                                                End Time
+                                                                        </th>
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:right;
+                                                                                width:10%;
+                                                                        ">
+                                                                                Total
+                                                                        </th>
+
+                                                                        <th style="
+                                                                                padding:9px 10px;
+                                                                                text-align:left;
+                                                                                width:16%;
+                                                                        ">
+                                                                                Location
+                                                                        </th>
+
+                                                                </tr>
+
+                                                        </thead>
+
+                                                        <tbody>
+                                                                ${rows}
+                                                        </tbody>
+
+                                                </table>
+
+                                        </div>
+
+                                </div>
+                        `);
+
+
+                        dialog.show();
+
+                        return;
+                }
+        }
+
+        // GLH_DIRECT_POPUP_END
+
+
+const colours = theme === "purple"
 		? {
 			border: "#7b2cbf",
 			header_bg: "#e6d6ff",
@@ -628,3 +1006,175 @@ window.show_au_month_end_reason_dialog = function(key, title, asset_name, theme)
 
 	dialog.show();
 };
+
+// MONTH_END_PLANNED_POPUP_SAME_AS_BREAKDOWN_START
+
+(function install_month_end_planned_popup_same_as_breakdown() {
+
+    const REPORT_NAME =
+        "Availability and Utilisation Month End Report";
+
+
+    const report =
+        frappe.query_reports[
+            REPORT_NAME
+        ];
+
+
+    if (!report) {
+        return;
+    }
+
+
+    const previous_formatter =
+        report.formatter;
+
+
+    report.formatter = function(
+        value,
+        row,
+        column,
+        data,
+        default_formatter
+    ) {
+
+        // ====================================================
+        // ONLY INTERCEPT PLANNED MAINTENANCE REASON
+        // ====================================================
+
+        if (
+            column.fieldname
+            === "planned_maintenance_reason"
+        ) {
+
+            if (
+                !data
+                || !data.asset_name
+            ) {
+                return "";
+            }
+
+
+            let details = (
+                data.planned_maintenance_reason_details
+                || []
+            );
+
+
+            // Fallback if actual reason text exists but
+            // detail array is unexpectedly empty.
+            if (
+                !details.length
+                && data.planned_maintenance_reason
+            ) {
+
+                details = [{
+                    date: "",
+                    start_datetime: "",
+                    resolved_datetime: "",
+                    total_minutes: 0,
+                    startup_fatigue_minutes: 0,
+                    sunday_minutes: 0,
+                    au_minutes: 0,
+                    reason:
+                        data.planned_maintenance_reason
+                }];
+            }
+
+
+            if (!details.length) {
+                return "";
+            }
+
+
+            window.au_month_end_reason_details =
+                window.au_month_end_reason_details
+                || {};
+
+
+            const key =
+                "planned_maintenance_reason-"
+                + String(
+                    data.asset_name
+                    || ""
+                )
+                + "-"
+                + Math.random();
+
+
+            window.au_month_end_reason_details[
+                key
+            ] = {
+                details: details
+            };
+
+
+            const button_style =
+                data.is_spare_swing_unit
+                    ?
+                    (
+                        "background:#e6d6ff;"
+                        + "color:#4b0082;"
+                        + "border:1px solid #7b2cbf;"
+                    )
+                    :
+                    (
+                        "background:#dbeafe;"
+                        + "color:#1d4ed8;"
+                        + "border:1px solid #2563eb;"
+                    );
+
+
+            const asset_name =
+                frappe.utils.escape_html(
+                    String(
+                        data.asset_name
+                        || ""
+                    )
+                );
+
+
+            const theme =
+                data.is_spare_swing_unit
+                    ? "purple"
+                    : "blue";
+
+
+            return `
+                <button
+                    class="btn btn-xs"
+                    style="
+                        ${button_style}
+                        font-weight:800;
+                        border-radius:999px;
+                        padding:3px 12px;
+                    "
+                    onclick="
+                        window.show_au_month_end_reason_dialog(
+                            '${key}',
+                            'Planned Maintenance Reasons',
+                            '${asset_name}',
+                            '${theme}'
+                        )
+                    "
+                >
+                    View
+                </button>
+            `;
+        }
+
+
+        // Everything else remains unchanged.
+        return previous_formatter.call(
+            this,
+            value,
+            row,
+            column,
+            data,
+            default_formatter
+        );
+    };
+
+})();
+
+// MONTH_END_PLANNED_POPUP_SAME_AS_BREAKDOWN_END

@@ -1176,6 +1176,539 @@ def get_other_delay_reason(row):
 
 	return "\n".join(reasons) if reasons else None
 
+# GLH_MONTH_END_MACHINE_REASON_HELPER_START
+
+def get_general_lost_hour_machine_reason_details(
+    filters,
+    asset_rows,
+    categories,
+):
+    """
+    General Lost Hours for Month End popup.
+
+    Rules:
+    - Specific machine -> that machine only
+    - ALL Equipment    -> every applicable machine
+    - Blank machine    -> ignored
+
+    Saved Draft Daily Lost Hours Recon records are included.
+    """
+
+    filters = frappe._dict(
+        filters or {}
+    )
+
+    from_date = (
+        filters.get("from_date")
+        or filters.get("start_date")
+    )
+
+    to_date = (
+        filters.get("to_date")
+        or filters.get("end_date")
+    )
+
+    location = filters.get(
+        "location"
+    )
+
+
+    if (
+        not from_date
+        or not to_date
+    ):
+        return {}
+
+
+    if not frappe.db.exists(
+        "DocType",
+        "Daily General Lost Hours",
+    ):
+        return {}
+
+
+    if not frappe.db.exists(
+        "DocType",
+        "Daily Lost Hours Recon",
+    ):
+        return {}
+
+
+    # ========================================================
+    # MONTH END MACHINE LIST
+    # ========================================================
+
+    asset_category_by_name = {}
+
+    machines = []
+
+
+    for asset in asset_rows or []:
+
+        if hasattr(
+            asset,
+            "get",
+        ):
+            asset_name = (
+                asset.get(
+                    "asset_name"
+                )
+            )
+
+            asset_category = (
+                asset.get(
+                    "asset_category"
+                )
+            )
+
+        else:
+            asset_name = getattr(
+                asset,
+                "asset_name",
+                None,
+            )
+
+            asset_category = getattr(
+                asset,
+                "asset_category",
+                None,
+            )
+
+
+        asset_name = str(
+            asset_name or ""
+        ).strip()
+
+        asset_category = str(
+            asset_category or ""
+        ).strip()
+
+
+        if not asset_name:
+            continue
+
+
+        if (
+            categories
+            and asset_category
+            not in categories
+        ):
+            continue
+
+
+        asset_category_by_name[
+            asset_name
+        ] = asset_category
+
+
+        if asset_name not in machines:
+            machines.append(
+                asset_name
+            )
+
+
+    if not machines:
+        return {}
+
+
+    # ========================================================
+    # GENERAL LOST HOURS
+    # ========================================================
+
+    conditions = [
+        (
+            "r.shift_date BETWEEN "
+            "%(from_date)s AND %(to_date)s"
+        ),
+        (
+            "IFNULL(TRIM(g.machine), '') != ''"
+        ),
+    ]
+
+
+    values = {
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+
+    if location:
+
+        conditions.append(
+            "r.location = %(location)s"
+        )
+
+        values[
+            "location"
+        ] = location
+
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            r.name AS recon_name,
+            r.location,
+            r.shift_date,
+            r.shift,
+
+            g.idx,
+            g.machine,
+            g.lost_hour_category,
+            g.reason_description,
+            g.start_time,
+            g.end_time,
+            g.total_hours,
+            g.location AS delay_location
+
+        FROM `tabDaily Lost Hours Recon` r
+
+        INNER JOIN `tabDaily General Lost Hours` g
+            ON g.parent = r.name
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            r.shift_date ASC,
+            r.shift ASC,
+            g.idx ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    result = {}
+
+
+    # ========================================================
+    # FORMAT TIME
+    # ========================================================
+
+    def clean_time(value):
+
+        if value is None:
+            return ""
+
+        value = str(
+            value
+        ).strip()
+
+
+        if "." in value:
+            value = value.split(
+                ".",
+                1,
+            )[0]
+
+
+        parts = value.split(
+            ":"
+        )
+
+
+        if (
+            len(parts) >= 2
+            and len(parts[0]) == 1
+        ):
+            value = (
+                "0"
+                + value
+            )
+
+
+        return value
+
+
+    # ========================================================
+    # ADD ONE CAPTURE TO ONE MACHINE
+    # ========================================================
+
+    def append_reason(
+        target_machine,
+        row,
+    ):
+
+        target_machine = str(
+            target_machine or ""
+        ).strip()
+
+
+        if not target_machine:
+            return
+
+
+        category = (
+            asset_category_by_name.get(
+                target_machine
+            )
+        )
+
+
+        if not category:
+            return
+
+
+        if (
+            categories
+            and category
+            not in categories
+        ):
+            return
+
+
+        key = (
+            category,
+            target_machine,
+        )
+
+
+        lost_hour_category = str(
+            row.get(
+                "lost_hour_category"
+            )
+            or ""
+        ).strip()
+
+
+        reason_description = str(
+            row.get(
+                "reason_description"
+            )
+            or ""
+        ).strip()
+
+
+        start_time = clean_time(
+            row.get(
+                "start_time"
+            )
+        )
+
+
+        end_time = clean_time(
+            row.get(
+                "end_time"
+            )
+        )
+
+
+        total_hours = round(
+            flt(
+                row.get(
+                    "total_hours"
+                )
+            ),
+            2,
+        )
+
+
+        delay_location = str(
+            row.get(
+                "delay_location"
+            )
+            or ""
+        ).strip()
+
+
+        reason_text = (
+            reason_description
+            or lost_hour_category
+        )
+
+
+        detail = {
+            "detail_type":
+                "general_lost_hour",
+
+            "is_general_lost_hour":
+                1,
+
+            "date":
+                str(
+                    row.get(
+                        "shift_date"
+                    )
+                    or ""
+                )[:10],
+
+            "machine":
+                target_machine,
+
+            "lost_hour_category":
+                lost_hour_category,
+
+            "reason_description":
+                reason_description,
+
+            # Keep standard reason field so existing
+            # Month End logic continues to work.
+            "reason":
+                reason_text,
+
+            "start_time":
+                start_time,
+
+            "end_time":
+                end_time,
+
+            "total_hours":
+                total_hours,
+
+            "location":
+                delay_location,
+        }
+
+
+        result.setdefault(
+            key,
+            {
+                "other_delay_reason_details": [],
+            },
+        )
+
+
+        existing_keys = {
+            (
+                str(
+                    existing.get(
+                        "date"
+                    )
+                    or ""
+                )[:10],
+
+                str(
+                    existing.get(
+                        "reason_description"
+                    )
+                    or existing.get(
+                        "reason"
+                    )
+                    or ""
+                ).strip(),
+
+                str(
+                    existing.get(
+                        "start_time"
+                    )
+                    or ""
+                ),
+
+                str(
+                    existing.get(
+                        "end_time"
+                    )
+                    or ""
+                ),
+
+                round(
+                    flt(
+                        existing.get(
+                            "total_hours"
+                        )
+                    ),
+                    2,
+                ),
+
+                str(
+                    existing.get(
+                        "location"
+                    )
+                    or ""
+                ).strip(),
+            )
+
+            for existing
+            in result[
+                key
+            ][
+                "other_delay_reason_details"
+            ]
+        }
+
+
+        detail_key = (
+            detail[
+                "date"
+            ],
+
+            detail[
+                "reason_description"
+            ],
+
+            detail[
+                "start_time"
+            ],
+
+            detail[
+                "end_time"
+            ],
+
+            detail[
+                "total_hours"
+            ],
+
+            detail[
+                "location"
+            ],
+        )
+
+
+        if detail_key not in existing_keys:
+
+            result[
+                key
+            ][
+                "other_delay_reason_details"
+            ].append(
+                detail
+            )
+
+
+    # ========================================================
+    # MACHINE RULE
+    # ========================================================
+
+    for row in rows:
+
+        captured_machine = str(
+            row.get(
+                "machine"
+            )
+            or ""
+        ).strip()
+
+
+        if not captured_machine:
+            # Blank machine applies to nobody.
+            continue
+
+
+        if (
+            captured_machine.casefold()
+            ==
+            "ALL Equipment".casefold()
+        ):
+
+            for asset_name in machines:
+
+                append_reason(
+                    asset_name,
+                    row,
+                )
+
+        else:
+
+            # Specific machine only.
+            append_reason(
+                captured_machine,
+                row,
+            )
+
+
+    return result
+
+# GLH_MONTH_END_MACHINE_REASON_HELPER_END
 
 # BEGIN DIRECT AU MONTH END TOTALS
 
@@ -1848,6 +2381,104 @@ def _month_end_direct_rows(filters):
                 ),
             })
 
+
+    # GLH_MONTH_END_DIRECT_REASON_MERGE_START
+
+    # --------------------------------------------------------
+    # Read General Lost Hours DIRECTLY from the saved child
+    # table. Do not depend only on detailed_au.get_grouped_data
+    # for Other Delay popup reasons.
+    # --------------------------------------------------------
+
+    direct_general_delay_reasons = (
+        get_general_lost_hour_machine_reason_details(
+            filters,
+            asset_rows,
+            categories,
+        )
+    )
+
+
+    for (
+        key,
+        direct_reason_row,
+    ) in direct_general_delay_reasons.items():
+
+        target = (
+            other_delay_reasons_by_key.setdefault(
+                key,
+                {
+                    "other_delay_reason_details": [],
+                },
+            )
+        )
+
+
+        existing = {
+            (
+                str(
+                    detail.get(
+                        "date"
+                    )
+                    or ""
+                )[:10],
+
+                str(
+                    detail.get(
+                        "reason"
+                    )
+                    or ""
+                ).strip(),
+            )
+            for detail
+            in target.get(
+                "other_delay_reason_details"
+            )
+            or []
+        }
+
+
+        for detail in (
+            direct_reason_row.get(
+                "other_delay_reason_details"
+            )
+            or []
+        ):
+
+            detail_key = (
+                str(
+                    detail.get(
+                        "date"
+                    )
+                    or ""
+                )[:10],
+
+                str(
+                    detail.get(
+                        "reason"
+                    )
+                    or ""
+                ).strip(),
+            )
+
+
+            if detail_key in existing:
+                continue
+
+
+            target[
+                "other_delay_reason_details"
+            ].append(
+                detail
+            )
+
+
+            existing.add(
+                detail_key
+            )
+
+    # GLH_MONTH_END_DIRECT_REASON_MERGE_END
+
     employee_availability_by_key = {}
 
     for key, rows in (
@@ -1995,6 +2626,59 @@ def _month_end_direct_rows(filters):
                 machine_row["breakdown_reason_details"] = breakdown_details
                 machine_row["other_delay_reason_details"] = []
                 machine_row["breakdown_reason"] = "\n".join([d.get("reason") for d in breakdown_details])
+
+
+            # GLH_MONTH_END_FINAL_REASON_ASSIGN_START
+
+            # Always assign Other Delay reasons after both
+            # machine-row branches.
+            #
+            # This prevents a valid General Lost Hour reason
+            # from being cleared when the machine has no
+            # legacy AU source row.
+
+            final_reason_row = (
+                other_delay_reasons_by_key.get(
+                    (
+                        category,
+                        asset_name,
+                    ),
+                    {},
+                )
+            )
+
+
+            final_other_delay_details = (
+                clean_reason_details(
+                    final_reason_row.get(
+                        "other_delay_reason_details"
+                    )
+                    or []
+                )
+            )
+
+
+            machine_row[
+                "other_delay_reason_details"
+            ] = final_other_delay_details
+
+
+            machine_row[
+                "other_delay_reason"
+            ] = "\n".join(
+                [
+                    detail.get(
+                        "reason"
+                    )
+                    for detail
+                    in final_other_delay_details
+                    if detail.get(
+                        "reason"
+                    )
+                ]
+            )
+
+            # GLH_MONTH_END_FINAL_REASON_ASSIGN_END
 
             machine_rows.append(apply_spare_swing_flags(machine_row, spare_swing_asset_map))
 
@@ -2171,3 +2855,928 @@ def get_data(filters):
 
 # END DIRECT AU MONTH END TOTALS
 
+# GLH_DIRECT_POPUP_API_START
+
+@frappe.whitelist()
+def get_general_lost_hour_popup_rows(
+    asset_name,
+    from_date=None,
+    to_date=None,
+    location=None,
+):
+    """
+    Return General Lost Hours popup rows directly from capture.
+
+    Rules:
+    - Specific machine = that machine only
+    - ALL Equipment = applies to every machine
+    - Blank machine = ignored
+    """
+
+    asset_name = str(
+        asset_name or ""
+    ).strip()
+
+
+    if not asset_name:
+        return []
+
+
+    if not from_date:
+        from_date = "1900-01-01"
+
+
+    if not to_date:
+        to_date = "2999-12-31"
+
+
+    conditions = [
+        "r.shift_date BETWEEN %(from_date)s AND %(to_date)s",
+        (
+            "("
+            "TRIM(g.machine) = %(asset_name)s "
+            "OR LOWER(TRIM(g.machine)) = 'all equipment'"
+            ")"
+        ),
+    ]
+
+
+    values = {
+        "asset_name": asset_name,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+
+    if location:
+
+        conditions.append(
+            "r.location = %(location)s"
+        )
+
+        values[
+            "location"
+        ] = location
+
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            r.shift_date,
+            r.shift,
+
+            g.machine,
+            g.lost_hour_category,
+            g.reason_description,
+            g.start_time,
+            g.end_time,
+            g.total_hours,
+            g.location AS delay_location
+
+        FROM `tabDaily Lost Hours Recon` r
+
+        INNER JOIN `tabDaily General Lost Hours` g
+            ON g.parent = r.name
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            r.shift_date ASC,
+            g.start_time ASC,
+            g.idx ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    result = []
+
+
+    def clean_time(value):
+
+        if value is None:
+            return ""
+
+        value = str(
+            value
+        ).strip()
+
+        if "." in value:
+            value = value.split(
+                ".",
+                1,
+            )[0]
+
+        parts = value.split(
+            ":"
+        )
+
+        if (
+            len(parts) >= 2
+            and len(parts[0]) == 1
+        ):
+            value = "0" + value
+
+        return value
+
+
+    for row in rows:
+
+        result.append({
+            "date":
+                str(
+                    row.shift_date
+                    or ""
+                )[:10],
+
+            "shift":
+                row.shift or "",
+
+            "machine":
+                row.machine or "",
+
+            "lost_hour_category":
+                row.lost_hour_category or "",
+
+            "reason_description":
+                row.reason_description or "",
+
+            "start_time":
+                clean_time(
+                    row.start_time
+                ),
+
+            "end_time":
+                clean_time(
+                    row.end_time
+                ),
+
+            "total_hours":
+                round(
+                    flt(
+                        row.total_hours
+                    ),
+                    2,
+                ),
+
+            "location":
+                row.delay_location or "",
+        })
+
+
+    return result
+
+# GLH_DIRECT_POPUP_API_END
+
+# MONTH_END_PLANNED_REASON_SPLIT_START
+
+
+def get_month_end_pbm_reason_details_by_type(
+    filters,
+    asset_names,
+    downtime_type,
+):
+    """
+    Return Month End PBM detail rows for one downtime type.
+
+    Used only for reason display/export.
+
+    downtime_type:
+        Breakdown
+        Planned Maintenance
+
+    IMPORTANT:
+        This does not change any Month End A&U calculations.
+    """
+
+    from datetime import timedelta
+
+    from frappe.utils import (
+        getdate,
+        get_datetime,
+    )
+
+
+    if not asset_names:
+        return {}
+
+
+    if not frappe.db.exists(
+        "DocType",
+        "Plant Breakdown or Maintenance",
+    ):
+        return {}
+
+
+    filters = frappe._dict(
+        filters or {}
+    )
+
+
+    from_date = _month_end_get_filter_value(
+        filters,
+        "from_date",
+        "start_date",
+    )
+
+
+    to_date = _month_end_get_filter_value(
+        filters,
+        "to_date",
+        "end_date",
+    )
+
+
+    location = _month_end_get_filter_value(
+        filters,
+        "location",
+        "site",
+        "production_site",
+    )
+
+
+    if not from_date or not to_date:
+        return {}
+
+
+    # ========================================================
+    # MONTH END OPERATIONAL WINDOW
+    #
+    # From date 06:00
+    # through day after To date 06:00.
+    # ========================================================
+
+    report_start = get_datetime(
+        f"{getdate(from_date)} 06:00:00"
+    )
+
+
+    report_end_date = (
+        getdate(to_date)
+        + timedelta(
+            days=1
+        )
+    )
+
+
+    report_end = get_datetime(
+        f"{report_end_date} 06:00:00"
+    )
+
+
+    values = {
+        "from_datetime":
+            report_start,
+
+        "to_datetime":
+            report_end,
+
+        "asset_names":
+            tuple(
+                asset_names
+            ),
+
+        "downtime_type":
+            downtime_type,
+
+        "plant_breakdown_trust_datetime":
+            "2026-01-01 00:00:00",
+    }
+
+
+    conditions = [
+        (
+            "IFNULL(asset_name, '') != ''"
+        ),
+        (
+            "IFNULL(breakdown_reason, '') != ''"
+        ),
+        (
+            "IFNULL(exclude_from_au, 0) = 0"
+        ),
+        (
+            "asset_name IN %(asset_names)s"
+        ),
+        (
+            "LOWER(TRIM(IFNULL(downtime_type, ''))) "
+            "= LOWER(%(downtime_type)s)"
+        ),
+        (
+            "breakdown_start_datetime >= "
+            "%(plant_breakdown_trust_datetime)s"
+        ),
+        (
+            "breakdown_start_datetime <= "
+            "%(to_datetime)s"
+        ),
+        (
+            "("
+            "resolved_datetime >= %(from_datetime)s "
+            "OR resolved_datetime IS NULL"
+            ")"
+        ),
+    ]
+
+
+    if location:
+
+        conditions.append(
+            "location = %(location)s"
+        )
+
+        values[
+            "location"
+        ] = location
+
+
+    rows = frappe.db.sql(
+        f"""
+        SELECT
+            asset_name,
+            location,
+            downtime_type,
+            breakdown_start_datetime,
+            resolved_datetime,
+            breakdown_reason
+
+        FROM `tabPlant Breakdown or Maintenance`
+
+        WHERE
+            {" AND ".join(conditions)}
+
+        ORDER BY
+            asset_name ASC,
+            breakdown_start_datetime ASC
+        """,
+        values,
+        as_dict=True,
+    )
+
+
+    details_by_asset = {}
+
+    seen_intervals = set()
+
+
+    for row in rows:
+
+        start_datetime = row.get(
+            "breakdown_start_datetime"
+        )
+
+
+        resolved_datetime = row.get(
+            "resolved_datetime"
+        )
+
+
+        if not start_datetime:
+            continue
+
+
+        start_dt = get_datetime(
+            start_datetime
+        )
+
+
+        end_dt = (
+            get_datetime(
+                resolved_datetime
+            )
+            if resolved_datetime
+            else report_end
+        )
+
+
+        # Clip to selected report range.
+        clipped_start = max(
+            start_dt,
+            report_start,
+        )
+
+
+        clipped_end = min(
+            end_dt,
+            report_end,
+        )
+
+
+        if clipped_end <= clipped_start:
+            continue
+
+
+        interval_key = (
+            row.get(
+                "asset_name"
+            ),
+
+            row.get(
+                "location"
+            ),
+
+            row.get(
+                "downtime_type"
+            ),
+
+            str(
+                clipped_start
+            ),
+
+            str(
+                clipped_end
+            ),
+
+            row.get(
+                "breakdown_reason"
+            ),
+        )
+
+
+        if interval_key in seen_intervals:
+            continue
+
+
+        seen_intervals.add(
+            interval_key
+        )
+
+
+        row_filters = frappe._dict(
+            filters.copy()
+        )
+
+
+        row_filters[
+            "location"
+        ] = row.get(
+            "location"
+        )
+
+
+        # ====================================================
+        # SPLIT LONG PBM RECORD INTO OPERATIONAL DAYS
+        #
+        # This matches the current Month End popup structure.
+        # ====================================================
+
+        current_date = getdate(
+            clipped_start
+        )
+
+
+        current_day_start = get_datetime(
+            f"{current_date} 06:00:00"
+        )
+
+
+        if clipped_start < current_day_start:
+
+            current_date = (
+                current_date
+                - timedelta(
+                    days=1
+                )
+            )
+
+
+        while True:
+
+            day_start = get_datetime(
+                f"{current_date} 06:00:00"
+            )
+
+
+            day_end = (
+                day_start
+                + timedelta(
+                    days=1
+                )
+            )
+
+
+            if day_start >= clipped_end:
+                break
+
+
+            segment_start = max(
+                clipped_start,
+                day_start,
+            )
+
+
+            segment_end = min(
+                clipped_end,
+                day_end,
+            )
+
+
+            if segment_end > segment_start:
+
+                # Reuse exactly the same A&U exclusion calculation
+                # currently used by the Month End breakdown popup.
+                required_downtime = (
+                    get_required_downtime_minutes_for_breakdown(
+                        row_filters,
+                        row.get(
+                            "asset_name"
+                        ),
+                        segment_start,
+                        segment_end,
+                    )
+                )
+
+
+                details_by_asset.setdefault(
+                    row.get(
+                        "asset_name"
+                    ),
+                    [],
+                ).append({
+
+                    "date":
+                        str(
+                            current_date
+                        ),
+
+                    "start_datetime":
+                        segment_start,
+
+                    "resolved_datetime":
+                        segment_end,
+
+                    "total_minutes":
+                        required_downtime[
+                            "total_minutes"
+                        ],
+
+                    "startup_fatigue_minutes":
+                        required_downtime[
+                            "excluded_minutes"
+                        ],
+
+                    "sunday_minutes":
+                        required_downtime[
+                            "sunday_minutes"
+                        ],
+
+                    "au_minutes":
+                        required_downtime[
+                            "required_downtime_minutes"
+                        ],
+
+                    "reason":
+                        row.get(
+                            "breakdown_reason"
+                        ),
+
+                    "downtime_type":
+                        row.get(
+                            "downtime_type"
+                        ),
+                })
+
+
+            current_date = (
+                current_date
+                + timedelta(
+                    days=1
+                )
+            )
+
+
+    return details_by_asset
+
+
+def _month_end_add_planned_reason_column(
+    columns,
+):
+    """
+    Insert Planned Maintenance Reason directly after
+    Breakdown Reason.
+    """
+
+    if not columns:
+        return
+
+
+    existing = {
+        column.get(
+            "fieldname"
+        )
+        for column in columns
+        if isinstance(
+            column,
+            dict,
+        )
+    }
+
+
+    if (
+        "planned_maintenance_reason"
+        in existing
+    ):
+        return
+
+
+    new_column = {
+        "label":
+            _("Planned Maintenance Reason"),
+
+        "fieldname":
+            "planned_maintenance_reason",
+
+        "fieldtype":
+            "Data",
+
+        "width":
+            175,
+    }
+
+
+    for index, column in enumerate(
+        columns
+    ):
+
+        if (
+            isinstance(
+                column,
+                dict,
+            )
+            and column.get(
+                "fieldname"
+            )
+            == "breakdown_reason"
+        ):
+
+            columns.insert(
+                index + 1,
+                new_column,
+            )
+
+            return
+
+
+    # Fallback: place before Other Delay Reason.
+    for index, column in enumerate(
+        columns
+    ):
+
+        if (
+            isinstance(
+                column,
+                dict,
+            )
+            and column.get(
+                "fieldname"
+            )
+            == "other_delay_reason"
+        ):
+
+            columns.insert(
+                index,
+                new_column,
+            )
+
+            return
+
+
+    columns.append(
+        new_column
+    )
+
+
+def _month_end_split_pbm_reasons(
+    data,
+    filters,
+):
+    """
+    Separate PBM reasons into:
+
+        Breakdown Reason
+        Planned Maintenance Reason
+
+    This is deliberately performed AFTER the existing report
+    calculations, so Mechanical Downtime, Required Hours,
+    Availability and Utilisation are not recalculated.
+    """
+
+    if not data:
+        return
+
+
+    asset_names = sorted({
+        str(
+            row.get(
+                "asset_name"
+            )
+            or ""
+        ).strip()
+
+        for row in data
+
+        if (
+            isinstance(
+                row,
+                dict,
+            )
+            and row.get(
+                "asset_name"
+            )
+        )
+    })
+
+
+    if not asset_names:
+        return
+
+
+    breakdown_map = (
+        get_month_end_pbm_reason_details_by_type(
+            filters,
+            asset_names,
+            "Breakdown",
+        )
+    )
+
+
+    planned_map = (
+        get_month_end_pbm_reason_details_by_type(
+            filters,
+            asset_names,
+            "Planned Maintenance",
+        )
+    )
+
+
+    for row in data:
+
+        if not isinstance(
+            row,
+            dict,
+        ):
+            continue
+
+
+        asset_name = str(
+            row.get(
+                "asset_name"
+            )
+            or ""
+        ).strip()
+
+
+        # Category / scope total rows stay blank.
+        if not asset_name:
+
+            row[
+                "planned_maintenance_reason"
+            ] = ""
+
+            row[
+                "planned_maintenance_reason_details"
+            ] = []
+
+            continue
+
+
+        breakdown_details = clean_reason_details(
+            breakdown_map.get(
+                asset_name
+            )
+            or []
+        )
+
+
+        planned_details = clean_reason_details(
+            planned_map.get(
+                asset_name
+            )
+            or []
+        )
+
+
+        # ====================================================
+        # BREAKDOWN ONLY
+        # ====================================================
+
+        row[
+            "breakdown_reason_details"
+        ] = breakdown_details
+
+
+        row[
+            "breakdown_reason"
+        ] = "\n".join(
+            [
+                detail.get(
+                    "reason"
+                )
+                for detail
+                in breakdown_details
+                if detail.get(
+                    "reason"
+                )
+            ]
+        )
+
+
+        # ====================================================
+        # PLANNED MAINTENANCE ONLY
+        # ====================================================
+
+        row[
+            "planned_maintenance_reason_details"
+        ] = planned_details
+
+
+        row[
+            "planned_maintenance_reason"
+        ] = "\n".join(
+            [
+                detail.get(
+                    "reason"
+                )
+                for detail
+                in planned_details
+                if detail.get(
+                    "reason"
+                )
+            ]
+        )
+
+
+# ------------------------------------------------------------
+# WRAP EXISTING EXECUTE
+#
+# Existing Month End calculations happen FIRST.
+# We modify reason display/export only afterwards.
+# ------------------------------------------------------------
+
+_month_end_execute_before_pbm_reason_split = execute
+
+
+def execute(filters=None):
+
+    result = (
+        _month_end_execute_before_pbm_reason_split(
+            filters
+        )
+    )
+
+
+    if not result:
+        return result
+
+
+    if (
+        not isinstance(
+            result,
+            (tuple, list),
+        )
+        or len(result) < 2
+    ):
+        return result
+
+
+    columns = result[0]
+
+    data = result[1]
+
+
+    _month_end_add_planned_reason_column(
+        columns
+    )
+
+
+    _month_end_split_pbm_reasons(
+        data,
+        filters,
+    )
+
+
+    if isinstance(
+        result,
+        tuple,
+    ):
+
+        return (
+            columns,
+            data,
+            *result[2:],
+        )
+
+
+    result = list(
+        result
+    )
+
+    result[0] = columns
+
+    result[1] = data
+
+    return result
+
+
+# MONTH_END_PLANNED_REASON_SPLIT_END
