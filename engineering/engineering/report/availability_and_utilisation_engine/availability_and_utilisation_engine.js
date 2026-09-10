@@ -3080,3 +3080,682 @@ function add_invalid_au_exclusion_column(report) {
 })();
 
 // END INVALID AU PERMANENT EXCLUSION
+
+// AU_ENGINE_REASON_VIEW_START
+
+(() => {
+
+    const REPORT_NAME =
+        "Availability and Utilisation Engine";
+
+
+    const report =
+        frappe.query_reports[
+            REPORT_NAME
+        ];
+
+
+    if (!report) {
+        return;
+    }
+
+
+    const original_formatter =
+        report.formatter;
+
+
+    function escape_html(value) {
+
+        return frappe.utils.escape_html(
+            String(
+                value == null
+                    ? ""
+                    : value
+            )
+        );
+    }
+
+
+    // ========================================================
+    // VIEW BUTTON
+    // ========================================================
+
+    report.formatter = function(
+        value,
+        row,
+        column,
+        data,
+        default_formatter
+    ) {
+
+        if (
+            data
+            && data.asset_name
+            && (
+                column.fieldname
+                    === "breakdown_reason"
+                ||
+                column.fieldname
+                    === "other_delay_reason"
+            )
+        ) {
+
+            if (!value) {
+                return "";
+            }
+
+
+            const asset =
+                escape_html(
+                    data.asset_name
+                );
+
+
+            const type = (
+                column.fieldname
+                    === "breakdown_reason"
+            )
+                ? "breakdown"
+                : "delay";
+
+
+            return `
+                <button
+                    type="button"
+                    class="btn btn-xs btn-default"
+                    style="
+                        color:#1d4ed8;
+                        border:1px solid #2563eb;
+                        border-radius:12px;
+                        padding:2px 12px;
+                        font-weight:700;
+                        background:#eff6ff;
+                    "
+                    onclick="
+                        window.show_au_engine_reason_popup(
+                            '${asset}',
+                            '${type}'
+                        );
+                        return false;
+                    "
+                >
+                    View
+                </button>
+            `;
+        }
+
+
+        if (
+            typeof original_formatter
+            === "function"
+        ) {
+
+            return original_formatter.call(
+                this,
+                value,
+                row,
+                column,
+                data,
+                default_formatter
+            );
+        }
+
+
+        return default_formatter(
+            value,
+            row,
+            column,
+            data
+        );
+    };
+
+
+    // ========================================================
+    // POPUP
+    // ========================================================
+
+    window.show_au_engine_reason_popup =
+        async function(
+            asset_name,
+            type
+        ) {
+
+            const filters =
+                frappe.query_report
+                    .get_filter_values();
+
+
+            const is_breakdown =
+                type === "breakdown";
+
+
+            const method =
+                is_breakdown
+                    ?
+                    (
+                        "engineering.engineering.report." +
+                        "availability_and_utilisation_engine." +
+                        "availability_and_utilisation_engine." +
+                        "get_au_engine_breakdown_reasons"
+                    )
+                    :
+                    (
+                        "engineering.engineering.report." +
+                        "availability_and_utilisation_engine." +
+                        "availability_and_utilisation_engine." +
+                        "get_au_engine_other_delay_reasons"
+                    );
+
+
+            const response =
+                await frappe.call({
+                    method: method,
+
+                    args: {
+                        asset_name:
+                            asset_name,
+
+                        from_date:
+                            filters.from_date,
+
+                        to_date:
+                            filters.to_date,
+
+                        location:
+                            filters.location
+                            || null
+                    },
+
+                    freeze: false
+                });
+
+
+            const details =
+                response.message
+                || [];
+
+
+            if (!details.length) {
+
+                frappe.msgprint(
+                    "No reasons found for "
+                    + asset_name
+                    + "."
+                );
+
+                return;
+            }
+
+
+            const title =
+                is_breakdown
+                    ? "Breakdown Reasons"
+                    : "Other Delay Reasons";
+
+
+            const rows =
+                details.map(
+                    detail => {
+
+                        const date =
+                            escape_html(
+                                detail.date
+                                || ""
+                            );
+
+
+                        const shift =
+                            escape_html(
+                                detail.shift
+                                || ""
+                            );
+
+
+                        const reason =
+                            escape_html(
+                                detail.reason
+                                || ""
+                            );
+
+
+                        if (is_breakdown) {
+
+                            return `
+                                <tr>
+                                    <td style="
+                                        padding:8px 10px;
+                                        border-bottom:1px solid #dbeafe;
+                                        white-space:nowrap;
+                                    ">
+                                        ${date || "-"}
+                                    </td>
+
+                                    <td style="
+                                        padding:8px 10px;
+                                        border-bottom:1px solid #dbeafe;
+                                        font-weight:600;
+                                    ">
+                                        ${reason || "-"}
+                                    </td>
+                                </tr>
+                            `;
+                        }
+
+
+                        return `
+                            <tr>
+                                <td style="
+                                    padding:8px 10px;
+                                    border-bottom:1px solid #dbeafe;
+                                    white-space:nowrap;
+                                ">
+                                    ${date || "-"}
+                                </td>
+
+                                <td style="
+                                    padding:8px 10px;
+                                    border-bottom:1px solid #dbeafe;
+                                    white-space:nowrap;
+                                ">
+                                    ${shift || "-"}
+                                </td>
+
+                                <td style="
+                                    padding:8px 10px;
+                                    border-bottom:1px solid #dbeafe;
+                                    font-weight:600;
+                                ">
+                                    ${reason || "-"}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                ).join("");
+
+
+            const headers =
+                is_breakdown
+                    ?
+                    `
+                        <th style="
+                            padding:8px 10px;
+                            text-align:left;
+                            width:130px;
+                        ">
+                            Date
+                        </th>
+
+                        <th style="
+                            padding:8px 10px;
+                            text-align:left;
+                        ">
+                            Breakdown Reason
+                        </th>
+                    `
+                    :
+                    `
+                        <th style="
+                            padding:8px 10px;
+                            text-align:left;
+                            width:130px;
+                        ">
+                            Date
+                        </th>
+
+                        <th style="
+                            padding:8px 10px;
+                            text-align:left;
+                            width:90px;
+                        ">
+                            Shift
+                        </th>
+
+                        <th style="
+                            padding:8px 10px;
+                            text-align:left;
+                        ">
+                            Reason / Description
+                        </th>
+                    `;
+
+
+            const dialog =
+                new frappe.ui.Dialog({
+                    title:
+                        `${title} - ${asset_name}`,
+
+                    size:
+                        "large"
+                });
+
+
+            dialog.$body.html(`
+                <div style="
+                    border:1px solid #2563eb;
+                    border-radius:10px;
+                    overflow:hidden;
+                ">
+
+                    <div style="
+                        background:#dbeafe;
+                        color:#1d4ed8;
+                        font-weight:900;
+                        padding:10px 12px;
+                    ">
+                        ${title} for ${escape_html(asset_name)}
+                    </div>
+
+                    <div style="
+                        overflow-x:auto;
+                    ">
+
+                        <table style="
+                            width:100%;
+                            border-collapse:collapse;
+                        ">
+
+                            <thead>
+                                <tr style="
+                                    background:#eff6ff;
+                                    color:#1d4ed8;
+                                ">
+                                    ${headers}
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                ${rows}
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            `);
+
+
+            dialog.show();
+        };
+
+})();
+
+// AU_ENGINE_REASON_VIEW_END
+
+// ============================================================
+// AU ENGINE - PLANNED MAINTENANCE REASON VIEW
+// ============================================================
+
+(function install_planned_maintenance_reason_view() {
+
+    const REPORT_NAME =
+        "Availability and Utilisation Engine";
+
+
+    const report =
+        frappe.query_reports[
+            REPORT_NAME
+        ];
+
+
+    if (!report) {
+        return;
+    }
+
+
+    const previous_formatter =
+        report.formatter;
+
+
+    report.formatter = function(
+        value,
+        row,
+        column,
+        data,
+        default_formatter
+    ) {
+
+        if (
+            column.fieldname
+            === "planned_maintenance_reason"
+        ) {
+
+            if (
+                !data
+                || !data.asset_name
+                || !data.shift
+                || !value
+            ) {
+                return "";
+            }
+
+
+            const asset =
+                frappe.utils.escape_html(
+                    String(
+                        data.asset_name
+                        || ""
+                    )
+                );
+
+
+            return `
+                <button
+                    type="button"
+                    class="btn btn-xs btn-default"
+                    style="
+                        color:#1d4ed8;
+                        border:1px solid #2563eb;
+                        border-radius:12px;
+                        padding:2px 12px;
+                        font-weight:700;
+                        background:#eff6ff;
+                    "
+                    onclick="
+                        window.show_au_engine_planned_maintenance_popup(
+                            '${asset}'
+                        );
+                        return false;
+                    "
+                >
+                    View
+                </button>
+            `;
+        }
+
+
+        return previous_formatter.call(
+            this,
+            value,
+            row,
+            column,
+            data,
+            default_formatter
+        );
+    };
+
+
+    window.show_au_engine_planned_maintenance_popup =
+        async function(
+            asset_name
+        ) {
+
+            const filters =
+                frappe.query_report
+                    .get_filter_values();
+
+
+            const response =
+                await frappe.call({
+
+                    method:
+                        "engineering.engineering.report." +
+                        "availability_and_utilisation_engine." +
+                        "availability_and_utilisation_engine." +
+                        "get_au_engine_planned_maintenance_reasons",
+
+                    args: {
+                        asset_name:
+                            asset_name,
+
+                        from_date:
+                            filters.from_date,
+
+                        to_date:
+                            filters.to_date,
+
+                        location:
+                            filters.location
+                            || null
+                    }
+                });
+
+
+            const records =
+                response.message
+                || [];
+
+
+            if (!records.length) {
+
+                frappe.msgprint(
+                    "No Planned Maintenance records found for "
+                    + asset_name
+                    + "."
+                );
+
+                return;
+            }
+
+
+            const esc = function(value) {
+
+                return frappe.utils.escape_html(
+                    String(
+                        value
+                        || ""
+                    )
+                );
+            };
+
+
+            const body =
+                records.map(
+                    record => `
+                        <tr>
+                            <td style="
+                                padding:8px 10px;
+                                border-bottom:1px solid #dbeafe;
+                                white-space:nowrap;
+                            ">
+                                ${esc(record.start)}
+                            </td>
+
+                            <td style="
+                                padding:8px 10px;
+                                border-bottom:1px solid #dbeafe;
+                                white-space:nowrap;
+                            ">
+                                ${esc(record.resolved || "Open")}
+                            </td>
+
+                            <td style="
+                                padding:8px 10px;
+                                border-bottom:1px solid #dbeafe;
+                                font-weight:600;
+                            ">
+                                ${esc(record.reason)}
+                            </td>
+                        </tr>
+                    `
+                ).join("");
+
+
+            const dialog =
+                new frappe.ui.Dialog({
+
+                    title:
+                        "Planned Maintenance Reasons - "
+                        + asset_name,
+
+                    size:
+                        "large"
+                });
+
+
+            dialog.$body.html(`
+                <div style="
+                    border:1px solid #2563eb;
+                    border-radius:10px;
+                    overflow:hidden;
+                ">
+
+                    <div style="
+                        background:#dbeafe;
+                        color:#1d4ed8;
+                        font-weight:900;
+                        padding:10px 12px;
+                    ">
+                        Planned Maintenance Reasons for
+                        ${esc(asset_name)}
+                    </div>
+
+                    <div style="
+                        overflow-x:auto;
+                    ">
+
+                        <table style="
+                            width:100%;
+                            border-collapse:collapse;
+                        ">
+
+                            <thead>
+                                <tr style="
+                                    background:#eff6ff;
+                                    color:#1d4ed8;
+                                ">
+
+                                    <th style="
+                                        padding:9px 10px;
+                                        text-align:left;
+                                    ">
+                                        Start
+                                    </th>
+
+                                    <th style="
+                                        padding:9px 10px;
+                                        text-align:left;
+                                    ">
+                                        Resolved
+                                    </th>
+
+                                    <th style="
+                                        padding:9px 10px;
+                                        text-align:left;
+                                    ">
+                                        Reason
+                                    </th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                ${body}
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            `);
+
+
+            dialog.show();
+        };
+
+})();
+
+// ============================================================
+// END PLANNED MAINTENANCE REASON VIEW
+// ============================================================
