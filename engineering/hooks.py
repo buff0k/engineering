@@ -162,3 +162,12 @@ if "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folder
         "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders"
     )
 
+
+# Breakdown History global public List View
+doctype_list_js = dict(
+    globals().get("doctype_list_js", {}),
+    **{
+        "Breakdown History": "public/js/breakdown_history_list.js"
+    }
+)
+
