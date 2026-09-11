@@ -1,6 +1,6 @@
 {
  "app": "engineering",
- "creation": "2026-01-27 09:00:58.707820",
+ "creation": "2026-06-18 09:47:55.613029",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
@@ -10,8 +10,8 @@
  "link": "/app/engineering",
  "link_to": "Engineering",
  "link_type": "Workspace Sidebar",
- "logo_url": "/assets/engineering/images/is-logo.svg",
- "modified": "2026-02-03 17:55:44.678677",
+ "logo_url": "/assets/engineering/images/is-logo.png",
+ "modified": "2026-09-11 18:45:00.820998",
  "modified_by": "Administrator",
  "name": "Engineering",
  "owner": "Administrator",

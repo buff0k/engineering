@@ -39,12 +39,14 @@ frappe.query_reports["Fleet Compliance Overview"] = {
 			driver_licence_status: {
 				Valid: "green",
 				Expiring: "orange",
+				Incomplete: "blue",
 				Expired: "red",
 				Outstanding: "red",
 			},
 			vehicle_licence_status: {
 				Valid: "green",
 				Expiring: "orange",
+				Incomplete: "blue",
 				Expired: "red",
 				Outstanding: "red",
 			},
