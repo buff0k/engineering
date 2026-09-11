@@ -21,6 +21,13 @@ COLUMNS_TO_DROP = {
 		"vehicle_licence_source",
 		"overall_status",
 		"last_checked_on",
+		# Single-driver field, replaced by the 'drivers' Table MultiSelect —
+		# see migrate_vehicle_allocation_single_driver_to_table, which MUST
+		# run before this patch (it is placed earlier in patches.txt) so the
+		# data below is copied across before the column disappears.
+		"driver",
+		"driver_name",
+		"driver_branch",
 	],
 	"Vehicle Licence": [
 		"days_left",

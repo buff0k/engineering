@@ -149,6 +149,100 @@ def compute_driver_licence_status(driver, required_licence_type, threshold_days=
 	return None, "Outstanding", None
 
 
+def bulk_drivers(parent_names):
+	"""Drivers is a Table MultiSelect child table (Vehicle Allocation
+	Driver), so it never comes through a plain frappe.get_all() on the
+	Vehicle Allocation parent. One extra query, grouped by parent, for any
+	caller that loops many allocations at once (list view, xlsx export,
+	dashboard Number Cards, notifications, reports). Returns
+	{parent_name: [<Vehicle Allocation Driver row>, ...]}, each row having
+	.driver and .driver_name."""
+	if not parent_names:
+		return {}
+
+	by_parent = {}
+
+	for row in frappe.get_all(
+		"Vehicle Allocation Driver",
+		filters={"parent": ["in", parent_names], "parenttype": "Vehicle Allocation", "parentfield": "drivers"},
+		fields=["parent", "driver", "driver_name"],
+	):
+		by_parent.setdefault(row.parent, []).append(row)
+
+	return by_parent
+
+
+def collect_drivers(drivers):
+	"""Dedupe/clean the Drivers table into an ordered list of Employee ids.
+	Empty means a vehicle allocated to a Location as a shared resource
+	(compliance is then Not Applicable for the driver-related sections);
+	one or more drivers means every one of them must be individually
+	compliant."""
+	result = []
+
+	for candidate in drivers or []:
+		if candidate and candidate not in result:
+			result.append(candidate)
+
+	return result
+
+
+# Severity ranking used to reduce a group of drivers down to a single
+# worst-case status: "the group is only as compliant as its least compliant
+# member". Expired/Outstanding (no usable licence at all) outrank
+# Expiring/Incomplete (licence exists, just lapsing or not yet finalised),
+# which outrank Valid.
+_DRIVER_STATUS_SEVERITY = {"Outstanding": 3, "Expired": 3, "Incomplete": 2, "Expiring": 2, "Valid": 1}
+
+
+def compute_driver_licence_status_for_group(drivers, required_licence_type, threshold_days=None):
+	"""Like compute_driver_licence_status, but for a list of drivers (a
+	shared vehicle) rather than a single one. The whole group must be
+	Valid for the aggregate to read Valid — the worst individual result
+	is surfaced, since that is the one that actually needs attention."""
+	if not drivers:
+		return None, "Not Applicable", None
+
+	if threshold_days is None:
+		threshold_days = get_expiring_threshold_days()
+
+	worst = None
+	very_old = getdate("1900-01-01")
+
+	for candidate in drivers:
+		valid_to, status, source = compute_driver_licence_status(candidate, required_licence_type, threshold_days)
+		severity = _DRIVER_STATUS_SEVERITY.get(status, 0)
+
+		if worst is None or severity > worst[0]:
+			worst = (severity, valid_to, status, source)
+		elif severity == worst[0] and (valid_to or very_old) < (worst[1] or very_old):
+			# Tie-break on the soonest valid_to (the more urgent of the two
+			# equally severe results — a missing licence, with no date at
+			# all, is the most urgent of all) so the surfaced source record
+			# is actionable.
+			worst = (severity, valid_to, status, source)
+
+	return worst[1], worst[2], worst[3]
+
+
+def compute_addendum_status_for_group(drivers):
+	"""Like compute_addendum_status, but for a list of drivers. Every driver
+	in the group needs their own signed Undertaking on file — if any one is
+	missing, the group reads Outstanding."""
+	if not drivers:
+		return "Not Applicable", None, None
+
+	results = [compute_addendum_status(candidate) for candidate in drivers]
+	missing = [r for r in results if r[0] != "On File"]
+
+	if missing:
+		return "Outstanding", None, None
+
+	# All On File: surface the most recently captured one as representative.
+	results.sort(key=lambda r: r[1] or getdate("1900-01-01"), reverse=True)
+	return "On File", results[0][1], results[0][2]
+
+
 def compute_addendum_status(driver):
 	"""Look up the 'Company Vehicle Undertaking' entry in the driver's own
 	Employee Records table (Employee.ir_employee_records) rather than storing
@@ -221,14 +315,20 @@ def compute_vehicle_licence_status(asset, threshold_days=None):
 	return None, "Outstanding", None
 
 
-def compute_overall_status(vehicle_licence_status, driver, driver_licence_status, addendum_status):
+def compute_overall_status(vehicle_licence_status, has_driver, driver_licence_status, addendum_status):
 	# "Incomplete" (a currently-valid Draft record exists, just not yet
 	# submitted) is partial compliance — the paperwork is in motion, only a
 	# finalisation step is outstanding — so it belongs with "Attention
 	# Required", not "Non-Compliant".
+	#
+	# has_driver is True whenever at least one driver (the primary Driver
+	# and/or one-or-more Additional Drivers) is assigned. A vehicle with no
+	# driver at all — allocated to a Location as a shared resource — has
+	# nobody's licence/undertaking to check, so those sections don't count
+	# against it either way.
 	non_compliant_flags = [vehicle_licence_status in ("Expired", "Outstanding")]
 
-	if driver:
+	if has_driver:
 		non_compliant_flags.append(driver_licence_status in ("Expired", "Outstanding"))
 		non_compliant_flags.append(addendum_status == "Outstanding")
 
@@ -237,13 +337,130 @@ def compute_overall_status(vehicle_licence_status, driver, driver_licence_status
 
 	attention_flags = [vehicle_licence_status in ("Expiring", "Incomplete")]
 
-	if driver:
+	if has_driver:
 		attention_flags.append(driver_licence_status in ("Expiring", "Incomplete"))
 
 	if any(attention_flags):
 		return "Attention Required"
 
 	return "Compliant"
+
+
+# Pill colours shared by every compliance HTML block below, so "Valid" /
+# "Expiring" / "Expired" etc always mean the same colour everywhere on the
+# form (and roughly track the list-view indicator colours).
+_STATUS_COLOURS = {
+	"Valid": "#2e7d32",
+	"On File": "#2e7d32",
+	"Expiring": "#e65100",
+	"Incomplete": "#e65100",
+	"Expired": "#c62828",
+	"Outstanding": "#c62828",
+	"Not Applicable": "#757575",
+}
+
+
+def _status_pill(status):
+	colour = _STATUS_COLOURS.get(status, "#757575")
+	return (
+		f"<span style='display:inline-block;padding:2px 10px;border-radius:10px;"
+		f"background:{colour};color:#fff;font-size:12px;font-weight:600;white-space:nowrap;'>"
+		f"{escape_html(status)}</span>"
+	)
+
+
+def _driver_label(driver):
+	name = frappe.db.get_value("Employee", driver, "employee_name")
+	return f"{escape_html(driver)} - {escape_html(name)}" if name else escape_html(driver)
+
+
+def render_driver_licence_html(drivers, required_licence_type, threshold_days=None):
+	"""One row per Driver — replaces the old single driver_licence_status/
+	valid_to/source virtual fields, which couldn't represent more than one
+	person's compliance at a time."""
+	drivers = collect_drivers(drivers)
+
+	if not drivers:
+		return "<p class='text-muted'>No driver assigned — shared resource, no licence to check.</p>"
+
+	if threshold_days is None:
+		threshold_days = get_expiring_threshold_days()
+
+	body_rows = []
+
+	for driver in drivers:
+		valid_to, status, source = compute_driver_licence_status(driver, required_licence_type, threshold_days)
+		source_html = (
+			f"<a href='/app/employee-induction-record/{escape_html(source)}'>{escape_html(source)}</a>"
+			if source
+			else "—"
+		)
+		body_rows.append(
+			"<tr>"
+			f"<td>{_driver_label(driver)}</td>"
+			f"<td>{_status_pill(status)}</td>"
+			f"<td>{escape_html(str(valid_to or '—'))}</td>"
+			f"<td>{source_html}</td>"
+			"</tr>"
+		)
+
+	return (
+		"<table class='table table-bordered' style='margin-bottom:0;'>"
+		"<thead><tr><th>Driver</th><th>Status</th><th>Valid To</th><th>Source Record</th></tr></thead>"
+		f"<tbody>{''.join(body_rows)}</tbody>"
+		"</table>"
+	)
+
+
+def render_addendum_html(drivers):
+	"""One row per Driver — replaces the old single addendum_status/date/url
+	virtual fields."""
+	drivers = collect_drivers(drivers)
+
+	if not drivers:
+		return "<p class='text-muted'>No driver assigned — shared resource, no undertaking to check.</p>"
+
+	body_rows = []
+
+	for driver in drivers:
+		status, date_captured, url = compute_addendum_status(driver)
+		link_html = f"<a href='{escape_html(url)}' target='_blank'>View</a>" if url else "—"
+		body_rows.append(
+			"<tr>"
+			f"<td>{_driver_label(driver)}</td>"
+			f"<td>{_status_pill(status)}</td>"
+			f"<td>{escape_html(str(date_captured or '—'))}</td>"
+			f"<td>{link_html}</td>"
+			"</tr>"
+		)
+
+	return (
+		"<table class='table table-bordered' style='margin-bottom:0;'>"
+		"<thead><tr><th>Driver</th><th>Status</th><th>Date Captured</th><th>Undertaking</th></tr></thead>"
+		f"<tbody>{''.join(body_rows)}</tbody>"
+		"</table>"
+	)
+
+
+def render_vehicle_licence_html(asset, threshold_days=None):
+	"""Replaces the old single vehicle_licence_status/valid_to/source
+	virtual fields — kept as HTML too, for the same reason as the driver
+	sections: one place, consistent pill styling, no virtual fields left to
+	carry in the doctype's own schema."""
+	valid_to, status, source = compute_vehicle_licence_status(asset, threshold_days)
+	source_html = (
+		f"<a href='/app/vehicle-licence/{escape_html(source)}'>{escape_html(source)}</a>" if source else "—"
+	)
+
+	return (
+		"<table class='table table-bordered' style='margin-bottom:0;'>"
+		"<tbody>"
+		f"<tr><td style='width:160px;'>Status</td><td>{_status_pill(status)}</td></tr>"
+		f"<tr><td>Valid To</td><td>{escape_html(str(valid_to or '—'))}</td></tr>"
+		f"<tr><td>Source Record</td><td>{source_html}</td></tr>"
+		"</tbody>"
+		"</table>"
+	)
 
 
 def render_service_history_html(asset, limit=10):
@@ -282,11 +499,14 @@ def render_service_history_html(asset, limit=10):
 	)
 
 
-def compute_all(asset, driver, required_licence_type, threshold_days=None):
+def compute_all(asset, drivers, required_licence_type, threshold_days=None):
 	"""Bulk-friendly single entry point: returns every compliance field as a
 	dict, for callers (the report, dashboard number cards, notifications)
 	that loop many allocations and don't want to load a full Document (and
-	therefore its virtual-field properties) per row."""
+	therefore its virtual-field properties) per row.
+
+	`drivers` is a list of Employees (0, 1, or many — a vehicle allocated to
+	a Location as a shared resource with nobody named has an empty list)."""
 	if threshold_days is None:
 		threshold_days = get_expiring_threshold_days()
 
@@ -294,16 +514,18 @@ def compute_all(asset, driver, required_licence_type, threshold_days=None):
 		asset, threshold_days
 	)
 
-	if driver:
-		driver_licence_valid_to, driver_licence_status, driver_licence_source = compute_driver_licence_status(
-			driver, required_licence_type, threshold_days
+	drivers = collect_drivers(drivers)
+
+	if drivers:
+		driver_licence_valid_to, driver_licence_status, driver_licence_source = (
+			compute_driver_licence_status_for_group(drivers, required_licence_type, threshold_days)
 		)
-		addendum_status, addendum_date, addendum_url = compute_addendum_status(driver)
+		addendum_status, addendum_date, addendum_url = compute_addendum_status_for_group(drivers)
 	else:
 		driver_licence_valid_to, driver_licence_status, driver_licence_source = None, "Not Applicable", None
 		addendum_status, addendum_date, addendum_url = "Not Applicable", None, None
 
-	overall_status = compute_overall_status(vehicle_licence_status, driver, driver_licence_status, addendum_status)
+	overall_status = compute_overall_status(vehicle_licence_status, bool(drivers), driver_licence_status, addendum_status)
 
 	return {
 		"vehicle_licence_valid_to": vehicle_licence_valid_to,

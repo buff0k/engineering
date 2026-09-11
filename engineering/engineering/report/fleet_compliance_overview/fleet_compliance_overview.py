@@ -3,7 +3,7 @@
 
 import frappe
 
-from engineering.controllers.fleet_compliance import compute_all, get_expiring_threshold_days
+from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
 	get_public_road_asset_categories,
 )
@@ -26,8 +26,7 @@ def get_columns():
 		{"fieldname": "registered", "label": "Registered", "fieldtype": "Data", "width": 90},
 		{"fieldname": "allocation", "label": "Allocation", "fieldtype": "Link", "options": "Vehicle Allocation", "width": 160},
 		{"fieldname": "location", "label": "Location", "fieldtype": "Link", "options": "Location", "width": 120},
-		{"fieldname": "driver", "label": "Driver", "fieldtype": "Link", "options": "Employee", "width": 110},
-		{"fieldname": "driver_name", "label": "Driver Name", "fieldtype": "Data", "width": 140},
+		{"fieldname": "drivers", "label": "Drivers", "fieldtype": "Data", "width": 220},
 		{"fieldname": "driver_licence_status", "label": "Driver Licence", "fieldtype": "Data", "width": 110},
 		{"fieldname": "driver_licence_valid_to", "label": "Driver Licence Valid To", "fieldtype": "Date", "width": 140},
 		{"fieldname": "addendum_status", "label": "Addendum", "fieldtype": "Data", "width": 100},
@@ -54,8 +53,6 @@ def get_data(filters):
 			a.asset_category as asset_category,
 			v.name as allocation,
 			v.location as location,
-			v.driver as driver,
-			v.driver_name as driver_name,
 			v.required_licence_type as required_licence_type
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v
@@ -69,10 +66,19 @@ def get_data(filters):
 
 	# Compliance is computed live per row (never read from a stored/cached
 	# column — see engineering.controllers.fleet_compliance).
+	drivers_by_allocation = bulk_drivers([row["allocation"] for row in rows if row.get("allocation")])
+
 	for row in rows:
 		row["registered"] = "Yes" if row.get("allocation") else "No"
-		compliance = compute_all(row["asset"], row.get("driver"), row.pop("required_licence_type"), threshold_days)
+		driver_rows = drivers_by_allocation.get(row.get("allocation"), [])
+		compliance = compute_all(
+			row["asset"],
+			[d.driver for d in driver_rows],
+			row.pop("required_licence_type"),
+			threshold_days,
+		)
 		row.update(compliance)
+		row["drivers"] = ", ".join(d.driver_name or d.driver for d in driver_rows)
 
 		if not row.get("allocation"):
 			row["overall_status"] = "Not Registered"
@@ -95,7 +101,6 @@ def _build_conditions(filters, categories):
 
 	simple_filter_map = {
 		"location": "v.location",
-		"driver": "v.driver",
 		"asset_category": "a.asset_category",
 	}
 
@@ -105,5 +110,19 @@ def _build_conditions(filters, categories):
 		if value:
 			where.append(f"{column} = %({filter_key})s")
 			params[filter_key] = value
+
+	if filters.get("driver"):
+		# Drivers is a Table MultiSelect child table now — no plain column
+		# to equality-match on the parent, so filter by whether any of its
+		# rows names this Employee.
+		where.append(
+			"""
+			exists (
+				select 1 from `tabVehicle Allocation Driver` vad
+				where vad.parent = v.name and vad.parentfield = 'drivers' and vad.driver = %(driver)s
+			)
+			"""
+		)
+		params["driver"] = filters["driver"]
 
 	return " and ".join(where), params
