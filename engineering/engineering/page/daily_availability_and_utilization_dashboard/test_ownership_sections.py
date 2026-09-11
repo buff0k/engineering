@@ -3,6 +3,7 @@ import unittest
 
 from engineering.engineering.page.daily_availability_and_utilization_dashboard.ownership_sections import (
     get_ownership_average_sections,
+    should_show_spare_average_section,
 )
 
 
@@ -31,6 +32,14 @@ class TestOwnershipAverageSections(unittest.TestCase):
                     "Isambane & Excavo Assets - Average per Category",
                 ),
             ),
+        )
+
+    def test_supplier_assets_never_show_a_spare_average_section(self):
+        self.assertFalse(
+            should_show_spare_average_section("Suppliers Assets")
+        )
+        self.assertTrue(
+            should_show_spare_average_section("Isambane & Excavo Assets")
         )
 
 
