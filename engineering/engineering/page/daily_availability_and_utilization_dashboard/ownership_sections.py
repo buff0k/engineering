@@ -22,3 +22,8 @@ def get_ownership_average_sections(asset_ownership):
         (scope, labels.get(scope, f"{scope} - Average per Category"))
         for scope in scopes
     )
+
+
+def should_show_spare_average_section(asset_ownership):
+    """Suppliers do not have swing/spare machines."""
+    return asset_ownership != SUPPLIER_ASSETS
