@@ -3179,13 +3179,38 @@ def get_machine_downtime_details(
 
 
 @frappe.whitelist()
-def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=None, summary_type=None, machine_scope=None, asset_ownership=None, au_target_filter=None):
+def download_dashboard_pdf(
+    start_date=None,
+    end_date=None,
+    location=None,
+    site=None,
+    summary_type=None,
+    machine_scope=None,
+    asset_ownership=None,
+    au_target_filter=None,
+    dashboard_tab=None,
+    hours_display=None,
+    hours_asset=None,
+):
     from frappe.utils.pdf import get_pdf
     from frappe.utils import now_datetime
 
     location = location or site
     summary_type = summary_type or "Average Per Machine"
     machine_scope = machine_scope or "Production + Swing/Spare Machines"
+
+    # PDF_SELECTED_TAB_V1
+    dashboard_tab = str(
+        dashboard_tab or "hours"
+    ).strip().lower()
+
+    if dashboard_tab not in ("hours", "au"):
+        dashboard_tab = "hours"
+
+    hours_display = (
+        hours_display or "Hours Average per Category"
+    )
+    hours_asset = hours_asset or ""
 
     html = get_dashboard_html(
         start_date=start_date,
@@ -3196,10 +3221,47 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
         machine_scope=machine_scope,
         asset_ownership=asset_ownership or "Isambane & Excavo Assets",
         au_target_filter=au_target_filter or "85% A & U",
+        hours_display=hours_display,
+        hours_asset=hours_asset,
     )
 
     engineering_css = get_engineering_css_for_pdf()
     pdf_override_css = get_daily_dashboard_pdf_override_css()
+
+    # PDF_SELECTED_TAB_V1
+    #
+    # The browser dashboard contains both performance panels.
+    # PDF output must contain only the panel selected by the user.
+    if dashboard_tab == "au":
+        selected_tab_css = """
+            .daily-dashboard-tabs {
+                display: none !important;
+            }
+
+            .daily-dashboard-tab-panel[data-panel="hours"] {
+                display: none !important;
+            }
+
+            .daily-dashboard-tab-panel[data-panel="au"] {
+                display: block !important;
+            }
+        """
+        safe_tab = "AU_Performance"
+    else:
+        selected_tab_css = """
+            .daily-dashboard-tabs {
+                display: none !important;
+            }
+
+            .daily-dashboard-tab-panel[data-panel="au"] {
+                display: none !important;
+            }
+
+            .daily-dashboard-tab-panel[data-panel="hours"] {
+                display: block !important;
+            }
+        """
+        safe_tab = "Hours_Based_Performance"
 
     full_html = f"""
     <!doctype html>
@@ -3236,6 +3298,10 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
 
         <style>
             {pdf_override_css}
+        </style>
+
+        <style>
+            {selected_tab_css}
         </style>
     </head>
     <body>
@@ -3351,7 +3417,7 @@ def download_dashboard_pdf(start_date=None, end_date=None, location=None, site=N
     safe_end = str(end_date or "")
     timestamp = now_datetime().strftime("%Y%m%d_%H%M%S")
 
-    filename = f"Daily_Availability_Dashboard_{safe_summary}_{safe_scope}_{safe_location}_{safe_start}_to_{safe_end}_{timestamp}.pdf"
+    filename = f"Daily_Availability_Dashboard_{safe_tab}_{safe_summary}_{safe_scope}_{safe_location}_{safe_start}_to_{safe_end}_{timestamp}.pdf"
 
     frappe.local.response.filename = filename
     frappe.local.response.filecontent = pdf
