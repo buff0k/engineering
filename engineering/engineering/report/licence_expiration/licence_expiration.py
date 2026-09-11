@@ -19,18 +19,19 @@ def execute(filters=None):
     as_at = getdate(today())
     site = (filters.get("site") or "").strip() or None
     asset = (filters.get("asset") or "").strip() or None
+    asset_category = (filters.get("asset_category") or "").strip() or None
     start_date = filters.get("start_date") or None
     end_date = filters.get("end_date") or None
     view = (filters.get("view") or "Summary").strip() or "Summary"
     bucket = (filters.get("bucket") or "").strip() or None
 
-    if view == "Assets" and bucket:
-        return _assets_view(as_at, site, asset, start_date, end_date, bucket)
+    if view == "Assets":
+        return _assets_view(as_at, site, asset, asset_category, start_date, end_date, bucket)
 
-    return _summary_view(as_at, site, asset, start_date, end_date)
+    return _summary_view(as_at, site, asset, asset_category, start_date, end_date)
 
 
-def _where_sql(site=None, asset=None, start_date=None, end_date=None, table_alias="lr"):
+def _where_sql(site=None, asset=None, asset_category=None, start_date=None, end_date=None, table_alias="lr"):
     where = [
         f"{table_alias}.docstatus < 2",
         f"{table_alias}.expiry_date IS NOT NULL",
@@ -44,6 +45,12 @@ def _where_sql(site=None, asset=None, start_date=None, end_date=None, table_alia
     if asset:
         where.append(f"{table_alias}.fleet_number = %(asset)s")
         params["asset"] = asset
+
+    if asset_category:
+        where.append(
+            f"{table_alias}.fleet_number IN (SELECT name FROM `tabAsset` WHERE asset_category = %(asset_category)s)"
+        )
+        params["asset_category"] = asset_category
 
     if start_date:
         where.append(f"{table_alias}.expiry_date >= %(start_date)s")
@@ -62,23 +69,23 @@ def _latest_sql(where_sql):
             lr.site,
             lr.fleet_number,
             MAX(lr.expiry_date) AS expiry_date
-        FROM `tabLicence Registration` lr
+        FROM `tabVehicle Licence` lr
         WHERE {where_sql}
         GROUP BY lr.site, lr.fleet_number
     """
 
 
-def _summary_view(as_at, site=None, asset=None, start_date=None, end_date=None):
+def _summary_view(as_at, site=None, asset=None, asset_category=None, start_date=None, end_date=None):
     columns = [
         {"label": "Document", "fieldname": "document", "fieldtype": "Data", "width": 220},
-        {"label": "🔴 Overdue", "fieldname": "overdue", "fieldtype": "Int", "width": 110},
-        {"label": "🟠 0–7", "fieldname": "d0_7", "fieldtype": "Int", "width": 90},
-        {"label": "🟡 8–14", "fieldname": "d8_14", "fieldtype": "Int", "width": 90},
-        {"label": "🟦 15–21", "fieldname": "d15_21", "fieldtype": "Int", "width": 95},
-        {"label": "🟩 22–28", "fieldname": "d22_28", "fieldtype": "Int", "width": 95},
+        {"label": "Overdue", "fieldname": "overdue", "fieldtype": "Int", "width": 110},
+        {"label": "0–7", "fieldname": "d0_7", "fieldtype": "Int", "width": 90},
+        {"label": "8–14", "fieldname": "d8_14", "fieldtype": "Int", "width": 90},
+        {"label": "15–21", "fieldname": "d15_21", "fieldtype": "Int", "width": 95},
+        {"label": "22–28", "fieldname": "d22_28", "fieldtype": "Int", "width": 95},
     ]
 
-    where_sql, params = _where_sql(site, asset, start_date, end_date)
+    where_sql, params = _where_sql(site, asset, asset_category, start_date, end_date)
     params["as_at"] = as_at
     latest_sql = _latest_sql(where_sql)
 
@@ -88,7 +95,7 @@ def _summary_view(as_at, site=None, asset=None, start_date=None, end_date=None):
             {latest_sql}
         )
         SELECT
-            'Licence Registration' AS document,
+            'Vehicle Licence' AS document,
             SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) < 0 THEN 1 ELSE 0 END) AS overdue,
             SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 0 AND 7 THEN 1 ELSE 0 END) AS d0_7,
             SUM(CASE WHEN DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 8 AND 14 THEN 1 ELSE 0 END) AS d8_14,
@@ -101,7 +108,7 @@ def _summary_view(as_at, site=None, asset=None, start_date=None, end_date=None):
     )
 
     if not data:
-        data = [{"document": "Licence Registration", "overdue": 0, "d0_7": 0, "d8_14": 0, "d15_21": 0, "d22_28": 0}]
+        data = [{"document": "Vehicle Licence", "overdue": 0, "d0_7": 0, "d8_14": 0, "d15_21": 0, "d22_28": 0}]
 
     return columns, data, None, None
 
@@ -117,10 +124,13 @@ def _bucket_condition(bucket):
         return "DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 15 AND 21"
     if bucket == "d22_28":
         return "DATEDIFF(latest.expiry_date, %(as_at)s) BETWEEN 22 AND 28"
-    return "1 = 0"
+    # No bucket specified: show every currently-tracked licence, not none —
+    # this view is directly usable as a standalone report, not only as a
+    # drilldown target.
+    return "1 = 1"
 
 
-def _assets_view(as_at, site=None, asset=None, start_date=None, end_date=None, bucket=None):
+def _assets_view(as_at, site=None, asset=None, asset_category=None, start_date=None, end_date=None, bucket=None):
     columns = [
         {"label": "Fleet Number", "fieldname": "fleet_number", "fieldtype": "Link", "options": "Asset", "width": 130},
         {"label": "Site", "fieldname": "site", "fieldtype": "Link", "options": "Location", "width": 160},
@@ -129,10 +139,10 @@ def _assets_view(as_at, site=None, asset=None, start_date=None, end_date=None, b
         {"label": "Expiry Date", "fieldname": "expiry_date", "fieldtype": "Date", "width": 110},
         {"label": "Days Left", "fieldname": "days_left", "fieldtype": "Int", "width": 90},
         {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 140},
-        {"label": "Document", "fieldname": "document", "fieldtype": "Data", "width": 110},
+        {"label": "Document", "fieldname": "document", "fieldtype": "Link", "options": "Vehicle Licence", "width": 160},
     ]
 
-    where_sql, params = _where_sql(site, asset, start_date, end_date)
+    where_sql, params = _where_sql(site, asset, asset_category, start_date, end_date)
     params["as_at"] = as_at
     latest_sql = _latest_sql(where_sql)
     bucket_sql = _bucket_condition(bucket)
@@ -159,7 +169,7 @@ def _assets_view(as_at, site=None, asset=None, start_date=None, end_date=None, b
                 ELSE '-'
             END AS status,
             lr.attach
-        FROM `tabLicence Registration` lr
+        FROM `tabVehicle Licence` lr
         INNER JOIN latest
             ON latest.site = lr.site
             AND latest.fleet_number = lr.fleet_number
@@ -183,7 +193,7 @@ def _assets_view(as_at, site=None, asset=None, start_date=None, end_date=None, b
             "days_left": r.get("days_left"),
             "status": r.get("status"),
             "attach": r.get("attach"),
-            "document": "Open",
+            "document": r.get("name"),
         })
 
     return columns, data, None, None

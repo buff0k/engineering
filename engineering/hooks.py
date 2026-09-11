@@ -40,8 +40,23 @@ fixtures = [
     {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User", "Information Officer", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver", "Engineering Area Manager"]]]},
     {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User", "Information Officer", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver", "Engineering Area Manager"]]]},
     {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
-    {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "RDT", "Excavator"]]]},
-    {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]}
+    {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "RDT", "Excavator", "LDV"]]]},
+    {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]},
+    # Driver's licence competencies (Employee Induction is owned by the ir app,
+    # but these 6 licence codes back Vehicle Allocation, so they are fixtured
+    # here rather than in ir).
+    {"dt": "Employee Induction", "filters": [["name", "in", [
+        "Drivers Licence - Code B",
+        "Drivers Licence - Code EB",
+        "Drivers Licence - Code C",
+        "Drivers Licence - Code EC",
+        "Drivers Licence - Code C1",
+        "Drivers Licence - Code EC1",
+    ]]]},
+    # Company Vehicle Undertaking record type (Employee File Record is owned
+    # by the ir app; this backs the addendum-on-file check on Vehicle
+    # Allocation, read from Employee.ir_employee_records).
+    {"dt": "Employee File Record", "filters": [["name", "in", ["Company Vehicle Undertaking"]]]},
 ]
 
 
@@ -161,6 +176,17 @@ if "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folder
     scheduler_events["daily"].append(
         "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders"
     )
+
+# ==========================================================
+# FLEET MANAGEMENT (Vehicle Allocation / Vehicle Licence) — weekly digest.
+# Compliance/expiry status is computed live (virtual fields, never stored),
+# so there is nothing to recalculate daily any more. The digest gate itself
+# only actually sends on the day/hour configured in Fleet Management
+# Settings, computing fresh values at send time.
+# ==========================================================
+for _fleet_job in ("engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",):
+    if _fleet_job not in scheduler_events["daily"]:
+        scheduler_events["daily"].append(_fleet_job)
 
 
 # Breakdown History global public List View

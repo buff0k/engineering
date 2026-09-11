@@ -1,0 +1,37 @@
+{
+ "cards": [
+  {
+   "card": "Total Public Road Assets"
+  },
+  {
+   "card": "Currently Allocated"
+  },
+  {
+   "card": "Unregistered Assets"
+  },
+  {
+   "card": "Fleet Non-Compliant"
+  },
+  {
+   "card": "Fleet Expiring Soon"
+  }
+ ],
+ "charts": [
+  {
+   "chart": "Fleet Compliance Breakdown",
+   "width": "Full"
+  }
+ ],
+ "creation": "2026-09-11 15:30:02.474791",
+ "dashboard_name": "Fleet Management",
+ "docstatus": 0,
+ "doctype": "Dashboard",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 0,
+ "modified": "2026-09-11 15:30:02.474791",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Management",
+ "owner": "Administrator"
+}
