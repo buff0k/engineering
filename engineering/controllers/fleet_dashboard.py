@@ -12,7 +12,7 @@ column, since overall_status is a virtual field on Vehicle Allocation."""
 
 import frappe
 
-from engineering.controllers.fleet_compliance import compute_all, get_expiring_threshold_days
+from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
 	get_public_road_asset_categories,
 )
@@ -31,16 +31,23 @@ def _current_allocations():
 	return frappe.get_all(
 		"Vehicle Allocation",
 		filters={"docstatus": 1, "status": "Current"},
-		fields=["asset", "driver", "required_licence_type"],
+		fields=["name", "asset", "required_licence_type"],
 	)
 
 
 def _count_by_overall_status(target_statuses):
 	threshold_days = get_expiring_threshold_days()
+	rows = _current_allocations()
+	drivers_by_parent = bulk_drivers([row.name for row in rows])
 	count = 0
 
-	for row in _current_allocations():
-		compliance = compute_all(row.asset, row.driver, row.required_licence_type, threshold_days)
+	for row in rows:
+		compliance = compute_all(
+			row.asset,
+			[d.driver for d in drivers_by_parent.get(row.name, [])],
+			row.required_licence_type,
+			threshold_days,
+		)
 
 		if compliance["overall_status"] in target_statuses:
 			count += 1

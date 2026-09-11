@@ -32,6 +32,15 @@ def _asset_site_field():
 
 @frappe.whitelist()
 def get_asset_category_counts(site=None):
+	"""One row per Asset Category: how many Assets exist in it, and how many
+	Vehicle Licence documents (current + historical, any not-cancelled
+	docstatus) have been captured against those Assets — two different,
+	previously-conflated numbers shown separately so a category with lots
+	of Assets but few Licences on file is visible at a glance.
+
+	Assets are counted submitted-only (docstatus 1) — a Draft Asset isn't a
+	real in-service vehicle yet, and a Cancelled one no longer is, so
+	neither belongs in a "how many vehicles do we have" count."""
 	meta = frappe.get_meta("Asset")
 
 	if not meta.has_field("asset_category"):
@@ -40,9 +49,9 @@ def get_asset_category_counts(site=None):
 	site_field = _asset_site_field()
 	Asset = DocType("Asset")
 
-	q = (
+	asset_q = (
 		frappe.qb.from_(Asset)
-		.select(Asset.asset_category.as_("category"), Count(Asset.name).as_("count"))
+		.select(Asset.asset_category.as_("category"), Count(Asset.name).as_("asset_count"))
 		.where(Asset.docstatus == 1)
 		.where(Asset.asset_category.isin(CATEGORIES_SHOWN))
 		.groupby(Asset.asset_category)
@@ -50,10 +59,55 @@ def get_asset_category_counts(site=None):
 	)
 
 	if site and site_field:
-		q = q.where(getattr(Asset, site_field) == site)
+		asset_q = asset_q.where(getattr(Asset, site_field) == site)
 
-	rows = q.run(as_dict=True)
-	return [{"category": r["category"], "count": int(r.get("count") or 0)} for r in rows if r.get("category")]
+	asset_rows = asset_q.run(as_dict=True)
+	categories = [r["category"] for r in asset_rows if r.get("category")]
+
+	if not categories:
+		return []
+
+	asset_filters = {"asset_category": ["in", categories], "docstatus": 1}
+
+	if site and site_field:
+		asset_filters[site_field] = site
+
+	fleet_numbers_by_category = {}
+
+	for a in frappe.get_all("Asset", filters=asset_filters, fields=["name", "asset_category"]):
+		fleet_numbers_by_category.setdefault(a.asset_category, []).append(a.name)
+
+	all_fleet_numbers = [name for names in fleet_numbers_by_category.values() for name in names]
+	licence_count_by_asset = {}
+
+	if all_fleet_numbers and frappe.db.exists("DocType", "Vehicle Licence"):
+		for lic in frappe.get_all(
+			"Vehicle Licence",
+			filters={"fleet_number": ["in", all_fleet_numbers], "docstatus": ["<", 2]},
+			fields=["fleet_number"],
+		):
+			licence_count_by_asset[lic.fleet_number] = licence_count_by_asset.get(lic.fleet_number, 0) + 1
+
+	out = []
+
+	for r in asset_rows:
+		category = r.get("category")
+
+		if not category:
+			continue
+
+		licence_count = sum(
+			licence_count_by_asset.get(fleet_number, 0)
+			for fleet_number in fleet_numbers_by_category.get(category, [])
+		)
+
+		out.append({
+			"category": category,
+			"asset_count": int(r.get("asset_count") or 0),
+			"licence_count": licence_count,
+		})
+
+	return out
 
 
 @frappe.whitelist()
@@ -114,7 +168,9 @@ def get_doc_history_tree_meta(site=None, asset=None, asset_category=None):
 	if asset:
 		filters.append(["fleet_number", "=", asset])
 	if asset_category:
-		fleet_numbers = frappe.get_all("Asset", filters={"asset_category": asset_category}, pluck="name")
+		fleet_numbers = frappe.get_all(
+			"Asset", filters={"asset_category": asset_category, "docstatus": 1}, pluck="name"
+		)
 		filters.append(["fleet_number", "in", fleet_numbers or [""]])
 
 	rows = frappe.get_all(

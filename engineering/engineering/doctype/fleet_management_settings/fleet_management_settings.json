@@ -1,6 +1,6 @@
 {
  "actions": [],
- "creation": "2026-09-11 00:00:00.000000",
+ "creation": "2026-09-11 00:00:00",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -23,7 +23,7 @@
    "label": "Public Road Asset Categories"
   },
   {
-   "description": "Assets whose Asset Category is listed here are treated as \"drives on public roads\" — they are the ones offered for selection on Vehicle Allocation, and the ones the Fleet Compliance Overview report enumerates.",
+   "description": "Assets whose Asset Category is listed here are treated as \"drives on public roads\" \u2014 they are the ones offered for selection on Vehicle Allocation, and the ones the Fleet Compliance Overview report enumerates.",
    "fieldname": "public_road_asset_categories",
    "fieldtype": "Table",
    "label": "Public Road Asset Categories",
@@ -39,6 +39,7 @@
    "description": "A Licence (driver's licence or Vehicle Licence) is flagged \"Expiring\" once its expiry date falls within this many days.",
    "fieldname": "expiring_threshold_days",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Expiring Threshold (Days)",
    "non_negative": 1,
    "reqd": 1
@@ -87,7 +88,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-11 15:41:00.000000",
+ "modified": "2026-09-11 21:45:17.954768",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Management Settings",
@@ -95,7 +96,6 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "print": 1,
    "read": 1,
@@ -105,7 +105,6 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "print": 1,
    "read": 1,
@@ -115,25 +114,19 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "print": 1,
    "read": 1,
-   "role": "Engineering Area Manager",
+   "role": "Fleet Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "role": "Engineering User",
-   "share": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
 }

@@ -6,13 +6,14 @@ from frappe.model.document import Document
 from frappe.utils import nowdate
 
 from engineering.controllers.fleet_compliance import (
-	compute_addendum_status,
+	bulk_drivers,
+	collect_drivers,
 	compute_all,
-	compute_driver_licence_status,
-	compute_overall_status,
-	compute_vehicle_licence_status,
 	get_expiring_threshold_days,
+	render_addendum_html,
+	render_driver_licence_html,
 	render_service_history_html,
+	render_vehicle_licence_html,
 )
 
 
@@ -65,12 +66,43 @@ def get_overall_statuses(names):
 	rows = frappe.get_all(
 		"Vehicle Allocation",
 		filters={"name": ["in", names]},
-		fields=["name", "asset", "driver", "required_licence_type"],
+		fields=["name", "asset", "required_licence_type"],
 	)
 
+	drivers_by_parent = bulk_drivers([row.name for row in rows])
+
 	return {
-		row.name: compute_all(row.asset, row.driver, row.required_licence_type, threshold_days)["overall_status"]
+		row.name: compute_all(
+			row.asset,
+			[d.driver for d in drivers_by_parent.get(row.name, [])],
+			row.required_licence_type,
+			threshold_days,
+		)["overall_status"]
 		for row in rows
+	}
+
+
+@frappe.whitelist()
+def preview_compliance(asset=None, required_licence_type=None, drivers=None):
+	"""Lets the form recompute every compliance HTML block (plus Overall
+	Status) the instant Asset / Drivers / Required Licence Type changes,
+	without needing a save + reload first. Takes raw values rather than a
+	saved doc name on purpose — the whole point is to preview a combination
+	that may not be saved yet (e.g. the user is mid-edit on an existing
+	allocation)."""
+	if not frappe.has_permission("Vehicle Allocation", "read"):
+		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
+
+	if isinstance(drivers, str):
+		drivers = frappe.parse_json(drivers)
+
+	drivers = collect_drivers(drivers)
+
+	return {
+		"vehicle_licence_compliance_html": render_vehicle_licence_html(asset),
+		"driver_licence_compliance_html": render_driver_licence_html(drivers, required_licence_type),
+		"company_vehicle_undertaking_html": render_addendum_html(drivers),
+		"overall_status": compute_all(asset, drivers, required_licence_type)["overall_status"],
 	}
 
 
@@ -102,8 +134,6 @@ def export_road_asset_register_xlsx():
 			a.company as company,
 			v.name as allocation,
 			v.location as location,
-			v.driver as driver,
-			v.driver_name as driver_name,
 			v.required_licence_type as required_licence_type
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v
@@ -134,14 +164,26 @@ def export_road_asset_register_xlsx():
 		licence_by_asset.setdefault(lic.fleet_number, lic)  # first hit per asset = latest (ordered desc)
 
 	threshold_days = get_expiring_threshold_days()
+	drivers_by_allocation = bulk_drivers([r.allocation for r in rows if r.allocation])
 
 	for row in rows:
-		row.update(compute_all(row.asset, row.driver, row.required_licence_type, threshold_days))
+		driver_rows = drivers_by_allocation.get(row.allocation, [])
+		row.update(
+			compute_all(
+				row.asset,
+				[d.driver for d in driver_rows],
+				row.required_licence_type,
+				threshold_days,
+			)
+		)
 		lic = licence_by_asset.get(row.asset)
 		row["registration_number"] = lic.registration_number if lic else None
 		row["chassis"] = lic.chassis if lic else None
 		row["engine_number"] = lic.engine_number if lic else None
 		row["vin_number"] = lic.vin_number if lic else None
+		row["driver_display"] = ", ".join(
+			f"{d.driver} - {d.driver_name}" if d.driver_name else d.driver for d in driver_rows
+		)
 
 	return {
 		"filename": f"road_asset_register_{nowdate()}.xlsx",
@@ -182,7 +224,7 @@ def _rows_to_xlsx_base64(rows):
 		("Engine Number", 18),
 		("VIN Number", 20),
 		("Location", 18),
-		("Driver", 32),
+		("Driver", 44),
 		("Required Licence", 24),
 		("Driver Licence Status", 18),
 		("Vehicle Licence Status", 18),
@@ -224,7 +266,6 @@ def _rows_to_xlsx_base64(rows):
 		current_row += 1
 
 		for i, row in enumerate(by_company[company], start=1):
-			driver_display = f"{row.driver} - {row.driver_name}" if row.driver else ""
 			values = [
 				i,
 				row.asset,
@@ -234,7 +275,7 @@ def _rows_to_xlsx_base64(rows):
 				row.engine_number,
 				row.vin_number,
 				row.location or "",
-				driver_display,
+				row.driver_display,
 				row.required_licence_type or "",
 				row.driver_licence_status,
 				row.vehicle_licence_status,
@@ -281,53 +322,41 @@ class VehicleAllocation(Document):
 	# time regardless of this document), so nothing here is ever cached or
 	# allowed to go stale between scheduled refreshes.
 	#
+	# Driver Licence / Company Vehicle Undertaking / Vehicle Licence
+	# Compliance are HTML fields, not individual Select/Date/Link fields —
+	# once a vehicle can have more than one Driver, a single status/valid_to
+	# pair per section can't represent it (each driver has their own), so
+	# they render a small table instead. Only Overall Status stays a plain
+	# Select field, since the list view and reports need one filterable
+	# value out of it.
+	#
 	# Note: because these are virtual, they are NOT populated by bulk
 	# frappe.get_all()/list-view queries — only by loading the full
 	# Document (form view, frappe.get_doc). The report/dashboard/
 	# notifications call the same underlying engineering.controllers.
 	# fleet_compliance functions directly instead, for exactly this reason.
 	# ------------------------------------------------------------------
-	@property
-	def driver_licence_valid_to(self):
-		return compute_driver_licence_status(self.driver, self.required_licence_type)[0]
+	def _drivers(self):
+		"""Every Employee listed in the Drivers table, deduped. Empty when
+		this is a shared resource allocated to a Location with no driver
+		assigned at all."""
+		return collect_drivers([row.driver for row in (self.drivers or [])])
 
 	@property
-	def driver_licence_status(self):
-		return compute_driver_licence_status(self.driver, self.required_licence_type)[1]
+	def driver_licence_compliance_html(self):
+		return render_driver_licence_html(self._drivers(), self.required_licence_type)
 
 	@property
-	def driver_licence_source(self):
-		return compute_driver_licence_status(self.driver, self.required_licence_type)[2]
+	def company_vehicle_undertaking_html(self):
+		return render_addendum_html(self._drivers())
 
 	@property
-	def addendum_status(self):
-		return compute_addendum_status(self.driver)[0]
-
-	@property
-	def addendum_date(self):
-		return compute_addendum_status(self.driver)[1]
-
-	@property
-	def addendum_url(self):
-		return compute_addendum_status(self.driver)[2]
-
-	@property
-	def vehicle_licence_valid_to(self):
-		return compute_vehicle_licence_status(self.asset)[0]
-
-	@property
-	def vehicle_licence_status(self):
-		return compute_vehicle_licence_status(self.asset)[1]
-
-	@property
-	def vehicle_licence_source(self):
-		return compute_vehicle_licence_status(self.asset)[2]
+	def vehicle_licence_compliance_html(self):
+		return render_vehicle_licence_html(self.asset)
 
 	@property
 	def overall_status(self):
-		return compute_overall_status(
-			self.vehicle_licence_status, self.driver, self.driver_licence_status, self.addendum_status
-		)
+		return compute_all(self.asset, self._drivers(), self.required_licence_type)["overall_status"]
 
 	@property
 	def service_history_html(self):

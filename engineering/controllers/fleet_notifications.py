@@ -4,7 +4,7 @@
 import frappe
 from frappe.utils import now_datetime
 
-from engineering.controllers.fleet_compliance import compute_all, get_expiring_threshold_days
+from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
 from engineering.controllers.notifications import _get_outgoing_email_account
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
 	get_public_road_asset_categories,
@@ -29,7 +29,7 @@ def _get_current_allocations():
 	return frappe.get_all(
 		"Vehicle Allocation",
 		filters={"docstatus": 1, "status": "Current"},
-		fields=["name", "asset", "asset_name", "location", "driver", "driver_name", "driver_branch", "required_licence_type"],
+		fields=["name", "asset", "asset_name", "location", "required_licence_type"],
 	)
 
 
@@ -111,29 +111,55 @@ def _get_unregistered_assets():
 
 
 def send_weekly_fleet_digest(dry_run: bool = False):
-	"""Group currently-open Vehicle Allocations needing attention by the
+	"""Group currently-open Vehicle Allocations needing attention by each
 	driver's Branch and email the configured recipients; also surfaces
 	unregistered public-road Assets. Compliance is computed fresh here (not
 	read from any stored field). dry_run=True returns payloads instead of
-	sending."""
+	sending.
+
+	A flagged allocation can have more than one driver, potentially across
+	more than one Branch — it is fanned out into every one of those
+	branches' digests (rather than picking just one), so every relevant
+	branch manager sees it."""
 	settings = frappe.get_single("Fleet Management Settings")
 	threshold_days = get_expiring_threshold_days()
 
 	flagged = []
+	current_allocations = _get_current_allocations()
+	drivers_by_parent = bulk_drivers([row.name for row in current_allocations])
 
-	for row in _get_current_allocations():
-		compliance = compute_all(row.asset, row.driver, row.required_licence_type, threshold_days)
+	for row in current_allocations:
+		driver_rows = drivers_by_parent.get(row.name, [])
+		compliance = compute_all(
+			row.asset,
+			[d.driver for d in driver_rows],
+			row.required_licence_type,
+			threshold_days,
+		)
 
 		if compliance["overall_status"] in ATTENTION_STATUSES:
-			flagged.append({**row, **compliance})
+			flagged.append({**row, **compliance, "driver_rows": driver_rows})
 
 	unregistered = _get_unregistered_assets()
+
+	driver_ids = {d.driver for r in flagged for d in r["driver_rows"]}
+	branch_by_driver = (
+		{
+			e.name: e.branch
+			for e in frappe.get_all("Employee", filters={"name": ["in", list(driver_ids)]}, fields=["name", "branch"])
+		}
+		if driver_ids
+		else {}
+	)
 
 	by_branch = {}
 
 	for r in flagged:
-		branch = (r.get("driver_branch") or "Unassigned").strip() or "Unassigned"
-		by_branch.setdefault(branch, []).append(r)
+		branches = {(branch_by_driver.get(d.driver) or "").strip() for d in r["driver_rows"]}
+		branches = {b for b in branches if b} or {"Unassigned"}
+
+		for branch in branches:
+			by_branch.setdefault(branch, []).append(r)
 
 	branches = sorted(by_branch) or (["Unassigned"] if unregistered else [])
 	payloads = {}
@@ -156,9 +182,11 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 			if r["addendum_status"] == "Outstanding":
 				issues.append("Company Vehicle Undertaking Outstanding")
 
+			driver_display = ", ".join(d.driver_name or d.driver for d in r["driver_rows"]) or "no driver"
+
 			lines.append(
 				f"- {r['asset_name'] or r['asset']} ({r['location'] or 'no location'})"
-				f" — {r['driver_name'] or r['driver'] or 'no driver'}: {', '.join(issues) or r['overall_status']}"
+				f" — {driver_display}: {', '.join(issues) or r['overall_status']}"
 			)
 
 		if branch == "Unassigned" and unregistered:
