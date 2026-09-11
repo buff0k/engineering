@@ -10,6 +10,9 @@ from engineering.engineering.page.daily_availability_dashboard.daily_availabilit
     build_hours_based_performance_html,
   get_monthly_production_shift_hours,
 )
+from engineering.engineering.page.daily_availability_and_utilization_dashboard.ownership_sections import (
+    get_ownership_average_sections,
+)
 
 
 _ = frappe._
@@ -765,12 +768,37 @@ def execute(filters=None):
         source_rows
     )
 
-    (
-        production_avgs,
-        spare_avgs,
-    ) = build_scope_averages_from_source_rows(
-        source_rows
-    )
+    ownership_average_sections = []
+
+    for ownership_scope, ownership_label in get_ownership_average_sections(
+        asset_ownership
+    ):
+        ownership_rows = (
+            source_rows
+            if ownership_scope == asset_ownership
+            else fetch_grouped_data(
+                location,
+                start_date,
+                end_date,
+                machine_scope,
+                au_target_filter,
+                ownership_scope,
+            )
+        )
+
+        (
+            ownership_production_avgs,
+            ownership_spare_avgs,
+        ) = build_scope_averages_from_source_rows(
+            ownership_rows
+        )
+
+        ownership_average_sections.append({
+            "asset_ownership": ownership_scope,
+            "label": ownership_label,
+            "production_avgs": ownership_production_avgs,
+            "spare_avgs": ownership_spare_avgs,
+        })
 
     dashboard_html = build_dashboard_html(
         location,
@@ -782,8 +810,7 @@ def execute(filters=None):
         summary_type,
         machine_scope,
         spare_swing_asset_map,
-        production_avgs,
-        spare_avgs,
+        ownership_average_sections,
         hours_display,
         hours_asset,
         asset_ownership,
@@ -1576,8 +1603,7 @@ def build_dashboard_html(
     summary_type="Average Per Machine",
     machine_scope="Production + Swing/Spare Machines",
     spare_swing_asset_map=None,
-    production_avgs=None,
-    spare_avgs=None,
+    ownership_average_sections=None,
     hours_display="Hours Average per Category",
     hours_asset=None,
     asset_ownership="Isambane & Excavo Assets",
@@ -1587,21 +1613,7 @@ def build_dashboard_html(
     header_colour = get_site_header_colour(location)
 
 
-    production_avgs = production_avgs or {
-        category: {
-            "avail": None,
-            "util": None,
-        }
-        for category in UI_CATEGORIES
-    }
-
-    spare_avgs = spare_avgs or {
-        category: {
-            "avail": None,
-            "util": None,
-        }
-        for category in UI_CATEGORIES
-    }
+    ownership_average_sections = ownership_average_sections or []
 
     au_target_filter = getattr(
         frappe.local,
@@ -1620,11 +1632,14 @@ def build_dashboard_html(
         f"&site={quote(str(location or ''))}"
         f"&au_target_filter={quote(str(au_target_filter))}"
         f"&au_percentage_basis={quote(str(au_target_filter))}"
-        f"&asset_ownership={quote(str(asset_ownership))}"
     )
 
 
-    def build_metric_cards(metric_values, card_machine_scope):
+    def build_metric_cards(
+        metric_values,
+        card_machine_scope,
+        card_asset_ownership,
+    ):
         cards = []
 
         for category in UI_CATEGORIES:
@@ -1640,6 +1655,7 @@ def build_dashboard_html(
                 f"{month_end_url}"
                 f"&asset_category={quote(str(category))}"
                 f"&machine_scope={quote(str(card_machine_scope))}"
+                f"&asset_ownership={quote(str(card_asset_ownership))}"
             )
 
             cards.append(f'''
@@ -1684,15 +1700,74 @@ def build_dashboard_html(
 
         return "".join(cards)
 
-    production_metric_cards = build_metric_cards(
-        production_avgs,
-        "Production Machines",
-    )
+    metric_bands = []
 
-    spare_metric_cards = build_metric_cards(
-        spare_avgs,
-        "Swing/Spare Machines",
-    )
+    for ownership_section in ownership_average_sections:
+        ownership_label = esc(
+            ownership_section.get("label")
+        )
+        ownership_scope = ownership_section.get(
+            "asset_ownership"
+        )
+
+        production_metric_cards = build_metric_cards(
+            ownership_section.get("production_avgs") or {},
+            "Production Machines",
+            ownership_scope,
+        )
+
+        spare_metric_cards = build_metric_cards(
+            ownership_section.get("spare_avgs") or {},
+            "Swing/Spare Machines",
+            ownership_scope,
+        )
+
+        metric_bands.append(f'''
+        <div
+            class="isd-scope-banner-title"
+            style="
+                padding:8px 12px;
+                background:#dbeafe;
+                color:#1e3a8a;
+                border-bottom:1px solid #93c5fd;
+                font-size:12px;
+                font-weight:900;
+                text-transform:uppercase;
+            "
+        >
+            {ownership_label} - Production Machines
+        </div>
+
+        <div class="isd-band" style="--site-colour:#4fa3dc;">
+            <div class="isd-metrics">
+                {production_metric_cards}
+            </div>
+        </div>
+
+        <div
+            class="isd-scope-banner-title"
+            style="
+                padding:8px 12px;
+                background:#dcfce7;
+                color:#166534;
+                border-top:1px solid #86efac;
+                border-bottom:1px solid #86efac;
+                font-size:12px;
+                font-weight:900;
+                text-transform:uppercase;
+            "
+        >
+            {ownership_label} - Swing/Spare Machines
+        </div>
+
+        <div class="isd-band" style="--site-colour:#55c878;">
+            <div class="isd-metrics">
+                {spare_metric_cards}
+            </div>
+        </div>
+''')
+
+    metric_bands_html = "".join(metric_bands)
 
     chart_html = build_selected_summary_chart_html(
         summary_type,
@@ -1739,54 +1814,7 @@ def build_dashboard_html(
     <div class="isd-site">
         <div class="isd-site-title">{summary_type_safe} | {site_safe} | {start_date} to {end_date}</div>
 
-        <div
-            class="isd-scope-banner-title"
-            style="
-                padding:8px 12px;
-                background:#dbeafe;
-                color:#1e3a8a;
-                border-bottom:1px solid #93c5fd;
-                font-size:12px;
-                font-weight:900;
-                text-transform:uppercase;
-            "
-        >
-            Average Per Machine - Production Machines
-        </div>
-
-        <div
-            class="isd-band"
-            style="--site-colour:#4fa3dc;"
-        >
-            <div class="isd-metrics">
-                {production_metric_cards}
-            </div>
-        </div>
-
-        <div
-            class="isd-scope-banner-title"
-            style="
-                padding:8px 12px;
-                background:#dcfce7;
-                color:#166534;
-                border-top:1px solid #86efac;
-                border-bottom:1px solid #86efac;
-                font-size:12px;
-                font-weight:900;
-                text-transform:uppercase;
-            "
-        >
-            Average Per Machine - Swing/Spare Machines
-        </div>
-
-        <div
-            class="isd-band"
-            style="--site-colour:#55c878;"
-        >
-            <div class="isd-metrics">
-                {spare_metric_cards}
-            </div>
-        </div>
+        {metric_bands_html}
 
         <div class="isd-contentrow">
             {chart_html}
