@@ -17,6 +17,52 @@ def _get_expiring_threshold_days() -> int:
 	return cint(days) or THRESHOLD_FALLBACK_DAYS
 
 
+def _current_vehicle_licence(asset):
+	"""Same "current licence" definition used everywhere else in fleet
+	compliance (engineering.controllers.fleet_compliance): the most
+	recently issued non-cancelled record — submitted preferred, falling
+	back to a Draft if that's all there is."""
+	rows = frappe.get_all(
+		"Vehicle Licence",
+		filters={"fleet_number": asset, "docstatus": ["<", 2]},
+		fields=["name"],
+		order_by="issue_date desc, docstatus desc",
+		limit_page_length=1,
+	)
+
+	return rows[0].name if rows else None
+
+
+def sync_location_from_asset_movement(doc, method=None):
+	"""Hook: engineering.hooks.doc_events["Asset Movement"] (on_submit /
+	on_cancel). Asset Movement's own controller already updates
+	Asset.location for every Asset in the movement before this runs (it's
+	the doctype's own on_submit/on_cancel, which fires first) — this just
+	carries that new location across onto the current Vehicle Licence for
+	each of those Assets too, so licensing doesn't go stale relative to
+	where the vehicle actually is. Only the current record is touched;
+	superseded/historical Vehicle Licences keep whatever site they were
+	actually issued at."""
+	for row in doc.get("assets") or []:
+		if not row.asset:
+			continue
+
+		licence_name = _current_vehicle_licence(row.asset)
+
+		if not licence_name:
+			continue
+
+		current_location = frappe.db.get_value("Asset", row.asset, "location")
+
+		if not current_location:
+			continue
+
+		if frappe.db.get_value("Vehicle Licence", licence_name, "site") == current_location:
+			continue
+
+		frappe.db.set_value("Vehicle Licence", licence_name, "site", current_location)
+
+
 class VehicleLicence(Document):
 	def validate(self):
 		self.set_expiry_date()

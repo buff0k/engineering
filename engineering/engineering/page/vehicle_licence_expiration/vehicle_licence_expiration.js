@@ -95,17 +95,19 @@ frappe.pages["vehicle-licence-expiration"].on_page_load = function (wrapper) {
 
 			.vle-bubble-row { display: flex; gap: 12px; flex-wrap: wrap; }
 			.vle-bubble {
-				border-radius: 999px;
+				border-radius: 10px;
 				border: 2px solid var(--blue-500, #1a73e8);
 				background: var(--card-bg);
-				padding: 10px 16px;
+				padding: 10px 14px;
 				text-align: center;
 				cursor: pointer;
-				min-width: 130px;
+				min-width: 150px;
 			}
 			.vle-bubble:hover { transform: translateY(-1px); }
-			.vle-bubble-cat { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-color); }
-			.vle-bubble-count { font-size: 20px; font-weight: 800; color: var(--text-color); line-height: 1.3; }
+			.vle-bubble-cat { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-color); margin-bottom: 8px; }
+			.vle-bubble-stats { display: flex; gap: 16px; justify-content: center; }
+			.vle-bubble-stat-value { font-size: 18px; font-weight: 800; color: var(--text-color); line-height: 1.1; }
+			.vle-bubble-stat-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-top: 3px; }
 
 			.vle-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 			.vle-table th, .vle-table td {
@@ -280,9 +282,19 @@ frappe.pages["vehicle-licence-expiration"].on_page_load = function (wrapper) {
 					const cat = frappe.utils.escape_html(x.category || __("Unknown"));
 					const active_cls = active_category === x.category ? "vle-active" : "";
 					return `
-						<div class="vle-bubble ${active_cls}" data-category="${frappe.utils.escape_html(x.category || "")}">
+						<div class="vle-bubble ${active_cls}" data-category="${frappe.utils.escape_html(x.category || "")}"
+							title="${__("Assets in this Category vs. Vehicle Licence documents captured against them (current + historical)")}">
 							<div class="vle-bubble-cat">${cat}</div>
-							<div class="vle-bubble-count">${frappe.utils.escape_html(String(x.count || 0))}</div>
+							<div class="vle-bubble-stats">
+								<div>
+									<div class="vle-bubble-stat-value">${frappe.utils.escape_html(String(x.asset_count || 0))}</div>
+									<div class="vle-bubble-stat-label">${__("Assets")}</div>
+								</div>
+								<div>
+									<div class="vle-bubble-stat-value">${frappe.utils.escape_html(String(x.licence_count || 0))}</div>
+									<div class="vle-bubble-stat-label">${__("Licences")}</div>
+								</div>
+							</div>
 						</div>
 					`;
 				})

@@ -12,7 +12,7 @@ frappe.listview_settings["Vehicle Allocation"] = {
 	// neutral placeholder for "Current" rows on first paint; refresh()
 	// below fetches the live compliance status for the rows actually on
 	// screen and patches the indicator afterwards — nothing is cached.
-	add_fields: ["status", "driver", "driver_name"],
+	add_fields: ["status"],
 
 	onload(listview) {
 		listview.page.add_inner_button(__("Export to Excel"), () => {
@@ -32,13 +32,6 @@ frappe.listview_settings["Vehicle Allocation"] = {
 				},
 			});
 		});
-	},
-
-	formatters: {
-		driver(value, df, doc) {
-			if (!value) return "";
-			return doc.driver_name ? `${value} - ${frappe.utils.escape_html(doc.driver_name)}` : value;
-		},
 	},
 
 	get_indicator(doc) {

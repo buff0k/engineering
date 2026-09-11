@@ -1,8 +1,9 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
+ "allow_import": 1,
  "autoname": "format:{asset} - {valid_from}",
- "creation": "2026-09-11 00:00:00.000000",
+ "creation": "2026-09-11 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -15,9 +16,7 @@
   "item_name",
   "location",
   "section_break_driver",
-  "driver",
-  "driver_name",
-  "driver_branch",
+  "drivers",
   "column_break_driver_1",
   "required_licence_type",
   "section_break_period",
@@ -26,20 +25,11 @@
   "valid_to",
   "status",
   "section_break_driver_licence",
-  "driver_licence_status",
-  "driver_licence_valid_to",
-  "column_break_dl_1",
-  "driver_licence_source",
+  "driver_licence_compliance_html",
   "section_break_addendum",
-  "addendum_status",
-  "addendum_date",
-  "column_break_addendum_1",
-  "addendum_url",
+  "company_vehicle_undertaking_html",
   "section_break_vehicle_licence",
-  "vehicle_licence_status",
-  "vehicle_licence_valid_to",
-  "column_break_vl_1",
-  "vehicle_licence_source",
+  "vehicle_licence_compliance_html",
   "section_break_overall",
   "overall_status",
   "section_break_service",
@@ -53,12 +43,13 @@
    "label": "Vehicle"
   },
   {
-   "description": "Only Assets whose Category is listed on Fleet Management Settings → Public Road Asset Categories are offered here.",
+   "description": "Only Assets whose Category is listed on Fleet Management Settings \u2192 Public Road Asset Categories are offered here.",
    "fieldname": "asset",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Asset",
+   "link_filters": "[[\"Asset\",\"docstatus\",\"=\",\"1\"]]",
    "options": "Asset",
    "reqd": 1,
    "set_only_once": 1
@@ -67,7 +58,8 @@
    "fetch_from": "asset.asset_name",
    "fieldname": "asset_name",
    "fieldtype": "Read Only",
-   "label": "Asset Name"
+   "label": "Asset Name",
+   "read_only": 1
   },
   {
    "fetch_from": "asset.image",
@@ -84,23 +76,26 @@
    "fetch_from": "asset.item_code",
    "fieldname": "item_code",
    "fieldtype": "Read Only",
-   "label": "Item Code"
+   "label": "Item Code",
+   "read_only": 1
   },
   {
    "fetch_from": "asset.item_name",
    "fieldname": "item_name",
    "fieldtype": "Read Only",
    "in_list_view": 1,
-   "label": "Model"
+   "label": "Model",
+   "read_only": 1
   },
   {
+   "fetch_from": "asset.location",
    "fieldname": "location",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Location",
    "options": "Location",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "section_break_driver",
@@ -108,25 +103,11 @@
    "label": "Driver"
   },
   {
-   "fieldname": "driver",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Driver",
-   "options": "Employee"
-  },
-  {
-   "fetch_from": "driver.employee_name",
-   "fieldname": "driver_name",
-   "fieldtype": "Read Only",
-   "label": "Driver Name"
-  },
-  {
-   "fetch_from": "driver.branch",
-   "fieldname": "driver_branch",
-   "fieldtype": "Read Only",
-   "label": "Driver Branch",
-   "options": "Branch"
+   "description": "Every employee allowed to drive this Asset under this allocation. Leave empty for a vehicle allocated to a Location as a shared resource with no assigned driver \u2014 Driver Licence and Company Vehicle Undertaking then don't apply. List more than one for a vehicle shared by several employees: all of them must hold a valid licence (and have their Undertaking on file) for those sections to read Valid.",
+   "fieldname": "drivers",
+   "fieldtype": "Table MultiSelect",
+   "label": "Drivers",
+   "options": "Vehicle Allocation Driver"
   },
   {
    "fieldname": "column_break_driver_1",
@@ -181,33 +162,11 @@
    "label": "Driver Licence Compliance"
   },
   {
-   "description": "Computed live from Employee Induction Record — never stored. Factors in the SA licence-code hierarchy (e.g. a Code C holder is compliant against a Code C1 requirement). \"Incomplete\" means a currently-valid Draft record exists but hasn't been submitted yet.",
-   "fieldname": "driver_licence_status",
-   "fieldtype": "Select",
+   "description": "Computed live from Employee Induction Record \u2014 never stored, one row per Driver. Factors in the SA licence-code hierarchy (e.g. a Code C holder is compliant against a Code C1 requirement). \"Incomplete\" means a currently-valid Draft record exists but hasn't been submitted yet.",
+   "fieldname": "driver_licence_compliance_html",
+   "fieldtype": "HTML",
    "is_virtual": 1,
-   "label": "Driver Licence Status",
-   "options": "Not Applicable\nValid\nExpiring\nExpired\nIncomplete\nOutstanding",
-   "read_only": 1
-  },
-  {
-   "fieldname": "driver_licence_valid_to",
-   "fieldtype": "Date",
-   "is_virtual": 1,
-   "label": "Driver Licence Valid To",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_dl_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Latest qualifying, submitted Employee Induction Record backing the status above.",
-   "fieldname": "driver_licence_source",
-   "fieldtype": "Link",
-   "is_virtual": 1,
-   "label": "Driver Licence Source Record",
-   "options": "Employee Induction Record",
-   "read_only": 1
+   "label": "Driver Licence Compliance"
   },
   {
    "fieldname": "section_break_addendum",
@@ -215,32 +174,11 @@
    "label": "Company Vehicle Undertaking"
   },
   {
-   "description": "Computed live from the driver's own Employee Records table — never stored.",
-   "fieldname": "addendum_status",
-   "fieldtype": "Select",
+   "description": "Computed live from each driver's own Employee Records table \u2014 never stored, one row per Driver.",
+   "fieldname": "company_vehicle_undertaking_html",
+   "fieldtype": "HTML",
    "is_virtual": 1,
-   "label": "Addendum Status",
-   "options": "Not Applicable\nOn File\nOutstanding",
-   "read_only": 1
-  },
-  {
-   "fieldname": "addendum_date",
-   "fieldtype": "Date",
-   "is_virtual": 1,
-   "label": "Addendum Date Captured",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_addendum_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "URL of the 'Company Vehicle Undertaking' file already attached to the driver's Employee Records row — this doc does not own or store the file itself.",
-   "fieldname": "addendum_url",
-   "fieldtype": "Data",
-   "is_virtual": 1,
-   "label": "Uploaded Undertaking",
-   "read_only": 1
+   "label": "Company Vehicle Undertaking"
   },
   {
    "fieldname": "section_break_vehicle_licence",
@@ -248,33 +186,11 @@
    "label": "Vehicle Licence Compliance"
   },
   {
-   "description": "Computed live from the most recently issued, submitted Vehicle Licence for this Asset — never stored. \"Incomplete\" means a currently-valid Draft record exists but hasn't been submitted yet.",
-   "fieldname": "vehicle_licence_status",
-   "fieldtype": "Select",
+   "description": "Computed live from the most recently issued, submitted Vehicle Licence for this Asset \u2014 never stored. \"Incomplete\" means a currently-valid Draft record exists but hasn't been submitted yet.",
+   "fieldname": "vehicle_licence_compliance_html",
+   "fieldtype": "HTML",
    "is_virtual": 1,
-   "label": "Vehicle Licence Status",
-   "options": "Valid\nExpiring\nExpired\nIncomplete\nOutstanding",
-   "read_only": 1
-  },
-  {
-   "fieldname": "vehicle_licence_valid_to",
-   "fieldtype": "Date",
-   "is_virtual": 1,
-   "label": "Vehicle Licence Valid To",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_vl_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Latest submitted Vehicle Licence record for this Asset.",
-   "fieldname": "vehicle_licence_source",
-   "fieldtype": "Link",
-   "is_virtual": 1,
-   "label": "Vehicle Licence Source Record",
-   "options": "Vehicle Licence",
-   "read_only": 1
+   "label": "Vehicle Licence Compliance"
   },
   {
    "fieldname": "section_break_overall",
@@ -296,7 +212,7 @@
    "label": "Service History"
   },
   {
-   "description": "Recent Plant Breakdown / Maintenance records for this Asset — computed live, never stored.",
+   "description": "Recent Plant Breakdown / Maintenance records for this Asset \u2014 computed live, never stored.",
    "fieldname": "service_history_html",
    "fieldtype": "HTML",
    "is_virtual": 1,
@@ -317,7 +233,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-12 15:00:00.000000",
+ "modified": "2026-09-11 20:37:07.823291",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Vehicle Allocation",
@@ -328,9 +244,9 @@
    "amend": 1,
    "cancel": 1,
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -343,7 +259,6 @@
    "amend": 1,
    "cancel": 1,
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -355,29 +270,14 @@
    "write": 1
   },
   {
-   "amend": 1,
    "cancel": 1,
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Engineering Area Manager",
-   "share": 1,
-   "submit": 1,
-   "write": 1
-  },
-  {
-   "amend": 1,
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Engineering User",
+   "role": "Fleet Manager",
    "share": 1,
    "submit": 1,
    "write": 1
@@ -387,5 +287,7 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
 }

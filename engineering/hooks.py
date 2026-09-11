@@ -158,6 +158,14 @@ doc_events = {
     "Component Replacement Report": {
         "on_update": "engineering.controllers.isambane_sample_input.component_replacement_report_on_update"
     },
+    "Asset Movement": {
+        # Asset Movement's own on_submit/on_cancel already updates
+        # Asset.location first — this just carries that across onto the
+        # current Vehicle Licence for each moved Asset, so licensing
+        # doesn't go stale relative to where the vehicle actually is.
+        "on_submit": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
+        "on_cancel": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
+    },
 
 }
 
