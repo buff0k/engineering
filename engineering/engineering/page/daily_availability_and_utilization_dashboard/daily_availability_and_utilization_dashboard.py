@@ -12,6 +12,7 @@ from engineering.engineering.page.daily_availability_dashboard.daily_availabilit
 )
 from engineering.engineering.page.daily_availability_and_utilization_dashboard.ownership_sections import (
     get_ownership_average_sections,
+    should_show_spare_average_section,
 )
 
 
@@ -1716,12 +1717,6 @@ def build_dashboard_html(
             ownership_scope,
         )
 
-        spare_metric_cards = build_metric_cards(
-            ownership_section.get("spare_avgs") or {},
-            "Swing/Spare Machines",
-            ownership_scope,
-        )
-
         metric_bands.append(f'''
         <div
             class="isd-scope-banner-title"
@@ -1743,7 +1738,18 @@ def build_dashboard_html(
                 {production_metric_cards}
             </div>
         </div>
+''')
 
+        if not should_show_spare_average_section(ownership_scope):
+            continue
+
+        spare_metric_cards = build_metric_cards(
+            ownership_section.get("spare_avgs") or {},
+            "Swing/Spare Machines",
+            ownership_scope,
+        )
+
+        metric_bands.append(f'''
         <div
             class="isd-scope-banner-title"
             style="
