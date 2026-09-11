@@ -80,12 +80,31 @@ def _status_from_valid_to(valid_to, threshold_days, today):
 	return "Valid"
 
 
+def _incomplete_or_outstanding(draft_valid_to, draft_name, today):
+	"""A Draft (unsubmitted) record is real progress, not nothing — someone
+	has captured it, they just haven't finished (an upload still pending,
+	etc). If its own dates would currently be valid, surface that as
+	"Incomplete" rather than conflating it with "Outstanding" (no record at
+	all). A draft whose dates are already lapsed doesn't represent current
+	progress either way, so it still falls back to Outstanding."""
+	valid_to = getdate(draft_valid_to) if draft_valid_to else None
+
+	if valid_to and valid_to >= today:
+		return valid_to, "Incomplete", draft_name
+
+	return None, "Outstanding", None
+
+
 def compute_driver_licence_status(driver, required_licence_type, threshold_days=None):
 	"""A driver is compliant if they hold ANY currently-submitted Employee
 	Induction Record for the required code, or for a higher code in the SA
 	licence hierarchy that legally covers it (e.g. a Code C holder may
 	legally drive a Code C1 vehicle). Among all qualifying records, the one
-	with the furthest valid_to is used."""
+	with the furthest valid_to is used.
+
+	If no submitted record exists but a currently-valid Draft one does
+	(captured but not yet finalised — e.g. certificate upload outstanding),
+	that is reported as "Incomplete" rather than "Outstanding"."""
 	if threshold_days is None:
 		threshold_days = get_expiring_threshold_days()
 
@@ -101,6 +120,7 @@ def compute_driver_licence_status(driver, required_licence_type, threshold_days=
 		return None, "Outstanding", None
 
 	qualifying_names = qualifying_licence_names(required_licence_type)
+	today = getdate(nowdate())
 
 	records = frappe.get_all(
 		"Employee Induction Record",
@@ -110,14 +130,23 @@ def compute_driver_licence_status(driver, required_licence_type, threshold_days=
 		limit_page_length=1,
 	)
 
-	if not records:
-		return None, "Outstanding", None
+	if records:
+		row = records[0]
+		valid_to = getdate(row.valid_to) if row.valid_to else None
+		return valid_to, _status_from_valid_to(valid_to, threshold_days, today), row.name
 
-	row = records[0]
-	valid_to = getdate(row.valid_to) if row.valid_to else None
-	today = getdate(nowdate())
+	draft = frappe.get_all(
+		"Employee Induction Record",
+		filters={"employee": driver, "training": ["in", qualifying_names], "docstatus": 0},
+		fields=["name", "valid_to"],
+		order_by="valid_to desc",
+		limit_page_length=1,
+	)
 
-	return valid_to, _status_from_valid_to(valid_to, threshold_days, today), row.name
+	if draft:
+		return _incomplete_or_outstanding(draft[0].valid_to, draft[0].name, today)
+
+	return None, "Outstanding", None
 
 
 def compute_addendum_status(driver):
@@ -151,12 +180,19 @@ def compute_vehicle_licence_status(asset, threshold_days=None):
 	"""The current Vehicle Licence for an Asset is simply the most recently
 	*issued* submitted one — by construction that is never the superseded
 	one, so there is no need to depend on Vehicle Licence's own (also
-	virtual) status field here."""
+	virtual) status field here.
+
+	If no submitted record exists but a currently-valid Draft one does
+	(captured but not yet finalised — e.g. the disc scan hasn't been
+	attached/submitted yet), that is reported as "Incomplete" rather than
+	"Outstanding"."""
 	if threshold_days is None:
 		threshold_days = get_expiring_threshold_days()
 
 	if not asset or not frappe.db.exists("DocType", "Vehicle Licence"):
 		return None, "Outstanding", None
+
+	today = getdate(nowdate())
 
 	records = frappe.get_all(
 		"Vehicle Licence",
@@ -166,17 +202,30 @@ def compute_vehicle_licence_status(asset, threshold_days=None):
 		limit_page_length=1,
 	)
 
-	if not records:
-		return None, "Outstanding", None
+	if records:
+		row = records[0]
+		valid_to = getdate(row.expiry_date) if row.expiry_date else None
+		return valid_to, _status_from_valid_to(valid_to, threshold_days, today), row.name
 
-	row = records[0]
-	valid_to = getdate(row.expiry_date) if row.expiry_date else None
-	today = getdate(nowdate())
+	draft = frappe.get_all(
+		"Vehicle Licence",
+		filters={"fleet_number": asset, "docstatus": 0},
+		fields=["name", "expiry_date"],
+		order_by="issue_date desc",
+		limit_page_length=1,
+	)
 
-	return valid_to, _status_from_valid_to(valid_to, threshold_days, today), row.name
+	if draft:
+		return _incomplete_or_outstanding(draft[0].expiry_date, draft[0].name, today)
+
+	return None, "Outstanding", None
 
 
 def compute_overall_status(vehicle_licence_status, driver, driver_licence_status, addendum_status):
+	# "Incomplete" (a currently-valid Draft record exists, just not yet
+	# submitted) is partial compliance — the paperwork is in motion, only a
+	# finalisation step is outstanding — so it belongs with "Attention
+	# Required", not "Non-Compliant".
 	non_compliant_flags = [vehicle_licence_status in ("Expired", "Outstanding")]
 
 	if driver:
@@ -186,12 +235,12 @@ def compute_overall_status(vehicle_licence_status, driver, driver_licence_status
 	if any(non_compliant_flags):
 		return "Non-Compliant"
 
-	expiring_flags = [vehicle_licence_status == "Expiring"]
+	attention_flags = [vehicle_licence_status in ("Expiring", "Incomplete")]
 
 	if driver:
-		expiring_flags.append(driver_licence_status == "Expiring")
+		attention_flags.append(driver_licence_status in ("Expiring", "Incomplete"))
 
-	if any(expiring_flags):
+	if any(attention_flags):
 		return "Attention Required"
 
 	return "Compliant"

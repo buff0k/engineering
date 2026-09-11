@@ -148,7 +148,6 @@
    "default": "Today",
    "fieldname": "valid_from",
    "fieldtype": "Date",
-   "in_list_view": 1,
    "label": "Valid From",
    "reqd": 1
   },
@@ -161,6 +160,7 @@
    "description": "Set automatically when this allocation is superseded by a new one, or via the Return Vehicle action. Never entered manually.",
    "fieldname": "valid_to",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Valid To",
    "read_only": 1
   },
@@ -181,12 +181,12 @@
    "label": "Driver Licence Compliance"
   },
   {
-   "description": "Computed live from Employee Induction Record — never stored. Factors in the SA licence-code hierarchy (e.g. a Code C holder is compliant against a Code C1 requirement).",
+   "description": "Computed live from Employee Induction Record — never stored. Factors in the SA licence-code hierarchy (e.g. a Code C holder is compliant against a Code C1 requirement). \"Incomplete\" means a currently-valid Draft record exists but hasn't been submitted yet.",
    "fieldname": "driver_licence_status",
    "fieldtype": "Select",
    "is_virtual": 1,
    "label": "Driver Licence Status",
-   "options": "Not Applicable\nValid\nExpiring\nExpired\nOutstanding",
+   "options": "Not Applicable\nValid\nExpiring\nExpired\nIncomplete\nOutstanding",
    "read_only": 1
   },
   {
@@ -248,12 +248,12 @@
    "label": "Vehicle Licence Compliance"
   },
   {
-   "description": "Computed live from the most recently issued, submitted Vehicle Licence for this Asset — never stored.",
+   "description": "Computed live from the most recently issued, submitted Vehicle Licence for this Asset — never stored. \"Incomplete\" means a currently-valid Draft record exists but hasn't been submitted yet.",
    "fieldname": "vehicle_licence_status",
    "fieldtype": "Select",
    "is_virtual": 1,
    "label": "Vehicle Licence Status",
-   "options": "Valid\nExpiring\nExpired\nOutstanding",
+   "options": "Valid\nExpiring\nExpired\nIncomplete\nOutstanding",
    "read_only": 1
   },
   {
@@ -317,7 +317,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-12 09:00:00.000000",
+ "modified": "2026-09-12 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Vehicle Allocation",
