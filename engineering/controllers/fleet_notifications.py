@@ -147,10 +147,10 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 		for r in branch_rows:
 			issues = []
 
-			if r["vehicle_licence_status"] in ("Expiring", "Expired", "Outstanding"):
+			if r["vehicle_licence_status"] in ("Expiring", "Expired", "Incomplete", "Outstanding"):
 				issues.append(f"Vehicle Licence {r['vehicle_licence_status']}")
 
-			if r["driver_licence_status"] in ("Expiring", "Expired", "Outstanding"):
+			if r["driver_licence_status"] in ("Expiring", "Expired", "Incomplete", "Outstanding"):
 				issues.append(f"Driver Licence {r['driver_licence_status']}")
 
 			if r["addendum_status"] == "Outstanding":

@@ -143,7 +143,7 @@ frappe.pages["vehicle-licence-expiration"].on_page_load = function (wrapper) {
 
 		<div class="vle-panel">
 			<h4>${__("Fleet by Category")}</h4>
-			<div id="vle-bubbles"><div class="vle-panel-empty">${__("Loading…")}</div></div>
+			<div class="vle-bubble-row" id="vle-bubbles"><div class="vle-panel-empty">${__("Loading…")}</div></div>
 		</div>
 
 		<div class="vle-panel">

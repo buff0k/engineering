@@ -7,9 +7,11 @@ from frappe.utils import nowdate
 
 from engineering.controllers.fleet_compliance import (
 	compute_addendum_status,
+	compute_all,
 	compute_driver_licence_status,
 	compute_overall_status,
 	compute_vehicle_licence_status,
+	get_expiring_threshold_days,
 	render_service_history_html,
 )
 
@@ -44,6 +46,32 @@ def public_road_asset_query(doctype, txt, searchfield, start, page_len, filters)
 			"page_len": page_len,
 		},
 	)
+
+
+@frappe.whitelist()
+def get_overall_statuses(names):
+	"""overall_status (and the fields it depends on) is a virtual field, so
+	it never comes through the List View's bulk query. The list view JS
+	calls this once per page of rows and patches the indicator in
+	afterwards, rather than storing/caching the value anywhere."""
+	if isinstance(names, str):
+		names = frappe.parse_json(names)
+
+	if not names:
+		return {}
+
+	threshold_days = get_expiring_threshold_days()
+
+	rows = frappe.get_all(
+		"Vehicle Allocation",
+		filters={"name": ["in", names]},
+		fields=["name", "asset", "driver", "required_licence_type"],
+	)
+
+	return {
+		row.name: compute_all(row.asset, row.driver, row.required_licence_type, threshold_days)["overall_status"]
+		for row in rows
+	}
 
 
 class VehicleAllocation(Document):
