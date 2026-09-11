@@ -394,9 +394,14 @@ frappe.pages["vehicle-licence-expiration"].on_page_load = function (wrapper) {
 		const $tree = $container.find("#vle-history-tree");
 		$tree.html(`<div class="vle-panel-empty">${__("Loading…")}</div>`);
 
+		// This is a full historical audit-trail browser, not date-windowed —
+		// only pass the filters get_doc_history_tree_meta actually accepts
+		// (site/asset/asset_category); start_date/end_date don't apply here.
+		const { site, asset, asset_category } = get_filter_values();
+
 		frappe.call({
 			method: "engineering.engineering.page.vehicle_licence_expiration.vehicle_licence_expiration.get_doc_history_tree_meta",
-			args: get_filter_values(),
+			args: { site, asset, asset_category },
 			callback: (r) => {
 				const tree = ((r && r.message) || {}).tree || [];
 				$tree.html(build_tree_html(tree));
