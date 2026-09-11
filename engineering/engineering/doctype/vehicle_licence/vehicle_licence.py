@@ -25,6 +25,13 @@ class VehicleLicence(Document):
 		if self.issue_date:
 			self.expiry_date = add_months(self.issue_date, 12)
 
+	def before_submit(self):
+		if not self.attach:
+			frappe.throw(
+				frappe._("You cannot submit this record without attaching the licence document."),
+				title=frappe._("Attachment Required"),
+			)
+
 	# ------------------------------------------------------------------
 	# Days Left / Status are virtual (is_virtual: 1 in the JSON) — they hold
 	# no DB column and are recomputed from today() on every read, so they

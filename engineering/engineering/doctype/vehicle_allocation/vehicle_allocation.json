@@ -148,6 +148,7 @@
    "default": "Today",
    "fieldname": "valid_from",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Valid From",
    "reqd": 1
   },
@@ -160,7 +161,6 @@
    "description": "Set automatically when this allocation is superseded by a new one, or via the Return Vehicle action. Never entered manually.",
    "fieldname": "valid_to",
    "fieldtype": "Date",
-   "in_list_view": 1,
    "label": "Valid To",
    "read_only": 1
   },
@@ -317,7 +317,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-12 14:00:00.000000",
+ "modified": "2026-09-12 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Vehicle Allocation",
