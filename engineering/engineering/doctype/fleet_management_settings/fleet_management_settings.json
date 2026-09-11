@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "creation": "2026-09-11 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "asset_categories_tab",
+  "public_road_asset_categories",
+  "notification_rules_tab",
+  "expiring_threshold_days",
+  "column_break_settings_1",
+  "send_weekly_digest",
+  "digest_day",
+  "digest_hour",
+  "manage_recipients_tab",
+  "recipients"
+ ],
+ "fields": [
+  {
+   "fieldname": "asset_categories_tab",
+   "fieldtype": "Tab Break",
+   "label": "Public Road Asset Categories"
+  },
+  {
+   "description": "Assets whose Asset Category is listed here are treated as \"drives on public roads\" — they are the ones offered for selection on Vehicle Allocation, and the ones the Fleet Compliance Overview report enumerates.",
+   "fieldname": "public_road_asset_categories",
+   "fieldtype": "Table",
+   "label": "Public Road Asset Categories",
+   "options": "Fleet Asset Category"
+  },
+  {
+   "fieldname": "notification_rules_tab",
+   "fieldtype": "Tab Break",
+   "label": "Notification Rules"
+  },
+  {
+   "default": "90",
+   "description": "A Licence (driver's licence or Vehicle Licence) is flagged \"Expiring\" once its expiry date falls within this many days.",
+   "fieldname": "expiring_threshold_days",
+   "fieldtype": "Int",
+   "label": "Expiring Threshold (Days)",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_settings_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "send_weekly_digest",
+   "fieldtype": "Check",
+   "label": "Send Weekly Digest"
+  },
+  {
+   "default": "Monday",
+   "depends_on": "send_weekly_digest",
+   "fieldname": "digest_day",
+   "fieldtype": "Select",
+   "label": "Digest Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "default": "6",
+   "depends_on": "send_weekly_digest",
+   "description": "24-hour clock, site timezone.",
+   "fieldname": "digest_hour",
+   "fieldtype": "Int",
+   "label": "Digest Hour",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "manage_recipients_tab",
+   "fieldtype": "Tab Break",
+   "label": "Manage Recipients"
+  },
+  {
+   "description": "Add a row per recipient. Leave Branch blank for a recipient to receive notifications for every branch; set Branch to scope a recipient to that branch only.",
+   "fieldname": "recipients",
+   "fieldtype": "Table",
+   "label": "Recipients",
+   "options": "Fleet Notification Recipient"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-11 15:41:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Management Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Engineering Area Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Engineering User",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

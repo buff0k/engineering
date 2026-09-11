@@ -1,0 +1,20 @@
+{
+ "creation": "2026-09-11 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Vehicle Allocation",
+ "dynamic_filters_json": "[]",
+ "filters_json": "[]",
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Currently Allocated",
+ "method": "engineering.controllers.fleet_dashboard.currently_allocated",
+ "modified": "2026-09-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Currently Allocated",
+ "owner": "Administrator",
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Custom"
+}

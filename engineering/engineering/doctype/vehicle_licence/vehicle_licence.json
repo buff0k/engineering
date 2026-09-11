@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{expiry_date}-{site}-{fleet_number}",
+ "autoname": "format:{fleet_number} - {issue_date}",
  "creation": "2026-04-28 13:00:27.761478",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -19,6 +19,8 @@
   "section_break_rdrs",
   "issue_date",
   "expiry_date",
+  "column_break_status_1",
+  "status",
   "days_left",
   "attach",
   "amended_from"
@@ -29,7 +31,7 @@
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Licence Registration",
+   "options": "Vehicle Licence",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -114,9 +116,24 @@
    "label": "Licence Expiration Information"
   },
   {
+   "description": "Days remaining until expiry, as of today. Computed live, never stored.",
    "fieldname": "days_left",
    "fieldtype": "Int",
+   "is_virtual": 1,
    "label": "Days Left",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Computed live from Expiry Date (and, for a submitted licence, whether a newer one for this Asset has since been submitted). Never stored.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "is_virtual": 1,
+   "label": "Status",
+   "options": "Active\nExpiring\nExpired\nSuperseded\nCancelled",
    "read_only": 1
   }
  ],
@@ -127,7 +144,7 @@
  "modified": "2026-04-28 14:08:21.525071",
  "modified_by": "Administrator",
  "module": "Engineering",
- "name": "Licence Registration",
+ "name": "Vehicle Licence",
  "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [

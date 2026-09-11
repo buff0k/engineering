@@ -1,0 +1,391 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "autoname": "format:{asset} - {valid_from}",
+ "creation": "2026-09-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_alloc",
+  "asset",
+  "asset_name",
+  "asset_image",
+  "column_break_alloc_1",
+  "item_code",
+  "item_name",
+  "location",
+  "section_break_driver",
+  "driver",
+  "driver_name",
+  "driver_branch",
+  "column_break_driver_1",
+  "required_licence_type",
+  "section_break_period",
+  "valid_from",
+  "column_break_period_1",
+  "valid_to",
+  "status",
+  "section_break_driver_licence",
+  "driver_licence_status",
+  "driver_licence_valid_to",
+  "column_break_dl_1",
+  "driver_licence_source",
+  "section_break_addendum",
+  "addendum_status",
+  "addendum_date",
+  "column_break_addendum_1",
+  "addendum_url",
+  "section_break_vehicle_licence",
+  "vehicle_licence_status",
+  "vehicle_licence_valid_to",
+  "column_break_vl_1",
+  "vehicle_licence_source",
+  "section_break_overall",
+  "overall_status",
+  "section_break_service",
+  "service_history_html",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_alloc",
+   "fieldtype": "Section Break",
+   "label": "Vehicle"
+  },
+  {
+   "description": "Only Assets whose Category is listed on Fleet Management Settings → Public Road Asset Categories are offered here.",
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Asset",
+   "options": "Asset",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fetch_from": "asset.asset_name",
+   "fieldname": "asset_name",
+   "fieldtype": "Read Only",
+   "label": "Asset Name"
+  },
+  {
+   "fetch_from": "asset.image",
+   "fieldname": "asset_image",
+   "fieldtype": "Attach Image",
+   "label": "Asset Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_alloc_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "asset.item_code",
+   "fieldname": "item_code",
+   "fieldtype": "Read Only",
+   "label": "Item Code"
+  },
+  {
+   "fetch_from": "asset.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
+   "in_list_view": 1,
+   "label": "Model"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Location",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_driver",
+   "fieldtype": "Section Break",
+   "label": "Driver"
+  },
+  {
+   "fieldname": "driver",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Driver",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "driver.employee_name",
+   "fieldname": "driver_name",
+   "fieldtype": "Read Only",
+   "label": "Driver Name"
+  },
+  {
+   "fetch_from": "driver.branch",
+   "fieldname": "driver_branch",
+   "fieldtype": "Read Only",
+   "label": "Driver Branch",
+   "options": "Branch"
+  },
+  {
+   "fieldname": "column_break_driver_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Driver's licence code required to legally drive this Asset (e.g. Code B, Code EC1).",
+   "fieldname": "required_licence_type",
+   "fieldtype": "Link",
+   "label": "Required Licence Type",
+   "options": "Employee Induction"
+  },
+  {
+   "fieldname": "section_break_period",
+   "fieldtype": "Section Break",
+   "label": "Allocation Period"
+  },
+  {
+   "default": "Today",
+   "fieldname": "valid_from",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Valid From",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_period_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Set automatically when this allocation is superseded by a new one, or via the Return Vehicle action. Never entered manually.",
+   "fieldname": "valid_to",
+   "fieldtype": "Date",
+   "label": "Valid To",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Current",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Current\nClosed\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_driver_licence",
+   "fieldtype": "Section Break",
+   "label": "Driver Licence Compliance"
+  },
+  {
+   "description": "Computed live from Employee Induction Record — never stored. Factors in the SA licence-code hierarchy (e.g. a Code C holder is compliant against a Code C1 requirement).",
+   "fieldname": "driver_licence_status",
+   "fieldtype": "Select",
+   "is_virtual": 1,
+   "label": "Driver Licence Status",
+   "options": "Not Applicable\nValid\nExpiring\nExpired\nOutstanding",
+   "read_only": 1
+  },
+  {
+   "fieldname": "driver_licence_valid_to",
+   "fieldtype": "Date",
+   "is_virtual": 1,
+   "label": "Driver Licence Valid To",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dl_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Latest qualifying, submitted Employee Induction Record backing the status above.",
+   "fieldname": "driver_licence_source",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Driver Licence Source Record",
+   "options": "Employee Induction Record",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_addendum",
+   "fieldtype": "Section Break",
+   "label": "Company Vehicle Undertaking"
+  },
+  {
+   "description": "Computed live from the driver's own Employee Records table — never stored.",
+   "fieldname": "addendum_status",
+   "fieldtype": "Select",
+   "is_virtual": 1,
+   "label": "Addendum Status",
+   "options": "Not Applicable\nOn File\nOutstanding",
+   "read_only": 1
+  },
+  {
+   "fieldname": "addendum_date",
+   "fieldtype": "Date",
+   "is_virtual": 1,
+   "label": "Addendum Date Captured",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_addendum_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "URL of the 'Company Vehicle Undertaking' file already attached to the driver's Employee Records row — this doc does not own or store the file itself.",
+   "fieldname": "addendum_url",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Uploaded Undertaking",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_vehicle_licence",
+   "fieldtype": "Section Break",
+   "label": "Vehicle Licence Compliance"
+  },
+  {
+   "description": "Computed live from the most recently issued, submitted Vehicle Licence for this Asset — never stored.",
+   "fieldname": "vehicle_licence_status",
+   "fieldtype": "Select",
+   "is_virtual": 1,
+   "label": "Vehicle Licence Status",
+   "options": "Valid\nExpiring\nExpired\nOutstanding",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vehicle_licence_valid_to",
+   "fieldtype": "Date",
+   "is_virtual": 1,
+   "label": "Vehicle Licence Valid To",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vl_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Latest submitted Vehicle Licence record for this Asset.",
+   "fieldname": "vehicle_licence_source",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Vehicle Licence Source Record",
+   "options": "Vehicle Licence",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_overall",
+   "fieldtype": "Section Break",
+   "label": "Overall Compliance"
+  },
+  {
+   "bold": 1,
+   "fieldname": "overall_status",
+   "fieldtype": "Select",
+   "is_virtual": 1,
+   "label": "Overall Status",
+   "options": "Compliant\nAttention Required\nNon-Compliant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_service",
+   "fieldtype": "Section Break",
+   "label": "Service History"
+  },
+  {
+   "description": "Recent Plant Breakdown / Maintenance records for this Asset — computed live, never stored.",
+   "fieldname": "service_history_html",
+   "fieldtype": "HTML",
+   "is_virtual": 1,
+   "label": "Service History"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Vehicle Allocation",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-09-12 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Vehicle Allocation",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Area Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
