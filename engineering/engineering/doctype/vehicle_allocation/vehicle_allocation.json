@@ -24,6 +24,8 @@
   "column_break_period_1",
   "valid_to",
   "status",
+  "section_break_comments",
+  "comments",
   "section_break_driver_licence",
   "driver_licence_compliance_html",
   "section_break_addendum",
@@ -43,7 +45,7 @@
    "label": "Vehicle"
   },
   {
-   "description": "Only Assets whose Category is listed on Fleet Management Settings \u2192 Public Road Asset Categories are offered here.",
+   "description": "Only submitted Assets whose Category is listed on Fleet Management Settings \u2192 Public Road Asset Categories are offered here.",
    "fieldname": "asset",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -157,6 +159,18 @@
    "read_only": 1
   },
   {
+   "fieldname": "section_break_comments",
+   "fieldtype": "Section Break",
+   "label": "Comments"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Free-text notes about this allocation — included as the last column of the Road Asset Register Excel export.",
+   "fieldname": "comments",
+   "fieldtype": "Small Text",
+   "label": "Comments"
+  },
+  {
    "fieldname": "section_break_driver_licence",
    "fieldtype": "Section Break",
    "label": "Driver Licence Compliance"
@@ -233,7 +247,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-11 20:37:07.823291",
+ "modified": "2026-09-12 08:39:49.927627",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Vehicle Allocation",

@@ -96,7 +96,7 @@ def get_data(filters):
 
 
 def _build_conditions(filters, categories):
-	where = ["a.asset_category in %(categories)s", "a.docstatus < 2"]
+	where = ["a.asset_category in %(categories)s", "a.docstatus = 1"]
 	params = {"categories": categories}
 
 	simple_filter_map = {

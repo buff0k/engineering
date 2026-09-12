@@ -723,7 +723,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Fleet Management",
-   "link_count": 7,
+   "link_count": 8,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -755,6 +755,16 @@
    "link_count": 0,
    "link_to": "Fleet Compliance Overview",
    "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Compliance Dashboard",
+   "link_count": 0,
+   "link_to": "fleet-compliance-dashboard",
+   "link_type": "Page",
    "onboard": 0,
    "type": "Link"
   },
@@ -799,7 +809,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-11 22:26:59.668846",
+ "modified": "2026-09-12 08:48:24.373374",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
