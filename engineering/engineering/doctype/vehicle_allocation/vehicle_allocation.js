@@ -32,6 +32,7 @@ frappe.ui.form.on("Vehicle Allocation", {
 			});
 		}
 
+		sync_html_fields(frm);
 		set_headline(frm);
 	},
 });
@@ -50,6 +51,29 @@ frappe.ui.form.on("Vehicle Allocation Driver", {
 		refresh_compliance_preview(frm);
 	},
 });
+
+const HTML_FIELDS = [
+	"vehicle_licence_compliance_html",
+	"driver_licence_compliance_html",
+	"company_vehicle_undertaking_html",
+	"service_history_html",
+];
+
+function sync_html_fields(frm) {
+	// A virtual HTML field's computed value DOES come through in frm.doc on
+	// every load/reload (Document.get_valid_dict() evaluates is_virtual
+	// properties server-side) — but ControlHTML only ever paints
+	// this.df.options, which nothing keeps in sync with frm.doc on a plain
+	// refresh(). Without this, these blocks render blank on open (most
+	// visibly on an already-submitted doc, since nothing else ever fires a
+	// field-change to accidentally trigger a repaint).
+	HTML_FIELDS.forEach((fieldname) => {
+		const field = frm.get_field(fieldname);
+		if (field) {
+			field.set_value(frm.doc[fieldname] || "");
+		}
+	});
+}
 
 function set_headline(frm) {
 	if (!frm.doc.overall_status) {
@@ -97,19 +121,20 @@ function refresh_compliance_preview(frm) {
 			// HTML-fieldtype controls render from df.options, not the doc's
 			// field value — frm.set_value() only ever touches the latter,
 			// so it silently does nothing for these three. Setting the
-			// control's value directly re-renders it.
-			const html_fields = [
-				"vehicle_licence_compliance_html",
-				"driver_licence_compliance_html",
-				"company_vehicle_undertaking_html",
-			];
-
-			html_fields.forEach((fieldname) => {
-				const field = frm.get_field(fieldname);
-				if (field) {
-					field.set_value(r.message[fieldname] || "");
+			// control's value directly re-renders it; keeping frm.doc in
+			// sync too means a later plain refresh() (see sync_html_fields)
+			// re-applies this same value instead of the stale one the form
+			// was originally loaded with.
+			["vehicle_licence_compliance_html", "driver_licence_compliance_html", "company_vehicle_undertaking_html"].forEach(
+				(fieldname) => {
+					const html = r.message[fieldname] || "";
+					frm.doc[fieldname] = html;
+					const field = frm.get_field(fieldname);
+					if (field) {
+						field.set_value(html);
+					}
 				}
-			});
+			);
 
 			frm.set_value("overall_status", r.message.overall_status ?? null);
 

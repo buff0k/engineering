@@ -102,7 +102,7 @@ def _get_unregistered_assets():
 		select a.name as asset, a.asset_name as asset_name, a.asset_category as asset_category
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
-		where a.asset_category in %(categories)s and a.docstatus < 2 and v.name is null
+		where a.asset_category in %(categories)s and a.docstatus = 1 and v.name is null
 		order by a.name
 		""",
 		{"categories": categories},
