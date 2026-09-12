@@ -2,6 +2,12 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Vehicle Licence", {
+	setup(frm) {
+		frm.set_query("fleet_number", () => ({
+			query: "engineering.engineering.doctype.vehicle_allocation.vehicle_allocation.public_road_asset_query",
+		}));
+	},
+
 	refresh(frm) {
 		// Available on Draft and Submitted (not on a new, unsaved doc, nor a
 		// Cancelled one — renewing from a voided record doesn't make sense).

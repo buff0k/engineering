@@ -20,8 +20,12 @@ from engineering.controllers.fleet_compliance import (
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def public_road_asset_query(doctype, txt, searchfield, start, page_len, filters):
-	"""Link query for the Asset field: only Assets whose Category is listed
-	on Fleet Management Settings -> Public Road Asset Categories."""
+	"""Link query for the Asset field on both Vehicle Allocation (asset) and
+	Vehicle Licence (fleet_number): only submitted Assets whose Category is
+	listed on Fleet Management Settings -> Public Road Asset Categories.
+	Submitted-only because a Draft Asset isn't a real in-service vehicle
+	yet and a Cancelled one no longer is (same rule the Vehicle Licence
+	Expiration page's counts and the road asset register export use)."""
 	from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
 		get_public_road_asset_categories,
 	)
@@ -36,6 +40,7 @@ def public_road_asset_query(doctype, txt, searchfield, start, page_len, filters)
 		select name, asset_name
 		from `tabAsset`
 		where asset_category in %(categories)s
+			and docstatus = 1
 			and (name like %(txt)s or asset_name like %(txt)s)
 		order by name
 		limit %(start)s, %(page_len)s
@@ -108,11 +113,12 @@ def preview_compliance(asset=None, required_licence_type=None, drivers=None):
 
 @frappe.whitelist()
 def export_road_asset_register_xlsx():
-	"""XLSX export of every public-road Asset (registered or not), grouped by
-	Company — same general shape as the manually-maintained LDV spreadsheet
-	this replaces, but Location/Driver/compliance are pulled live from the
-	actual Vehicle Allocation records instead of free-typed site codes and
-	driver names."""
+	"""XLSX export of every submitted public-road Asset (registered or not),
+	grouped by Company — same general shape as the manually-maintained LDV
+	spreadsheet this replaces, but Location/Driver/compliance are pulled
+	live from the actual Vehicle Allocation records instead of free-typed
+	site codes and driver names. Draft/Cancelled Assets are excluded — same
+	rule used everywhere else in fleet compliance."""
 	if not frappe.has_permission("Vehicle Allocation", "read"):
 		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
 
@@ -134,11 +140,12 @@ def export_road_asset_register_xlsx():
 			a.company as company,
 			v.name as allocation,
 			v.location as location,
-			v.required_licence_type as required_licence_type
+			v.required_licence_type as required_licence_type,
+			v.comments as comments
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v
 			on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
-		where a.asset_category in %(categories)s and a.docstatus < 2
+		where a.asset_category in %(categories)s and a.docstatus = 1
 		order by a.company asc, a.name asc
 		""",
 		{"categories": categories},
@@ -230,6 +237,7 @@ def _rows_to_xlsx_base64(rows):
 		("Vehicle Licence Status", 18),
 		("Addendum Status", 16),
 		("Overall Status", 16),
+		("Comments", 40),
 	]
 
 	header_fill = PatternFill(fill_type="solid", fgColor="FFD9EAF7", bgColor="FFD9EAF7")
@@ -281,6 +289,7 @@ def _rows_to_xlsx_base64(rows):
 				row.vehicle_licence_status,
 				row.addendum_status,
 				row.overall_status,
+				row.comments or "",
 			]
 
 			for col_idx, value in enumerate(values, start=1):

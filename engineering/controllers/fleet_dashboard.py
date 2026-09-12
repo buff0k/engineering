@@ -24,7 +24,7 @@ def _asset_count(categories):
 	if not categories:
 		return 0
 
-	return frappe.db.count("Asset", filters={"asset_category": ["in", categories], "docstatus": ["<", 2]})
+	return frappe.db.count("Asset", filters={"asset_category": ["in", categories], "docstatus": 1})
 
 
 def _current_allocations():
@@ -82,7 +82,7 @@ def unregistered_assets(filters=None):
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v
 			on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
-		where a.asset_category in %(categories)s and a.docstatus < 2 and v.name is null
+		where a.asset_category in %(categories)s and a.docstatus = 1 and v.name is null
 		""",
 		{"categories": categories},
 	)[0][0]
