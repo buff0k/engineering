@@ -112,6 +112,7 @@ def preview_compliance(asset=None, required_licence_type=None, drivers=None):
 		"vehicle_licence_compliance_html": render_vehicle_licence_html(asset),
 		"driver_licence_compliance_html": render_driver_licence_html(drivers, required_licence_type),
 		"company_vehicle_undertaking_html": render_addendum_html(drivers),
+		"service_history_html": render_service_history_html(asset),
 		"overall_status": compute_all(asset, drivers, required_licence_type)["overall_status"],
 	}
 
