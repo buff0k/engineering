@@ -247,7 +247,7 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 		const needle = search_text.toLowerCase();
 
 		return all_rows.filter((row) => {
-			const haystack = [row.asset, row.asset_name, row.drivers, row.location]
+			const haystack = [row.asset, row.item_name, row.drivers, row.location, row.comments]
 				.filter(Boolean)
 				.join(" ")
 				.toLowerCase();
@@ -320,7 +320,7 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 					<tr class="fcd-asset-row" data-asset="${asset_key}">
 						<td class="fcd-expand-cell"><span class="fcd-expand-icon">▶</span></td>
 						<td><a href="${href}" target="_blank" rel="noopener noreferrer">${esc(r.asset || "")}</a></td>
-						<td>${esc(r.asset_name || "")}</td>
+						<td>${esc(r.item_name || "")}</td>
 						<td>${esc(r.registered || "")}</td>
 						<td>${esc(r.location || "")}</td>
 						<td>${esc(r.drivers || "")}</td>
@@ -328,9 +328,10 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 						<td>${status_chip(r.driver_licence_status)}</td>
 						<td>${status_chip(r.addendum_status)}</td>
 						<td>${status_chip(r.overall_status)}</td>
+						<td>${esc(r.comments || "")}</td>
 					</tr>
 					<tr class="fcd-history-row" data-asset="${asset_key}" hidden>
-						<td colspan="10">
+						<td colspan="11">
 							<div class="fcd-history-body fcd-panel-empty">${__("Expand to load…")}</div>
 						</td>
 					</tr>
@@ -344,7 +345,7 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 					<tr>
 						<th></th>
 						<th>${__("Asset")}</th>
-						<th>${__("Asset Name")}</th>
+						<th>${__("Item Name")}</th>
 						<th>${__("Registered")}</th>
 						<th>${__("Location")}</th>
 						<th>${__("Drivers")}</th>
@@ -352,6 +353,7 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 						<th>${__("Driver Licence")}</th>
 						<th>${__("Undertaking")}</th>
 						<th>${__("Overall Status")}</th>
+						<th>${__("Comments")}</th>
 					</tr>
 				</thead>
 				<tbody>${trs}</tbody>

@@ -33,13 +33,13 @@ def _get_current_allocations():
 	)
 
 
-def _get_recipients_for_branch(settings, branch):
+def _get_recipients_for_location(settings, location):
 	emails = []
 
 	for row in settings.get("recipients") or []:
-		row_branch = (row.branch or "").strip()
+		row_location = (row.location or "").strip()
 
-		if row_branch and row_branch != branch:
+		if row_location and row_location != location:
 			continue
 
 		email = frappe.db.get_value("User", row.user, "email") or row.user
@@ -99,7 +99,7 @@ def _get_unregistered_assets():
 
 	return frappe.db.sql(
 		"""
-		select a.name as asset, a.asset_name as asset_name, a.asset_category as asset_category
+		select a.name as asset, a.asset_name as asset_name, a.asset_category as asset_category, a.location as location
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
 		where a.asset_category in %(categories)s and a.docstatus = 1 and v.name is null
@@ -111,16 +111,16 @@ def _get_unregistered_assets():
 
 
 def send_weekly_fleet_digest(dry_run: bool = False):
-	"""Group currently-open Vehicle Allocations needing attention by each
-	driver's Branch and email the configured recipients; also surfaces
-	unregistered public-road Assets. Compliance is computed fresh here (not
+	"""Group currently-open Vehicle Allocations needing attention — and
+	unregistered public-road Assets — by Location and email the configured
+	recipients for that Location. Compliance is computed fresh here (not
 	read from any stored field). dry_run=True returns payloads instead of
 	sending.
 
-	A flagged allocation can have more than one driver, potentially across
-	more than one Branch — it is fanned out into every one of those
-	branches' digests (rather than picking just one), so every relevant
-	branch manager sees it."""
+	Unlike the old Branch-based scheme (an allocation could have drivers
+	across more than one Branch, needing a fan-out), each Vehicle
+	Allocation — and each Asset — has exactly one Location, so this is a
+	straight one-row-per-bucket grouping."""
 	settings = frappe.get_single("Fleet Management Settings")
 	threshold_days = get_expiring_threshold_days()
 
@@ -142,35 +142,25 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 
 	unregistered = _get_unregistered_assets()
 
-	driver_ids = {d.driver for r in flagged for d in r["driver_rows"]}
-	branch_by_driver = (
-		{
-			e.name: e.branch
-			for e in frappe.get_all("Employee", filters={"name": ["in", list(driver_ids)]}, fields=["name", "branch"])
-		}
-		if driver_ids
-		else {}
-	)
-
-	by_branch = {}
+	by_location = {}
 
 	for r in flagged:
-		branches = {(branch_by_driver.get(d.driver) or "").strip() for d in r["driver_rows"]}
-		branches = {b for b in branches if b} or {"Unassigned"}
+		location = (r.get("location") or "").strip() or "Unassigned"
+		by_location.setdefault(location, {"flagged": [], "unregistered": []})["flagged"].append(r)
 
-		for branch in branches:
-			by_branch.setdefault(branch, []).append(r)
+	for u in unregistered:
+		location = (u.get("location") or "").strip() or "Unassigned"
+		by_location.setdefault(location, {"flagged": [], "unregistered": []})["unregistered"].append(u)
 
-	branches = sorted(by_branch) or (["Unassigned"] if unregistered else [])
 	payloads = {}
 
-	for branch in branches:
-		branch_rows = by_branch.get(branch, [])
-		recipients = _get_recipients_for_branch(settings, None if branch == "Unassigned" else branch)
+	for location in sorted(by_location):
+		bucket = by_location[location]
+		recipients = _get_recipients_for_location(settings, None if location == "Unassigned" else location)
 
-		lines = ["Hi Team", "", f"Branch: {branch}", ""]
+		lines = ["Hi Team", "", f"Location: {location}", ""]
 
-		for r in branch_rows:
+		for r in bucket["flagged"]:
 			issues = []
 
 			if r["vehicle_licence_status"] in ("Expiring", "Expired", "Incomplete", "Outstanding"):
@@ -185,23 +175,23 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 			driver_display = ", ".join(d.driver_name or d.driver for d in r["driver_rows"]) or "no driver"
 
 			lines.append(
-				f"- {r['asset_name'] or r['asset']} ({r['location'] or 'no location'})"
-				f" — {driver_display}: {', '.join(issues) or r['overall_status']}"
+				f"- {r['asset_name'] or r['asset']} — {driver_display}: {', '.join(issues) or r['overall_status']}"
 			)
 
-		if branch == "Unassigned" and unregistered:
+		if bucket["unregistered"]:
 			lines.append("")
 			lines.append("Unregistered public-road Assets (no Vehicle Allocation yet):")
 
-			for u in unregistered:
+			for u in bucket["unregistered"]:
 				lines.append(f"- {u.asset_name or u.asset} ({u.asset_category})")
 
 		if len(lines) <= 4:
 			lines.append("No outstanding items.")
 
-		payloads[branch] = {
+		total_items = len(bucket["flagged"]) + len(bucket["unregistered"])
+		payloads[location] = {
 			"recipients": recipients,
-			"subject": f"Fleet Compliance Weekly Digest — {branch} ({len(branch_rows)})",
+			"subject": f"Fleet Compliance Weekly Digest — {location} ({total_items})",
 			"message": "<br>".join(lines),
 		}
 
@@ -217,7 +207,7 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 		)
 		return payloads
 
-	for branch, payload in payloads.items():
+	for location, payload in payloads.items():
 		if not payload["recipients"]:
 			continue
 
@@ -231,7 +221,7 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 			)
 		except Exception:
 			frappe.log_error(
-				f"Failed to send Fleet Compliance weekly digest for branch {branch}",
+				f"Failed to send Fleet Compliance weekly digest for location {location}",
 				"Fleet Compliance Weekly Digest",
 			)
 

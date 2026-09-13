@@ -6,7 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "user",
-  "branch"
+  "location"
  ],
  "fields": [
   {
@@ -18,19 +18,19 @@
    "reqd": 1
   },
   {
-   "description": "Leave blank to receive notifications for all branches.",
-   "fieldname": "branch",
+   "description": "Leave blank to receive notifications for all Locations. Also determines who becomes Custodian of a shared vehicle (a Vehicle Allocation with more than one Driver) at this Location.",
+   "fieldname": "location",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Branch",
-   "options": "Branch"
+   "label": "Location",
+   "options": "Location"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-11 00:00:00.000000",
+ "modified": "2026-09-13 10:44:55.898673",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Notification Recipient",
