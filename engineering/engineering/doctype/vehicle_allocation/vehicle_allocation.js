@@ -33,7 +33,7 @@ frappe.ui.form.on("Vehicle Allocation", {
 			});
 		}
 
-		sync_html_fields(frm);
+		refresh_compliance_preview(frm);
 		set_headline(frm);
 
 		// Only on the form's first real render (opening it fresh, or
@@ -70,22 +70,6 @@ const HTML_FIELDS = [
 	"company_vehicle_undertaking_html",
 	"service_history_html",
 ];
-
-function sync_html_fields(frm) {
-	// A virtual HTML field's computed value DOES come through in frm.doc on
-	// every load/reload (Document.get_valid_dict() evaluates is_virtual
-	// properties server-side) — but ControlHTML only ever paints
-	// this.df.options, which nothing keeps in sync with frm.doc on a plain
-	// refresh(). Without this, these blocks render blank on open (most
-	// visibly on an already-submitted doc, since nothing else ever fires a
-	// field-change to accidentally trigger a repaint).
-	HTML_FIELDS.forEach((fieldname) => {
-		const field = frm.get_field(fieldname);
-		if (field) {
-			field.set_value(frm.doc[fieldname] || "");
-		}
-	});
-}
 
 function set_headline(frm) {
 	if (!frm.doc.overall_status) {
@@ -162,16 +146,16 @@ function show_conflict_message(conflicts) {
 
 function refresh_compliance_preview(frm) {
 	// Driver Licence / Company Vehicle Undertaking / Vehicle Licence
-	// Compliance are HTML fields (server-rendered, is_virtual: 1) — they
-	// only get recomputed when the full Document is loaded, so on a plain
-	// field change they'd otherwise stay stale until the next save +
-	// reload. Ask the server to re-render them for the current in-progress
-	// values and patch the form directly instead.
+	// Compliance / Service History are HTML fields (server-rendered,
+	// is_virtual: 1). Following the same pattern used across the ir app
+	// (e.g. Disciplinary Action's render_linked_docs) rather than trusting
+	// frm.doc to already carry the right value: always make a live call on
+	// refresh — never assume the initial doc payload threaded a virtual
+	// field's value into the control correctly. This runs unconditionally
+	// (including on a brand-new, still-empty form and on an already-
+	// submitted doc) so every block always reflects reality, not just
+	// after a field change.
 	const drivers = (frm.doc.drivers || []).map((row) => row.driver).filter(Boolean);
-
-	if (!frm.doc.asset && !drivers.length) {
-		return;
-	}
 
 	frappe.call({
 		method: "engineering.engineering.doctype.vehicle_allocation.vehicle_allocation.preview_compliance",
@@ -181,29 +165,17 @@ function refresh_compliance_preview(frm) {
 			drivers,
 		},
 		callback(r) {
-			if (!r.message) {
-				return;
-			}
+			const data = r.message || {};
 
-			// HTML-fieldtype controls render from df.options, not the doc's
-			// field value — frm.set_value() only ever touches the latter,
-			// so it silently does nothing for these three. Setting the
-			// control's value directly re-renders it; keeping frm.doc in
-			// sync too means a later plain refresh() (see sync_html_fields)
-			// re-applies this same value instead of the stale one the form
-			// was originally loaded with.
-			["vehicle_licence_compliance_html", "driver_licence_compliance_html", "company_vehicle_undertaking_html"].forEach(
-				(fieldname) => {
-					const html = r.message[fieldname] || "";
-					frm.doc[fieldname] = html;
-					const field = frm.get_field(fieldname);
-					if (field) {
-						field.set_value(html);
-					}
-				}
-			);
+			HTML_FIELDS.forEach((fieldname) => {
+				if (!frm.fields_dict[fieldname]) return;
 
-			frm.set_value("overall_status", r.message.overall_status ?? null);
+				const html = data[fieldname] || "";
+				frm.doc[fieldname] = html;
+				frm.fields_dict[fieldname].$wrapper.html(html);
+			});
+
+			frm.set_value("overall_status", data.overall_status ?? null);
 
 			set_headline(frm);
 		},
