@@ -3,11 +3,12 @@
 
 import frappe
 
-# These fields were converted to virtual (computed live, never stored) but
-# Frappe's schema sync never drops abandoned columns on its own — clean them
-# up explicitly so the DB schema doesn't keep a stale, misleading copy of
-# data that now lives only in ir's Employee Induction Record / the driver's
-# Employee Records table / Vehicle Licence.
+# These fields were converted to virtual (computed live, never stored), or
+# simply renamed/replaced, but Frappe's schema sync never drops abandoned
+# columns on its own — clean them up explicitly so the DB schema doesn't
+# keep a stale, misleading copy of data that now lives only in ir's
+# Employee Induction Record / the driver's Employee Records table /
+# Vehicle Licence (or, for a plain rename, under the new column name).
 COLUMNS_TO_DROP = {
 	"Vehicle Allocation": [
 		"driver_licence_status",
@@ -32,6 +33,14 @@ COLUMNS_TO_DROP = {
 	"Vehicle Licence": [
 		"days_left",
 		"status",
+	],
+	# Weekly digest recipients used to be scoped by the recipient's own
+	# Branch; now scoped by Location instead (also used to resolve a shared
+	# vehicle's Custodian) — no clean automatic Branch->Location mapping
+	# exists, so existing rows simply lose their old scoping and fall back
+	# to "all Locations" until reconfigured.
+	"Fleet Notification Recipient": [
+		"branch",
 	],
 }
 

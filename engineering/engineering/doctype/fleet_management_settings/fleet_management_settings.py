@@ -44,3 +44,31 @@ def public_road_asset_category_query(doctype, txt, searchfield, start, page_len,
 		""",
 		{"categories": categories, "txt": f"%{txt}%", "start": start, "page_len": page_len},
 	)
+
+
+def get_location_custodian(location):
+	"""Resolve the Employee who should become Custodian of a shared vehicle
+	(a Vehicle Allocation with more than one Driver) from the Recipients
+	table here: prefer a row scoped to this exact Location, falling back
+	to a blank-Location (catch-all) row if no Location-specific one is
+	configured. Recipients are Users (the weekly digest emails them
+	directly); resolved to an Employee via Employee.user_id. Returns None
+	if nothing configured resolves to a real Employee — callers should
+	leave the Asset's custodian untouched in that case rather than guess."""
+	if not frappe.db.exists("DocType", "Fleet Management Settings"):
+		return None
+
+	settings = frappe.get_single("Fleet Management Settings")
+	rows = settings.get("recipients") or []
+
+	location = (location or "").strip()
+	specific = [r for r in rows if location and (r.location or "").strip() == location]
+	catch_all = [r for r in rows if not (r.location or "").strip()]
+
+	for row in specific + catch_all:
+		employee = frappe.db.get_value("Employee", {"user_id": row.user}, "name")
+
+		if employee:
+			return employee
+
+	return None

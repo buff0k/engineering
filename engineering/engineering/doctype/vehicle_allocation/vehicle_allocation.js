@@ -14,6 +14,7 @@ frappe.ui.form.on("Vehicle Allocation", {
 
 	asset(frm) {
 		refresh_compliance_preview(frm);
+		check_conflicts(frm);
 	},
 
 	required_licence_type(frm) {
@@ -34,6 +35,15 @@ frappe.ui.form.on("Vehicle Allocation", {
 
 		sync_html_fields(frm);
 		set_headline(frm);
+
+		// Only on the form's first real render (opening it fresh, or
+		// routing in) — not on every post-save refresh(), since validate()
+		// already shows the equivalent warning server-side on save, and
+		// popping up both would just be the same message twice.
+		if (!frm.__fleet_conflict_checked && frm.doc.docstatus === 0) {
+			frm.__fleet_conflict_checked = true;
+			check_conflicts(frm);
+		}
 	},
 });
 
@@ -45,10 +55,12 @@ frappe.ui.form.on("Vehicle Allocation", {
 frappe.ui.form.on("Vehicle Allocation Driver", {
 	drivers_add(frm) {
 		refresh_compliance_preview(frm);
+		check_conflicts(frm);
 	},
 
 	drivers_remove(frm) {
 		refresh_compliance_preview(frm);
+		check_conflicts(frm);
 	},
 });
 
@@ -91,6 +103,61 @@ function set_headline(frm) {
 		`Overall Status: ${frm.doc.overall_status}`,
 		indicator_map[frm.doc.overall_status] || "grey"
 	);
+}
+
+function check_conflicts(frm) {
+	// Only meaningful pre-submit — once this allocation is itself Current,
+	// close_previous_open_allocation has already resolved the asset side,
+	// and re-warning about it every time the doc is opened would be noise.
+	if (frm.doc.docstatus !== 0) {
+		return;
+	}
+
+	const drivers = (frm.doc.drivers || []).map((row) => row.driver).filter(Boolean);
+
+	if (!frm.doc.asset && !drivers.length) {
+		return;
+	}
+
+	frappe.call({
+		method: "engineering.engineering.doctype.vehicle_allocation.vehicle_allocation.check_active_conflicts",
+		args: {
+			asset: frm.doc.asset,
+			drivers,
+			exclude_name: frm.doc.name,
+		},
+		callback(r) {
+			const conflicts = (r && r.message) || [];
+
+			if (conflicts.length) {
+				show_conflict_message(conflicts);
+			}
+		},
+	});
+}
+
+function show_conflict_message(conflicts) {
+	const esc = frappe.utils.escape_html;
+
+	const lines = conflicts.map((c) => {
+		const link = `<a href="/app/vehicle-allocation/${encodeURIComponent(c.allocation)}" target="_blank" rel="noopener noreferrer">${esc(c.allocation)}</a>`;
+
+		if (c.type === "asset") {
+			return `<div>${__("This Asset is already allocated under {0} — submitting this allocation will close it.", [link])}</div>`;
+		}
+
+		return `<div>${__("{0} already drives a different Asset ({1}) under {2} — not closed automatically, review manually.", [
+			esc(c.driver_name || c.driver),
+			esc(c.other_asset),
+			link,
+		])}</div>`;
+	});
+
+	frappe.msgprint({
+		title: __("Active Allocation Conflicts"),
+		indicator: "orange",
+		message: lines.join(""),
+	});
 }
 
 function refresh_compliance_preview(frm) {
