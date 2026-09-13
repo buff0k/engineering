@@ -3,7 +3,13 @@
 
 import frappe
 
-from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
+from engineering.controllers.fleet_compliance import (
+	apply_draft_allocation_penalty,
+	bulk_drivers,
+	compute_all,
+	get_effective_allocations,
+	get_expiring_threshold_days,
+)
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
 	get_public_road_asset_categories,
 )
@@ -50,13 +56,9 @@ def get_data(filters):
 		select
 			a.name as asset,
 			a.asset_name as asset_name,
-			a.asset_category as asset_category,
-			v.name as allocation,
-			v.location as location,
-			v.required_licence_type as required_licence_type
+			a.item_name as item_name,
+			a.asset_category as asset_category
 		from `tabAsset` a
-		left join `tabVehicle Allocation` v
-			on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
 		where {conditions}
 		order by a.name asc
 		""",
@@ -64,24 +66,55 @@ def get_data(filters):
 		as_dict=True,
 	)
 
-	# Compliance is computed live per row (never read from a stored/cached
-	# column — see engineering.controllers.fleet_compliance).
-	drivers_by_allocation = bulk_drivers([row["allocation"] for row in rows if row.get("allocation")])
+	# A Draft Vehicle Allocation still counts as "this Asset's current
+	# allocation" for Location/Drivers purposes — it shouldn't read as
+	# unregistered just because nobody has submitted it yet. Its Overall
+	# Status is forced Non-Compliant regardless though, since the
+	# allocation itself isn't legally in effect (see
+	# apply_draft_allocation_penalty). Compliance is always computed live
+	# per row, never read from a stored/cached column.
+	allocation_by_asset = get_effective_allocations(
+		[row["asset"] for row in rows], fields=["location", "required_licence_type", "comments"]
+	)
+	drivers_by_allocation = bulk_drivers([a.name for a in allocation_by_asset.values()])
 
 	for row in rows:
-		row["registered"] = "Yes" if row.get("allocation") else "No"
-		driver_rows = drivers_by_allocation.get(row.get("allocation"), [])
+		effective = allocation_by_asset.get(row["asset"])
+		row["allocation"] = effective.name if effective else None
+		row["location"] = effective.location if effective else None
+		row["comments"] = effective.comments if effective else None
+		row["registered"] = "Yes" if effective else "No"
+
+		driver_rows = drivers_by_allocation.get(row["allocation"], [])
 		compliance = compute_all(
 			row["asset"],
 			[d.driver for d in driver_rows],
-			row.pop("required_licence_type"),
+			effective.required_licence_type if effective else None,
 			threshold_days,
 		)
 		row.update(compliance)
 		row["drivers"] = ", ".join(d.driver_name or d.driver for d in driver_rows)
+		row["_driver_ids"] = [d.driver for d in driver_rows]
 
-		if not row.get("allocation"):
+		if not effective:
 			row["overall_status"] = "Not Registered"
+		else:
+			row["overall_status"] = apply_draft_allocation_penalty(row["overall_status"], effective.docstatus)
+
+	# Location and Driver can no longer be filtered in SQL — both now come
+	# from the Python-resolved effective allocation (Draft or Submitted),
+	# not a joined column.
+	location_filter = (filters.get("location") or "").strip()
+	driver_filter = (filters.get("driver") or "").strip()
+
+	if location_filter:
+		rows = [r for r in rows if r.get("location") == location_filter]
+
+	if driver_filter:
+		rows = [r for r in rows if driver_filter in r["_driver_ids"]]
+
+	for row in rows:
+		row.pop("_driver_ids", None)
 
 	status_filter = (filters.get("overall_status") or "").strip()
 
@@ -99,30 +132,8 @@ def _build_conditions(filters, categories):
 	where = ["a.asset_category in %(categories)s", "a.docstatus = 1"]
 	params = {"categories": categories}
 
-	simple_filter_map = {
-		"location": "v.location",
-		"asset_category": "a.asset_category",
-	}
-
-	for filter_key, column in simple_filter_map.items():
-		value = filters.get(filter_key)
-
-		if value:
-			where.append(f"{column} = %({filter_key})s")
-			params[filter_key] = value
-
-	if filters.get("driver"):
-		# Drivers is a Table MultiSelect child table now — no plain column
-		# to equality-match on the parent, so filter by whether any of its
-		# rows names this Employee.
-		where.append(
-			"""
-			exists (
-				select 1 from `tabVehicle Allocation Driver` vad
-				where vad.parent = v.name and vad.parentfield = 'drivers' and vad.driver = %(driver)s
-			)
-			"""
-		)
-		params["driver"] = filters["driver"]
+	if filters.get("asset_category"):
+		where.append("a.asset_category = %(asset_category)s")
+		params["asset_category"] = filters["asset_category"]
 
 	return " and ".join(where), params

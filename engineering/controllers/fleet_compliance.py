@@ -149,6 +149,55 @@ def compute_driver_licence_status(driver, required_licence_type, threshold_days=
 	return None, "Outstanding", None
 
 
+def get_effective_allocations(assets, fields=None):
+	"""One allocation per Asset — the one that should drive that Asset's
+	Location/Drivers/compliance columns wherever this is displayed (Excel
+	export, Fleet Compliance Overview report/dashboard). A Submitted
+	"Current" allocation wins; if there isn't one yet, falls back to the
+	most recent Draft "Current" allocation — a captured-but-not-yet-
+	submitted allocation still carries real Location/Drivers, it
+	shouldn't make the Asset look unregistered.
+
+	Never returns more than one row per Asset even if more than one Draft
+	exists for it (nothing stops a user creating several): highest
+	docstatus wins, then newest valid_from/creation."""
+	if not assets:
+		return {}
+
+	fields = list(fields or ["location", "required_licence_type"])
+
+	for standard_field in ("name", "asset", "docstatus"):
+		if standard_field not in fields:
+			fields.append(standard_field)
+
+	rows = frappe.get_all(
+		"Vehicle Allocation",
+		filters={"asset": ["in", assets], "status": "Current", "docstatus": ["<", 2]},
+		fields=fields,
+		order_by="docstatus desc, valid_from desc, creation desc",
+	)
+
+	effective = {}
+
+	for row in rows:
+		effective.setdefault(row.asset, row)  # first hit per asset wins — already ordered best-first
+
+	return effective
+
+
+def apply_draft_allocation_penalty(overall_status, allocation_docstatus):
+	"""A Draft allocation isn't legally in effect yet — even when every
+	underlying detail (licences, undertaking) individually looks fine, the
+	allocation itself hasn't been finalised, so it can never read as truly
+	Compliant. Only applies where get_effective_allocations() resolved to
+	a Draft; a Submitted allocation (or an unregistered Asset with no
+	allocation at all) is untouched."""
+	if allocation_docstatus == 0:
+		return "Non-Compliant"
+
+	return overall_status
+
+
 def bulk_drivers(parent_names):
 	"""Drivers is a Table MultiSelect child table (Vehicle Allocation
 	Driver), so it never comes through a plain frappe.get_all() on the
