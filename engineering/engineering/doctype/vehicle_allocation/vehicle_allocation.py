@@ -14,6 +14,7 @@ from engineering.controllers.fleet_compliance import (
 	get_expiring_threshold_days,
 	render_addendum_html,
 	render_driver_licence_html,
+	render_drivers_overview_html,
 	render_service_history_html,
 	render_vehicle_licence_html,
 )
@@ -112,23 +113,29 @@ def preview_compliance(asset=None, required_licence_type=None, drivers=None):
 		"vehicle_licence_compliance_html": render_vehicle_licence_html(asset),
 		"driver_licence_compliance_html": render_driver_licence_html(drivers, required_licence_type),
 		"company_vehicle_undertaking_html": render_addendum_html(drivers),
+		"drivers_overview_html": render_drivers_overview_html(drivers, required_licence_type),
 		"service_history_html": render_service_history_html(asset),
 		"overall_status": compute_all(asset, drivers, required_licence_type)["overall_status"],
 	}
 
 
 def _find_active_conflicts(asset, drivers, exclude_name=None):
-	"""Two kinds of overlap worth warning about before this allocation is
-	submitted:
+	"""Two kinds of overlap worth flagging before this allocation is
+	submitted — both resolved automatically on submit, mirroring each
+	other:
 
 	1. "asset" — this Asset is already the subject of another still-open
-	   ("Current", submitted) allocation. Submitting THIS one resolves it
-	   automatically (close_previous_open_allocation closes the other one).
+	   ("Current", submitted) allocation. close_previous_open_allocation
+	   closes the other one.
 	2. "employee" — a Driver listed here already drives a DIFFERENT Asset
-	   under another still-open allocation. Nothing closes this
-	   automatically — a shared vehicle's other allocation is never
-	   auto-closed just because one of its several drivers has moved on —
-	   so this is a heads-up only, for a human to review.
+	   under another still-open allocation — a change of vehicle for that
+	   driver. close_or_update_previous_driver_allocations closes the
+	   other allocation too, UNLESS it's a shared vehicle (more than one
+	   Driver) — closing the whole thing just because one of several
+	   drivers moved on would strand the rest, so there this driver is
+	   only removed from it, not the whole allocation. sole_driver on the
+	   returned dict says which case applies, so callers can word the
+	   heads-up accordingly.
 
 	Used both by the whitelisted client-facing wrapper and by validate()
 	(server-side, so the warning surfaces on every save regardless of what
@@ -163,6 +170,15 @@ def _find_active_conflicts(asset, drivers, exclude_name=None):
 				)
 			}
 
+			all_drivers_by_parent = {}
+
+			for r in frappe.get_all(
+				"Vehicle Allocation Driver",
+				filters={"parent": ["in", list(candidate_parents)], "parentfield": "drivers"},
+				fields=["parent", "driver"],
+			):
+				all_drivers_by_parent.setdefault(r.parent, set()).add(r.driver)
+
 			for row in driver_rows:
 				parent = open_parents.get(row.parent)
 
@@ -171,6 +187,8 @@ def _find_active_conflicts(asset, drivers, exclude_name=None):
 					# the "asset" conflict above, not a second finding.
 					continue
 
+				other_drivers = all_drivers_by_parent.get(row.parent, set()) - {row.driver}
+
 				conflicts.append(
 					{
 						"type": "employee",
@@ -178,6 +196,7 @@ def _find_active_conflicts(asset, drivers, exclude_name=None):
 						"driver_name": row.driver_name,
 						"allocation": row.parent,
 						"other_asset": parent.asset,
+						"sole_driver": not other_drivers,
 					}
 				)
 
@@ -426,6 +445,25 @@ def _rows_to_xlsx_base64(rows):
 
 
 class VehicleAllocation(Document):
+	def autoname(self):
+		""""{asset} - {valid_from}" (the JSON's own "format:" autoname string
+		is unused once a controller defines its own autoname() — kept there
+		only as documentation) — collision-safe: a second allocation for the
+		same Asset on the same date gets "{asset} - {valid_from} - 1", a
+		third " - 2", and so on."""
+		base_name = f"{self.asset} - {self.valid_from}"
+
+		if not frappe.db.exists("Vehicle Allocation", base_name):
+			self.name = base_name
+			return
+
+		counter = 1
+
+		while frappe.db.exists("Vehicle Allocation", f"{base_name} - {counter}"):
+			counter += 1
+
+		self.name = f"{base_name} - {counter}"
+
 	# ------------------------------------------------------------------
 	# All compliance fields below are virtual (is_virtual: 1 in the JSON) —
 	# they hold no DB column and are recomputed on every read, straight from
@@ -463,6 +501,10 @@ class VehicleAllocation(Document):
 		return render_addendum_html(self._drivers())
 
 	@property
+	def drivers_overview_html(self):
+		return render_drivers_overview_html(self._drivers(), self.required_licence_type)
+
+	@property
 	def vehicle_licence_compliance_html(self):
 		return render_vehicle_licence_html(self.asset)
 
@@ -483,42 +525,67 @@ class VehicleAllocation(Document):
 
 	def warn_about_active_conflicts(self):
 		"""Non-blocking heads-up, surfaced on every save (Draft or Submit) —
-		the form's own JS runs the same check live on Asset/Drivers change,
+		the form's own JS runs the same checks live on Asset/Drivers change,
 		this is the server-side backstop so the warning shows up regardless
 		of what the browser did (API/Data Import saves included, though
-		nothing displays a msgprint there)."""
+		nothing displays a msgprint there).
+
+		Both the Asset side and the Driver side are auto-resolved on submit
+		now (close_previous_open_allocation /
+		close_or_update_previous_driver_allocations) — this is purely an
+		FYI about what submitting will do, not a call to action, so both
+		read as informational (blue). Mirrors check_asset_conflict/
+		check_driver_conflicts in vehicle_allocation.js exactly, so the
+		wording is never a surprise between what you saw while editing and
+		what shows up on save."""
 		conflicts = _find_active_conflicts(self.asset, self._drivers(), exclude_name=self.name)
 
 		if not conflicts:
 			return
 
-		lines = []
+		def route(allocation):
+			return f"/app/vehicle-allocation/{frappe.utils.quote(allocation)}"
 
-		for c in conflicts:
-			route = f"/app/vehicle-allocation/{frappe.utils.quote(c['allocation'])}"
+		asset_conflicts = [c for c in conflicts if c["type"] == "asset"]
+		driver_conflicts = [c for c in conflicts if c["type"] == "employee"]
 
-			if c["type"] == "asset":
-				lines.append(
-					frappe._("This Asset is already allocated under {0} — submitting this allocation will close it.").format(
-						f"<a href='{route}'>{c['allocation']}</a>"
+		if asset_conflicts:
+			links = ", ".join(f"<a href='{route(c['allocation'])}'>{c['allocation']}</a>" for c in asset_conflicts)
+			frappe.msgprint(
+				frappe._(
+					"{0} is currently allocated under {1}. Submitting this allocation will automatically close"
+					" that one — no action needed."
+				).format(frappe.utils.escape_html(self.asset), links),
+				title=frappe._("Asset Already Allocated"),
+				indicator="blue",
+			)
+
+		if driver_conflicts:
+			lines = []
+
+			for c in driver_conflicts:
+				link = f"<a href='{route(c['allocation'])}'>{c['allocation']}</a>"
+				driver_label = f"<b>{frappe.utils.escape_html(c.get('driver_name') or c['driver'])}</b>"
+
+				if c["sole_driver"]:
+					lines.append(
+						frappe._("{0}'s other allocation ({1}) will be closed automatically — a change of vehicle.").format(
+							driver_label, link
+						)
 					)
-				)
-			else:
-				lines.append(
-					frappe._(
-						"{0} already drives a different Asset ({1}) under {2} — not closed automatically, review manually."
-					).format(
-						frappe.utils.escape_html(c.get("driver_name") or c["driver"]),
-						frappe.utils.escape_html(c["other_asset"]),
-						f"<a href='{route}'>{c['allocation']}</a>",
+				else:
+					lines.append(
+						frappe._(
+							"{0} will be removed from the shared allocation {1} — that vehicle stays allocated to its"
+							" other driver(s)."
+						).format(driver_label, link)
 					)
-				)
 
-		frappe.msgprint(
-			"<br>".join(lines),
-			title=frappe._("Active Allocation Conflicts"),
-			indicator="orange",
-		)
+			frappe.msgprint(
+				"<br>".join(lines),
+				title=frappe._("Driver Reassignment"),
+				indicator="blue",
+			)
 
 	def before_submit(self):
 		"""Signed Vehicle Handover Paperwork is only meaningful once there is
@@ -539,6 +606,7 @@ class VehicleAllocation(Document):
 
 	def on_submit(self):
 		self.close_previous_open_allocation()
+		self.close_or_update_previous_driver_allocations()
 		self.sync_asset_custodian_and_location()
 
 	def on_update_after_submit(self):
@@ -562,6 +630,48 @@ class VehicleAllocation(Document):
 			frappe.db.set_value(
 				"Vehicle Allocation", name, {"status": "Closed", "valid_to": self.valid_from}
 			)
+
+	def close_or_update_previous_driver_allocations(self):
+		"""Mirrors close_previous_open_allocation, but for Drivers instead
+		of the Asset: a driver moving to a new vehicle is a change of
+		vehicle for them, same as a new allocation for an Asset supersedes
+		the previous one — the default is to close their old allocation
+		out, not leave it dangling. A driver CAN legitimately be on two
+		vehicles at once though, so this only auto-closes the other
+		allocation outright when this driver was its SOLE driver (their
+		change of vehicle really did vacate it). If it's a shared vehicle
+		(more than one Driver), closing the whole thing would strand
+		whoever else is still using it — there, only this driver is
+		removed from it; the allocation stays Current for the rest."""
+		drivers = self._drivers()
+
+		if not drivers:
+			return
+
+		conflicts = [
+			c for c in _find_active_conflicts(self.asset, drivers, exclude_name=self.name) if c["type"] == "employee"
+		]
+
+		by_parent = {}
+
+		for c in conflicts:
+			by_parent.setdefault(c["allocation"], {"sole_driver": c["sole_driver"], "drivers": []})
+			by_parent[c["allocation"]]["drivers"].append(c["driver"])
+
+		for parent_name, info in by_parent.items():
+			if info["sole_driver"]:
+				frappe.db.set_value(
+					"Vehicle Allocation", parent_name, {"status": "Closed", "valid_to": self.valid_from}
+				)
+			else:
+				frappe.db.delete(
+					"Vehicle Allocation Driver",
+					{
+						"parent": parent_name,
+						"parentfield": "drivers",
+						"driver": ["in", info["drivers"]],
+					},
+				)
 
 	def sync_asset_custodian_and_location(self):
 		"""Keep the linked Asset's own Custodian/Location in step with this

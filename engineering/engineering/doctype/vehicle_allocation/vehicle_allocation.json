@@ -10,13 +10,16 @@
   "section_break_alloc",
   "asset",
   "asset_name",
+  "is_temp",
   "asset_image",
   "column_break_alloc_1",
   "item_code",
   "item_name",
   "location",
+  "condition_photos",
   "section_break_driver",
   "drivers",
+  "drivers_overview_html",
   "column_break_driver_1",
   "required_licence_type",
   "handover_paperwork",
@@ -92,7 +95,7 @@
   },
   {
    "allow_on_submit": 1,
-   "description": "Defaults to the Asset's own Location when first created, but can be changed — moving the vehicle to a new Location here (including after submission) automatically raises an Asset Movement so the Asset itself stays in sync.",
+   "description": "Defaults to the Asset's own Location when first created, but can be changed \u2014 moving the vehicle to a new Location here (including after submission) automatically raises an Asset Movement so the Asset itself stays in sync.",
    "fetch_from": "asset.location",
    "fetch_if_empty": 1,
    "fieldname": "location",
@@ -109,11 +112,19 @@
    "label": "Driver"
   },
   {
-   "description": "Every employee allowed to drive this Asset under this allocation. Leave empty for a vehicle allocated to a Location as a shared resource with no assigned driver \u2014 Driver Licence and Company Vehicle Undertaking then don't apply. List more than one for a vehicle shared by several employees: all of them must hold a valid licence (and have their Undertaking on file) for those sections to read Valid.",
+   "description": "Every employee allowed to drive this Asset under this allocation. Managed entirely through the Drivers field below (search box + cards) \u2014 this underlying field is hidden, kept only as the actual data store.",
    "fieldname": "drivers",
    "fieldtype": "Table MultiSelect",
-   "label": "Drivers",
+   "hidden": 1,
+   "label": "Drivers (data)",
    "options": "Vehicle Allocation Driver"
+  },
+  {
+   "description": "Search to add a Driver; each card shows their Designation and live Licence/Undertaking status, with a \u00d7 to remove. Leave empty for a vehicle allocated to a Location as a shared resource with no assigned driver \u2014 Driver Licence and Company Vehicle Undertaking then don't apply. Add more than one for a vehicle shared by several employees: all of them must hold a valid licence (and have their Undertaking on file) for those sections to read Valid.",
+   "fieldname": "drivers_overview_html",
+   "fieldtype": "HTML",
+   "is_virtual": 1,
+   "label": "Drivers"
   },
   {
    "fieldname": "column_break_driver_1",
@@ -175,7 +186,7 @@
   },
   {
    "allow_on_submit": 1,
-   "description": "Free-text notes about this allocation — included as the last column of the Road Asset Register Excel export.",
+   "description": "Free-text notes about this allocation \u2014 included as the last column of the Road Asset Register Excel export.",
    "fieldname": "comments",
    "fieldtype": "Small Text",
    "label": "Comments"
@@ -251,13 +262,25 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_temp",
+   "fieldtype": "Check",
+   "label": "Is Temporary Loan"
+  },
+  {
+   "fieldname": "condition_photos",
+   "fieldtype": "Table",
+   "label": "Condition Photos",
+   "options": "Vehicle Allocation Condition Photos"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-13 10:46:34.787658",
+ "modified": "2026-09-14 10:20:38.035107",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Vehicle Allocation",

@@ -13,6 +13,10 @@
   "send_weekly_digest",
   "digest_day",
   "digest_hour",
+  "send_terminated_driver_alert",
+  "terminated_driver_alert_hour",
+  "send_temporary_loan_digest",
+  "temporary_loan_digest_hour",
   "manage_recipients_tab",
   "recipients"
  ],
@@ -72,12 +76,44 @@
    "non_negative": 1
   },
   {
+   "default": "1",
+   "description": "Checks every Current, submitted Vehicle Allocation's Drivers for anyone whose Employee status is Left, or who has a Termination Form on file, and notifies the recipients opted into it for that Location.",
+   "fieldname": "send_terminated_driver_alert",
+   "fieldtype": "Check",
+   "label": "Send Terminated Driver Alert"
+  },
+  {
+   "default": "6",
+   "depends_on": "send_terminated_driver_alert",
+   "description": "24-hour clock, site timezone.",
+   "fieldname": "terminated_driver_alert_hour",
+   "fieldtype": "Int",
+   "label": "Terminated Driver Alert Hour",
+   "non_negative": 1
+  },
+  {
+   "default": "1",
+   "description": "Notifies the recipients opted into it, per Location, of every active \"Is Temporary Loan\" Vehicle Allocation.",
+   "fieldname": "send_temporary_loan_digest",
+   "fieldtype": "Check",
+   "label": "Send Temporary Loan Digest"
+  },
+  {
+   "default": "6",
+   "depends_on": "send_temporary_loan_digest",
+   "description": "24-hour clock, site timezone.",
+   "fieldname": "temporary_loan_digest_hour",
+   "fieldtype": "Int",
+   "label": "Temporary Loan Digest Hour",
+   "non_negative": 1
+  },
+  {
    "fieldname": "manage_recipients_tab",
    "fieldtype": "Tab Break",
    "label": "Manage Recipients"
   },
   {
-   "description": "Add a row per recipient. Leave Branch blank for a recipient to receive notifications for every branch; set Branch to scope a recipient to that branch only.",
+   "description": "Add a row per recipient. Leave Location blank for a recipient to receive one company-wide notification covering every Location; set Location to scope a recipient to that Location's own notification only.",
    "fieldname": "recipients",
    "fieldtype": "Table",
    "label": "Recipients",
@@ -88,7 +124,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-11 21:45:17.954768",
+ "modified": "2026-09-14 08:58:07.749401",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Management Settings",

@@ -401,8 +401,10 @@ def compute_overall_status(vehicle_licence_status, has_driver, driver_licence_st
 _STATUS_COLOURS = {
 	"Valid": "#2e7d32",
 	"On File": "#2e7d32",
+	"Closed": "#2e7d32",
 	"Expiring": "#e65100",
 	"Incomplete": "#e65100",
+	"Open": "#e65100",
 	"Expired": "#c62828",
 	"Outstanding": "#c62828",
 	"Not Applicable": "#757575",
@@ -423,6 +425,36 @@ def _driver_label(driver):
 	return f"{escape_html(driver)} - {escape_html(name)}" if name else escape_html(driver)
 
 
+# Shared look for every compliance block on the Vehicle Allocation form — a
+# single rounded, bordered panel per block, consistent header/cell styling,
+# so the driver cards and the plain tables read as one visual system
+# instead of the driver cards looking hand-styled and everything else
+# looking like default Bootstrap.
+_PANEL_STYLE = "border:1px solid var(--border-color); border-radius:8px; overflow:hidden;"
+_CARD_STYLE = "border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; min-width:180px; flex:1 1 200px; position:relative;"
+_TABLE_STYLE = "width:100%; border-collapse:collapse; font-size:12px;"
+_TH_STYLE = (
+	"text-align:left; padding:8px 10px; font-size:10.5px; font-weight:700; text-transform:uppercase; "
+	"letter-spacing:0.3px; color:var(--text-muted); background:var(--control-bg); border-bottom:1px solid var(--border-color);"
+)
+_TD_STYLE = "padding:8px 10px; border-top:1px solid var(--border-color);"
+
+
+def _empty_panel(message):
+	return f"<p class='text-muted' style='margin:4px 0 0;'>{escape_html(message)}</p>"
+
+
+def _render_table(headers, rows_of_cells):
+	"""headers: [str, ...]; rows_of_cells: [[cell_html, ...], ...] — cells
+	are raw HTML (pills/links), not escaped again here."""
+	thead = "".join(f"<th style='{_TH_STYLE}'>{escape_html(h)}</th>" for h in headers)
+	body = "".join(
+		"<tr>" + "".join(f"<td style='{_TD_STYLE}'>{cell}</td>" for cell in row) + "</tr>" for row in rows_of_cells
+	)
+
+	return f"<div style='{_PANEL_STYLE} margin-top:4px;'><table style='{_TABLE_STYLE}'><thead><tr>{thead}</tr></thead><tbody>{body}</tbody></table></div>"
+
+
 def render_driver_licence_html(drivers, required_licence_type, threshold_days=None):
 	"""One row per Driver — replaces the old single driver_licence_status/
 	valid_to/source virtual fields, which couldn't represent more than one
@@ -430,12 +462,12 @@ def render_driver_licence_html(drivers, required_licence_type, threshold_days=No
 	drivers = collect_drivers(drivers)
 
 	if not drivers:
-		return "<p class='text-muted'>No driver assigned — shared resource, no licence to check.</p>"
+		return _empty_panel("No driver assigned — shared resource, no licence to check.")
 
 	if threshold_days is None:
 		threshold_days = get_expiring_threshold_days()
 
-	body_rows = []
+	rows = []
 
 	for driver in drivers:
 		valid_to, status, source = compute_driver_licence_status(driver, required_licence_type, threshold_days)
@@ -444,21 +476,9 @@ def render_driver_licence_html(drivers, required_licence_type, threshold_days=No
 			if source
 			else "—"
 		)
-		body_rows.append(
-			"<tr>"
-			f"<td>{_driver_label(driver)}</td>"
-			f"<td>{_status_pill(status)}</td>"
-			f"<td>{escape_html(str(valid_to or '—'))}</td>"
-			f"<td>{source_html}</td>"
-			"</tr>"
-		)
+		rows.append([_driver_label(driver), _status_pill(status), escape_html(str(valid_to or "—")), source_html])
 
-	return (
-		"<table class='table table-bordered' style='margin-bottom:0;'>"
-		"<thead><tr><th>Driver</th><th>Status</th><th>Valid To</th><th>Source Record</th></tr></thead>"
-		f"<tbody>{''.join(body_rows)}</tbody>"
-		"</table>"
-	)
+	return _render_table(["Driver", "Status", "Valid To", "Source Record"], rows)
 
 
 def render_addendum_html(drivers):
@@ -467,28 +487,67 @@ def render_addendum_html(drivers):
 	drivers = collect_drivers(drivers)
 
 	if not drivers:
-		return "<p class='text-muted'>No driver assigned — shared resource, no undertaking to check.</p>"
+		return _empty_panel("No driver assigned — shared resource, no undertaking to check.")
 
-	body_rows = []
+	rows = []
 
 	for driver in drivers:
 		status, date_captured, url = compute_addendum_status(driver)
 		link_html = f"<a href='{escape_html(url)}' target='_blank'>View</a>" if url else "—"
-		body_rows.append(
-			"<tr>"
-			f"<td>{_driver_label(driver)}</td>"
-			f"<td>{_status_pill(status)}</td>"
-			f"<td>{escape_html(str(date_captured or '—'))}</td>"
-			f"<td>{link_html}</td>"
-			"</tr>"
+		rows.append([_driver_label(driver), _status_pill(status), escape_html(str(date_captured or "—")), link_html])
+
+	return _render_table(["Driver", "Status", "Date Captured", "Undertaking"], rows)
+
+
+def render_drivers_overview_html(drivers, required_licence_type):
+	"""The Drivers field's entire interactive surface: a search box (add),
+	a card per already-added Driver with Name / Designation / Licence &
+	Undertaking status and a remove button, all rendered here — the
+	underlying Drivers Table MultiSelect field itself is hidden (see
+	vehicle_allocation.json), driven entirely from this HTML block's JS
+	(vehicle_allocation.js) instead of its own native widget."""
+	drivers = collect_drivers(drivers)
+
+	search_box = (
+		"<div class='fleet-driver-search' style='position:relative; margin-bottom:8px;'>"
+		"<input type='text' class='form-control' autocomplete='off' "
+		"placeholder='Search driver by name or employee ID…' data-fleet-driver-search>"
+		f"<div data-fleet-driver-results style='display:none; position:absolute; z-index:50; top:100%; left:0; right:0; "
+		f"background:var(--card-bg); {_PANEL_STYLE} margin-top:2px; max-height:220px; overflow:auto;'></div>"
+		"</div>"
+	)
+
+	if not drivers:
+		return search_box + _empty_panel("No Drivers added yet.")
+
+	employees = {
+		e.name: e
+		for e in frappe.get_all(
+			"Employee", filters={"name": ["in", drivers]}, fields=["name", "employee_name", "designation"]
+		)
+	}
+
+	cards = []
+
+	for driver in drivers:
+		emp = employees.get(driver)
+		name_label = f"{driver} - {emp.employee_name}" if emp and emp.employee_name else driver
+		designation = emp.designation if emp else ""
+		_, licence_status, _ = compute_driver_licence_status(driver, required_licence_type)
+		addendum_status, _, _ = compute_addendum_status(driver)
+
+		cards.append(
+			f"<div style='{_CARD_STYLE}' data-fleet-driver-card='{escape_html(driver)}'>"
+			f"<button type='button' data-fleet-driver-remove='{escape_html(driver)}' title='Remove' "
+			"style='position:absolute; top:4px; right:6px; border:none; background:none; cursor:pointer; "
+			"font-size:14px; line-height:1; color:var(--text-muted);'>&times;</button>"
+			f"<div style='font-weight:600; font-size:12px; padding-right:16px;'>{escape_html(name_label)}</div>"
+			f"<div style='color:var(--text-muted); font-size:11px; margin-bottom:6px;'>{escape_html(designation or '—')}</div>"
+			f"<div style='display:flex; gap:4px; flex-wrap:wrap;'>{_status_pill(licence_status)}{_status_pill(addendum_status)}</div>"
+			"</div>"
 		)
 
-	return (
-		"<table class='table table-bordered' style='margin-bottom:0;'>"
-		"<thead><tr><th>Driver</th><th>Status</th><th>Date Captured</th><th>Undertaking</th></tr></thead>"
-		f"<tbody>{''.join(body_rows)}</tbody>"
-		"</table>"
-	)
+	return search_box + f"<div style='display:flex; flex-wrap:wrap; gap:8px;'>{''.join(cards)}</div>"
 
 
 def render_vehicle_licence_html(asset, threshold_days=None):
@@ -501,20 +560,23 @@ def render_vehicle_licence_html(asset, threshold_days=None):
 		f"<a href='/app/vehicle-licence/{escape_html(source)}'>{escape_html(source)}</a>" if source else "—"
 	)
 
-	return (
-		"<table class='table table-bordered' style='margin-bottom:0;'>"
-		"<tbody>"
-		f"<tr><td style='width:160px;'>Status</td><td>{_status_pill(status)}</td></tr>"
-		f"<tr><td>Valid To</td><td>{escape_html(str(valid_to or '—'))}</td></tr>"
-		f"<tr><td>Source Record</td><td>{source_html}</td></tr>"
-		"</tbody>"
-		"</table>"
+	rows = [
+		["Status", _status_pill(status)],
+		["Valid To", escape_html(str(valid_to or "—"))],
+		["Source Record", source_html],
+	]
+	body = "".join(
+		f"<tr><td style='{_TD_STYLE} width:160px; color:var(--text-muted); font-size:11px; text-transform:uppercase;'>{label}</td>"
+		f"<td style='{_TD_STYLE}'>{value}</td></tr>"
+		for label, value in rows
 	)
+
+	return f"<div style='{_PANEL_STYLE} margin-top:4px;'><table style='{_TABLE_STYLE}'><tbody>{body}</tbody></table></div>"
 
 
 def render_service_history_html(asset, limit=10):
 	if not asset or not frappe.db.exists("DocType", "Plant Breakdown or Maintenance"):
-		return "<p class='text-muted'>No service history available.</p>"
+		return _empty_panel("No service history available.")
 
 	rows = frappe.get_all(
 		"Plant Breakdown or Maintenance",
@@ -525,27 +587,21 @@ def render_service_history_html(asset, limit=10):
 	)
 
 	if not rows:
-		return "<p class='text-muted'>No breakdown/maintenance history recorded for this Asset.</p>"
+		return _empty_panel("No breakdown/maintenance history recorded for this Asset.")
 
-	body_rows = []
+	table_rows = []
 
 	for r in rows:
-		status_colour = "orange" if (r.open_closed or "").lower() == "open" else "green"
-		body_rows.append(
-			"<tr>"
-			f"<td><a href='/app/plant-breakdown-or-maintenance/{escape_html(r.name)}'>{escape_html(r.name)}</a></td>"
-			f"<td>{escape_html(str(r.breakdown_start_datetime or ''))}</td>"
-			f"<td>{escape_html(str(r.resolved_datetime or ''))}</td>"
-			f"<td style='color:{status_colour}; font-weight:600;'>{escape_html(r.open_closed or '')}</td>"
-			"</tr>"
+		table_rows.append(
+			[
+				f"<a href='/app/plant-breakdown-or-maintenance/{escape_html(r.name)}'>{escape_html(r.name)}</a>",
+				escape_html(str(r.breakdown_start_datetime or "—")),
+				escape_html(str(r.resolved_datetime or "—")),
+				_status_pill(r.open_closed or ""),
+			]
 		)
 
-	return (
-		"<table class='table table-bordered' style='margin-bottom:0;'>"
-		"<thead><tr><th>Record</th><th>Start</th><th>Resolved</th><th>Status</th></tr></thead>"
-		f"<tbody>{''.join(body_rows)}</tbody>"
-		"</table>"
-	)
+	return _render_table(["Record", "Start", "Resolved", "Status"], table_rows)
 
 
 def compute_all(asset, drivers, required_licence_type, threshold_days=None):

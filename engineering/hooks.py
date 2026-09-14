@@ -186,13 +186,18 @@ if "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folder
     )
 
 # ==========================================================
-# FLEET MANAGEMENT (Vehicle Allocation / Vehicle Licence) — weekly digest.
-# Compliance/expiry status is computed live (virtual fields, never stored),
-# so there is nothing to recalculate daily any more. The digest gate itself
-# only actually sends on the day/hour configured in Fleet Management
-# Settings, computing fresh values at send time.
+# FLEET MANAGEMENT (Vehicle Allocation / Vehicle Licence) — weekly compliance
+# digest, plus two daily alerts (terminated/pending-termination drivers,
+# temporary loans). Compliance/expiry status is computed live (virtual
+# fields, never stored), so there is nothing to recalculate daily — every
+# gate below only actually sends on the day/hour configured in Fleet
+# Management Settings, computing fresh values at send time.
 # ==========================================================
-for _fleet_job in ("engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",):
+for _fleet_job in (
+    "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",
+    "engineering.controllers.fleet_notifications.send_terminated_driver_alert_gate",
+    "engineering.controllers.fleet_notifications.send_temporary_loan_digest_gate",
+):
     if _fleet_job not in scheduler_events["daily"]:
         scheduler_events["daily"].append(_fleet_job)
 
