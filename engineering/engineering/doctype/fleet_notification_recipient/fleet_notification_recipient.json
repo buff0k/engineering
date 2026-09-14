@@ -6,7 +6,10 @@
  "engine": "InnoDB",
  "field_order": [
   "user",
-  "location"
+  "location",
+  "column_break_fnr_1",
+  "terminated_driver_alert",
+  "temporary_loan_digest"
  ],
  "fields": [
   {
@@ -18,19 +21,39 @@
    "reqd": 1
   },
   {
-   "description": "Leave blank to receive notifications for all Locations. Also determines who becomes Custodian of a shared vehicle (a Vehicle Allocation with more than one Driver) at this Location.",
+   "description": "Leave blank to receive notifications for all Locations. Also determines who becomes Custodian of a shared vehicle (a Vehicle Allocation with more than one Driver) at this Location. Every recipient always receives the Weekly Compliance Digest for their scope — the two checkboxes opt into the additional daily alerts as well.",
    "fieldname": "location",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Location",
    "options": "Location"
+  },
+  {
+   "fieldname": "column_break_fnr_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Daily: a Vehicle Allocation in this recipient's scope has a driver whose Employee status is Left, or who has a Termination Form on file.",
+   "fieldname": "terminated_driver_alert",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Terminated Driver Alert"
+  },
+  {
+   "default": "0",
+   "description": "Daily: a summary of active \"Is Temporary Loan\" Vehicle Allocations in this recipient's scope.",
+   "fieldname": "temporary_loan_digest",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Temporary Loan Digest"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-13 10:44:55.898673",
+ "modified": "2026-09-14 08:57:40.452165",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Notification Recipient",
