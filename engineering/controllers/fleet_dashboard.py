@@ -8,36 +8,37 @@ Overview report.
 
 Compliance-related counts (Non-Compliant / Expiring Soon) are computed live
 per allocation via fleet_compliance.compute_all — never read from a stored
-column, since overall_status is a virtual field on Vehicle Allocation."""
+column, since overall_status is a virtual field on Vehicle Allocation.
+
+Every count here is scoped to get_reportable_asset_names() — Public Road
+Asset Categories plus (if configured) Reporting Scope's included
+Companies/Suppliers — so the dashboard, the report, the export and the
+email notifications all agree on the same fleet universe."""
 
 import frappe
 
 from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
-	get_public_road_asset_categories,
+	get_reportable_asset_names,
 )
 
 REPORT_ROUTE = ["query-report", "Fleet Compliance Overview"]
 
 
-def _asset_count(categories):
-	if not categories:
-		return 0
+def _current_allocations(asset_names):
+	if not asset_names:
+		return []
 
-	return frappe.db.count("Asset", filters={"asset_category": ["in", categories], "docstatus": 1})
-
-
-def _current_allocations():
 	return frappe.get_all(
 		"Vehicle Allocation",
-		filters={"docstatus": 1, "status": "Current"},
+		filters={"docstatus": 1, "status": "Current", "asset": ["in", list(asset_names)]},
 		fields=["name", "asset", "required_licence_type"],
 	)
 
 
-def _count_by_overall_status(target_statuses):
+def _count_by_overall_status(target_statuses, asset_names):
 	threshold_days = get_expiring_threshold_days()
-	rows = _current_allocations()
+	rows = _current_allocations(asset_names)
 	drivers_by_parent = bulk_drivers([row.name for row in rows])
 	count = 0
 
@@ -57,23 +58,24 @@ def _count_by_overall_status(target_statuses):
 
 @frappe.whitelist()
 def total_public_road_assets(filters=None):
-	categories = get_public_road_asset_categories()
+	asset_names = get_reportable_asset_names()
 
-	return {"value": _asset_count(categories), "route": REPORT_ROUTE}
+	return {"value": len(asset_names or []), "route": REPORT_ROUTE}
 
 
 @frappe.whitelist()
 def currently_allocated(filters=None):
-	value = frappe.db.count("Vehicle Allocation", filters={"docstatus": 1, "status": "Current"})
+	asset_names = get_reportable_asset_names()
+	value = len(_current_allocations(asset_names))
 
 	return {"value": value, "route": REPORT_ROUTE, "route_options": {"registered": "Yes"}}
 
 
 @frappe.whitelist()
 def unregistered_assets(filters=None):
-	categories = get_public_road_asset_categories()
+	asset_names = get_reportable_asset_names()
 
-	if not categories:
+	if not asset_names:
 		return {"value": 0, "route": REPORT_ROUTE}
 
 	value = frappe.db.sql(
@@ -82,9 +84,9 @@ def unregistered_assets(filters=None):
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v
 			on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
-		where a.asset_category in %(categories)s and a.docstatus = 1 and v.name is null
+		where a.name in %(asset_names)s and v.name is null
 		""",
-		{"categories": categories},
+		{"asset_names": list(asset_names)},
 	)[0][0]
 
 	return {"value": value, "route": REPORT_ROUTE, "route_options": {"registered": "No"}}
@@ -92,13 +94,13 @@ def unregistered_assets(filters=None):
 
 @frappe.whitelist()
 def non_compliant(filters=None):
-	value = _count_by_overall_status({"Non-Compliant"})
+	value = _count_by_overall_status({"Non-Compliant"}, get_reportable_asset_names())
 
 	return {"value": value, "route": REPORT_ROUTE, "route_options": {"overall_status": "Non-Compliant"}}
 
 
 @frappe.whitelist()
 def expiring_soon(filters=None):
-	value = _count_by_overall_status({"Attention Required"})
+	value = _count_by_overall_status({"Attention Required"}, get_reportable_asset_names())
 
 	return {"value": value, "route": REPORT_ROUTE, "route_options": {"overall_status": "Attention Required"}}

@@ -7,6 +7,13 @@
  "field_order": [
   "asset_categories_tab",
   "public_road_asset_categories",
+  "reporting_scope_tab",
+  "included_companies_section",
+  "included_companies",
+  "included_suppliers_section",
+  "included_suppliers",
+  "included_customers_section",
+  "included_customers",
   "notification_rules_tab",
   "expiring_threshold_days",
   "column_break_settings_1",
@@ -18,7 +25,12 @@
   "send_temporary_loan_digest",
   "temporary_loan_digest_hour",
   "manage_recipients_tab",
-  "recipients"
+  "weekly_digest_recipients_section",
+  "weekly_digest_recipients",
+  "terminated_driver_alert_recipients_section",
+  "terminated_driver_alert_recipients",
+  "temporary_loan_digest_recipients_section",
+  "temporary_loan_digest_recipients"
  ],
  "fields": [
   {
@@ -32,6 +44,47 @@
    "fieldtype": "Table",
    "label": "Public Road Asset Categories",
    "options": "Fleet Asset Category"
+  },
+  {
+   "fieldname": "reporting_scope_tab",
+   "fieldtype": "Tab Break",
+   "label": "Reporting Scope"
+  },
+  {
+   "fieldname": "included_companies_section",
+   "fieldtype": "Section Break",
+   "label": "Included Companies"
+  },
+  {
+   "description": "Restricts every Fleet dashboard, report, Excel export and email notification to only Company-owned Assets whose Company is listed here. Leave this, Included Suppliers AND Included Customers all empty to disable Reporting Scope entirely (include every Asset) — but once any one of the three tables has a row, an empty table for a given owner type means NO Asset of that type qualifies (e.g. an empty Included Companies then means no Company-owned Asset shows, not \"every Company is fine\"). To keep showing Supplier- or Customer-owned Assets once you've started using this, you must still list them explicitly in their own table.",
+   "fieldname": "included_companies",
+   "fieldtype": "Table",
+   "label": "Included Companies",
+   "options": "Fleet Included Company"
+  },
+  {
+   "fieldname": "included_suppliers_section",
+   "fieldtype": "Section Break",
+   "label": "Included Suppliers"
+  },
+  {
+   "description": "Restricts every Fleet dashboard, report, Excel export and email notification to only Supplier-owned Assets whose Supplier is listed here. Same all-or-nothing-per-table rule as Included Companies: once any of the three Reporting Scope tables has a row, an empty Included Suppliers means NO Supplier-owned Asset qualifies — it is not treated as \"every Supplier is fine\".",
+   "fieldname": "included_suppliers",
+   "fieldtype": "Table",
+   "label": "Included Suppliers",
+   "options": "Fleet Included Supplier"
+  },
+  {
+   "fieldname": "included_customers_section",
+   "fieldtype": "Section Break",
+   "label": "Included Customers"
+  },
+  {
+   "description": "Restricts every Fleet dashboard, report, Excel export and email notification to only Customer-owned Assets whose Customer is listed here. Same all-or-nothing-per-table rule as Included Companies/Suppliers: once any of the three Reporting Scope tables has a row, an empty Included Customers means NO Customer-owned Asset qualifies — it is not treated as \"every Customer is fine\".",
+   "fieldname": "included_customers",
+   "fieldtype": "Table",
+   "label": "Included Customers",
+   "options": "Fleet Included Customer"
   },
   {
    "fieldname": "notification_rules_tab",
@@ -77,7 +130,7 @@
   },
   {
    "default": "1",
-   "description": "Checks every Current, submitted Vehicle Allocation's Drivers for anyone whose Employee status is Left, or who has a Termination Form on file, and notifies the recipients opted into it for that Location.",
+   "description": "Checks every Current, submitted Vehicle Allocation's Drivers for anyone whose Employee status is Left, or who has a Termination Form on file, and notifies the Terminated Driver Alert Recipients for that Location.",
    "fieldname": "send_terminated_driver_alert",
    "fieldtype": "Check",
    "label": "Send Terminated Driver Alert"
@@ -93,7 +146,7 @@
   },
   {
    "default": "1",
-   "description": "Notifies the recipients opted into it, per Location, of every active \"Is Temporary Loan\" Vehicle Allocation.",
+   "description": "Notifies the Temporary Loan Digest Recipients, per Location, of every active \"Is Temporary Loan\" Vehicle Allocation.",
    "fieldname": "send_temporary_loan_digest",
    "fieldtype": "Check",
    "label": "Send Temporary Loan Digest"
@@ -113,10 +166,39 @@
    "label": "Manage Recipients"
   },
   {
-   "description": "Add a row per recipient. Leave Location blank for a recipient to receive one company-wide notification covering every Location; set Location to scope a recipient to that Location's own notification only.",
-   "fieldname": "recipients",
+   "fieldname": "weekly_digest_recipients_section",
+   "fieldtype": "Section Break",
+   "label": "Weekly Compliance Digest Recipients"
+  },
+  {
+   "description": "Who receives the Weekly Compliance Digest (expiring/expired Driver and Vehicle Licences, Company Vehicle Undertakings, unregistered Assets). A separate list from the two daily alerts below — add the same person to more than one list if they need all three.",
+   "fieldname": "weekly_digest_recipients",
    "fieldtype": "Table",
-   "label": "Recipients",
+   "label": "Weekly Compliance Digest Recipients",
+   "options": "Fleet Notification Recipient"
+  },
+  {
+   "fieldname": "terminated_driver_alert_recipients_section",
+   "fieldtype": "Section Break",
+   "label": "Terminated Driver Alert Recipients"
+  },
+  {
+   "description": "Who receives the daily Terminated Driver Alert (a Vehicle Allocation has a Driver who is Terminated or Pending Termination). A separate list from the other two.",
+   "fieldname": "terminated_driver_alert_recipients",
+   "fieldtype": "Table",
+   "label": "Terminated Driver Alert Recipients",
+   "options": "Fleet Notification Recipient"
+  },
+  {
+   "fieldname": "temporary_loan_digest_recipients_section",
+   "fieldtype": "Section Break",
+   "label": "Temporary Loan Digest Recipients"
+  },
+  {
+   "description": "Who receives the daily Temporary Loan Digest (active \"Is Temporary Loan\" Vehicle Allocations). A separate list from the other two.",
+   "fieldname": "temporary_loan_digest_recipients",
+   "fieldtype": "Table",
+   "label": "Temporary Loan Digest Recipients",
    "options": "Fleet Notification Recipient"
   }
  ],
@@ -124,7 +206,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-14 08:58:07.749401",
+ "modified": "2026-09-14 13:54:12.513332",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Management Settings",

@@ -67,6 +67,32 @@ def get_expiring_threshold_days() -> int:
 	return cint(days) or 90
 
 
+def effective_asset_owner(asset_owner, company, supplier=None, customer=None):
+	"""An Asset's "Company" field is just the books it's accounted under —
+	who actually *owns* it is the Ownership section (Asset Owner: Company /
+	Supplier / Customer, each with its own party field). Company only means
+	"the owner" when Asset Owner is actually set to Company; a hired/leased
+	LDV has Asset Owner = Supplier, and Company on its own says nothing
+	about that. Mirrors the same Company-vs-Supplier reasoning already used
+	for plant/equipment grouping in machine_file.py and the Daily
+	Availability dashboard's ownership_sections.py, so fleet reporting
+	agrees with the rest of the app on what "owner" means."""
+	owner = (asset_owner or "").strip().lower()
+
+	if owner == "supplier":
+		# Explicitly Supplier-owned — Company never applies here, even if
+		# Supplier itself wasn't captured (that's a data-entry gap to flag as
+		# "Unassigned", not a reason to silently count it as a Company asset).
+		return (supplier or "").strip()
+	if owner == "customer":
+		return (customer or "").strip()
+	if owner == "company":
+		return (company or "").strip()
+
+	# Asset Owner was never captured — fall back to whatever's actually filled in.
+	return (company or supplier or customer or "").strip()
+
+
 def _status_from_valid_to(valid_to, threshold_days, today):
 	if not valid_to:
 		return "Outstanding"

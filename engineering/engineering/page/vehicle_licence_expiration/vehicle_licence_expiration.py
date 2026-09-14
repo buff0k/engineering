@@ -4,9 +4,11 @@
 from urllib.parse import quote
 
 import frappe
-from frappe.query_builder import DocType
-from frappe.query_builder.functions import Count
 from frappe.utils import getdate, today
+
+from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
+	filter_asset_names_by_reporting_scope,
+)
 
 CATEGORIES_SHOWN = (
 	"LDV",
@@ -40,41 +42,31 @@ def get_asset_category_counts(site=None):
 
 	Assets are counted submitted-only (docstatus 1) — a Draft Asset isn't a
 	real in-service vehicle yet, and a Cancelled one no longer is, so
-	neither belongs in a "how many vehicles do we have" count."""
+	neither belongs in a "how many vehicles do we have" count. Also
+	restricted to Fleet Management Settings' Reporting Scope (Included
+	Companies/Suppliers/Customers), same as every other Fleet dashboard,
+	report and export."""
 	meta = frappe.get_meta("Asset")
 
 	if not meta.has_field("asset_category"):
 		return []
 
 	site_field = _asset_site_field()
-	Asset = DocType("Asset")
-
-	asset_q = (
-		frappe.qb.from_(Asset)
-		.select(Asset.asset_category.as_("category"), Count(Asset.name).as_("asset_count"))
-		.where(Asset.docstatus == 1)
-		.where(Asset.asset_category.isin(CATEGORIES_SHOWN))
-		.groupby(Asset.asset_category)
-		.orderby(Count(Asset.name), order=frappe.qb.desc)
-	)
-
-	if site and site_field:
-		asset_q = asset_q.where(getattr(Asset, site_field) == site)
-
-	asset_rows = asset_q.run(as_dict=True)
-	categories = [r["category"] for r in asset_rows if r.get("category")]
-
-	if not categories:
-		return []
-
-	asset_filters = {"asset_category": ["in", categories], "docstatus": 1}
+	asset_filters = {"docstatus": 1, "asset_category": ["in", CATEGORIES_SHOWN]}
 
 	if site and site_field:
 		asset_filters[site_field] = site
 
+	assets = frappe.get_all("Asset", filters=asset_filters, fields=["name", "asset_category"])
+	in_scope = set(filter_asset_names_by_reporting_scope([a.name for a in assets]))
+	assets = [a for a in assets if a.name in in_scope]
+
+	if not assets:
+		return []
+
 	fleet_numbers_by_category = {}
 
-	for a in frappe.get_all("Asset", filters=asset_filters, fields=["name", "asset_category"]):
+	for a in assets:
 		fleet_numbers_by_category.setdefault(a.asset_category, []).append(a.name)
 
 	all_fleet_numbers = [name for names in fleet_numbers_by_category.values() for name in names]
@@ -90,22 +82,16 @@ def get_asset_category_counts(site=None):
 
 	out = []
 
-	for r in asset_rows:
-		category = r.get("category")
-
-		if not category:
-			continue
-
-		licence_count = sum(
-			licence_count_by_asset.get(fleet_number, 0)
-			for fleet_number in fleet_numbers_by_category.get(category, [])
-		)
+	for category, fleet_numbers in fleet_numbers_by_category.items():
+		licence_count = sum(licence_count_by_asset.get(fleet_number, 0) for fleet_number in fleet_numbers)
 
 		out.append({
 			"category": category,
-			"asset_count": int(r.get("asset_count") or 0),
+			"asset_count": len(fleet_numbers),
 			"licence_count": licence_count,
 		})
+
+	out.sort(key=lambda r: r["asset_count"], reverse=True)
 
 	return out
 
@@ -122,6 +108,7 @@ def get_category_summary(site=None, asset_category=None):
 		asset_filters[site_field] = site
 
 	fleet_numbers = frappe.get_all("Asset", filters=asset_filters, pluck="name", limit_page_length=0)
+	fleet_numbers = filter_asset_names_by_reporting_scope(fleet_numbers)
 
 	if not fleet_numbers:
 		return {"rows": []}
@@ -167,11 +154,14 @@ def get_doc_history_tree_meta(site=None, asset=None, asset_category=None):
 		filters.append(["site", "=", site])
 	if asset:
 		filters.append(["fleet_number", "=", asset])
-	if asset_category:
-		fleet_numbers = frappe.get_all(
-			"Asset", filters={"asset_category": asset_category, "docstatus": 1}, pluck="name"
-		)
-		filters.append(["fleet_number", "in", fleet_numbers or [""]])
+
+	# Always narrow to the Reporting-Scope-permitted Assets (Included
+	# Companies/Suppliers/Customers), same as every other Fleet
+	# dashboard/report/export — not just when asset_category is given.
+	asset_filters = {"docstatus": 1, "asset_category": asset_category or ["in", CATEGORIES_SHOWN]}
+	fleet_numbers = frappe.get_all("Asset", filters=asset_filters, pluck="name")
+	fleet_numbers = filter_asset_names_by_reporting_scope(fleet_numbers)
+	filters.append(["fleet_number", "in", fleet_numbers or [""]])
 
 	rows = frappe.get_all(
 		"Vehicle Licence",
