@@ -1127,6 +1127,15 @@ class DailyAvailabilityAndUtilizationDashboardPage {
         values.location = this.location.get_value();
         values.site = this.location.get_value();
 
+        // PDF_SELECTED_TAB_V1
+        // Send the currently selected dashboard tab to the PDF endpoint.
+        values.dashboard_tab = this.active_dashboard_tab || "hours";
+        values.hours_display =
+            this.hours_display.get_value() ||
+            "Hours Average per Category";
+        values.hours_asset =
+            this.hours_asset.get_value() || "";
+
         if (!this.validate(values)) {
             return;
         }
@@ -1139,7 +1148,10 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             summary_type: values.summary_type,
             machine_scope: values.machine_scope,
             asset_ownership: values.asset_ownership,
-            au_target_filter: values.au_target_filter
+            au_target_filter: values.au_target_filter,
+            dashboard_tab: values.dashboard_tab,
+            hours_display: values.hours_display,
+            hours_asset: values.hours_asset
         });
 
         const url = "/api/method/" + this.pdf_method + "?" + query;
