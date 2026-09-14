@@ -11,7 +11,7 @@ from engineering.controllers.fleet_compliance import (
 	get_expiring_threshold_days,
 )
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
-	get_public_road_asset_categories,
+	get_reportable_asset_names,
 )
 
 
@@ -43,12 +43,12 @@ def get_columns():
 
 
 def get_data(filters):
-	categories = get_public_road_asset_categories()
+	asset_names = get_reportable_asset_names()
 
-	if not categories:
+	if not asset_names:
 		return []
 
-	conditions, params = _build_conditions(filters, categories)
+	conditions, params = _build_conditions(filters, asset_names)
 	threshold_days = get_expiring_threshold_days()
 
 	rows = frappe.db.sql(
@@ -128,9 +128,9 @@ def get_data(filters):
 	return rows
 
 
-def _build_conditions(filters, categories):
-	where = ["a.asset_category in %(categories)s", "a.docstatus = 1"]
-	params = {"categories": categories}
+def _build_conditions(filters, asset_names):
+	where = ["a.name in %(asset_names)s"]
+	params = {"asset_names": list(asset_names)}
 
 	if filters.get("asset_category"):
 		where.append("a.asset_category = %(asset_category)s")

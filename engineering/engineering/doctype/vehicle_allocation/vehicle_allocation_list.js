@@ -14,7 +14,41 @@ frappe.listview_settings["Vehicle Allocation"] = {
 	// screen and patches the indicator afterwards — nothing is cached.
 	add_fields: ["status"],
 
+	// "drivers" is a Table MultiSelect (and hidden on the form), so it can't
+	// be marked in_standard_filter — Frappe's quick-filter row only accepts
+	// value-type fields. custom_filter_configs is the documented escape
+	// hatch: it adds a plain Link-to-Employee quick filter that targets the
+	// child doctype directly, and core list-view filtering already knows how
+	// to join a child table filter back onto its parent's Table field.
+	custom_filter_configs: [
+		{
+			fieldtype: "Link",
+			options: "Employee",
+			label: __("Driver"),
+			fieldname: "driver",
+			doctype: "Vehicle Allocation Driver",
+			condition: "=",
+			is_filter: 1,
+		},
+	],
+
 	onload(listview) {
+		// By default these quick filters offer every Employee / every
+		// public-road Asset — most of which have no Vehicle Allocation at
+		// all, so picking one would just filter the list down to nothing.
+		// Scope both to only the values that could actually match a row.
+		if (listview.page.fields_dict.driver) {
+			listview.page.fields_dict.driver.get_query = () => ({
+				query: "engineering.engineering.doctype.vehicle_allocation.vehicle_allocation.allocation_driver_query",
+			});
+		}
+
+		if (listview.page.fields_dict.asset) {
+			listview.page.fields_dict.asset.get_query = () => ({
+				query: "engineering.engineering.doctype.vehicle_allocation.vehicle_allocation.allocated_asset_query",
+			});
+		}
+
 		listview.page.add_inner_button(__("Export to Excel"), () => {
 			frappe.call({
 				method: "engineering.engineering.doctype.vehicle_allocation.vehicle_allocation.export_road_asset_register_xlsx",

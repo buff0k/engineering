@@ -7,7 +7,7 @@ from frappe.utils import now_datetime
 from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
 from engineering.controllers.notifications import _get_outgoing_email_account
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
-	get_public_road_asset_categories,
+	get_reportable_asset_names,
 )
 
 DAY_NAMES = [
@@ -31,27 +31,33 @@ NO_LOCATION = ""
 
 def _get_current_allocations():
 	"""Base (real, stored) fields only — compliance is computed fresh per
-	row via fleet_compliance.compute_all, never read from a cached column."""
+	row via fleet_compliance.compute_all, never read from a cached column.
+	Scoped to get_reportable_asset_names() — Reporting Scope's included
+	Companies/Suppliers — same as every other Fleet report/dashboard/export."""
+	asset_names = get_reportable_asset_names()
+
+	if not asset_names:
+		return []
+
 	return frappe.get_all(
 		"Vehicle Allocation",
-		filters={"docstatus": 1, "status": "Current"},
+		filters={"docstatus": 1, "status": "Current", "asset": ["in", list(asset_names)]},
 		fields=["name", "asset", "asset_name", "location", "required_licence_type", "is_temp", "valid_from"],
 	)
 
 
-def _recipients_by_scope(recipients, opt_in_field=None):
+def _recipients_by_scope(recipients):
 	"""Split Fleet Notification Recipient rows into a Location-specific map
-	and a catch-all (blank-Location) list. opt_in_field is the name of a
-	Check field a row must have set to count at all (e.g.
-	"terminated_driver_alert") — pass None for the Weekly Compliance
-	Digest, which every recipient row is unconditionally part of."""
+	and a catch-all (blank-Location) list. Each of the three fleet
+	notifications (Weekly Compliance Digest, Terminated Driver Alert,
+	Temporary Loan Digest) has its own separate Recipients table on Fleet
+	Management Settings — pass in whichever one is relevant, not a shared
+	list with opt-in flags. The same person can be added to more than one
+	table if they need more than one notification."""
 	specific = {}
 	catch_all = []
 
 	for row in recipients or []:
-		if opt_in_field and not row.get(opt_in_field):
-			continue
-
 		email = frappe.db.get_value("User", row.user, "email") or row.user
 
 		if not email:
@@ -82,9 +88,10 @@ def _recipients_by_scope(recipients, opt_in_field=None):
 	return {loc: _dedupe(emails) for loc, emails in specific.items()}, _dedupe(catch_all)
 
 
-def _send_location_grouped(*, by_location_lines, recipients, opt_in_field, subject_prefix, log_label, dry_run):
+def _send_location_grouped(*, by_location_lines, recipients, subject_prefix, log_label, dry_run):
 	"""Shared sender for every Location-scoped fleet notification (Weekly
-	Compliance Digest, Terminated Driver Alert, Temporary Loan Digest).
+	Compliance Digest, Terminated Driver Alert, Temporary Loan Digest) —
+	`recipients` is that specific notification's own Recipients table.
 
 	by_location_lines: {location_or_NO_LOCATION: [pre-formatted line, ...]}
 	— only keys with actual content should be present.
@@ -95,7 +102,7 @@ def _send_location_grouped(*, by_location_lines, recipients, opt_in_field, subje
 	NO_LOCATION bucket, which can never reach a Location-specific
 	recipient since it isn't tied to one) — "no Location set" means
 	"across the whole company", not "nothing"."""
-	specific_recipients, catch_all_recipients = _recipients_by_scope(recipients, opt_in_field)
+	specific_recipients, catch_all_recipients = _recipients_by_scope(recipients)
 
 	payloads = {}
 
@@ -245,9 +252,9 @@ def send_temporary_loan_digest_gate():
 
 
 def _get_unregistered_assets():
-	categories = get_public_road_asset_categories()
+	asset_names = get_reportable_asset_names()
 
-	if not categories:
+	if not asset_names:
 		return []
 
 	return frappe.db.sql(
@@ -255,10 +262,10 @@ def _get_unregistered_assets():
 		select a.name as asset, a.asset_name as asset_name, a.asset_category as asset_category, a.location as location
 		from `tabAsset` a
 		left join `tabVehicle Allocation` v on v.asset = a.name and v.docstatus = 1 and v.status = 'Current'
-		where a.asset_category in %(categories)s and a.docstatus = 1 and v.name is null
+		where a.name in %(asset_names)s and v.name is null
 		order by a.name
 		""",
-		{"categories": categories},
+		{"asset_names": list(asset_names)},
 		as_dict=True,
 	)
 
@@ -328,8 +335,7 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 
 	return _send_location_grouped(
 		by_location_lines=by_location_lines,
-		recipients=settings.get("recipients"),
-		opt_in_field=None,
+		recipients=settings.get("weekly_digest_recipients"),
 		subject_prefix="Fleet Compliance Weekly Digest",
 		log_label="Fleet Compliance Weekly Digest",
 		dry_run=dry_run,
@@ -393,8 +399,7 @@ def send_terminated_driver_alert(dry_run: bool = False):
 
 	return _send_location_grouped(
 		by_location_lines=by_location_lines,
-		recipients=settings.get("recipients"),
-		opt_in_field="terminated_driver_alert",
+		recipients=settings.get("terminated_driver_alert_recipients"),
 		subject_prefix="Fleet Terminated Driver Alert",
 		log_label="Fleet Terminated Driver Alert",
 		dry_run=dry_run,
@@ -420,8 +425,7 @@ def send_temporary_loan_digest(dry_run: bool = False):
 
 	return _send_location_grouped(
 		by_location_lines=by_location_lines,
-		recipients=settings.get("recipients"),
-		opt_in_field="temporary_loan_digest",
+		recipients=settings.get("temporary_loan_digest_recipients"),
 		subject_prefix="Fleet Temporary Loan Digest",
 		log_label="Fleet Temporary Loan Digest",
 		dry_run=dry_run,

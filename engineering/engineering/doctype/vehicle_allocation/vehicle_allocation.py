@@ -10,6 +10,7 @@ from engineering.controllers.fleet_compliance import (
 	bulk_drivers,
 	collect_drivers,
 	compute_all,
+	effective_asset_owner,
 	get_effective_allocations,
 	get_expiring_threshold_days,
 	render_addendum_html,
@@ -57,6 +58,65 @@ def public_road_asset_query(doctype, txt, searchfield, start, page_len, filters)
 			"start": start,
 			"page_len": page_len,
 		},
+	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def allocated_asset_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Link query for the Vehicle Allocation list view's Asset quick filter —
+	unlike public_road_asset_query (used on the form, where you're picking an
+	Asset to *create* a new allocation for), this only offers Assets that are
+	both a public-road category AND already have at least one Vehicle
+	Allocation. Anything else would just filter the list down to zero rows."""
+	from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
+		get_public_road_asset_categories,
+	)
+
+	categories = get_public_road_asset_categories()
+
+	if not categories:
+		return []
+
+	return frappe.db.sql(
+		"""
+		select distinct a.name, a.asset_name
+		from `tabAsset` a
+		where a.asset_category in %(categories)s
+			and (a.name like %(txt)s or a.asset_name like %(txt)s)
+			and exists (
+				select 1 from `tabVehicle Allocation` va where va.asset = a.name
+			)
+		order by a.name
+		limit %(start)s, %(page_len)s
+		""",
+		{
+			"categories": categories,
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len,
+		},
+	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def allocation_driver_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Link query for the Vehicle Allocation list view's Driver quick filter —
+	only offers Employees who actually appear as a driver on at least one
+	Vehicle Allocation, same reasoning as allocated_asset_query above."""
+	return frappe.db.sql(
+		"""
+		select distinct e.name, e.employee_name
+		from `tabEmployee` e
+		where (e.name like %(txt)s or e.employee_name like %(txt)s)
+			and exists (
+				select 1 from `tabVehicle Allocation Driver` vad where vad.driver = e.name
+			)
+		order by e.employee_name
+		limit %(start)s, %(page_len)s
+		""",
+		{"txt": f"%{txt}%", "start": start, "page_len": page_len},
 	)
 
 
@@ -220,11 +280,16 @@ def check_active_conflicts(asset=None, drivers=None, exclude_name=None):
 @frappe.whitelist()
 def export_road_asset_register_xlsx():
 	"""XLSX export of every submitted public-road Asset (registered or not),
-	grouped by Company — same general shape as the manually-maintained LDV
+	grouped by owner — same general shape as the manually-maintained LDV
 	spreadsheet this replaces, but Location/Driver/compliance are pulled
 	live from the actual Vehicle Allocation records instead of free-typed
 	site codes and driver names. Draft/Cancelled Assets are excluded — same
 	rule used everywhere else in fleet compliance.
+
+	"Owner" is not simply the Asset's Company field — that's just the books
+	the Asset is accounted under. A hired/leased LDV has Asset Owner =
+	Supplier, so its actual owner is its Supplier, not whichever Company it
+	happens to be booked against. See effective_asset_owner().
 
 	A Draft Vehicle Allocation still populates Location/Drivers/etc (it
 	shouldn't make the Asset look unregistered just because nobody has
@@ -235,13 +300,16 @@ def export_road_asset_register_xlsx():
 		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
 
 	from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
-		get_public_road_asset_categories,
+		get_reportable_asset_names,
 	)
 
-	categories = get_public_road_asset_categories()
+	asset_names = get_reportable_asset_names()
 
-	if not categories:
+	if asset_names is None:
 		frappe.throw(frappe._("No Public Road Asset Categories are configured on Fleet Management Settings."))
+
+	if not asset_names:
+		frappe.throw(frappe._("No Assets found within the configured Reporting Scope."))
 
 	rows = frappe.db.sql(
 		"""
@@ -249,17 +317,20 @@ def export_road_asset_register_xlsx():
 			a.name as asset,
 			a.asset_name as asset_name,
 			a.item_name as model,
-			a.company as company
+			a.company as company,
+			a.asset_owner as asset_owner,
+			a.supplier as supplier,
+			a.customer as customer
 		from `tabAsset` a
-		where a.asset_category in %(categories)s and a.docstatus = 1
-		order by a.company asc, a.name asc
+		where a.name in %(asset_names)s
+		order by a.name asc
 		""",
-		{"categories": categories},
+		{"asset_names": list(asset_names)},
 		as_dict=True,
 	)
 
-	if not rows:
-		frappe.throw(frappe._("No public-road Assets found."))
+	for row in rows:
+		row["owner"] = effective_asset_owner(row.asset_owner, row.company, row.supplier, row.customer)
 
 	allocation_by_asset = get_effective_allocations(
 		[r.asset for r in rows], fields=["location", "required_licence_type", "comments"]
@@ -327,7 +398,7 @@ def _sanitize_table_name(label, index):
 	cleaned = "".join(ch if ch.isalnum() else "_" for ch in (label or ""))
 
 	if not cleaned or not cleaned[0].isalpha():
-		cleaned = f"Company_{cleaned}"
+		cleaned = f"Owner_{cleaned}"
 
 	return f"{cleaned}_{index}"[:255]
 
@@ -363,24 +434,24 @@ def _rows_to_xlsx_base64(rows):
 	]
 
 	header_fill = PatternFill(fill_type="solid", fgColor="FFD9EAF7", bgColor="FFD9EAF7")
-	company_fill = PatternFill(fill_type="solid", fgColor="FF262A76", bgColor="FF262A76")
-	company_font = Font(bold=True, color="FFFFFFFF", size=12)
+	owner_fill = PatternFill(fill_type="solid", fgColor="FF262A76", bgColor="FF262A76")
+	owner_font = Font(bold=True, color="FFFFFFFF", size=12)
 	header_font = Font(bold=True)
 
-	by_company = {}
+	by_owner = {}
 
 	for row in rows:
-		by_company.setdefault(row.company or "Unassigned", []).append(row)
+		by_owner.setdefault(row.owner or "Unassigned", []).append(row)
 
 	current_row = 1
 	last_col_letter = ws.cell(row=1, column=len(columns)).column_letter
 
-	for table_index, company in enumerate(sorted(by_company), start=1):
-		company_cell = ws.cell(row=current_row, column=1, value=company)
-		company_cell.font = company_font
+	for table_index, owner in enumerate(sorted(by_owner), start=1):
+		owner_cell = ws.cell(row=current_row, column=1, value=owner)
+		owner_cell.font = owner_font
 
 		for col_idx in range(1, len(columns) + 1):
-			ws.cell(row=current_row, column=col_idx).fill = company_fill
+			ws.cell(row=current_row, column=col_idx).fill = owner_fill
 
 		ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(columns))
 		current_row += 1
@@ -395,7 +466,7 @@ def _rows_to_xlsx_base64(rows):
 
 		current_row += 1
 
-		for i, row in enumerate(by_company[company], start=1):
+		for i, row in enumerate(by_owner[owner], start=1):
 			values = [
 				i,
 				row.asset,
@@ -420,10 +491,10 @@ def _rows_to_xlsx_base64(rows):
 			current_row += 1
 
 		# A real Excel Table (not a sheet-wide AutoFilter, which only allows
-		# one range per sheet) gives this company's header row its own
+		# one range per sheet) gives this owner's header row its own
 		# independent filter dropdowns, scoped to just its own rows.
 		table = Table(
-			displayName=_sanitize_table_name(company, table_index),
+			displayName=_sanitize_table_name(owner, table_index),
 			ref=f"A{header_row}:{last_col_letter}{current_row - 1}",
 		)
 		table.tableStyleInfo = TableStyleInfo(
@@ -435,7 +506,7 @@ def _rows_to_xlsx_base64(rows):
 		)
 		ws.add_table(table)
 
-		current_row += 1  # blank spacer row between companies
+		current_row += 1  # blank spacer row between owners
 
 	out = BytesIO()
 	wb.save(out)

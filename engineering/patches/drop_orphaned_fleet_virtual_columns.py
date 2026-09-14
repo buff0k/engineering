@@ -38,9 +38,15 @@ COLUMNS_TO_DROP = {
 	# Branch; now scoped by Location instead (also used to resolve a shared
 	# vehicle's Custodian) — no clean automatic Branch->Location mapping
 	# exists, so existing rows simply lose their old scoping and fall back
-	# to "all Locations" until reconfigured.
+	# to "all Locations" until reconfigured. The two Check columns were a
+	# short-lived attempt at one shared Recipients table with per-
+	# notification opt-in flags — replaced by three fully separate
+	# Recipients tables on Fleet Management Settings instead (one per
+	# report), so a row's very presence in a given table is the signal now.
 	"Fleet Notification Recipient": [
 		"branch",
+		"terminated_driver_alert",
+		"temporary_loan_digest",
 	],
 }
 
